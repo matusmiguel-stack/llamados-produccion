@@ -15,6 +15,7 @@ export default function Home() {
   const [allDay, setAllDay] = useState(false)
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
+  const [shootResources, setShootResources] = useState<any[]>([])
 
   async function loadShoots() {
     const { data, error } = await supabase
@@ -26,6 +27,21 @@ export default function Home() {
       alert(error.message)
       return
     }
+    async function loadShootResources() {
+  const { data, error } = await supabase
+    .from("shoot_resources")
+    .select(`
+      *,
+      shoots (*)
+    `)
+
+  if (error) {
+    alert(error.message)
+    return
+  }
+
+  setShootResources(data)
+}
 
     setEvents(
       data.map((shoot) => ({
@@ -42,8 +58,10 @@ export default function Home() {
   }
 
   useEffect(() => {
-    loadShoots()
-  }, [])
+  loadShoots()
+  loadResources()
+  loadShootResources()
+}, [])
 
   function handleDateClick(info: any) {
     setSelectedDate(info.dateStr)
