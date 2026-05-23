@@ -1,22 +1,30 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import Select from "react-select"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
-import Link from "next/link"
-import Select from "react-select"
 
 export default function Home() {
   const [events, setEvents] = useState<any[]>([])
+  const [allShoots, setAllShoots] = useState<any[]>([])
   const [resources, setResources] = useState<any[]>([])
   const [shootResources, setShootResources] = useState<any[]>([])
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedShoot, setSelectedShoot] = useState<any>(null)
+
+  const [filterClient, setFilterClient] = useState("")
+  const [filterProject, setFilterProject] = useState("")
+  const [filterStatus, setFilterStatus] = useState("")
+  const [filterHumanResource, setFilterHumanResource] = useState("")
 
   const [selectedDate, setSelectedDate] = useState("")
   const [title, setTitle] = useState("")
@@ -30,12 +38,27 @@ export default function Home() {
   const [publicNotes, setPublicNotes] = useState("")
   const [privateNotes, setPrivateNotes] = useState("")
   const [productionNotes, setProductionNotes] = useState("")
+  const [status, setStatus] = useState("tentative")
+  const [color, setColor] = useState("#111827")
   const [allDay, setAllDay] = useState(false)
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
-  const [user, setUser] = useState<any>(null)
-const [profile, setProfile] = useState<any>(null)
+
+  const canEdit = profile?.role === "admin" || profile?.role === "editor"
+  const isAdmin = profile?.role === "admin"
+
+  async function loadUser() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    setUser(user)
+
+    const { data: profiles } = await supabase.from("profiles").select("*")
+    const myProfile = profiles?.find(
+      (p) => p.email?.trim().toLowerCase() === user.email?.trim().toLowerCase()
+    )
+    setProfile(myProfile)
+  }
 
   async function loadAll() {
     const { data: shoots } = await supabase.from("shoots").select("*").order("start_time")
@@ -44,56 +67,54 @@ const [profile, setProfile] = useState<any>(null)
       .from("shoot_resources")
       .select("*, shoots(*), resources(*)")
 
+    setAllShoots(shoots || [])
     setResources(res || [])
     setShootResources(assignments || [])
+  }
+
+  useEffect(() => {
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = "/login"
+        return
+      }
+      await loadAll()
+      await loadUser()
+    }
+    init()
+  }, [])
+
+  useEffect(() => {
+    const filtered = allShoots.filter((shoot) => {
+  const clientOk = !filterClient || shoot.client === filterClient
+  const projectOk = !filterProject || shoot.project === filterProject
+  const statusOk = !filterStatus || shoot.status === filterStatus
+
+  const humanResourceOk =
+    !filterHumanResource ||
+    shootResources.some(
+      (assignment) =>
+        assignment.shoot_id === shoot.id &&
+        assignment.resource_id === filterHumanResource
+    )
+
+  return clientOk && projectOk && statusOk && humanResourceOk
+})
 
     setEvents(
-      (shoots || []).map((shoot) => ({
+      filtered.map((shoot) => ({
         id: shoot.id,
-        title: shoot.title,
+        title: `${statusEmoji(shoot.status)} ${shoot.title}`,
         start: shoot.start_time,
         end: shoot.end_time,
         allDay: shoot.all_day,
-        backgroundColor: "#111827",
-        borderColor: "#111827",
+        backgroundColor: shoot.color || "#111827",
+        borderColor: shoot.color || "#111827",
         textColor: "#ffffff",
       }))
     )
-  }
-async function loadUser() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return
-
-  setUser(user)
-
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
-
-  setProfile(profileData)
-}
-useEffect(() => {
-  async function init() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      window.location.href = "/login"
-      return
-    }
-
-    await loadAll()
-    await loadUser()
-  }
-
-  init()
-}, [])
+  }, [allShoots, shootResources, filterClient, filterProject, filterStatus, filterHumanResource])
 
   function resetForm() {
     setSelectedShoot(null)
@@ -108,31 +129,31 @@ useEffect(() => {
     setPublicNotes("")
     setPrivateNotes("")
     setProductionNotes("")
+    setStatus("tentative")
+    setColor("#111827")
     setAllDay(false)
     setStartTime("09:00")
     setEndTime("18:00")
     setSelectedResources([])
   }
 
- function handleDateClick(info: any) {
-  resetForm()
+  function handleDateClick(info: any) {
+    if (!canEdit) return
+    resetForm()
 
-  const clickedDate = new Date(info.date)
-  const dateOnly = clickedDate.toISOString().slice(0, 10)
-  const timeOnly = clickedDate.toTimeString().slice(0, 5)
+    const clickedDate = new Date(info.date)
+    setSelectedDate(clickedDate.toISOString().slice(0, 10))
+    setStartTime(clickedDate.toTimeString().slice(0, 5))
 
-  setSelectedDate(dateOnly)
-  setStartTime(timeOnly)
+    const endDate = new Date(clickedDate)
+    endDate.setHours(endDate.getHours() + 1)
+    setEndTime(endDate.toTimeString().slice(0, 5))
 
-  const endDate = new Date(clickedDate)
-  endDate.setHours(endDate.getHours() + 1)
-  setEndTime(endDate.toTimeString().slice(0, 5))
-
-  setModalOpen(true)
-}
+    setModalOpen(true)
+  }
 
   function handleEventClick(info: any) {
-    const shoot = shootResources.find((a) => a.shoot_id === info.event.id)?.shoots
+    const shoot = allShoots.find((s) => s.id === info.event.id)
     setSelectedShoot(shoot || null)
     setDetailsOpen(true)
   }
@@ -145,7 +166,7 @@ useEffect(() => {
   }
 
   function openEditShoot() {
-    if (!selectedShoot) return
+    if (!selectedShoot || !canEdit) return
 
     const start = new Date(selectedShoot.start_time)
     const end = new Date(selectedShoot.end_time)
@@ -161,6 +182,8 @@ useEffect(() => {
     setPublicNotes(selectedShoot.public_notes || "")
     setPrivateNotes(selectedShoot.private_notes || "")
     setProductionNotes(selectedShoot.production_notes || "")
+    setStatus(selectedShoot.status || "tentative")
+    setColor(selectedShoot.color || "#111827")
     setAllDay(selectedShoot.all_day || false)
     setSelectedDate(start.toISOString().slice(0, 10))
     setStartTime(start.toTimeString().slice(0, 5))
@@ -196,17 +219,8 @@ useEffect(() => {
     })
   }
 
-  function toggleResource(resourceId: string) {
-    if (isResourceBusy(resourceId)) return
-
-    if (selectedResources.includes(resourceId)) {
-      setSelectedResources(selectedResources.filter((id) => id !== resourceId))
-    } else {
-      setSelectedResources([...selectedResources, resourceId])
-    }
-  }
-
   async function saveShoot() {
+    if (!canEdit) return alert("No tienes permisos para editar.")
     if (!title) return alert("Ponle nombre al llamado")
     if (selectedResources.length === 0) return alert("Selecciona al menos un recurso")
 
@@ -230,6 +244,8 @@ useEffect(() => {
       public_notes: publicNotes,
       private_notes: privateNotes,
       production_notes: productionNotes,
+      status,
+      color,
       start_time: start,
       end_time: end,
       all_day: allDay,
@@ -260,6 +276,7 @@ useEffect(() => {
   }
 
   async function deleteShoot() {
+    if (!isAdmin) return alert("Solo admin puede borrar.")
     if (!selectedShoot) return
     if (!confirm("¿Seguro que quieres borrar este llamado?")) return
 
@@ -272,6 +289,11 @@ useEffect(() => {
   }
 
   async function updateEventDate(info: any) {
+    if (!canEdit) {
+      info.revert()
+      return
+    }
+
     const { error } = await supabase
       .from("shoots")
       .update({
@@ -290,194 +312,283 @@ useEffect(() => {
     await loadAll()
   }
 
+  async function logout() {
+    await supabase.auth.signOut()
+    window.location.href = "/login"
+  }
+
   const humanResources = resources.filter((r) => r.type === "human")
   const technicalResources = resources.filter((r) => r.type === "technical")
 
-  return (
-    <main style={{ padding: 20 }}>
-      <h1>🎬 Sistema de Llamados</h1>
-      <div style={{ marginBottom: 20 }}>
-  <p>
-    👤 {profile?.email} — Rol: {profile?.role}
-  </p>
-
-  <button
-    onClick={async () => {
-      await supabase.auth.signOut()
-      window.location.href = "/login"
-    }}
-    style={{
-      padding: "10px 14px",
-      borderRadius: "8px",
-      border: "none",
-      background: "black",
-      color: "white",
-      cursor: "pointer",
-    }}
-  >
-    Cerrar sesión
-  </button>
-</div>
-<nav style={{ marginBottom: 20 }}>
-  <Link href="/resources">📦 Inventario de recursos</Link>
-</nav>
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
-        }}
-        height="80vh"
-        events={events}
-        selectable
-        editable
-        eventResizableFromStart
-        dateClick={handleDateClick}
-        eventClick={handleEventClick}
-        eventDrop={updateEventDate}
-        eventResize={updateEventDate}
-        eventDisplay="block"
-      />
-
-      {modalOpen && (
-        <div style={overlayStyle}>
-          <div style={modalStyle}>
-            <h2>{selectedShoot ? "Editar llamado" : "Nuevo llamado"}</h2>
-
-            <input placeholder="Nombre del llamado" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
-            <input placeholder="Cliente" value={client} onChange={(e) => setClient(e.target.value)} style={inputStyle} />
-            <input placeholder="Proyecto" value={project} onChange={(e) => setProject(e.target.value)} style={inputStyle} />
-            <input placeholder="Locación" value={location} onChange={(e) => setLocation(e.target.value)} style={inputStyle} />
-            <input placeholder="Dirección" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
-            <input placeholder="Contacto" value={contact} onChange={(e) => setContact(e.target.value)} style={inputStyle} />
-
-            <h3>Producción</h3>
-            <input placeholder="Director / Realizador" value={director} onChange={(e) => setDirector(e.target.value)} style={inputStyle} />
-            <input placeholder="DOP / Fotógrafo" value={dop} onChange={(e) => setDop(e.target.value)} style={inputStyle} />
-
-            <div style={{ marginTop: 20 }}>
-              <label>
-                <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Todo el día
-              </label>
-            </div>
-
-            {!allDay && (
-              <>
-                <label style={labelStyle}>Hora inicio</label>
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={inputStyle} />
-                <label style={labelStyle}>Hora fin</label>
-                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={inputStyle} />
-              </>
-            )}
-
-            <h3>Notas</h3>
-            <textarea placeholder="Notas públicas" value={publicNotes} onChange={(e) => setPublicNotes(e.target.value)} style={textareaStyle} />
-            <textarea placeholder="Notas privadas" value={privateNotes} onChange={(e) => setPrivateNotes(e.target.value)} style={textareaStyle} />
-            <textarea placeholder="Notas de producción" value={productionNotes} onChange={(e) => setProductionNotes(e.target.value)} style={textareaStyle} />
-
-           <h3>Recursos humanos</h3>
-
-<Select
-  isMulti
-  options={humanResources.map((resource) => ({
-    value: resource.id,
-    label: `${resource.name} — ${resource.category}${
-      isResourceBusy(resource.id) ? " — OCUPADO" : ""
-    }`,
-    isDisabled: isResourceBusy(resource.id),
-  }))}
-  value={humanResources
-    .filter((resource) => selectedResources.includes(resource.id))
-    .map((resource) => ({
-      value: resource.id,
-      label: `${resource.name} — ${resource.category}`,
-    }))}
-  onChange={(selected) => {
-    const humanIds = selected.map((item) => item.value)
-    const technicalIds = selectedResources.filter((id) =>
-      technicalResources.some((resource) => resource.id === id)
-    )
-
-    setSelectedResources([...humanIds, ...technicalIds])
-  }}
-/>
-
-<h3>Recursos técnicos</h3>
-
-<Select
-  isMulti
-  options={technicalResources.map((resource) => ({
-    value: resource.id,
-    label: `${resource.name} — ${resource.category}${
-      isResourceBusy(resource.id) ? " — OCUPADO" : ""
-    }`,
-    isDisabled: isResourceBusy(resource.id),
-  }))}
-  value={technicalResources
-    .filter((resource) => selectedResources.includes(resource.id))
-    .map((resource) => ({
-      value: resource.id,
-      label: `${resource.name} — ${resource.category}`,
-    }))}
-  onChange={(selected) => {
-    const technicalIds = selected.map((item) => item.value)
-    const humanIds = selectedResources.filter((id) =>
-      humanResources.some((resource) => resource.id === id)
-    )
-
-    setSelectedResources([...humanIds, ...technicalIds])
-  }}
-/>
-
-            <button onClick={saveShoot} style={primaryButton}>
-              {selectedShoot ? "Guardar cambios" : "Guardar llamado"}
-            </button>
-
-            <button onClick={() => { setModalOpen(false); resetForm() }} style={secondaryButton}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {detailsOpen && selectedShoot && (
-        <div style={overlayStyle}>
-          <div style={modalStyle}>
-            <h2>{selectedShoot.title}</h2>
-            <p><strong>Cliente:</strong> {selectedShoot.client || "-"}</p>
-            <p><strong>Proyecto:</strong> {selectedShoot.project || "-"}</p>
-            <p><strong>Locación:</strong> {selectedShoot.location || "-"}</p>
-            <p><strong>Dirección:</strong> {selectedShoot.address || "-"}</p>
-            <p><strong>Contacto:</strong> {selectedShoot.contact || "-"}</p>
-            <p><strong>Inicio:</strong> {new Date(selectedShoot.start_time).toLocaleString()}</p>
-            <p><strong>Fin:</strong> {new Date(selectedShoot.end_time).toLocaleString()}</p>
-
-            <h3>Producción</h3>
-            <p><strong>Director:</strong> {selectedShoot.director || "-"}</p>
-            <p><strong>DOP:</strong> {selectedShoot.dop || "-"}</p>
-
-            <h3>Notas</h3>
-            <p><strong>Públicas:</strong> {selectedShoot.public_notes || "-"}</p>
-            <p><strong>Privadas:</strong> {selectedShoot.private_notes || "-"}</p>
-            <p><strong>Producción:</strong> {selectedShoot.production_notes || "-"}</p>
-
-            <h3>Recursos asignados</h3>
-            <ul>
-              {getShootResources(selectedShoot.id).map((resource) => (
-                <li key={resource.id}>{resource.name} — {resource.category}</li>
-              ))}
-            </ul>
-
-            <button onClick={openEditShoot} style={primaryButton}>Editar llamado</button>
-            <button onClick={deleteShoot} style={{ ...primaryButton, background: "#b91c1c" }}>Borrar llamado</button>
-            <button onClick={() => setDetailsOpen(false)} style={secondaryButton}>Cerrar</button>
-          </div>
-        </div>
-      )}
-    </main>
+  const clients = useMemo(
+    () => [...new Set(allShoots.map((s) => s.client).filter(Boolean))],
+    [allShoots]
   )
+
+  const projects = useMemo(
+    () => [...new Set(allShoots.map((s) => s.project).filter(Boolean))],
+    [allShoots]
+  )
+
+  return (
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      <aside style={sidebarStyle}>
+        <h2>🎬 Llamados</h2>
+
+        <Link href="/" style={navLink}>Calendario</Link>
+        <Link href="/resources" style={navLink}>Inventario</Link>
+        {isAdmin && <Link href="/users" style={navLink}>Usuarios</Link>}
+
+        <div style={{ marginTop: 24, fontSize: 13, color: "#ddd" }}>
+          <p>{profile?.email}</p>
+          <p>Rol: {profile?.role || "..."}</p>
+        </div>
+
+        <button onClick={logout} style={logoutButton}>
+          Cerrar sesión
+        </button>
+      </aside>
+
+      <main style={{ flex: 1, padding: 24 }}>
+        <h1>Calendario de producción</h1>
+
+        <section style={filtersStyle}>
+          <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={filterInput}>
+            <option value="">Todos los clientes</option>
+            {clients.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+
+          <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} style={filterInput}>
+            <option value="">Todos los proyectos</option>
+            {projects.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={filterInput}>
+            <option value="">Todos los status</option>
+            <option value="tentative">Tentative</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="cancelled">Cancelado</option>
+            <option value="wrap">Wrap</option>
+          </select>
+          <select
+  value={filterHumanResource}
+  onChange={(e) => setFilterHumanResource(e.target.value)}
+  style={filterInput}
+>
+  <option value="">Todos los recursos humanos</option>
+  {humanResources.map((resource) => (
+    <option key={resource.id} value={resource.id}>
+      {resource.name} — {resource.category}
+    </option>
+  ))}
+</select>
+        </section>
+
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
+          }}
+          height="80vh"
+          events={events}
+          selectable={canEdit}
+          editable={canEdit}
+          eventResizableFromStart={canEdit}
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          eventDrop={updateEventDate}
+          eventResize={updateEventDate}
+          eventDisplay="block"
+        />
+
+        {modalOpen && (
+          <div style={overlayStyle}>
+            <div style={modalStyle}>
+              <h2>{selectedShoot ? "Editar llamado" : "Nuevo llamado"}</h2>
+
+              <input placeholder="Nombre del llamado" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
+              <input placeholder="Cliente" value={client} onChange={(e) => setClient(e.target.value)} style={inputStyle} />
+              <input placeholder="Proyecto" value={project} onChange={(e) => setProject(e.target.value)} style={inputStyle} />
+              <input placeholder="Locación" value={location} onChange={(e) => setLocation(e.target.value)} style={inputStyle} />
+              <input placeholder="Dirección" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
+              <input placeholder="Contacto" value={contact} onChange={(e) => setContact(e.target.value)} style={inputStyle} />
+
+              <h3>Status y color</h3>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} style={inputStyle}>
+                <option value="tentative">Tentative</option>
+                <option value="confirmed">Confirmado</option>
+                <option value="cancelled">Cancelado</option>
+                <option value="wrap">Wrap</option>
+              </select>
+
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ ...inputStyle, height: 48 }} />
+
+              <h3>Producción</h3>
+              <input placeholder="Director / Realizador" value={director} onChange={(e) => setDirector(e.target.value)} style={inputStyle} />
+              <input placeholder="DOP / Fotógrafo" value={dop} onChange={(e) => setDop(e.target.value)} style={inputStyle} />
+
+              <div style={{ marginTop: 20 }}>
+                <label>
+                  <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Todo el día
+                </label>
+              </div>
+
+              {!allDay && (
+                <>
+                  <label style={labelStyle}>Hora inicio</label>
+                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={inputStyle} />
+                  <label style={labelStyle}>Hora fin</label>
+                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={inputStyle} />
+                </>
+              )}
+
+              <h3>Notas</h3>
+              <textarea placeholder="Notas públicas" value={publicNotes} onChange={(e) => setPublicNotes(e.target.value)} style={textareaStyle} />
+              {canEdit && (
+                <textarea placeholder="Notas privadas" value={privateNotes} onChange={(e) => setPrivateNotes(e.target.value)} style={textareaStyle} />
+              )}
+              <textarea placeholder="Notas de producción" value={productionNotes} onChange={(e) => setProductionNotes(e.target.value)} style={textareaStyle} />
+
+              <h3>Recursos humanos</h3>
+              <Select
+                isMulti
+                options={humanResources.map((resource) => ({
+                  value: resource.id,
+                  label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
+                  isDisabled: isResourceBusy(resource.id),
+                }))}
+                value={humanResources
+                  .filter((r) => selectedResources.includes(r.id))
+                  .map((r) => ({ value: r.id, label: `${r.name} — ${r.category}` }))}
+                onChange={(selected) => {
+                  const humanIds = selected.map((item) => item.value)
+                  const technicalIds = selectedResources.filter((id) =>
+                    technicalResources.some((r) => r.id === id)
+                  )
+                  setSelectedResources([...humanIds, ...technicalIds])
+                }}
+              />
+
+              <h3>Recursos técnicos</h3>
+              <Select
+                isMulti
+                options={technicalResources.map((resource) => ({
+                  value: resource.id,
+                  label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
+                  isDisabled: isResourceBusy(resource.id),
+                }))}
+                value={technicalResources
+                  .filter((r) => selectedResources.includes(r.id))
+                  .map((r) => ({ value: r.id, label: `${r.name} — ${r.category}` }))}
+                onChange={(selected) => {
+                  const technicalIds = selected.map((item) => item.value)
+                  const humanIds = selectedResources.filter((id) =>
+                    humanResources.some((r) => r.id === id)
+                  )
+                  setSelectedResources([...humanIds, ...technicalIds])
+                }}
+              />
+
+              <button onClick={saveShoot} style={primaryButton}>
+                {selectedShoot ? "Guardar cambios" : "Guardar llamado"}
+              </button>
+
+              <button onClick={() => { setModalOpen(false); resetForm() }} style={secondaryButton}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {detailsOpen && selectedShoot && (
+          <div style={overlayStyle}>
+            <div style={modalStyle}>
+              <h2>{statusEmoji(selectedShoot.status)} {selectedShoot.title}</h2>
+              <p><strong>Status:</strong> {selectedShoot.status || "tentative"}</p>
+              <p><strong>Cliente:</strong> {selectedShoot.client || "-"}</p>
+              <p><strong>Proyecto:</strong> {selectedShoot.project || "-"}</p>
+              <p><strong>Locación:</strong> {selectedShoot.location || "-"}</p>
+              <p><strong>Dirección:</strong> {selectedShoot.address || "-"}</p>
+              <p><strong>Contacto:</strong> {selectedShoot.contact || "-"}</p>
+              <p><strong>Inicio:</strong> {new Date(selectedShoot.start_time).toLocaleString()}</p>
+              <p><strong>Fin:</strong> {new Date(selectedShoot.end_time).toLocaleString()}</p>
+
+              <h3>Producción</h3>
+              <p><strong>Director:</strong> {selectedShoot.director || "-"}</p>
+              <p><strong>DOP:</strong> {selectedShoot.dop || "-"}</p>
+
+              <h3>Notas</h3>
+              <p><strong>Públicas:</strong> {selectedShoot.public_notes || "-"}</p>
+              {canEdit && <p><strong>Privadas:</strong> {selectedShoot.private_notes || "-"}</p>}
+              <p><strong>Producción:</strong> {selectedShoot.production_notes || "-"}</p>
+
+              <h3>Recursos asignados</h3>
+              <ul>
+                {getShootResources(selectedShoot.id).map((resource) => (
+                  <li key={resource.id}>{resource.name} — {resource.category}</li>
+                ))}
+              </ul>
+
+              {canEdit && <button onClick={openEditShoot} style={primaryButton}>Editar llamado</button>}
+              {isAdmin && <button onClick={deleteShoot} style={{ ...primaryButton, background: "#b91c1c" }}>Borrar llamado</button>}
+              <button onClick={() => setDetailsOpen(false)} style={secondaryButton}>Cerrar</button>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
+function statusEmoji(status: string) {
+  if (status === "confirmed") return "✅"
+  if (status === "cancelled") return "❌"
+  if (status === "wrap") return "🏁"
+  return "🟡"
+}
+
+const sidebarStyle: React.CSSProperties = {
+  width: 230,
+  background: "#111827",
+  color: "white",
+  padding: 20,
+}
+
+const navLink: React.CSSProperties = {
+  display: "block",
+  color: "white",
+  textDecoration: "none",
+  marginTop: 14,
+  padding: "10px 12px",
+  borderRadius: 8,
+  background: "rgba(255,255,255,0.08)",
+}
+
+const logoutButton: React.CSSProperties = {
+  marginTop: 24,
+  width: "100%",
+  padding: 12,
+  borderRadius: 8,
+  border: "none",
+  cursor: "pointer",
+}
+
+const filtersStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 12,
+  background: "white",
+  padding: 16,
+  borderRadius: 16,
+  marginBottom: 16,
+}
+
+const filterInput: React.CSSProperties = {
+  padding: 10,
+  borderRadius: 8,
+  border: "1px solid #ccc",
 }
 
 const overlayStyle: React.CSSProperties = {
@@ -488,57 +599,57 @@ const overlayStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "20px",
+  padding: 20,
 }
 
 const modalStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: "620px",
+  maxWidth: 620,
   maxHeight: "90vh",
   overflowY: "auto",
   background: "#ffffff",
   color: "#111111",
-  borderRadius: "18px",
-  padding: "24px",
+  borderRadius: 18,
+  padding: 24,
   boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "12px",
-  marginTop: "8px",
+  padding: 12,
+  marginTop: 8,
   border: "1px solid #ccc",
-  borderRadius: "8px",
+  borderRadius: 8,
 }
 
 const textareaStyle: React.CSSProperties = {
   ...inputStyle,
-  minHeight: "80px",
+  minHeight: 80,
 }
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  marginTop: "20px",
+  marginTop: 20,
 }
 
 const primaryButton: React.CSSProperties = {
-  marginTop: "24px",
+  marginTop: 24,
   width: "100%",
-  padding: "14px",
+  padding: 14,
   background: "black",
   color: "white",
   border: "none",
-  borderRadius: "10px",
+  borderRadius: 10,
   cursor: "pointer",
 }
 
 const secondaryButton: React.CSSProperties = {
-  marginTop: "12px",
+  marginTop: 12,
   width: "100%",
-  padding: "12px",
+  padding: 12,
   background: "#eeeeee",
   color: "black",
   border: "none",
-  borderRadius: "10px",
+  borderRadius: 10,
   cursor: "pointer",
 }
