@@ -21,9 +21,22 @@ export default function ResourcesPage() {
     setResources(data || [])
   }
 
-  useEffect(() => {
-    loadResources()
-  }, [])
+ useEffect(() => {
+  async function init() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      window.location.href = "/login"
+      return
+    }
+
+    await loadResources()
+  }
+
+  init()
+}, [])
 
   async function createResource() {
     if (!name) return alert("Escribe el nombre del recurso")

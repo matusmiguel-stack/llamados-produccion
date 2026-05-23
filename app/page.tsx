@@ -34,6 +34,8 @@ export default function Home() {
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
+  const [user, setUser] = useState<any>(null)
+const [profile, setProfile] = useState<any>(null)
 
   async function loadAll() {
     const { data: shoots } = await supabase.from("shoots").select("*").order("start_time")
@@ -58,10 +60,40 @@ export default function Home() {
       }))
     )
   }
+async function loadUser() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    loadAll()
-  }, [])
+  if (!user) return
+
+  setUser(user)
+
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single()
+
+  setProfile(profileData)
+}
+useEffect(() => {
+  async function init() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      window.location.href = "/login"
+      return
+    }
+
+    await loadAll()
+    await loadUser()
+  }
+
+  init()
+}, [])
 
   function resetForm() {
     setSelectedShoot(null)
@@ -82,11 +114,22 @@ export default function Home() {
     setSelectedResources([])
   }
 
-  function handleDateClick(info: any) {
-    resetForm()
-    setSelectedDate(info.dateStr)
-    setModalOpen(true)
-  }
+ function handleDateClick(info: any) {
+  resetForm()
+
+  const clickedDate = new Date(info.date)
+  const dateOnly = clickedDate.toISOString().slice(0, 10)
+  const timeOnly = clickedDate.toTimeString().slice(0, 5)
+
+  setSelectedDate(dateOnly)
+  setStartTime(timeOnly)
+
+  const endDate = new Date(clickedDate)
+  endDate.setHours(endDate.getHours() + 1)
+  setEndTime(endDate.toTimeString().slice(0, 5))
+
+  setModalOpen(true)
+}
 
   function handleEventClick(info: any) {
     const shoot = shootResources.find((a) => a.shoot_id === info.event.id)?.shoots
@@ -253,6 +296,28 @@ export default function Home() {
   return (
     <main style={{ padding: 20 }}>
       <h1>🎬 Sistema de Llamados</h1>
+      <div style={{ marginBottom: 20 }}>
+  <p>
+    👤 {profile?.email} — Rol: {profile?.role}
+  </p>
+
+  <button
+    onClick={async () => {
+      await supabase.auth.signOut()
+      window.location.href = "/login"
+    }}
+    style={{
+      padding: "10px 14px",
+      borderRadius: "8px",
+      border: "none",
+      background: "black",
+      color: "white",
+      cursor: "pointer",
+    }}
+  >
+    Cerrar sesión
+  </button>
+</div>
 <nav style={{ marginBottom: 20 }}>
   <Link href="/resources">📦 Inventario de recursos</Link>
 </nav>
