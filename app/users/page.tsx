@@ -26,10 +26,15 @@ export default function UsersPage() {
       return
     }
 
-    const { data: profiles } = await supabase
+    const { data: profiles, error } = await supabase
       .from("profiles")
       .select("*")
       .order("email")
+
+    if (error) {
+      alert(error.message)
+      return
+    }
 
     const myProfile = profiles?.find(
       (p) =>
@@ -85,12 +90,23 @@ export default function UsersPage() {
       return
     }
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      alert("Tu sesión expiró. Vuelve a entrar.")
+      window.location.href = "/login"
+      return
+    }
+
     const response = await fetch(
       "https://bvmipundltcvijiueoio.supabase.co/functions/v1/create-user",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           email: newEmail,
@@ -104,9 +120,9 @@ export default function UsersPage() {
     const result = await response.json()
 
     if (!response.ok) {
-  alert(JSON.stringify(result, null, 2))
-  return
-}
+      alert(JSON.stringify(result, null, 2))
+      return
+    }
 
     alert("Usuario creado")
 
@@ -183,9 +199,7 @@ export default function UsersPage() {
                       style={inputStyle}
                     />
 
-                    <p style={{ marginTop: 8 }}>
-                      {user.email}
-                    </p>
+                    <p style={{ marginTop: 8 }}>{user.email}</p>
                   </div>
 
                   <select
@@ -198,17 +212,11 @@ export default function UsersPage() {
                     <option value="admin">Admin</option>
                   </select>
 
-                  <button
-                    onClick={() => saveUser(user.id)}
-                    style={primaryButton}
-                  >
+                  <button onClick={() => saveUser(user.id)} style={primaryButton}>
                     Guardar
                   </button>
 
-                  <button
-                    onClick={cancelEdit}
-                    style={secondaryButton}
-                  >
+                  <button onClick={cancelEdit} style={secondaryButton}>
                     Cancelar
                   </button>
                 </>
@@ -216,9 +224,7 @@ export default function UsersPage() {
                 <>
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: 0 }}>
-                      <strong>
-                        {user.full_name || user.email}
-                      </strong>
+                      <strong>{user.full_name || user.email}</strong>
                     </p>
 
                     <p style={{ marginTop: 4 }}>
@@ -226,10 +232,7 @@ export default function UsersPage() {
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => startEdit(user)}
-                    style={primaryButton}
-                  >
+                  <button onClick={() => startEdit(user)} style={primaryButton}>
                     Editar
                   </button>
                 </>
