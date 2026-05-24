@@ -48,6 +48,21 @@ export default function Home() {
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
 
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+
+    return () => {
+      window.removeEventListener("resize", checkMobile)
+    }
+  }, [])
+
   async function loadUser() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -331,28 +346,76 @@ export default function Home() {
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside style={sidebarStyle}>
-        <h2>🎬 Llamados</h2>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        minHeight: "100vh",
+        background: "#f5f5f5",
+      }}
+    >
+      <aside
+        style={{
+          ...sidebarStyle,
+          width: isMobile ? "100%" : 230,
+          minHeight: isMobile ? "auto" : "100vh",
+          flexDirection: isMobile ? "row" : "column",
+          alignItems: isMobile ? "center" : "stretch",
+          overflowX: isMobile ? "auto" : "visible",
+          position: isMobile ? "sticky" : "static",
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <h2
+          style={{
+            margin: isMobile ? "0 8px 0 0" : "0 0 10px 0",
+            whiteSpace: "nowrap",
+            fontSize: isMobile ? 18 : 24,
+          }}
+        >
+          🎬 Llamados
+        </h2>
 
         <Link href="/" style={navLink}>Calendario</Link>
         <Link href="/resources" style={navLink}>Inventario</Link>
         {isAdmin && <Link href="/users" style={navLink}>Usuarios</Link>}
 
-        <div style={{ marginTop: 24, fontSize: 13, color: "#ddd" }}>
+        <div style={{ marginTop: isMobile ? 0 : 24, fontSize: 13, color: "#ddd", display: isMobile ? "none" : "block" }}>
           <p>{profile?.email}</p>
           <p>Rol: {profile?.role || "..."}</p>
         </div>
 
-        <button onClick={logout} style={logoutButton}>
+        <button
+          onClick={logout}
+          style={{
+            ...logoutButton,
+            marginTop: isMobile ? 0 : 24,
+            width: isMobile ? "auto" : "100%",
+            whiteSpace: "nowrap",
+          }}
+        >
           Cerrar sesión
         </button>
       </aside>
 
-      <main style={{ flex: 1, padding: 24 }}>
-        <h1>Calendario de producción</h1>
+      <main
+        style={{
+          flex: 1,
+          padding: isMobile ? 12 : 24,
+          minWidth: 0,
+        }}
+      >
+        <h1 style={{ fontSize: isMobile ? 24 : 34, marginTop: 0 }}>
+          Calendario de producción
+        </h1>
 
-        <section style={filtersStyle}>
+        <section
+          style={{
+            ...filtersStyle,
+            flexDirection: isMobile ? "column" : "row",
+          }}
+        >
           <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={filterInput}>
             <option value="">Todos los clientes</option>
             {clients.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -384,15 +447,26 @@ export default function Home() {
 </select>
         </section>
 
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay",
+        <div
+          style={{
+            background: "white",
+            borderRadius: 18,
+            padding: isMobile ? 6 : 16,
+            overflow: "hidden",
           }}
-          height="80vh"
+        >
+          <FullCalendar
+            key={isMobile ? "mobile-calendar" : "desktop-calendar"}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
+            headerToolbar={{
+              left: "prev,next today",
+              center: "title",
+              right: isMobile
+                ? "timeGridDay"
+                : "dayGridMonth,timeGridWeek,timeGridDay",
+            }}
+            height={isMobile ? "72vh" : "80vh"}
           events={events}
           selectable={canEdit}
           editable={canEdit}
@@ -402,11 +476,24 @@ export default function Home() {
           eventDrop={updateEventDate}
           eventResize={updateEventDate}
           eventDisplay="block"
+          slotMinTime="06:00:00"
+          slotMaxTime="23:00:00"
+          nowIndicator
         />
+        </div>
 
         {modalOpen && (
           <div style={overlayStyle}>
-            <div style={modalStyle}>
+            <div
+              style={{
+                ...modalStyle,
+                maxWidth: isMobile ? "100%" : 620,
+                height: isMobile ? "100%" : "auto",
+                maxHeight: isMobile ? "100dvh" : "90vh",
+                borderRadius: isMobile ? 0 : 18,
+                padding: isMobile ? 16 : 24,
+              }}
+            >
               <h2>{selectedShoot ? "Editar llamado" : "Nuevo llamado"}</h2>
 
               <input placeholder="Nombre del llamado" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
@@ -455,6 +542,8 @@ export default function Home() {
               <h3>Recursos humanos</h3>
               <Select
                 isMulti
+                menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                styles={selectStyles}
                 options={humanResources.map((resource) => ({
                   value: resource.id,
                   label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
@@ -475,6 +564,8 @@ export default function Home() {
               <h3>Recursos técnicos</h3>
               <Select
                 isMulti
+                menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                styles={selectStyles}
                 options={technicalResources.map((resource) => ({
                   value: resource.id,
                   label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
@@ -505,7 +596,16 @@ export default function Home() {
 
         {detailsOpen && selectedShoot && (
           <div style={overlayStyle}>
-            <div style={modalStyle}>
+            <div
+              style={{
+                ...modalStyle,
+                maxWidth: isMobile ? "100%" : 620,
+                height: isMobile ? "100%" : "auto",
+                maxHeight: isMobile ? "100dvh" : "90vh",
+                borderRadius: isMobile ? 0 : 18,
+                padding: isMobile ? 16 : 24,
+              }}
+            >
               <h2>{statusEmoji(selectedShoot.status)} {selectedShoot.title}</h2>
               <p><strong>Status:</strong> {selectedShoot.status || "tentative"}</p>
               <p><strong>Cliente:</strong> {selectedShoot.client || "-"}</p>
@@ -551,25 +651,24 @@ function statusEmoji(status: string) {
 }
 
 const sidebarStyle: React.CSSProperties = {
-  width: 230,
   background: "#111827",
   color: "white",
   padding: 20,
+  display: "flex",
+  gap: 12,
 }
 
 const navLink: React.CSSProperties = {
   display: "block",
   color: "white",
   textDecoration: "none",
-  marginTop: 14,
   padding: "10px 12px",
   borderRadius: 8,
   background: "rgba(255,255,255,0.08)",
+  whiteSpace: "nowrap",
 }
 
 const logoutButton: React.CSSProperties = {
-  marginTop: 24,
-  width: "100%",
   padding: 12,
   borderRadius: 8,
   border: "none",
@@ -586,9 +685,11 @@ const filtersStyle: React.CSSProperties = {
 }
 
 const filterInput: React.CSSProperties = {
-  padding: 10,
-  borderRadius: 8,
+  padding: 12,
+  borderRadius: 10,
   border: "1px solid #ccc",
+  width: "100%",
+  fontSize: 16,
 }
 
 const overlayStyle: React.CSSProperties = {
@@ -599,27 +700,24 @@ const overlayStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 20,
+  padding: 0,
 }
 
 const modalStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 620,
-  maxHeight: "90vh",
   overflowY: "auto",
   background: "#ffffff",
   color: "#111111",
-  borderRadius: 18,
-  padding: 24,
   boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: 12,
-  marginTop: 8,
+  padding: 14,
+  marginTop: 10,
   border: "1px solid #ccc",
-  borderRadius: 8,
+  borderRadius: 10,
+  fontSize: 16,
 }
 
 const textareaStyle: React.CSSProperties = {
@@ -641,6 +739,7 @@ const primaryButton: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   cursor: "pointer",
+  fontSize: 16,
 }
 
 const secondaryButton: React.CSSProperties = {
@@ -652,4 +751,18 @@ const secondaryButton: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   cursor: "pointer",
+  fontSize: 16,
+}
+
+const selectStyles = {
+  menuPortal: (base: any) => ({
+    ...base,
+    zIndex: 1000000,
+  }),
+  control: (base: any) => ({
+    ...base,
+    minHeight: 46,
+    marginTop: 8,
+    fontSize: 16,
+  }),
 }
