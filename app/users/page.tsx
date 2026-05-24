@@ -104,9 +104,9 @@ export default function UsersPage() {
     const result = await response.json()
 
     if (!response.ok) {
-      alert(result.error || "Error creando usuario")
-      return
-    }
+  alert(JSON.stringify(result, null, 2))
+  return
+}
 
     alert("Usuario creado")
 
