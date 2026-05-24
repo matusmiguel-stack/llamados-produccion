@@ -6,9 +6,15 @@ import { supabase } from "../../lib/supabase"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
+
   const [editingId, setEditingId] = useState("")
   const [editingName, setEditingName] = useState("")
   const [editingRole, setEditingRole] = useState("viewer")
+
+  const [newName, setNewName] = useState("")
+  const [newEmail, setNewEmail] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [newRole, setNewRole] = useState("viewer")
 
   async function loadPage() {
     const {
@@ -20,7 +26,10 @@ export default function UsersPage() {
       return
     }
 
-    const { data: profiles } = await supabase.from("profiles").select("*")
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("email")
 
     const myProfile = profiles?.find(
       (p) =>
@@ -42,7 +51,7 @@ export default function UsersPage() {
 
   function startEdit(user: any) {
     setEditingId(user.id)
-    setEditingName(user.full_name || user.email || "")
+    setEditingName(user.full_name || "")
     setEditingRole(user.role || "viewer")
   }
 
@@ -70,6 +79,45 @@ export default function UsersPage() {
     await loadPage()
   }
 
+  async function createUser() {
+    if (!newName || !newEmail || !newPassword) {
+      alert("Completa todos los campos")
+      return
+    }
+
+    const response = await fetch(
+      "https://bvmipundltcvijiueoio.supabase.co/functions/v1/create-user",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: newEmail,
+          password: newPassword,
+          full_name: newName,
+          role: newRole,
+        }),
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      alert(result.error || "Error creando usuario")
+      return
+    }
+
+    alert("Usuario creado")
+
+    setNewName("")
+    setNewEmail("")
+    setNewPassword("")
+    setNewRole("viewer")
+
+    await loadPage()
+  }
+
   return (
     <main style={{ padding: 20 }}>
       <nav style={{ marginBottom: 20 }}>
@@ -79,6 +127,48 @@ export default function UsersPage() {
       <h1>👥 Usuarios</h1>
 
       <section style={cardStyle}>
+        <h2>Crear usuario</h2>
+
+        <input
+          placeholder="Nombre"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          style={inputStyle}
+        />
+
+        <input
+          type="password"
+          placeholder="Password temporal"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          style={inputStyle}
+        />
+
+        <select
+          value={newRole}
+          onChange={(e) => setNewRole(e.target.value)}
+          style={inputStyle}
+        >
+          <option value="viewer">Viewer</option>
+          <option value="editor">Editor</option>
+          <option value="admin">Admin</option>
+        </select>
+
+        <button onClick={createUser} style={primaryButton}>
+          Crear usuario
+        </button>
+      </section>
+
+      <section style={cardStyle}>
+        <h2>Usuarios existentes</h2>
+
         {users.map((user) => {
           const isEditing = editingId === user.id
 
@@ -90,11 +180,10 @@ export default function UsersPage() {
                     <input
                       value={editingName}
                       onChange={(e) => setEditingName(e.target.value)}
-                      placeholder="Nombre"
                       style={inputStyle}
                     />
 
-                    <p style={{ margin: "8px 0 0 0", color: "#666" }}>
+                    <p style={{ marginTop: 8 }}>
                       {user.email}
                     </p>
                   </div>
@@ -102,18 +191,24 @@ export default function UsersPage() {
                   <select
                     value={editingRole}
                     onChange={(e) => setEditingRole(e.target.value)}
-                    style={selectStyle}
+                    style={inputStyle}
                   >
                     <option value="viewer">Viewer</option>
                     <option value="editor">Editor</option>
                     <option value="admin">Admin</option>
                   </select>
 
-                  <button onClick={() => saveUser(user.id)} style={primaryButton}>
+                  <button
+                    onClick={() => saveUser(user.id)}
+                    style={primaryButton}
+                  >
                     Guardar
                   </button>
 
-                  <button onClick={cancelEdit} style={secondaryButton}>
+                  <button
+                    onClick={cancelEdit}
+                    style={secondaryButton}
+                  >
                     Cancelar
                   </button>
                 </>
@@ -121,15 +216,20 @@ export default function UsersPage() {
                 <>
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: 0 }}>
-                      <strong>{user.full_name || user.email}</strong>
+                      <strong>
+                        {user.full_name || user.email}
+                      </strong>
                     </p>
 
-                    <p style={{ margin: "4px 0 0 0", color: "#666" }}>
-                      {user.email} — Rol: {user.role}
+                    <p style={{ marginTop: 4 }}>
+                      {user.email} — {user.role}
                     </p>
                   </div>
 
-                  <button onClick={() => startEdit(user)} style={primaryButton}>
+                  <button
+                    onClick={() => startEdit(user)}
+                    style={primaryButton}
+                  >
                     Editar
                   </button>
                 </>
@@ -144,30 +244,25 @@ export default function UsersPage() {
 
 const cardStyle: React.CSSProperties = {
   background: "white",
-  borderRadius: 16,
   padding: 20,
+  borderRadius: 16,
   marginTop: 20,
 }
 
 const rowStyle: React.CSSProperties = {
   display: "flex",
-  alignItems: "center",
   gap: 12,
+  alignItems: "center",
   padding: "14px 0",
   borderBottom: "1px solid #eee",
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: 10,
+  padding: 12,
   borderRadius: 8,
   border: "1px solid #ccc",
-}
-
-const selectStyle: React.CSSProperties = {
-  padding: 10,
-  borderRadius: 8,
-  border: "1px solid #ccc",
+  marginTop: 10,
 }
 
 const primaryButton: React.CSSProperties = {
@@ -177,6 +272,7 @@ const primaryButton: React.CSSProperties = {
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
+  marginTop: 10,
 }
 
 const secondaryButton: React.CSSProperties = {
@@ -186,4 +282,5 @@ const secondaryButton: React.CSSProperties = {
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
+  marginTop: 10,
 }
