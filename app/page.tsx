@@ -462,9 +462,7 @@ export default function Home() {
             headerToolbar={{
               left: "prev,next today",
               center: "title",
-              right: isMobile
-                ? "timeGridDay"
-                : "dayGridMonth,timeGridWeek,timeGridDay",
+              right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             height={isMobile ? "72vh" : "80vh"}
           events={events}
