@@ -44,6 +44,7 @@ export default function Home() {
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
@@ -355,18 +356,34 @@ export default function Home() {
       }}
     >
       <aside
-        style={{
-          ...sidebarStyle,
-          width: isMobile ? "100%" : 230,
-          minHeight: isMobile ? "auto" : "100vh",
-          flexDirection: isMobile ? "row" : "column",
-          alignItems: isMobile ? "center" : "stretch",
-          overflowX: isMobile ? "auto" : "visible",
-          position: isMobile ? "sticky" : "static",
-          top: 0,
-          zIndex: 50,
-        }}
-      >
+  style={{
+    ...sidebarStyle,
+
+    width: isMobile ? 260 : 230,
+
+    minHeight: isMobile ? "100vh" : "100vh",
+
+    flexDirection: "column",
+
+    alignItems: "stretch",
+
+    overflowX: "visible",
+
+    position: isMobile ? "fixed" : "relative",
+
+    left:
+      isMobile && !menuOpen
+        ? "-100%"
+        : 0,
+
+    top: 0,
+
+    zIndex: 9999,
+
+    transition: "0.25s",
+  }}
+>
+      
         <h2
           style={{
             margin: isMobile ? "0 8px 0 0" : "0 0 10px 0",
@@ -398,14 +415,32 @@ export default function Home() {
           Cerrar sesión
         </button>
       </aside>
-
-      <main
-        style={{
-          flex: 1,
-          padding: isMobile ? 12 : 24,
-          minWidth: 0,
-        }}
-      >
+{isMobile && (
+  <button
+    onClick={() => setMenuOpen(!menuOpen)}
+    style={{
+      position: "fixed",
+      top: 14,
+      left: 14,
+      zIndex: 10000,
+      border: "none",
+      borderRadius: 10,
+      padding: "10px 14px",
+      background: "#111827",
+      color: "white",
+      fontSize: 20,
+      cursor: "pointer",
+    }}
+  >
+    ☰
+  </button>
+)}
+     <main
+  style={{
+    flex: 1,
+    padding: isMobile ? "70px 12px 12px" : 24,
+  }}
+>
         <h1 style={{ fontSize: isMobile ? 24 : 34, marginTop: 0 }}>
           Calendario de producción
         </h1>
