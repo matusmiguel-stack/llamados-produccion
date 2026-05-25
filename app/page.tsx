@@ -394,9 +394,21 @@ export default function Home() {
           🎬 Llamados
         </h2>
 
-        <Link href="/" style={navLink}>Calendario</Link>
-        <Link href="/resources" style={navLink}>Inventario</Link>
-        {isAdmin && <Link href="/users" style={navLink}>Usuarios</Link>}
+        <Link
+  href="/"
+  style={navLink}
+  onClick={() => isMobile && setMenuOpen(false)}
+>Calendario</Link>
+        <Link
+  href="/"
+  style={navLink}
+  onClick={() => isMobile && setMenuOpen(false)}
+>Inventario</Link>
+        {isAdmin && <Link
+  href="/"
+  style={navLink}
+  onClick={() => isMobile && setMenuOpen(false)}
+>Usuarios</Link>}
 
         <div style={{ marginTop: isMobile ? 0 : 24, fontSize: 13, color: "#ddd", display: isMobile ? "none" : "block" }}>
           <p>{profile?.email}</p>
