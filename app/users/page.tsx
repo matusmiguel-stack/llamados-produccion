@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { supabase } from "../../lib/supabase"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
+  const [profile, setProfile] = useState<any>(null)
 
   const [editingId, setEditingId] = useState("")
   const [editingName, setEditingName] = useState("")
@@ -15,6 +17,14 @@ export default function UsersPage() {
   const [newEmail, setNewEmail] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [newRole, setNewRole] = useState("viewer")
+
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const isMobile =
+    typeof window !== "undefined" &&
+    window.innerWidth < 768
+
+  const isAdmin = profile?.role === "admin"
 
   async function loadPage() {
     const {
@@ -26,15 +36,10 @@ export default function UsersPage() {
       return
     }
 
-    const { data: profiles, error } = await supabase
+    const { data: profiles } = await supabase
       .from("profiles")
       .select("*")
       .order("email")
-
-    if (error) {
-      alert(error.message)
-      return
-    }
 
     const myProfile = profiles?.find(
       (p) =>
@@ -47,6 +52,7 @@ export default function UsersPage() {
       return
     }
 
+    setProfile(myProfile)
     setUsers(profiles || [])
   }
 
@@ -95,8 +101,7 @@ export default function UsersPage() {
     } = await supabase.auth.getSession()
 
     if (!session) {
-      alert("Tu sesión expiró. Vuelve a entrar.")
-      window.location.href = "/login"
+      alert("Tu sesión expiró")
       return
     }
 
@@ -134,156 +139,492 @@ export default function UsersPage() {
     await loadPage()
   }
 
+  async function logout() {
+    await supabase.auth.signOut()
+    window.location.href = "/login"
+  }
+
   return (
-    <main style={{ padding: 20 }}>
-      <nav style={{ marginBottom: 20 }}>
-        <Link href="/">← Volver al calendario</Link>
-      </nav>
-
-      <h1>👥 Usuarios</h1>
-
-      <section style={cardStyle}>
-        <h2>Crear usuario</h2>
-
-        <input
-          placeholder="Nombre"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          style={inputStyle}
-        />
-
-        <input
-          placeholder="Email"
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          style={inputStyle}
-        />
-
-        <input
-          type="password"
-          placeholder="Password temporal"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          style={inputStyle}
-        />
-
-        <select
-          value={newRole}
-          onChange={(e) => setNewRole(e.target.value)}
-          style={inputStyle}
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      {isMobile && (
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={hamburgerButton}
         >
-          <option value="viewer">Viewer</option>
-          <option value="editor">Editor</option>
-          <option value="admin">Admin</option>
-        </select>
-
-        <button onClick={createUser} style={primaryButton}>
-          Crear usuario
+          ☰
         </button>
-      </section>
+      )}
 
-      <section style={cardStyle}>
-        <h2>Usuarios existentes</h2>
+      <aside
+        style={{
+          ...sidebarStyle,
 
-        {users.map((user) => {
-          const isEditing = editingId === user.id
+          position: isMobile ? "fixed" : "relative",
 
-          return (
-            <div key={user.id} style={rowStyle}>
-              {isEditing ? (
-                <>
-                  <div style={{ flex: 1 }}>
-                    <input
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
+          left:
+            isMobile && !menuOpen
+              ? "-100%"
+              : 0,
+
+          width: isMobile ? 260 : 240,
+
+          zIndex: 9999,
+
+          transition: "0.25s",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: 24,
+            textAlign: "center",
+          }}
+        >
+          <Image
+            src="/logo-retro.png"
+            alt="Retro"
+            width={160}
+            height={70}
+            style={{
+              objectFit: "contain",
+            }}
+          />
+        </div>
+
+        <Link
+          href="/"
+          style={navLink}
+          onClick={() =>
+            isMobile && setMenuOpen(false)
+          }
+        >
+          Calendario
+        </Link>
+
+        <Link
+          href="/resources"
+          style={navLink}
+          onClick={() =>
+            isMobile && setMenuOpen(false)
+          }
+        >
+          Inventario
+        </Link>
+
+        <Link
+          href="/users"
+          style={activeNavLink}
+          onClick={() =>
+            isMobile && setMenuOpen(false)
+          }
+        >
+          Usuarios
+        </Link>
+
+        <div
+          style={{
+            marginTop: 24,
+            fontSize: 13,
+            color: "#94a3b8",
+          }}
+        >
+          <p>{profile?.email}</p>
+          <p>Rol: {profile?.role}</p>
+        </div>
+
+        <button
+          onClick={logout}
+          style={logoutButton}
+        >
+          Cerrar sesión
+        </button>
+      </aside>
+
+      <main
+        style={{
+          flex: 1,
+          padding: isMobile
+            ? "76px 14px 24px"
+            : 32,
+        }}
+      >
+        <p style={eyebrow}>Admin</p>
+
+        <h1 style={titleStyle}>
+          Gestión de usuarios
+        </h1>
+
+        <section style={cardStyle}>
+          <h2>Crear usuario</h2>
+
+          <input
+            placeholder="Nombre"
+            value={newName}
+            onChange={(e) =>
+              setNewName(e.target.value)
+            }
+            style={inputStyle}
+          />
+
+          <input
+            placeholder="Email"
+            value={newEmail}
+            onChange={(e) =>
+              setNewEmail(e.target.value)
+            }
+            style={inputStyle}
+          />
+
+          <input
+            type="password"
+            placeholder="Password temporal"
+            value={newPassword}
+            onChange={(e) =>
+              setNewPassword(e.target.value)
+            }
+            style={inputStyle}
+          />
+
+          <select
+            value={newRole}
+            onChange={(e) =>
+              setNewRole(e.target.value)
+            }
+            style={inputStyle}
+          >
+            <option value="viewer">
+              Viewer
+            </option>
+
+            <option value="editor">
+              Editor
+            </option>
+
+            <option value="admin">
+              Admin
+            </option>
+          </select>
+
+          <button
+            onClick={createUser}
+            style={primaryButton}
+          >
+            Crear usuario
+          </button>
+        </section>
+
+        <section style={cardStyle}>
+          <h2>Usuarios existentes</h2>
+
+          {users.map((user) => {
+            const isEditing =
+              editingId === user.id
+
+            return (
+              <div
+                key={user.id}
+                style={rowStyle}
+              >
+                {isEditing ? (
+                  <>
+                    <div style={{ flex: 1 }}>
+                      <input
+                        value={editingName}
+                        onChange={(e) =>
+                          setEditingName(
+                            e.target.value
+                          )
+                        }
+                        style={inputStyle}
+                      />
+
+                      <p
+                        style={{
+                          marginTop: 8,
+                          color: "#94a3b8",
+                        }}
+                      >
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <select
+                      value={editingRole}
+                      onChange={(e) =>
+                        setEditingRole(
+                          e.target.value
+                        )
+                      }
                       style={inputStyle}
-                    />
+                    >
+                      <option value="viewer">
+                        Viewer
+                      </option>
 
-                    <p style={{ marginTop: 8 }}>{user.email}</p>
-                  </div>
+                      <option value="editor">
+                        Editor
+                      </option>
 
-                  <select
-                    value={editingRole}
-                    onChange={(e) => setEditingRole(e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="viewer">Viewer</option>
-                    <option value="editor">Editor</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                      <option value="admin">
+                        Admin
+                      </option>
+                    </select>
 
-                  <button onClick={() => saveUser(user.id)} style={primaryButton}>
-                    Guardar
-                  </button>
+                    <button
+                      onClick={() =>
+                        saveUser(user.id)
+                      }
+                      style={primaryButton}
+                    >
+                      Guardar
+                    </button>
 
-                  <button onClick={cancelEdit} style={secondaryButton}>
-                    Cancelar
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0 }}>
-                      <strong>{user.full_name || user.email}</strong>
-                    </p>
+                    <button
+                      onClick={cancelEdit}
+                      style={secondaryButton}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ flex: 1 }}>
+                      <p
+                        style={{
+                          margin: 0,
+                        }}
+                      >
+                        <strong>
+                          {user.full_name ||
+                            user.email}
+                        </strong>
+                      </p>
 
-                    <p style={{ marginTop: 4 }}>
-                      {user.email} — {user.role}
-                    </p>
-                  </div>
+                      <p
+                        style={{
+                          marginTop: 4,
+                          color: "#94a3b8",
+                        }}
+                      >
+                        {user.email} —{" "}
+                        {user.role}
+                      </p>
+                    </div>
 
-                  <button onClick={() => startEdit(user)} style={primaryButton}>
-                    Editar
-                  </button>
-                </>
-              )}
-            </div>
-          )
-        })}
-      </section>
-    </main>
+                    <button
+                      onClick={() =>
+                        startEdit(user)
+                      }
+                      style={primaryButton}
+                    >
+                      Editar
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </section>
+      </main>
+    </div>
   )
 }
 
-const cardStyle: React.CSSProperties = {
-  background: "white",
-  padding: 20,
-  borderRadius: 16,
-  marginTop: 20,
+const sidebarStyle: React.CSSProperties = {
+  minHeight: "100vh",
+
+  background:
+    "rgba(15, 23, 42, 0.9)",
+
+  borderRight:
+    "1px solid rgba(148,163,184,0.16)",
+
+  padding: 22,
+
+  color: "white",
+
+  backdropFilter: "blur(18px)",
 }
 
-const rowStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 12,
-  alignItems: "center",
-  padding: "14px 0",
-  borderBottom: "1px solid #eee",
+const navLink: React.CSSProperties = {
+  display: "block",
+
+  color: "#cbd5e1",
+
+  textDecoration: "none",
+
+  marginTop: 12,
+
+  padding: "12px 14px",
+
+  borderRadius: 12,
+
+  background:
+    "rgba(255,255,255,0.05)",
+}
+
+const activeNavLink: React.CSSProperties = {
+  ...navLink,
+
+  color: "white",
+
+  background:
+    "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(14,165,233,0.55))",
+}
+
+const logoutButton: React.CSSProperties = {
+  marginTop: 24,
+
+  width: "100%",
+
+  padding: 12,
+
+  borderRadius: 12,
+
+  border:
+    "1px solid rgba(255,255,255,0.14)",
+
+  cursor: "pointer",
+
+  color: "white",
+
+  background:
+    "rgba(255,255,255,0.08)",
+}
+
+const hamburgerButton: React.CSSProperties = {
+  position: "fixed",
+
+  top: 14,
+
+  left: 14,
+
+  zIndex: 10000,
+
+  border: "none",
+
+  borderRadius: 12,
+
+  padding: "10px 14px",
+
+  background: "#111827",
+
+  color: "white",
+
+  fontSize: 20,
+
+  cursor: "pointer",
+}
+
+const eyebrow: React.CSSProperties = {
+  color: "#a78bfa",
+
+  textTransform: "uppercase",
+
+  letterSpacing: 1.5,
+
+  fontWeight: 700,
+
+  fontSize: 13,
+}
+
+const titleStyle: React.CSSProperties = {
+  color: "#f8fafc",
+
+  fontSize: 36,
+
+  marginTop: 8,
+}
+
+const cardStyle: React.CSSProperties = {
+  background:
+    "rgba(15, 23, 42, 0.82)",
+
+  border:
+    "1px solid rgba(148,163,184,0.18)",
+
+  boxShadow:
+    "0 24px 70px rgba(0,0,0,0.35)",
+
+  backdropFilter: "blur(16px)",
+
+  color: "#f8fafc",
+
+  padding: 22,
+
+  borderRadius: 20,
+
+  marginTop: 20,
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: 12,
-  borderRadius: 8,
-  border: "1px solid #ccc",
-  marginTop: 10,
+
+  padding: 14,
+
+  marginTop: 12,
+
+  border:
+    "1px solid rgba(148,163,184,0.28)",
+
+  borderRadius: 12,
+
+  background:
+    "rgba(2,6,23,0.7)",
+
+  color: "#f8fafc",
+
+  outline: "none",
+}
+
+const rowStyle: React.CSSProperties = {
+  display: "flex",
+
+  flexDirection: "column",
+
+  gap: 12,
+
+  padding: "18px 0",
+
+  borderBottom:
+    "1px solid rgba(148,163,184,0.14)",
 }
 
 const primaryButton: React.CSSProperties = {
-  padding: "10px 14px",
-  background: "black",
+  marginTop: 16,
+
+  width: "100%",
+
+  padding: 14,
+
+  background:
+    "linear-gradient(135deg, #7c3aed, #0ea5e9)",
+
   color: "white",
+
   border: "none",
-  borderRadius: 8,
+
+  borderRadius: 12,
+
   cursor: "pointer",
-  marginTop: 10,
+
+  fontWeight: 700,
 }
 
 const secondaryButton: React.CSSProperties = {
-  padding: "10px 14px",
-  background: "#eeeeee",
-  color: "black",
-  border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
   marginTop: 10,
+
+  width: "100%",
+
+  padding: 12,
+
+  background:
+    "rgba(255,255,255,0.08)",
+
+  color: "white",
+
+  border: "none",
+
+  borderRadius: 12,
+
+  cursor: "pointer",
 }

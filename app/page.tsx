@@ -8,6 +8,7 @@ import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
+import Image from "next/image"
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
@@ -452,10 +453,26 @@ export default function Home() {
       >
         <div>
           <div style={brandBlockStyle}>
-            <div style={brandIconStyle}>🎬</div>
+          
             <div>
-              <h2 style={brandTitleStyle}>Llamados</h2>
-              <p style={brandSubtitleStyle}>Producción audiovisual</p>
+             <div
+  style={{
+    marginBottom: 20,
+    display: "flex",
+    justifyContent: "center",
+  }}
+>
+  <Image
+    src="/logo-retro.png"
+    alt="Retro"
+    width={160}
+    height={60}
+    style={{
+      objectFit: "contain",
+    }}
+  />
+</div>
+              
             </div>
           </div>
 
