@@ -10,6 +10,9 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 
 export default function Home() {
+  const [isMobile, setIsMobile] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
   const [resources, setResources] = useState<any[]>([])
@@ -39,17 +42,14 @@ export default function Home() {
   const [privateNotes, setPrivateNotes] = useState("")
   const [productionNotes, setProductionNotes] = useState("")
   const [status, setStatus] = useState("tentative")
-  const [color, setColor] = useState("#111827")
+  const [color, setColor] = useState("#7c3aed")
   const [allDay, setAllDay] = useState(false)
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
-  const [menuOpen, setMenuOpen] = useState(false)
 
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
-
-  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     function checkMobile() {
@@ -58,14 +58,14 @@ export default function Home() {
 
     checkMobile()
     window.addEventListener("resize", checkMobile)
-
-    return () => {
-      window.removeEventListener("resize", checkMobile)
-    }
+    return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
   async function loadUser() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
     if (!user) return
     setUser(user)
 
@@ -73,12 +73,21 @@ export default function Home() {
     const myProfile = profiles?.find(
       (p) => p.email?.trim().toLowerCase() === user.email?.trim().toLowerCase()
     )
+
     setProfile(myProfile)
   }
 
   async function loadAll() {
-    const { data: shoots } = await supabase.from("shoots").select("*").order("start_time")
-    const { data: res } = await supabase.from("resources").select("*").order("type")
+    const { data: shoots } = await supabase
+      .from("shoots")
+      .select("*")
+      .order("start_time")
+
+    const { data: res } = await supabase
+      .from("resources")
+      .select("*")
+      .order("type")
+
     const { data: assignments } = await supabase
       .from("shoot_resources")
       .select("*, shoots(*), resources(*)")
@@ -90,33 +99,38 @@ export default function Home() {
 
   useEffect(() => {
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
       if (!session) {
         window.location.href = "/login"
         return
       }
+
       await loadAll()
       await loadUser()
     }
+
     init()
   }, [])
 
   useEffect(() => {
     const filtered = allShoots.filter((shoot) => {
-  const clientOk = !filterClient || shoot.client === filterClient
-  const projectOk = !filterProject || shoot.project === filterProject
-  const statusOk = !filterStatus || shoot.status === filterStatus
+      const clientOk = !filterClient || shoot.client === filterClient
+      const projectOk = !filterProject || shoot.project === filterProject
+      const statusOk = !filterStatus || shoot.status === filterStatus
 
-  const humanResourceOk =
-    !filterHumanResource ||
-    shootResources.some(
-      (assignment) =>
-        assignment.shoot_id === shoot.id &&
-        assignment.resource_id === filterHumanResource
-    )
+      const humanResourceOk =
+        !filterHumanResource ||
+        shootResources.some(
+          (assignment) =>
+            assignment.shoot_id === shoot.id &&
+            assignment.resource_id === filterHumanResource
+        )
 
-  return clientOk && projectOk && statusOk && humanResourceOk
-})
+      return clientOk && projectOk && statusOk && humanResourceOk
+    })
 
     setEvents(
       filtered.map((shoot) => ({
@@ -125,12 +139,19 @@ export default function Home() {
         start: shoot.start_time,
         end: shoot.end_time,
         allDay: shoot.all_day,
-        backgroundColor: shoot.color || "#111827",
-        borderColor: shoot.color || "#111827",
+        backgroundColor: shoot.color || "#7c3aed",
+        borderColor: shoot.color || "#7c3aed",
         textColor: "#ffffff",
       }))
     )
-  }, [allShoots, shootResources, filterClient, filterProject, filterStatus, filterHumanResource])
+  }, [
+    allShoots,
+    shootResources,
+    filterClient,
+    filterProject,
+    filterStatus,
+    filterHumanResource,
+  ])
 
   function resetForm() {
     setSelectedShoot(null)
@@ -146,7 +167,7 @@ export default function Home() {
     setPrivateNotes("")
     setProductionNotes("")
     setStatus("tentative")
-    setColor("#111827")
+    setColor("#7c3aed")
     setAllDay(false)
     setStartTime("09:00")
     setEndTime("18:00")
@@ -199,7 +220,7 @@ export default function Home() {
     setPrivateNotes(selectedShoot.private_notes || "")
     setProductionNotes(selectedShoot.production_notes || "")
     setStatus(selectedShoot.status || "tentative")
-    setColor(selectedShoot.color || "#111827")
+    setColor(selectedShoot.color || "#7c3aed")
     setAllDay(selectedShoot.all_day || false)
     setSelectedDate(start.toISOString().slice(0, 10))
     setStartTime(start.toTimeString().slice(0, 5))
@@ -270,11 +291,24 @@ export default function Home() {
     let shootId = selectedShoot?.id
 
     if (selectedShoot) {
-      const { error } = await supabase.from("shoots").update(payload).eq("id", selectedShoot.id)
+      const { error } = await supabase
+        .from("shoots")
+        .update(payload)
+        .eq("id", selectedShoot.id)
+
       if (error) return alert(error.message)
-      await supabase.from("shoot_resources").delete().eq("shoot_id", selectedShoot.id)
+
+      await supabase
+        .from("shoot_resources")
+        .delete()
+        .eq("shoot_id", selectedShoot.id)
     } else {
-      const { data, error } = await supabase.from("shoots").insert(payload).select().single()
+      const { data, error } = await supabase
+        .from("shoots")
+        .insert(payload)
+        .select()
+        .single()
+
       if (error) return alert(error.message)
       shootId = data.id
     }
@@ -296,7 +330,11 @@ export default function Home() {
     if (!selectedShoot) return
     if (!confirm("¿Seguro que quieres borrar este llamado?")) return
 
-    const { error } = await supabase.from("shoots").delete().eq("id", selectedShoot.id)
+    const { error } = await supabase
+      .from("shoots")
+      .delete()
+      .eq("id", selectedShoot.id)
+
     if (error) return alert(error.message)
 
     setDetailsOpen(false)
@@ -346,152 +384,194 @@ export default function Home() {
     [allShoots]
   )
 
+  const selectThemeStyles = {
+    control: (base: any) => ({
+      ...base,
+      backgroundColor: "rgba(15, 23, 42, 0.92)",
+      borderColor: "rgba(148, 163, 184, 0.28)",
+      borderRadius: 12,
+      minHeight: 46,
+      boxShadow: "none",
+    }),
+    menu: (base: any) => ({
+      ...base,
+      backgroundColor: "#0f172a",
+      border: "1px solid rgba(148, 163, 184, 0.22)",
+      overflow: "hidden",
+      zIndex: 1000000,
+    }),
+    option: (base: any, state: any) => ({
+      ...base,
+      backgroundColor: state.isFocused ? "rgba(124, 58, 237, 0.35)" : "#0f172a",
+      color: state.isDisabled ? "#64748b" : "#f8fafc",
+      cursor: state.isDisabled ? "not-allowed" : "pointer",
+    }),
+    multiValue: (base: any) => ({
+      ...base,
+      backgroundColor: "rgba(124, 58, 237, 0.28)",
+      borderRadius: 999,
+    }),
+    multiValueLabel: (base: any) => ({ ...base, color: "#f8fafc" }),
+    multiValueRemove: (base: any) => ({ ...base, color: "#f8fafc" }),
+    input: (base: any) => ({ ...base, color: "#f8fafc" }),
+    placeholder: (base: any) => ({ ...base, color: "#94a3b8" }),
+    singleValue: (base: any) => ({ ...base, color: "#f8fafc" }),
+  }
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        minHeight: "100vh",
-        background: "#f5f5f5",
-      }}
-    >
-      <aside
-  style={{
-    ...sidebarStyle,
-
-    width: isMobile ? 260 : 230,
-
-    minHeight: isMobile ? "100vh" : "100vh",
-
-    flexDirection: "column",
-
-    alignItems: "stretch",
-
-    overflowX: "visible",
-
-    position: isMobile ? "fixed" : "relative",
-
-    left:
-      isMobile && !menuOpen
-        ? "-100%"
-        : 0,
-
-    top: 0,
-
-    zIndex: 9999,
-
-    transition: "0.25s",
-  }}
->
-      
-        <h2
-          style={{
-            margin: isMobile ? "0 8px 0 0" : "0 0 10px 0",
-            whiteSpace: "nowrap",
-            fontSize: isMobile ? 18 : 24,
-          }}
+    <div style={appShellStyle}>
+      {isMobile && (
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={hamburgerButtonStyle}
+          aria-label="Abrir menú"
         >
-          🎬 Llamados
-        </h2>
+          ☰
+        </button>
+      )}
 
-        <Link href="/" style={navLink}>Calendario</Link>
-        <Link href="/resources" style={navLink}>Inventario</Link>
-        {isAdmin && <Link href="/users" style={navLink}>Usuarios</Link>}
+      {isMobile && menuOpen && (
+        <button
+          onClick={() => setMenuOpen(false)}
+          style={mobileBackdropStyle}
+          aria-label="Cerrar menú"
+        />
+      )}
 
-        <div style={{ marginTop: isMobile ? 0 : 24, fontSize: 13, color: "#ddd", display: isMobile ? "none" : "block" }}>
-          <p>{profile?.email}</p>
-          <p>Rol: {profile?.role || "..."}</p>
+      <aside
+        style={{
+          ...sidebarStyle,
+          position: isMobile ? "fixed" : "sticky",
+          left: isMobile && !menuOpen ? "-100%" : 0,
+          top: 0,
+          height: "100vh",
+          zIndex: 9999,
+          transition: "left 0.25s ease",
+          width: isMobile ? 280 : 250,
+        }}
+      >
+        <div>
+          <div style={brandBlockStyle}>
+            <div style={brandIconStyle}>🎬</div>
+            <div>
+              <h2 style={brandTitleStyle}>Llamados</h2>
+              <p style={brandSubtitleStyle}>Producción audiovisual</p>
+            </div>
+          </div>
+
+          <nav style={navStyle}>
+            <Link
+              href="/"
+              style={navLink}
+              onClick={() => isMobile && setMenuOpen(false)}
+            >
+              📅 Calendario
+            </Link>
+
+            <Link
+              href="/resources"
+              style={navLink}
+              onClick={() => isMobile && setMenuOpen(false)}
+            >
+              📦 Inventario
+            </Link>
+
+            {isAdmin && (
+              <Link
+                href="/users"
+                style={navLink}
+                onClick={() => isMobile && setMenuOpen(false)}
+              >
+                👥 Usuarios
+              </Link>
+            )}
+          </nav>
         </div>
 
-        <button
-          onClick={logout}
-          style={{
-            ...logoutButton,
-            marginTop: isMobile ? 0 : 24,
-            width: isMobile ? "auto" : "100%",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Cerrar sesión
-        </button>
+        <div style={profileCardStyle}>
+          <p style={profileLabelStyle}>Sesión</p>
+          <p style={profileEmailStyle}>{profile?.email || user?.email || "..."}</p>
+          <span style={roleBadgeStyle}>{profile?.role || "cargando"}</span>
+          <button onClick={logout} style={logoutButton}>
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
-{isMobile && (
-  <button
-    onClick={() => setMenuOpen(!menuOpen)}
-    style={{
-      position: "fixed",
-      top: 14,
-      left: 14,
-      zIndex: 10000,
-      border: "none",
-      borderRadius: 10,
-      padding: "10px 14px",
-      background: "#111827",
-      color: "white",
-      fontSize: 20,
-      cursor: "pointer",
-    }}
-  >
-    ☰
-  </button>
-)}
-     <main
-  style={{
-    flex: 1,
-    padding: isMobile ? "70px 12px 12px" : 24,
-  }}
->
-        <h1 style={{ fontSize: isMobile ? 24 : 34, marginTop: 0 }}>
-          Calendario de producción
-        </h1>
 
-        <section
-          style={{
-            ...filtersStyle,
-            flexDirection: isMobile ? "column" : "row",
-          }}
-        >
-          <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={filterInput}>
+      <main style={{ ...mainStyle, padding: isMobile ? "76px 12px 18px" : 28 }}>
+        <section style={heroStyle}>
+          <div>
+            <p style={eyebrowStyle}>Sistema de producción</p>
+            <h1 style={{ ...pageTitleStyle, fontSize: isMobile ? 30 : 44 }}>
+              Calendario de llamados
+            </h1>
+            <p style={pageSubtitleStyle}>
+              Planea filmaciones, bloquea recursos y coordina crew en tiempo real.
+            </p>
+          </div>
+
+          <div style={statsGridStyle}>
+            <StatCard label="Llamados" value={String(allShoots.length)} />
+            <StatCard label="Recursos" value={String(resources.length)} />
+            <StatCard label="Rol" value={profile?.role || "..."} />
+          </div>
+        </section>
+
+        <section style={{ ...filtersStyle, flexDirection: isMobile ? "column" : "row" }}>
+          <select
+            value={filterClient}
+            onChange={(e) => setFilterClient(e.target.value)}
+            style={filterInput}
+          >
             <option value="">Todos los clientes</option>
-            {clients.map((c) => <option key={c} value={c}>{c}</option>)}
+            {clients.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
 
-          <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} style={filterInput}>
+          <select
+            value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value)}
+            style={filterInput}
+          >
             <option value="">Todos los proyectos</option>
-            {projects.map((p) => <option key={p} value={p}>{p}</option>)}
+            {projects.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </select>
 
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={filterInput}>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={filterInput}
+          >
             <option value="">Todos los status</option>
             <option value="tentative">Tentative</option>
             <option value="confirmed">Confirmado</option>
             <option value="cancelled">Cancelado</option>
             <option value="wrap">Wrap</option>
           </select>
+
           <select
-  value={filterHumanResource}
-  onChange={(e) => setFilterHumanResource(e.target.value)}
-  style={filterInput}
->
-  <option value="">Todos los recursos humanos</option>
-  {humanResources.map((resource) => (
-    <option key={resource.id} value={resource.id}>
-      {resource.name} — {resource.category}
-    </option>
-  ))}
-</select>
+            value={filterHumanResource}
+            onChange={(e) => setFilterHumanResource(e.target.value)}
+            style={filterInput}
+          >
+            <option value="">Todos los recursos humanos</option>
+            {humanResources.map((resource) => (
+              <option key={resource.id} value={resource.id}>
+                {resource.name} — {resource.category}
+              </option>
+            ))}
+          </select>
         </section>
 
-        <div
-          style={{
-            background: "white",
-            borderRadius: 18,
-            padding: isMobile ? 6 : 16,
-            overflow: "hidden",
-          }}
-        >
+        <section style={calendarCardStyle}>
           <FullCalendar
-            key={isMobile ? "mobile-calendar" : "desktop-calendar"}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
             headerToolbar={{
@@ -499,36 +579,31 @@ export default function Home() {
               center: "title",
               right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
-            height={isMobile ? "72vh" : "80vh"}
-          events={events}
-          selectable={canEdit}
-          editable={canEdit}
-          eventResizableFromStart={canEdit}
-          dateClick={handleDateClick}
-          eventClick={handleEventClick}
-          eventDrop={updateEventDate}
-          eventResize={updateEventDate}
-          eventDisplay="block"
-          slotMinTime="06:00:00"
-          slotMaxTime="23:00:00"
-          nowIndicator
-        />
-        </div>
+            height={isMobile ? "72vh" : "78vh"}
+            events={events}
+            selectable={canEdit}
+            editable={canEdit}
+            eventResizableFromStart={canEdit}
+            dateClick={handleDateClick}
+            eventClick={handleEventClick}
+            eventDrop={updateEventDate}
+            eventResize={updateEventDate}
+            eventDisplay="block"
+          />
+        </section>
 
         {modalOpen && (
           <div style={overlayStyle}>
-            <div
-              style={{
-                ...modalStyle,
-                maxWidth: isMobile ? "100%" : 620,
-                height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? "100dvh" : "90vh",
-                borderRadius: isMobile ? 0 : 18,
-                padding: isMobile ? 16 : 24,
-              }}
-            >
-              <h2>{selectedShoot ? "Editar llamado" : "Nuevo llamado"}</h2>
+            <div style={{ ...modalStyle, width: isMobile ? "100%" : 720, height: isMobile ? "100%" : "auto", borderRadius: isMobile ? 0 : 24 }}>
+              <div style={modalHeaderStyle}>
+                <div>
+                  <p style={eyebrowStyle}>{selectedShoot ? "Editar" : "Nuevo"}</p>
+                  <h2 style={modalTitleStyle}>{selectedShoot ? "Editar llamado" : "Nuevo llamado"}</h2>
+                </div>
+                <button onClick={() => { setModalOpen(false); resetForm() }} style={iconButtonStyle}>×</button>
+              </div>
 
+              <div style={sectionTitleStyle}>Información general</div>
               <input placeholder="Nombre del llamado" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
               <input placeholder="Cliente" value={client} onChange={(e) => setClient(e.target.value)} style={inputStyle} />
               <input placeholder="Proyecto" value={project} onChange={(e) => setProject(e.target.value)} style={inputStyle} />
@@ -536,47 +611,49 @@ export default function Home() {
               <input placeholder="Dirección" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
               <input placeholder="Contacto" value={contact} onChange={(e) => setContact(e.target.value)} style={inputStyle} />
 
-              <h3>Status y color</h3>
+              <div style={sectionTitleStyle}>Status y color</div>
               <select value={status} onChange={(e) => setStatus(e.target.value)} style={inputStyle}>
                 <option value="tentative">Tentative</option>
                 <option value="confirmed">Confirmado</option>
                 <option value="cancelled">Cancelado</option>
                 <option value="wrap">Wrap</option>
               </select>
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ ...inputStyle, height: 52 }} />
 
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ ...inputStyle, height: 48 }} />
-
-              <h3>Producción</h3>
+              <div style={sectionTitleStyle}>Producción</div>
               <input placeholder="Director / Realizador" value={director} onChange={(e) => setDirector(e.target.value)} style={inputStyle} />
               <input placeholder="DOP / Fotógrafo" value={dop} onChange={(e) => setDop(e.target.value)} style={inputStyle} />
 
-              <div style={{ marginTop: 20 }}>
+              <div style={checkRowStyle}>
                 <label>
                   <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Todo el día
                 </label>
               </div>
 
               {!allDay && (
-                <>
-                  <label style={labelStyle}>Hora inicio</label>
-                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={inputStyle} />
-                  <label style={labelStyle}>Hora fin</label>
-                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={inputStyle} />
-                </>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Hora inicio</label>
+                    <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Hora fin</label>
+                    <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={inputStyle} />
+                  </div>
+                </div>
               )}
 
-              <h3>Notas</h3>
+              <div style={sectionTitleStyle}>Notas</div>
               <textarea placeholder="Notas públicas" value={publicNotes} onChange={(e) => setPublicNotes(e.target.value)} style={textareaStyle} />
               {canEdit && (
                 <textarea placeholder="Notas privadas" value={privateNotes} onChange={(e) => setPrivateNotes(e.target.value)} style={textareaStyle} />
               )}
               <textarea placeholder="Notas de producción" value={productionNotes} onChange={(e) => setProductionNotes(e.target.value)} style={textareaStyle} />
 
-              <h3>Recursos humanos</h3>
+              <div style={sectionTitleStyle}>Recursos humanos</div>
               <Select
                 isMulti
-                menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
-                styles={selectStyles}
+                styles={selectThemeStyles}
                 options={humanResources.map((resource) => ({
                   value: resource.id,
                   label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
@@ -594,11 +671,10 @@ export default function Home() {
                 }}
               />
 
-              <h3>Recursos técnicos</h3>
+              <div style={sectionTitleStyle}>Recursos técnicos</div>
               <Select
                 isMulti
-                menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
-                styles={selectStyles}
+                styles={selectThemeStyles}
                 options={technicalResources.map((resource) => ({
                   value: resource.id,
                   label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
@@ -616,62 +692,81 @@ export default function Home() {
                 }}
               />
 
-              <button onClick={saveShoot} style={primaryButton}>
-                {selectedShoot ? "Guardar cambios" : "Guardar llamado"}
-              </button>
-
-              <button onClick={() => { setModalOpen(false); resetForm() }} style={secondaryButton}>
-                Cancelar
-              </button>
+              <div style={stickyActionsStyle}>
+                <button onClick={saveShoot} style={primaryButton}>
+                  {selectedShoot ? "Guardar cambios" : "Guardar llamado"}
+                </button>
+                <button onClick={() => { setModalOpen(false); resetForm() }} style={secondaryButton}>
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {detailsOpen && selectedShoot && (
           <div style={overlayStyle}>
-            <div
-              style={{
-                ...modalStyle,
-                maxWidth: isMobile ? "100%" : 620,
-                height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? "100dvh" : "90vh",
-                borderRadius: isMobile ? 0 : 18,
-                padding: isMobile ? 16 : 24,
-              }}
-            >
-              <h2>{statusEmoji(selectedShoot.status)} {selectedShoot.title}</h2>
-              <p><strong>Status:</strong> {selectedShoot.status || "tentative"}</p>
-              <p><strong>Cliente:</strong> {selectedShoot.client || "-"}</p>
-              <p><strong>Proyecto:</strong> {selectedShoot.project || "-"}</p>
-              <p><strong>Locación:</strong> {selectedShoot.location || "-"}</p>
-              <p><strong>Dirección:</strong> {selectedShoot.address || "-"}</p>
-              <p><strong>Contacto:</strong> {selectedShoot.contact || "-"}</p>
-              <p><strong>Inicio:</strong> {new Date(selectedShoot.start_time).toLocaleString()}</p>
-              <p><strong>Fin:</strong> {new Date(selectedShoot.end_time).toLocaleString()}</p>
+            <div style={{ ...modalStyle, width: isMobile ? "100%" : 680, height: isMobile ? "100%" : "auto", borderRadius: isMobile ? 0 : 24 }}>
+              <div style={modalHeaderStyle}>
+                <div>
+                  <p style={eyebrowStyle}>Detalle</p>
+                  <h2 style={modalTitleStyle}>{statusEmoji(selectedShoot.status)} {selectedShoot.title}</h2>
+                </div>
+                <button onClick={() => setDetailsOpen(false)} style={iconButtonStyle}>×</button>
+              </div>
 
-              <h3>Producción</h3>
-              <p><strong>Director:</strong> {selectedShoot.director || "-"}</p>
-              <p><strong>DOP:</strong> {selectedShoot.dop || "-"}</p>
+              <div style={detailGridStyle}>
+                <Detail label="Status" value={selectedShoot.status || "tentative"} />
+                <Detail label="Cliente" value={selectedShoot.client || "-"} />
+                <Detail label="Proyecto" value={selectedShoot.project || "-"} />
+                <Detail label="Locación" value={selectedShoot.location || "-"} />
+                <Detail label="Dirección" value={selectedShoot.address || "-"} />
+                <Detail label="Contacto" value={selectedShoot.contact || "-"} />
+                <Detail label="Inicio" value={new Date(selectedShoot.start_time).toLocaleString()} />
+                <Detail label="Fin" value={new Date(selectedShoot.end_time).toLocaleString()} />
+                <Detail label="Director" value={selectedShoot.director || "-"} />
+                <Detail label="DOP" value={selectedShoot.dop || "-"} />
+              </div>
 
-              <h3>Notas</h3>
-              <p><strong>Públicas:</strong> {selectedShoot.public_notes || "-"}</p>
-              {canEdit && <p><strong>Privadas:</strong> {selectedShoot.private_notes || "-"}</p>}
-              <p><strong>Producción:</strong> {selectedShoot.production_notes || "-"}</p>
+              <div style={sectionTitleStyle}>Notas</div>
+              <p style={noteBoxStyle}><strong>Públicas:</strong> {selectedShoot.public_notes || "-"}</p>
+              {canEdit && <p style={noteBoxStyle}><strong>Privadas:</strong> {selectedShoot.private_notes || "-"}</p>}
+              <p style={noteBoxStyle}><strong>Producción:</strong> {selectedShoot.production_notes || "-"}</p>
 
-              <h3>Recursos asignados</h3>
-              <ul>
+              <div style={sectionTitleStyle}>Recursos asignados</div>
+              <ul style={resourceListStyle}>
                 {getShootResources(selectedShoot.id).map((resource) => (
-                  <li key={resource.id}>{resource.name} — {resource.category}</li>
+                  <li key={resource.id} style={resourcePillStyle}>{resource.name} — {resource.category}</li>
                 ))}
               </ul>
 
-              {canEdit && <button onClick={openEditShoot} style={primaryButton}>Editar llamado</button>}
-              {isAdmin && <button onClick={deleteShoot} style={{ ...primaryButton, background: "#b91c1c" }}>Borrar llamado</button>}
-              <button onClick={() => setDetailsOpen(false)} style={secondaryButton}>Cerrar</button>
+              <div style={stickyActionsStyle}>
+                {canEdit && <button onClick={openEditShoot} style={primaryButton}>Editar llamado</button>}
+                {isAdmin && <button onClick={deleteShoot} style={{ ...primaryButton, background: "linear-gradient(135deg, #dc2626, #991b1b)" }}>Borrar llamado</button>}
+                <button onClick={() => setDetailsOpen(false)} style={secondaryButton}>Cerrar</button>
+              </div>
             </div>
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={statCardStyle}>
+      <p style={statLabelStyle}>{label}</p>
+      <p style={statValueStyle}>{value}</p>
+    </div>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={detailCardStyle}>
+      <p style={detailLabelStyle}>{label}</p>
+      <p style={detailValueStyle}>{value}</p>
     </div>
   )
 }
@@ -683,119 +778,390 @@ function statusEmoji(status: string) {
   return "🟡"
 }
 
+const appShellStyle: React.CSSProperties = {
+  display: "flex",
+  minHeight: "100vh",
+  background: "transparent",
+  color: "#f8fafc",
+}
+
 const sidebarStyle: React.CSSProperties = {
-  background: "#111827",
+  background: "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))",
   color: "white",
   padding: 20,
+  borderRight: "1px solid rgba(148,163,184,0.14)",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  boxShadow: "24px 0 80px rgba(0,0,0,0.35)",
+}
+
+const mobileBackdropStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.55)",
+  zIndex: 9998,
+  border: "none",
+}
+
+const hamburgerButtonStyle: React.CSSProperties = {
+  position: "fixed",
+  top: 14,
+  left: 14,
+  zIndex: 10000,
+  border: "1px solid rgba(255,255,255,0.14)",
+  borderRadius: 12,
+  padding: "10px 14px",
+  background: "rgba(15,23,42,0.92)",
+  color: "white",
+  fontSize: 20,
+  cursor: "pointer",
+  boxShadow: "0 16px 40px rgba(0,0,0,0.4)",
+}
+
+const brandBlockStyle: React.CSSProperties = {
   display: "flex",
   gap: 12,
+  alignItems: "center",
+}
+
+const brandIconStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  display: "grid",
+  placeItems: "center",
+  background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+  boxShadow: "0 14px 40px rgba(124,58,237,0.35)",
+}
+
+const brandTitleStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 21,
+  letterSpacing: -0.4,
+}
+
+const brandSubtitleStyle: React.CSSProperties = {
+  margin: "3px 0 0",
+  color: "#94a3b8",
+  fontSize: 12,
+}
+
+const navStyle: React.CSSProperties = {
+  marginTop: 28,
+  display: "grid",
+  gap: 10,
 }
 
 const navLink: React.CSSProperties = {
   display: "block",
-  color: "white",
+  color: "#e5e7eb",
   textDecoration: "none",
-  padding: "10px 12px",
-  borderRadius: 8,
-  background: "rgba(255,255,255,0.08)",
-  whiteSpace: "nowrap",
+  padding: "12px 14px",
+  borderRadius: 14,
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.08)",
+}
+
+const profileCardStyle: React.CSSProperties = {
+  marginTop: 24,
+  borderRadius: 18,
+  padding: 14,
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.10)",
+}
+
+const profileLabelStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#94a3b8",
+  fontSize: 12,
+  textTransform: "uppercase",
+  letterSpacing: 1,
+}
+
+const profileEmailStyle: React.CSSProperties = {
+  margin: "8px 0",
+  fontSize: 13,
+  color: "#e5e7eb",
+  wordBreak: "break-word",
+}
+
+const roleBadgeStyle: React.CSSProperties = {
+  display: "inline-block",
+  padding: "5px 10px",
+  borderRadius: 999,
+  background: "rgba(124,58,237,0.28)",
+  color: "#ddd6fe",
+  fontSize: 12,
 }
 
 const logoutButton: React.CSSProperties = {
+  marginTop: 12,
+  width: "100%",
   padding: 12,
-  borderRadius: 8,
-  border: "none",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.08)",
+  color: "white",
   cursor: "pointer",
+}
+
+const mainStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+}
+
+const heroStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 18,
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  alignItems: "end",
+  marginBottom: 18,
+}
+
+const eyebrowStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#a78bfa",
+  fontSize: 12,
+  textTransform: "uppercase",
+  letterSpacing: 1.4,
+  fontWeight: 700,
+}
+
+const pageTitleStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  lineHeight: 1.02,
+  letterSpacing: -1.6,
+  color: "#f8fafc",
+}
+
+const pageSubtitleStyle: React.CSSProperties = {
+  margin: "10px 0 0",
+  color: "#94a3b8",
+  maxWidth: 680,
+}
+
+const statsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 12,
+}
+
+const statCardStyle: React.CSSProperties = {
+  borderRadius: 18,
+  padding: 14,
+  background: "rgba(15,23,42,0.72)",
+  border: "1px solid rgba(148,163,184,0.16)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
+}
+
+const statLabelStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#94a3b8",
+  fontSize: 12,
+}
+
+const statValueStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  color: "#f8fafc",
+  fontSize: 22,
+  fontWeight: 800,
 }
 
 const filtersStyle: React.CSSProperties = {
   display: "flex",
   gap: 12,
-  background: "white",
+  background: "rgba(15,23,42,0.72)",
   padding: 16,
-  borderRadius: 16,
+  borderRadius: 20,
   marginBottom: 16,
+  border: "1px solid rgba(148,163,184,0.16)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
 }
 
 const filterInput: React.CSSProperties = {
   padding: 12,
-  borderRadius: 10,
-  border: "1px solid #ccc",
+  borderRadius: 12,
+  border: "1px solid rgba(148,163,184,0.26)",
+  background: "rgba(2,6,23,0.72)",
+  color: "#f8fafc",
   width: "100%",
-  fontSize: 16,
+}
+
+const calendarCardStyle: React.CSSProperties = {
+  background: "rgba(15,23,42,0.54)",
+  border: "1px solid rgba(148,163,184,0.16)",
+  borderRadius: 24,
+  padding: 12,
+  boxShadow: "0 28px 90px rgba(0,0,0,0.32)",
 }
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.65)",
+  background: "rgba(0,0,0,0.72)",
   zIndex: 999999,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 0,
+  padding: 18,
 }
 
 const modalStyle: React.CSSProperties = {
-  width: "100%",
+  maxWidth: "calc(100vw - 32px)",
+  maxHeight: "92vh",
   overflowY: "auto",
-  background: "#ffffff",
-  color: "#111111",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+  background: "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))",
+  color: "#f8fafc",
+  borderRadius: 24,
+  padding: 24,
+  border: "1px solid rgba(148,163,184,0.18)",
+  boxShadow: "0 30px 120px rgba(0,0,0,0.62)",
+}
+
+const modalHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 16,
+  alignItems: "start",
+  marginBottom: 18,
+}
+
+const modalTitleStyle: React.CSSProperties = {
+  margin: "4px 0 0",
+  fontSize: 28,
+  letterSpacing: -0.8,
+}
+
+const iconButtonStyle: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.08)",
+  color: "white",
+  fontSize: 24,
+  cursor: "pointer",
+}
+
+const sectionTitleStyle: React.CSSProperties = {
+  margin: "24px 0 8px",
+  color: "#c4b5fd",
+  fontSize: 13,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: 1,
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: 14,
-  marginTop: 10,
-  border: "1px solid #ccc",
-  borderRadius: 10,
-  fontSize: 16,
+  padding: 13,
+  marginTop: 8,
+  border: "1px solid rgba(148,163,184,0.28)",
+  borderRadius: 12,
+  background: "rgba(15,23,42,0.88)",
+  color: "#f8fafc",
+  outline: "none",
 }
 
 const textareaStyle: React.CSSProperties = {
   ...inputStyle,
-  minHeight: 80,
+  minHeight: 92,
 }
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  marginTop: 20,
+  marginTop: 14,
+  color: "#cbd5e1",
+  fontSize: 13,
+}
+
+const checkRowStyle: React.CSSProperties = {
+  marginTop: 18,
+  padding: 12,
+  borderRadius: 14,
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.08)",
+}
+
+const stickyActionsStyle: React.CSSProperties = {
+  position: "sticky",
+  bottom: -24,
+  margin: "24px -24px -24px",
+  padding: 18,
+  background: "linear-gradient(180deg, rgba(2,6,23,0.80), rgba(2,6,23,0.98))",
+  borderTop: "1px solid rgba(148,163,184,0.16)",
 }
 
 const primaryButton: React.CSSProperties = {
-  marginTop: 24,
+  marginTop: 0,
   width: "100%",
   padding: 14,
-  background: "black",
+  background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
   color: "white",
   border: "none",
-  borderRadius: 10,
+  borderRadius: 14,
   cursor: "pointer",
-  fontSize: 16,
+  fontWeight: 800,
+  boxShadow: "0 16px 40px rgba(124,58,237,0.28)",
 }
 
 const secondaryButton: React.CSSProperties = {
-  marginTop: 12,
+  marginTop: 10,
   width: "100%",
-  padding: 12,
-  background: "#eeeeee",
-  color: "black",
-  border: "none",
-  borderRadius: 10,
+  padding: 13,
+  background: "rgba(255,255,255,0.08)",
+  color: "#f8fafc",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 14,
   cursor: "pointer",
-  fontSize: 16,
 }
 
-const selectStyles = {
-  menuPortal: (base: any) => ({
-    ...base,
-    zIndex: 1000000,
-  }),
-  control: (base: any) => ({
-    ...base,
-    minHeight: 46,
-    marginTop: 8,
-    fontSize: 16,
-  }),
+const detailGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+}
+
+const detailCardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  padding: 12,
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.08)",
+}
+
+const detailLabelStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#94a3b8",
+  fontSize: 12,
+}
+
+const detailValueStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  color: "#f8fafc",
+  fontWeight: 700,
+}
+
+const noteBoxStyle: React.CSSProperties = {
+  padding: 12,
+  borderRadius: 14,
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  color: "#cbd5e1",
+}
+
+const resourceListStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+  padding: 0,
+  listStyle: "none",
+}
+
+const resourcePillStyle: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: 999,
+  background: "rgba(124,58,237,0.24)",
+  border: "1px solid rgba(167,139,250,0.24)",
+  color: "#ddd6fe",
 }
