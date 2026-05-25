@@ -44,6 +44,7 @@ export default function Home() {
   const [productionNotes, setProductionNotes] = useState("")
   const [status, setStatus] = useState("tentative")
   const [color, setColor] = useState("#7c3aed")
+  const [useCustomColor, setUseCustomColor] = useState(false)
   const [allDay, setAllDay] = useState(false)
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
@@ -168,7 +169,7 @@ export default function Home() {
     setPrivateNotes("")
     setProductionNotes("")
     setStatus("tentative")
-    setColor("#7c3aed")
+    setUseCustomColor(false)
     setAllDay(false)
     setStartTime("09:00")
     setEndTime("18:00")
@@ -195,15 +196,21 @@ export default function Home() {
     setSelectedShoot(shoot || null)
     setDetailsOpen(true)
   }
+function getShootResources(shootId: string) {
+  return shootResources
+    .filter((a) => a.shoot_id === shootId)
+    .map((a) => a.resources)
+    .filter(Boolean)
+}
 
-  function getShootResources(shootId: string) {
-    return shootResources
-      .filter((a) => a.shoot_id === shootId)
-      .map((a) => a.resources)
-      .filter(Boolean)
-  }
+function getProducer(shootId: string) {
+  return getShootResources(shootId).find((resource) => {
+    const category = resource.category?.trim().toLowerCase()
 
-  function openEditShoot() {
+    return category === "productor" || category === "productora"
+  })
+}
+function openEditShoot() {
     if (!selectedShoot || !canEdit) return
 
     const start = new Date(selectedShoot.start_time)
@@ -283,7 +290,7 @@ export default function Home() {
       private_notes: privateNotes,
       production_notes: productionNotes,
       status,
-      color,
+      color: useCustomColor ? color : getStatusColor(status),
       start_time: start,
       end_time: end,
       all_day: allDay,
@@ -567,7 +574,7 @@ export default function Home() {
             style={filterInput}
           >
             <option value="">Todos los status</option>
-            <option value="tentative">Tentative</option>
+            <option value="tentative">Tentativo</option>
             <option value="confirmed">Confirmado</option>
             <option value="cancelled">Cancelado</option>
             <option value="wrap">Wrap</option>
@@ -590,7 +597,7 @@ export default function Home() {
         <section style={calendarCardStyle}>
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
+            initialView="dayGridMonth"
             headerToolbar={{
               left: "prev,next today",
               center: "title",
@@ -630,12 +637,36 @@ export default function Home() {
 
               <div style={sectionTitleStyle}>Status y color</div>
               <select value={status} onChange={(e) => setStatus(e.target.value)} style={inputStyle}>
-                <option value="tentative">Tentative</option>
+                <option value="tentative">Tentativo</option>
                 <option value="confirmed">Confirmado</option>
                 <option value="cancelled">Cancelado</option>
                 <option value="wrap">Wrap</option>
               </select>
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ ...inputStyle, height: 52 }} />
+              <div style={{ marginTop: 16 }}>
+  <label>
+    <input
+      type="checkbox"
+      checked={useCustomColor}
+      onChange={(e) =>
+        setUseCustomColor(e.target.checked)
+      }
+    />{" "}
+    Usar color especial
+  </label>
+</div>
+
+{useCustomColor && (
+  <input
+    type="color"
+    value={color}
+    onChange={(e) => setColor(e.target.value)}
+    style={{
+      ...inputStyle,
+      height: 48,
+      marginTop: 12,
+    }}
+  />
+)}
 
               <div style={sectionTitleStyle}>Producción</div>
               <input placeholder="Director / Realizador" value={director} onChange={(e) => setDirector(e.target.value)} style={inputStyle} />
@@ -728,6 +759,39 @@ export default function Home() {
                 <div>
                   <p style={eyebrowStyle}>Detalle</p>
                   <h2 style={modalTitleStyle}>{statusEmoji(selectedShoot.status)} {selectedShoot.title}</h2>
+                  <div
+  style={{
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(148,163,184,0.18)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+  }}
+>
+  <p
+    style={{
+      margin: 0,
+      fontSize: 12,
+      color: "#a78bfa",
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+      fontWeight: 700,
+    }}
+  >
+    Productor
+  </p>
+
+  <p
+    style={{
+      margin: "8px 0 0",
+      fontSize: 22,
+      fontWeight: 700,
+      color: "#f8fafc",
+    }}
+  >
+    {getProducer(selectedShoot.id)?.name || "Sin productor asignado"}
+  </p>
+</div>
                 </div>
                 <button onClick={() => setDetailsOpen(false)} style={iconButtonStyle}>×</button>
               </div>
@@ -753,7 +817,7 @@ export default function Home() {
               <div style={sectionTitleStyle}>Recursos asignados</div>
               <ul style={resourceListStyle}>
                 {getShootResources(selectedShoot.id).map((resource) => (
-                  <li key={resource.id} style={resourcePillStyle}>{resource.name} — {resource.category}</li>
+                  <li key={resource.id} style={resourcePillStyle}>{resource.name}</li>
                 ))}
               </ul>
 
@@ -793,6 +857,15 @@ function statusEmoji(status: string) {
   if (status === "cancelled") return "❌"
   if (status === "wrap") return "🏁"
   return "🟡"
+}
+function getStatusColor(status: string) {
+  if (status === "confirmed") return "#16a34a"
+
+  if (status === "cancelled") return "#dc2626"
+
+  if (status === "wrap") return "#64748b"
+
+  return "#eab308"
 }
 
 const appShellStyle: React.CSSProperties = {
