@@ -999,8 +999,9 @@ function openEditVacation() {
         </div>
 
         {modalOpen && (
-          <div style={overlayStyle}>
+          <div style={overlayStyle} className="modal-overlay">
             <div
+              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
               style={{
                 ...formModalStyle,
                 width: isMobile ? "100%" : 680,
@@ -1455,8 +1456,9 @@ function openEditVacation() {
         )}
 
         {vacationDetailsOpen && selectedVacation && (
-          <div style={overlayStyle}>
+          <div style={overlayStyle} className="modal-overlay">
             <div
+              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
               style={{
                 ...formModalStyle,
                 width: isMobile ? "100%" : 680,
@@ -1542,8 +1544,9 @@ function openEditVacation() {
         )}
 
         {detailsOpen && selectedShoot && (
-          <div style={overlayStyle}>
+          <div style={overlayStyle} className="modal-overlay">
             <div
+              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
               style={{
                 ...formModalStyle,
                 width: isMobile ? "100%" : 680,
