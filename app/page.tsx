@@ -1,18 +1,19 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Select from "react-select"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
-import Image from "next/image"
+import { AppSidebar } from "../components/AppSidebar"
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const calendarShellRef = useRef<HTMLDivElement>(null)
+  const [calendarHeight, setCalendarHeight] = useState<number>()
 
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
@@ -62,6 +63,27 @@ export default function Home() {
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  useEffect(() => {
+    const shell = calendarShellRef.current
+    if (!shell) return
+
+    function updateHeight() {
+      if (!calendarShellRef.current) return
+      setCalendarHeight(calendarShellRef.current.clientHeight)
+    }
+
+    updateHeight()
+
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(shell)
+    window.addEventListener("resize", updateHeight)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updateHeight)
+    }
+  }, [isMobile])
 
   async function loadUser() {
     const {
@@ -175,6 +197,19 @@ export default function Home() {
     setEndTime("18:00")
     setSelectedResources([])
   }
+
+  function clearFilters() {
+    setFilterClient("")
+    setFilterProject("")
+    setFilterStatus("")
+    setFilterHumanResource("")
+  }
+
+  const hasActiveFilters =
+    !!filterClient ||
+    !!filterProject ||
+    !!filterStatus ||
+    !!filterHumanResource
 
   function handleDateClick(info: any) {
     if (!canEdit) return
@@ -451,193 +486,141 @@ function openEditShoot() {
 
   return (
     <div style={appShellStyle}>
-      {isMobile && (
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          style={hamburgerButtonStyle}
-          aria-label="Abrir menú"
-        >
-          ☰
-        </button>
-      )}
+      <AppSidebar
+        profile={profile}
+        user={user}
+        isAdmin={isAdmin}
+        isMobile={isMobile}
+        menuOpen={menuOpen}
+        onMenuToggle={() => setMenuOpen(!menuOpen)}
+        onMenuClose={() => setMenuOpen(false)}
+        onLogout={logout}
+      />
 
-      {isMobile && menuOpen && (
-        <button
-          onClick={() => setMenuOpen(false)}
-          style={mobileBackdropStyle}
-          aria-label="Cerrar menú"
-        />
-      )}
-
-      <aside
-        style={{
-          ...sidebarStyle,
-          position: isMobile ? "fixed" : "sticky",
-          left: isMobile && !menuOpen ? "-100%" : 0,
-          top: 0,
-          height: "100vh",
-          zIndex: 9999,
-          transition: "left 0.25s ease",
-          width: isMobile ? 280 : 250,
-        }}
-      >
-        <div>
-          <div style={brandBlockStyle}>
-          
+      <main style={{ ...mainStyle, padding: isMobile ? "76px 14px 24px" : "28px 32px" }}>
+        <div style={pageContainerStyle}>
+          <header style={pageHeaderStyle}>
             <div>
-             <div
-  style={{
-    marginBottom: 20,
-    display: "flex",
-    justifyContent: "center",
-  }}
->
-  <Image
-    src="/logo-retro.png"
-    alt="Retro"
-    width={160}
-    height={60}
-    style={{
-      objectFit: "contain",
-    }}
-  />
-</div>
-              
+              <h1 style={pageTitleStyle}>Calendario</h1>
+              <p style={pageSubtitleStyle}>
+                {events.length} visibles · {allShoots.length} total · {resources.length}{" "}
+                recursos
+              </p>
             </div>
-          </div>
 
-          <nav style={navStyle}>
-            <Link
-              href="/"
-              style={navLink}
-              onClick={() => isMobile && setMenuOpen(false)}
-            >
-              📅 Calendario
-            </Link>
+            <span style={roleBadgeStyle(profile?.role)}>{profile?.role || "..."}</span>
+          </header>
 
-            <Link
-              href="/resources"
-              style={navLink}
-              onClick={() => isMobile && setMenuOpen(false)}
-            >
-              📦 Inventario
-            </Link>
-
-            {isAdmin && (
-              <Link
-                href="/users"
-                style={navLink}
-                onClick={() => isMobile && setMenuOpen(false)}
-              >
-                👥 Usuarios
-              </Link>
-            )}
-          </nav>
-        </div>
-
-        <div style={profileCardStyle}>
-          <p style={profileLabelStyle}>Sesión</p>
-          <p style={profileEmailStyle}>{profile?.email || user?.email || "..."}</p>
-          <span style={roleBadgeStyle}>{profile?.role || "cargando"}</span>
-          <button onClick={logout} style={logoutButton}>
-            Cerrar sesión
-          </button>
-        </div>
-      </aside>
-
-      <main style={{ ...mainStyle, padding: isMobile ? "76px 12px 18px" : 28 }}>
-        <section style={heroStyle}>
-          <div>
-            <p style={eyebrowStyle}>Sistema de producción</p>
-            <h1 style={{ ...pageTitleStyle, fontSize: isMobile ? 30 : 44 }}>
-              Calendario de llamados
-            </h1>
-            <p style={pageSubtitleStyle}>
-              Planea filmaciones, bloquea recursos y coordina crew en tiempo real.
-            </p>
-          </div>
-
-          <div style={statsGridStyle}>
-            <StatCard label="Llamados" value={String(allShoots.length)} />
-            <StatCard label="Recursos" value={String(resources.length)} />
-            <StatCard label="Rol" value={profile?.role || "..."} />
-          </div>
-        </section>
-
-        <section style={{ ...filtersStyle, flexDirection: isMobile ? "column" : "row" }}>
-          <select
-            value={filterClient}
-            onChange={(e) => setFilterClient(e.target.value)}
-            style={filterInput}
-          >
-            <option value="">Todos los clientes</option>
-            {clients.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={filterProject}
-            onChange={(e) => setFilterProject(e.target.value)}
-            style={filterInput}
-          >
-            <option value="">Todos los proyectos</option>
-            {projects.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={filterInput}
-          >
-            <option value="">Todos los status</option>
-            <option value="tentative">Tentativo</option>
-            <option value="confirmed">Confirmado</option>
-            <option value="cancelled">Cancelado</option>
-            <option value="wrap">Wrap</option>
-          </select>
-
-          <select
-            value={filterHumanResource}
-            onChange={(e) => setFilterHumanResource(e.target.value)}
-            style={filterInput}
-          >
-            <option value="">Todo Personal Retro</option>
-            {humanResources.map((resource) => (
-              <option key={resource.id} value={resource.id}>
-                {resource.name} — {resource.category}
-              </option>
-            ))}
-          </select>
-        </section>
-
-        <section style={calendarCardStyle}>
-          <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
+          <section
+            style={{
+              ...filtersToolbarStyle,
+              gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr)) auto",
             }}
-            height={isMobile ? "72vh" : "78vh"}
-            events={events}
-            selectable={canEdit}
-            editable={canEdit}
-            eventResizableFromStart={canEdit}
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
-            eventDrop={updateEventDate}
-            eventResize={updateEventDate}
-            eventDisplay="block"
-          />
-        </section>
+          >
+            <select
+              aria-label="Cliente"
+              value={filterClient}
+              onChange={(e) => setFilterClient(e.target.value)}
+              style={compactFilterSelectStyle}
+            >
+              <option value="">Cliente</option>
+              {clients.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
+              aria-label="Proyecto"
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              style={compactFilterSelectStyle}
+            >
+              <option value="">Proyecto</option>
+              {projects.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+
+            <select
+              aria-label="Estado"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={compactFilterSelectStyle}
+            >
+              <option value="">Estado</option>
+              <option value="tentative">Tentativo</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="wrap">Wrap</option>
+            </select>
+
+            <select
+              aria-label="Personal"
+              value={filterHumanResource}
+              onChange={(e) => setFilterHumanResource(e.target.value)}
+              style={compactFilterSelectStyle}
+            >
+              <option value="">Personal</option>
+              {humanResources.map((resource) => (
+                <option key={resource.id} value={resource.id}>
+                  {resource.name} — {resource.category}
+                </option>
+              ))}
+            </select>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                style={{
+                  ...ghostButtonStyle,
+                  gridColumn: isMobile ? "1 / -1" : "auto",
+                }}
+              >
+                Limpiar
+              </button>
+            )}
+          </section>
+
+          <section style={calendarPanelStyle}>
+            <div style={calendarPanelHeaderStyle}>
+              <p style={panelHintStyle}>
+                {canEdit
+                  ? "Clic en un día para crear llamado"
+                  : "Consulta los llamados programados"}
+              </p>
+            </div>
+
+            <div ref={calendarShellRef} className="calendar-shell" style={calendarShellStyle}>
+              <FullCalendar
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                headerToolbar={{
+                  left: "prev,next today",
+                  center: "title",
+                  right: "dayGridMonth,timeGridWeek,timeGridDay",
+                }}
+                height={calendarHeight}
+                dayMaxEvents={3}
+                views={{
+                  dayGridMonth: { expandRows: true, dayMaxEvents: 3 },
+                }}
+                events={events}
+                selectable={canEdit}
+                editable={canEdit}
+                eventResizableFromStart={canEdit}
+                dateClick={handleDateClick}
+                eventClick={handleEventClick}
+                eventDrop={updateEventDate}
+                eventResize={updateEventDate}
+                eventDisplay="block"
+              />
+            </div>
+          </section>
+        </div>
 
         {modalOpen && (
           <div style={overlayStyle}>
@@ -1211,13 +1194,40 @@ function formModalStatusBadgeStyle(status: string): React.CSSProperties {
   }
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={statCardStyle}>
-      <p style={statLabelStyle}>{label}</p>
-      <p style={statValueStyle}>{value}</p>
-    </div>
-  )
+function roleBadgeStyle(role?: string): React.CSSProperties {
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
+    admin: {
+      bg: "rgba(124,58,237,0.18)",
+      border: "rgba(167,139,250,0.28)",
+      text: "#ddd6fe",
+    },
+    editor: {
+      bg: "rgba(14,165,233,0.14)",
+      border: "rgba(56,189,248,0.24)",
+      text: "#bae6fd",
+    },
+    viewer: {
+      bg: "rgba(148,163,184,0.12)",
+      border: "rgba(148,163,184,0.22)",
+      text: "#cbd5e1",
+    },
+  }
+
+  const palette = colors[role || "viewer"] || colors.viewer
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "capitalize",
+    background: palette.bg,
+    border: `1px solid ${palette.border}`,
+    color: palette.text,
+  }
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
@@ -1247,220 +1257,126 @@ function getStatusColor(status: string) {
 
 const appShellStyle: React.CSSProperties = {
   display: "flex",
-  minHeight: "100vh",
+  height: "100vh",
+  overflow: "hidden",
   background: "transparent",
   color: "#f8fafc",
-}
-
-const sidebarStyle: React.CSSProperties = {
-  background: "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))",
-  color: "white",
-  padding: 20,
-  borderRight: "1px solid rgba(148,163,184,0.14)",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  boxShadow: "24px 0 80px rgba(0,0,0,0.35)",
-}
-
-const mobileBackdropStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.55)",
-  zIndex: 9998,
-  border: "none",
-}
-
-const hamburgerButtonStyle: React.CSSProperties = {
-  position: "fixed",
-  top: 14,
-  left: 14,
-  zIndex: 10000,
-  border: "1px solid rgba(255,255,255,0.14)",
-  borderRadius: 12,
-  padding: "10px 14px",
-  background: "rgba(15,23,42,0.92)",
-  color: "white",
-  fontSize: 20,
-  cursor: "pointer",
-  boxShadow: "0 16px 40px rgba(0,0,0,0.4)",
-}
-
-const brandBlockStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 12,
-  alignItems: "center",
-}
-
-const brandIconStyle: React.CSSProperties = {
-  width: 44,
-  height: 44,
-  borderRadius: 14,
-  display: "grid",
-  placeItems: "center",
-  background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-  boxShadow: "0 14px 40px rgba(124,58,237,0.35)",
-}
-
-const brandTitleStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 21,
-  letterSpacing: -0.4,
-}
-
-const brandSubtitleStyle: React.CSSProperties = {
-  margin: "3px 0 0",
-  color: "#94a3b8",
-  fontSize: 12,
-}
-
-const navStyle: React.CSSProperties = {
-  marginTop: 28,
-  display: "grid",
-  gap: 10,
-}
-
-const navLink: React.CSSProperties = {
-  display: "block",
-  color: "#e5e7eb",
-  textDecoration: "none",
-  padding: "12px 14px",
-  borderRadius: 14,
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.08)",
-}
-
-const profileCardStyle: React.CSSProperties = {
-  marginTop: 24,
-  borderRadius: 18,
-  padding: 14,
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.10)",
-}
-
-const profileLabelStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#94a3b8",
-  fontSize: 12,
-  textTransform: "uppercase",
-  letterSpacing: 1,
-}
-
-const profileEmailStyle: React.CSSProperties = {
-  margin: "8px 0",
-  fontSize: 13,
-  color: "#e5e7eb",
-  wordBreak: "break-word",
-}
-
-const roleBadgeStyle: React.CSSProperties = {
-  display: "inline-block",
-  padding: "5px 10px",
-  borderRadius: 999,
-  background: "rgba(124,58,237,0.28)",
-  color: "#ddd6fe",
-  fontSize: 12,
-}
-
-const logoutButton: React.CSSProperties = {
-  marginTop: 12,
-  width: "100%",
-  padding: 12,
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.08)",
-  color: "white",
-  cursor: "pointer",
 }
 
 const mainStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
 }
 
-const heroStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 18,
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  alignItems: "end",
-  marginBottom: 18,
+const pageContainerStyle: React.CSSProperties = {
+  maxWidth: 1180,
+  margin: "0 auto",
+  width: "100%",
+  flex: 1,
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
 }
 
-const eyebrowStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#a78bfa",
-  fontSize: 12,
-  textTransform: "uppercase",
-  letterSpacing: 1.4,
-  fontWeight: 700,
+const pageHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  marginBottom: 8,
+  flexWrap: "wrap",
+  flexShrink: 0,
 }
 
 const pageTitleStyle: React.CSSProperties = {
-  margin: "6px 0 0",
-  lineHeight: 1.02,
-  letterSpacing: -1.6,
+  margin: 0,
+  lineHeight: 1.1,
+  letterSpacing: -0.5,
   color: "#f8fafc",
+  fontSize: 22,
 }
 
 const pageSubtitleStyle: React.CSSProperties = {
-  margin: "10px 0 0",
-  color: "#94a3b8",
-  maxWidth: 680,
-}
-
-const statsGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: 12,
-}
-
-const statCardStyle: React.CSSProperties = {
-  borderRadius: 18,
-  padding: 14,
-  background: "rgba(15,23,42,0.72)",
-  border: "1px solid rgba(148,163,184,0.16)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
-}
-
-const statLabelStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#94a3b8",
+  margin: "3px 0 0",
+  color: "#64748b",
   fontSize: 12,
 }
 
-const statValueStyle: React.CSSProperties = {
-  margin: "6px 0 0",
-  color: "#f8fafc",
-  fontSize: 22,
-  fontWeight: 800,
-}
-
-const filtersStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 12,
-  background: "rgba(15,23,42,0.72)",
-  padding: 16,
-  borderRadius: 20,
-  marginBottom: 16,
-  border: "1px solid rgba(148,163,184,0.16)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.20)",
-}
-
-const filterInput: React.CSSProperties = {
-  padding: 12,
+const filtersToolbarStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 6,
+  alignItems: "center",
+  padding: "6px 8px",
+  marginBottom: 8,
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.26)",
-  background: "rgba(2,6,23,0.72)",
-  color: "#f8fafc",
-  width: "100%",
+  background: "rgba(15, 23, 42, 0.72)",
+  border: "1px solid rgba(148,163,184,0.14)",
+  boxShadow: "0 12px 40px rgba(0,0,0,0.16)",
+  flexShrink: 0,
 }
 
-const calendarCardStyle: React.CSSProperties = {
-  background: "rgba(15,23,42,0.54)",
+const compactFilterSelectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "6px 8px",
+  border: "1px solid rgba(148,163,184,0.14)",
+  borderRadius: 8,
+  background: "rgba(2,6,23,0.55)",
+  color: "#f8fafc",
+  outline: "none",
+  fontSize: 12,
+  lineHeight: 1.2,
+  minWidth: 0,
+}
+
+const calendarPanelStyle: React.CSSProperties = {
+  background: "rgba(15, 23, 42, 0.72)",
+  border: "1px solid rgba(148,163,184,0.14)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  backdropFilter: "blur(16px)",
+  borderRadius: 16,
+  padding: "10px 12px 12px",
+  flex: 1,
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+}
+
+const calendarPanelHeaderStyle: React.CSSProperties = {
+  marginBottom: 8,
+  flexShrink: 0,
+}
+
+const calendarShellStyle: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+}
+
+const panelHintStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 11,
+}
+
+const ghostButtonStyle: React.CSSProperties = {
+  padding: "6px 10px",
+  background: "transparent",
+  color: "#94a3b8",
   border: "1px solid rgba(148,163,184,0.16)",
-  borderRadius: 24,
-  padding: 12,
-  boxShadow: "0 28px 90px rgba(0,0,0,0.32)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 500,
+  fontSize: 12,
+  whiteSpace: "nowrap",
+  height: 32,
 }
 
 const overlayStyle: React.CSSProperties = {

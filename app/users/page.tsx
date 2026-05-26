@@ -1,9 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import Image from "next/image"
 import { supabase } from "../../lib/supabase"
+import { AppSidebar } from "../../components/AppSidebar"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
@@ -197,79 +196,16 @@ export default function UsersPage() {
 
   return (
     <div style={appShellStyle}>
-      {isMobile && (
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          style={hamburgerButton}
-          aria-label="Abrir menú"
-        >
-          ☰
-        </button>
-      )}
-
-      {isMobile && menuOpen && (
-        <button
-          onClick={() => setMenuOpen(false)}
-          style={mobileBackdropStyle}
-          aria-label="Cerrar menú"
-        />
-      )}
-
-      <aside
-        style={{
-          ...sidebarStyle,
-          position: isMobile ? "fixed" : "sticky",
-          left: isMobile && !menuOpen ? "-100%" : 0,
-          top: 0,
-          height: "100vh",
-          width: isMobile ? 280 : 250,
-          zIndex: 9999,
-          transition: "left 0.25s ease",
-        }}
-      >
-        <div style={{ marginBottom: 20, textAlign: "center" }}>
-          <Image
-            src="/logo-retro.png"
-            alt="Retro"
-            width={160}
-            height={60}
-            style={{ objectFit: "contain" }}
-          />
-        </div>
-
-        <nav style={navStyle}>
-          <Link
-            href="/"
-            style={navLink}
-            onClick={() => isMobile && setMenuOpen(false)}
-          >
-            📅 Calendario
-          </Link>
-          <Link
-            href="/resources"
-            style={navLink}
-            onClick={() => isMobile && setMenuOpen(false)}
-          >
-            📦 Inventario
-          </Link>
-          <Link
-            href="/users"
-            style={activeNavLink}
-            onClick={() => isMobile && setMenuOpen(false)}
-          >
-            👥 Usuarios
-          </Link>
-        </nav>
-
-        <div style={profileCardStyle}>
-          <p style={profileLabelStyle}>Sesión</p>
-          <p style={profileEmailStyle}>{profile?.email || "..."}</p>
-          <span style={roleBadgeStyle(profile?.role)}>{profile?.role || "admin"}</span>
-          <button onClick={logout} style={logoutButton}>
-            Cerrar sesión
-          </button>
-        </div>
-      </aside>
+      <AppSidebar
+        profile={profile}
+        user={null}
+        isAdmin
+        isMobile={isMobile}
+        menuOpen={menuOpen}
+        onMenuToggle={() => setMenuOpen(!menuOpen)}
+        onMenuClose={() => setMenuOpen(false)}
+        onLogout={logout}
+      />
 
       <main style={{ ...mainStyle, padding: isMobile ? "76px 14px 24px" : "28px 32px" }}>
         <div style={pageContainerStyle}>
@@ -529,97 +465,6 @@ function avatarStyle(name: string): React.CSSProperties {
 const appShellStyle: React.CSSProperties = {
   display: "flex",
   minHeight: "100vh",
-}
-
-const sidebarStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  background: "rgba(15, 23, 42, 0.9)",
-  borderRight: "1px solid rgba(148,163,184,0.16)",
-  padding: 22,
-  color: "white",
-  backdropFilter: "blur(18px)",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-}
-
-const navStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 8,
-}
-
-const navLink: React.CSSProperties = {
-  display: "block",
-  color: "#cbd5e1",
-  textDecoration: "none",
-  padding: "11px 14px",
-  borderRadius: 12,
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.06)",
-}
-
-const activeNavLink: React.CSSProperties = {
-  ...navLink,
-  color: "white",
-  background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(14,165,233,0.55))",
-  border: "1px solid rgba(167,139,250,0.24)",
-}
-
-const profileCardStyle: React.CSSProperties = {
-  marginTop: 24,
-  borderRadius: 16,
-  padding: 14,
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.10)",
-}
-
-const profileLabelStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#94a3b8",
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
-}
-
-const profileEmailStyle: React.CSSProperties = {
-  margin: "8px 0",
-  fontSize: 13,
-  color: "#e5e7eb",
-  wordBreak: "break-word",
-}
-
-const logoutButton: React.CSSProperties = {
-  marginTop: 12,
-  width: "100%",
-  padding: 10,
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.12)",
-  cursor: "pointer",
-  color: "white",
-  background: "rgba(255,255,255,0.08)",
-}
-
-const hamburgerButton: React.CSSProperties = {
-  position: "fixed",
-  top: 14,
-  left: 14,
-  zIndex: 10000,
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: "10px 14px",
-  background: "rgba(15,23,42,0.92)",
-  color: "white",
-  fontSize: 20,
-  cursor: "pointer",
-}
-
-const mobileBackdropStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 9998,
-  border: "none",
-  background: "rgba(0,0,0,0.45)",
-  cursor: "pointer",
 }
 
 const mainStyle: React.CSSProperties = {
