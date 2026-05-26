@@ -10,6 +10,7 @@ type Employee = {
   apellido_paterno: string
   apellido_materno: string | null
   nickname: string | null
+  email: string
   puesto: string
   sueldo_mensual: number
   fecha_ingreso: string
@@ -20,6 +21,7 @@ type EmployeeForm = {
   apellido_paterno: string
   apellido_materno: string
   nickname: string
+  email: string
   puesto: string
   sueldo_mensual: string
   fecha_ingreso: string
@@ -30,6 +32,7 @@ const emptyForm: EmployeeForm = {
   apellido_paterno: "",
   apellido_materno: "",
   nickname: "",
+  email: "",
   puesto: "",
   sueldo_mensual: "",
   fecha_ingreso: "",
@@ -102,12 +105,13 @@ export default function EmpleadosPage() {
     if (
       !values.nombre.trim() ||
       !values.apellido_paterno.trim() ||
+      !values.email.trim() ||
       !values.puesto.trim() ||
       !values.fecha_ingreso ||
       Number.isNaN(sueldo) ||
       sueldo < 0
     ) {
-      alert("Completa nombre, apellido paterno, puesto, sueldo y fecha de ingreso")
+      alert("Completa nombre, apellido paterno, email, puesto, sueldo y fecha de ingreso")
       return null
     }
 
@@ -116,6 +120,7 @@ export default function EmpleadosPage() {
       apellido_paterno: values.apellido_paterno.trim(),
       apellido_materno: values.apellido_materno.trim() || null,
       nickname: values.nickname.trim() || null,
+      email: values.email.trim().toLowerCase(),
       puesto: values.puesto.trim(),
       sueldo_mensual: sueldo,
       fecha_ingreso: values.fecha_ingreso,
@@ -141,6 +146,7 @@ export default function EmpleadosPage() {
       apellido_paterno: employee.apellido_paterno,
       apellido_materno: employee.apellido_materno || "",
       nickname: employee.nickname || "",
+      email: employee.email,
       puesto: employee.puesto,
       sueldo_mensual: String(employee.sueldo_mensual),
       fecha_ingreso: employee.fecha_ingreso,
@@ -312,6 +318,7 @@ export default function EmpleadosPage() {
                         <span style={avatarStyle(name)}>{name.charAt(0).toUpperCase()}</span>
                         <div style={{ minWidth: 0 }}>
                           <p style={employeeNameStyle}>{name}</p>
+                          <p style={employeeMetaStyle}>{employee.email}</p>
                           {employee.nickname && (
                             <p style={employeeMetaStyle}>@{employee.nickname}</p>
                           )}
@@ -407,9 +414,19 @@ function EmployeeFormFields({
       <div
         style={{
           ...formGridStyle,
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr auto",
+          gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr 1fr",
         }}
       >
+        <Field label="Email">
+          <input
+            type="email"
+            placeholder="correo@empresa.com"
+            value={values.email}
+            onChange={(e) => updateField("email", e.target.value)}
+            style={inputStyle}
+          />
+        </Field>
+
         <Field label="Nickname">
           <input
             placeholder="Opcional"
@@ -427,7 +444,14 @@ function EmployeeFormFields({
             style={inputStyle}
           />
         </Field>
+      </div>
 
+      <div
+        style={{
+          ...formGridStyle,
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr auto",
+        }}
+      >
         <Field label="Sueldo mensual">
           <input
             type="number"

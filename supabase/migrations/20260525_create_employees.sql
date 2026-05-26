@@ -6,6 +6,7 @@ create table if not exists public.employees (
   apellido_paterno text not null,
   apellido_materno text,
   nickname text,
+  email text not null,
   puesto text not null,
   sueldo_mensual numeric(12, 2) not null check (sueldo_mensual >= 0),
   fecha_ingreso date not null,
