@@ -69,6 +69,19 @@ export function DatePickerField({
     [viewMonth]
   )
 
+  const yearOptions = useMemo(
+    () => buildYearOptions(minDate, maxDate, viewMonth.getFullYear()),
+    [minDate, maxDate, viewMonth.getFullYear()]
+  )
+
+  function setViewYear(year: number) {
+    setViewMonth((current) => new Date(year, current.getMonth(), 1))
+  }
+
+  function setViewMonthIndex(monthIndex: number) {
+    setViewMonth((current) => new Date(current.getFullYear(), monthIndex, 1))
+  }
+
   function selectDate(day: number) {
     const nextValue = toDateInputValue(
       new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day)
@@ -96,7 +109,7 @@ export function DatePickerField({
     const rect = triggerRef.current?.getBoundingClientRect()
     if (rect) {
       const popoverWidth = 280
-      const popoverHeight = 320
+      const popoverHeight = 360
       let top = rect.bottom + 6
       let left = rect.left
 
@@ -152,9 +165,35 @@ export function DatePickerField({
               >
                 ‹
               </button>
-              <p style={monthLabelStyle}>
-                {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-              </p>
+
+              <div style={selectorRowStyle}>
+                <select
+                  value={viewMonth.getMonth()}
+                  onChange={(event) => setViewMonthIndex(Number(event.target.value))}
+                  style={selectorStyle}
+                  aria-label="Mes"
+                >
+                  {MONTH_LABELS.map((monthLabel, index) => (
+                    <option key={monthLabel} value={index}>
+                      {monthLabel}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={viewMonth.getFullYear()}
+                  onChange={(event) => setViewYear(Number(event.target.value))}
+                  style={selectorStyle}
+                  aria-label="Año"
+                >
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => shiftMonth(1)}
@@ -245,6 +284,32 @@ function formatDisplayDate(value: string) {
   })
 }
 
+function buildYearOptions(minDate?: string, maxDate?: string, focusYear?: number) {
+  const currentYear = new Date().getFullYear()
+  let minYear = currentYear - 80
+  let maxYear = currentYear + 2
+
+  if (minDate) {
+    minYear = Math.min(minYear, Number(minDate.split("-")[0]))
+  }
+
+  if (maxDate) {
+    maxYear = Math.max(maxYear, Number(maxDate.split("-")[0]))
+  }
+
+  if (focusYear) {
+    minYear = Math.min(minYear, focusYear)
+    maxYear = Math.max(maxYear, focusYear)
+  }
+
+  const years: number[] = []
+  for (let year = maxYear; year >= minYear; year -= 1) {
+    years.push(year)
+  }
+
+  return years
+}
+
 function buildCalendarDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -314,18 +379,32 @@ const popoverStyle: React.CSSProperties = {
 }
 
 const popoverHeaderStyle: React.CSSProperties = {
-  display: "flex",
+  display: "grid",
+  gridTemplateColumns: "28px 1fr 28px",
   alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
+  gap: 6,
   marginBottom: 10,
 }
 
-const monthLabelStyle: React.CSSProperties = {
-  margin: 0,
+const selectorRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1.2fr 0.8fr",
+  gap: 6,
+  minWidth: 0,
+}
+
+const selectorStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  padding: "6px 8px",
+  border: "1px solid rgba(148,163,184,0.16)",
+  borderRadius: 8,
+  background: "rgba(2,6,23,0.75)",
   color: "#f8fafc",
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 600,
+  outline: "none",
+  cursor: "pointer",
 }
 
 const navButtonStyle: React.CSSProperties = {
