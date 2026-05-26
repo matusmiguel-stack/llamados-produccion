@@ -55,6 +55,7 @@ export default function Home() {
   const [filterHumanResource, setFilterHumanResource] = useState("")
 
   const [selectedDate, setSelectedDate] = useState("")
+  const [selectedEndDate, setSelectedEndDate] = useState("")
   const [title, setTitle] = useState("")
   const [client, setClient] = useState("")
   const [project, setProject] = useState("")
@@ -271,6 +272,8 @@ export default function Home() {
     setEntryMode("shoot")
     setVacationStartDate("")
     setVacationEndDate("")
+    setSelectedDate("")
+    setSelectedEndDate("")
     setTitle("")
     setClient("")
     setProject("")
@@ -304,22 +307,28 @@ export default function Home() {
     !!filterStatus ||
     !!filterHumanResource
 
-  function handleDateClick(info: any) {
+  function handleCalendarSelect(info: any) {
     if (!canEdit) return
     resetForm()
 
-    const clickedDate = new Date(info.date)
-    const dateStr = toDateInputValue(clickedDate)
-    setSelectedDate(dateStr)
-    setVacationStartDate(dateStr)
-    setVacationEndDate(dateStr)
-    setStartTime(clickedDate.toTimeString().slice(0, 5))
+    const { startDate, endDate } = selectionToDateRange(info)
 
-    const endDate = new Date(clickedDate)
-    endDate.setHours(endDate.getHours() + 1)
-    setEndTime(endDate.toTimeString().slice(0, 5))
+    setSelectedDate(startDate)
+    setSelectedEndDate(endDate)
+    setVacationStartDate(startDate)
+    setVacationEndDate(endDate)
+
+    const isMultiDay = endDate > startDate
+
+    if (isMultiDay || info.allDay) {
+      setAllDay(true)
+    } else {
+      setStartTime(info.start.toTimeString().slice(0, 5))
+      setEndTime(info.end.toTimeString().slice(0, 5))
+    }
 
     setModalOpen(true)
+    info.view.calendar.unselect()
   }
 
   function handleEventClick(info: any) {
@@ -398,6 +407,7 @@ function openEditShoot() {
     setColor(selectedShoot.color || "#7c3aed")
     setAllDay(selectedShoot.all_day || false)
     setSelectedDate(start.toISOString().slice(0, 10))
+    setSelectedEndDate(end.toISOString().slice(0, 10))
     setStartTime(start.toTimeString().slice(0, 5))
     setEndTime(end.toTimeString().slice(0, 5))
     setSelectedEmployees(getShootEmployees(selectedShoot.id).map((employee) => employee.id))
@@ -458,16 +468,42 @@ function openEditVacation() {
     return shootConflict || vacationConflict
   }
 
-  function isEmployeeBusy(employeeId: string) {
+  function getEffectiveShootEndDate() {
+    return selectedEndDate || selectedDate
+  }
+
+  function isMultiDayShoot() {
     if (!selectedDate) return false
+    return getEffectiveShootEndDate() > selectedDate
+  }
 
-    let newStart = `${selectedDate}T${startTime}:00`
-    let newEnd = `${selectedDate}T${endTime}:00`
+  function getShootDateTimeRange() {
+    if (!selectedDate) return null
 
-    if (allDay) {
-      newStart = `${selectedDate}T00:00:00`
-      newEnd = `${selectedDate}T23:59:59`
+    const endDate = getEffectiveShootEndDate()
+    const multiDay = endDate > selectedDate
+
+    if (allDay || multiDay) {
+      return {
+        start: `${selectedDate}T00:00:00`,
+        end: `${endDate}T23:59:59`,
+        allDay: true,
+      }
     }
+
+    return {
+      start: `${selectedDate}T${startTime}:00`,
+      end: `${selectedDate}T${endTime}:00`,
+      allDay: false,
+    }
+  }
+
+  function isEmployeeBusy(employeeId: string) {
+    const range = getShootDateTimeRange()
+    if (!range) return false
+
+    const proposedStart = new Date(range.start)
+    const proposedEnd = new Date(range.end)
 
     return shootEmployees.some((assignment) => {
       if (assignment.employee_id !== employeeId) return false
@@ -476,23 +512,17 @@ function openEditVacation() {
 
       const existingStart = new Date(assignment.shoots.start_time)
       const existingEnd = new Date(assignment.shoots.end_time)
-      const proposedStart = new Date(newStart)
-      const proposedEnd = new Date(newEnd)
 
       return proposedStart < existingEnd && proposedEnd > existingStart
     })
   }
 
   function isResourceBusy(resourceId: string) {
-    if (!selectedDate) return false
+    const range = getShootDateTimeRange()
+    if (!range) return false
 
-    let newStart = `${selectedDate}T${startTime}:00`
-    let newEnd = `${selectedDate}T${endTime}:00`
-
-    if (allDay) {
-      newStart = `${selectedDate}T00:00:00`
-      newEnd = `${selectedDate}T23:59:59`
-    }
+    const proposedStart = new Date(range.start)
+    const proposedEnd = new Date(range.end)
 
     return shootResources.some((assignment) => {
       if (assignment.resource_id !== resourceId) return false
@@ -501,8 +531,6 @@ function openEditVacation() {
 
       const existingStart = new Date(assignment.shoots.start_time)
       const existingEnd = new Date(assignment.shoots.end_time)
-      const proposedStart = new Date(newStart)
-      const proposedEnd = new Date(newEnd)
 
       return proposedStart < existingEnd && proposedEnd > existingStart
     })
@@ -511,17 +539,13 @@ function openEditVacation() {
   async function saveShoot() {
     if (!canEdit) return alert("No tienes permisos para editar.")
     if (!title) return alert("Ponle nombre al llamado")
+    if (!selectedDate) return alert("Selecciona las fechas del llamado")
     if (selectedEmployees.length === 0 && selectedResources.length === 0) {
       return alert("Selecciona al menos un empleado o recurso técnico")
     }
 
-    let start = `${selectedDate}T${startTime}:00`
-    let end = `${selectedDate}T${endTime}:00`
-
-    if (allDay) {
-      start = `${selectedDate}T00:00:00`
-      end = `${selectedDate}T23:59:59`
-    }
+    const range = getShootDateTimeRange()
+    if (!range) return alert("Selecciona las fechas del llamado")
 
     const payload = {
       title,
@@ -537,9 +561,9 @@ function openEditVacation() {
       production_notes: productionNotes,
       status,
       color: useCustomColor ? color : getStatusColor(status),
-      start_time: start,
-      end_time: end,
-      all_day: allDay,
+      start_time: range.start,
+      end_time: range.end,
+      all_day: range.allDay,
     }
 
     let shootId = selectedShoot?.id
@@ -929,7 +953,7 @@ function openEditVacation() {
             <div style={calendarPanelHeaderStyle}>
               <p style={panelHintStyle}>
                 {canEdit
-                  ? "Clic en un día para crear llamado"
+                  ? "Arrastra días seguidos o haz clic para crear llamado o vacaciones"
                   : "Consulta los llamados programados"}
               </p>
             </div>
@@ -960,9 +984,11 @@ function openEditVacation() {
                 }}
                 events={events}
                 selectable={canEdit}
+                selectMirror={canEdit}
+                unselectAuto
                 editable={canEdit}
                 eventResizableFromStart={canEdit}
-                dateClick={handleDateClick}
+                select={handleCalendarSelect}
                 eventClick={handleEventClick}
                 eventDrop={updateEventDate}
                 eventResize={updateEventDate}
@@ -996,9 +1022,9 @@ function openEditVacation() {
                   </h2>
                   {!isVacationForm && selectedDate && (
                     <p style={formModalMetaStyle}>
-                      {new Date(selectedDate + "T12:00:00").toLocaleDateString(
-                        "es-CL",
-                        { weekday: "short", day: "numeric", month: "short", year: "numeric" }
+                      {formatVacationRange(
+                        selectedDate,
+                        getEffectiveShootEndDate()
                       )}
                     </p>
                   )}
@@ -1021,7 +1047,13 @@ function openEditVacation() {
                   <div style={entryModeSwitchWrapStyle}>
                     <button
                       type="button"
-                      onClick={() => setEntryMode("shoot")}
+                      onClick={() => {
+                        if (vacationStartDate) {
+                          setSelectedDate(vacationStartDate)
+                          setSelectedEndDate(vacationEndDate || vacationStartDate)
+                        }
+                        setEntryMode("shoot")
+                      }}
                       style={{
                         ...entryModeSwitchButtonStyle,
                         ...(entryMode === "shoot" ? entryModeSwitchActiveStyle : {}),
@@ -1031,7 +1063,13 @@ function openEditVacation() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setEntryMode("vacation")}
+                      onClick={() => {
+                        if (selectedDate) {
+                          setVacationStartDate(selectedDate)
+                          setVacationEndDate(getEffectiveShootEndDate())
+                        }
+                        setEntryMode("vacation")
+                      }}
                       style={{
                         ...entryModeSwitchButtonStyle,
                         ...(entryMode === "vacation" ? entryModeSwitchActiveStyle : {}),
@@ -1191,6 +1229,35 @@ function openEditVacation() {
                     <p style={formModalSectionLabelStyle}>Producción</p>
 
                     <div style={formModalRowStyle}>
+                      <DatePickerField
+                        label="Desde"
+                        value={selectedDate}
+                        labelStyle={formModalLabelStyle}
+                        onChange={(nextValue) => {
+                          setSelectedDate(nextValue)
+                          setVacationStartDate(nextValue)
+                          if (selectedEndDate && nextValue > selectedEndDate) {
+                            setSelectedEndDate(nextValue)
+                            setVacationEndDate(nextValue)
+                          }
+                        }}
+                      />
+                      <DatePickerField
+                        label="Hasta"
+                        value={getEffectiveShootEndDate()}
+                        minDate={selectedDate || undefined}
+                        labelStyle={formModalLabelStyle}
+                        onChange={(nextValue) => {
+                          setSelectedEndDate(nextValue)
+                          setVacationEndDate(nextValue)
+                          if (selectedDate && nextValue > selectedDate) {
+                            setAllDay(true)
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div style={formModalRowStyle}>
                       <div style={formModalFieldStyle}>
                         <label style={formModalLabelStyle}>Estado</label>
                         <select
@@ -1209,7 +1276,8 @@ function openEditVacation() {
                         <label style={formModalInlineCheckStyle}>
                           <input
                             type="checkbox"
-                            checked={allDay}
+                            checked={allDay || isMultiDayShoot()}
+                            disabled={isMultiDayShoot()}
                             onChange={(e) => setAllDay(e.target.checked)}
                           />
                           Todo el día
@@ -1217,7 +1285,7 @@ function openEditVacation() {
                       </div>
                     </div>
 
-                    {!allDay && (
+                    {!allDay && !isMultiDayShoot() && (
                       <div style={formModalRowStyle}>
                         <div style={formModalFieldStyle}>
                           <label style={formModalLabelStyle}>Inicio</label>
@@ -1666,6 +1734,25 @@ function toDateInputValue(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
   return `${year}-${month}-${day}`
+}
+
+function selectionToDateRange(info: {
+  start: Date
+  end: Date
+  allDay: boolean
+}) {
+  const startDate = toDateInputValue(info.start)
+  let endDate = startDate
+
+  if (info.allDay) {
+    const end = new Date(info.end)
+    end.setDate(end.getDate() - 1)
+    endDate = toDateInputValue(end)
+  } else {
+    endDate = toDateInputValue(info.end)
+  }
+
+  return { startDate, endDate }
 }
 
 function addDaysToDateString(dateStr: string, days: number) {
