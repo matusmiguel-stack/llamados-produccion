@@ -17,6 +17,7 @@ type AppSidebarProps = {
 
 const navItems = [
   { href: "/", label: "Calendario", icon: "calendar" as const },
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
   { href: "/resources", label: "Inventario", icon: "inventory" as const },
   { href: "/users", label: "Usuarios", icon: "users" as const, adminOnly: true },
 ]
@@ -134,12 +135,23 @@ export function AppSidebar({
   )
 }
 
-function NavIcon({ type }: { type: "calendar" | "inventory" | "users" }) {
+function NavIcon({ type }: { type: "calendar" | "dashboard" | "inventory" | "users" }) {
   if (type === "calendar") {
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
         <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
         <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (type === "dashboard") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <rect x="13" y="3" width="8" height="5" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <rect x="13" y="10" width="8" height="11" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.6" />
       </svg>
     )
   }
