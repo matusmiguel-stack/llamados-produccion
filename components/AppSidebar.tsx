@@ -19,6 +19,7 @@ const navItems = [
   { href: "/", label: "Calendario", icon: "calendar" as const },
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
   { href: "/resources", label: "Inventario", icon: "inventory" as const },
+  { href: "/empleados", label: "Empleados", icon: "employees" as const, adminOnly: true },
   { href: "/users", label: "Usuarios", icon: "users" as const, adminOnly: true },
 ]
 
@@ -135,7 +136,11 @@ export function AppSidebar({
   )
 }
 
-function NavIcon({ type }: { type: "calendar" | "dashboard" | "inventory" | "users" }) {
+function NavIcon({
+  type,
+}: {
+  type: "calendar" | "dashboard" | "inventory" | "employees" | "users"
+}) {
   if (type === "calendar") {
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -166,6 +171,16 @@ function NavIcon({ type }: { type: "calendar" | "dashboard" | "inventory" | "use
           strokeLinejoin="round"
         />
         <path d="M4 12l8 4.5 8-4.5M4 16.5 12 21l8-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
+  if (type === "employees") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M8 7V5.5A2 2 0 0 1 10 3.5h4a2 2 0 0 1 2 2V7" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M12 12v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
     )
   }
