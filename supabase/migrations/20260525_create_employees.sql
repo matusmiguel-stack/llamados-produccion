@@ -10,6 +10,7 @@ create table if not exists public.employees (
   puesto text not null,
   sueldo_mensual numeric(12, 2) not null check (sueldo_mensual >= 0),
   fecha_ingreso date not null,
+  cumpleanos date,
   created_at timestamptz not null default now()
 );
 

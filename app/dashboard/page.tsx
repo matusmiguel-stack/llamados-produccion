@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { AppSidebar } from "../../components/AppSidebar"
+import { DatePickerField } from "../../components/DatePickerField"
+import {
+  employeeDisplayName,
+  getEmployeesOnVacationOnDate,
+  getEmployeesWithBirthdayOnDate,
+} from "../../lib/employee-dates"
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -10,6 +16,8 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
   const [shootEmployees, setShootEmployees] = useState<any[]>([])
+  const [allVacations, setAllVacations] = useState<any[]>([])
+  const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
   const [selectedDate, setSelectedDate] = useState(getLocalDateString)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -62,9 +70,20 @@ export default function DashboardPage() {
       .from("shoot_employees")
       .select("*, shoots(*), employees(*)")
 
+    const { data: vacations } = await supabase
+      .from("vacations")
+      .select("*")
+      .order("start_date")
+
+    const { data: vacationAssignments } = await supabase
+      .from("vacation_employees")
+      .select("*, vacations(*), employees(*)")
+
     setAllShoots(shoots || [])
     setEmployees(emps || [])
     setShootEmployees(employeeAssignments || [])
+    setAllVacations(vacations || [])
+    setVacationEmployees(vacationAssignments || [])
   }
 
   useEffect(() => {
@@ -85,6 +104,22 @@ export default function DashboardPage() {
   const shootsOnDate = useMemo(
     () => allShoots.filter((shoot) => shootOverlapsDate(shoot, selectedDate)),
     [allShoots, selectedDate]
+  )
+
+  const vacationsToday = useMemo(
+    () =>
+      getEmployeesOnVacationOnDate(
+        employees,
+        allVacations,
+        vacationEmployees,
+        selectedDate
+      ),
+    [employees, allVacations, vacationEmployees, selectedDate]
+  )
+
+  const birthdaysToday = useMemo(
+    () => getEmployeesWithBirthdayOnDate(employees, selectedDate),
+    [employees, selectedDate]
   )
 
   const crewSummaries = useMemo(() => {
@@ -118,7 +153,10 @@ export default function DashboardPage() {
   }, [employees, shootEmployees, allShoots, selectedDate])
 
   const activeCrew = crewSummaries.filter((entry) => entry.shoots.length > 0)
-  const idleCrew = crewSummaries.filter((entry) => entry.shoots.length === 0)
+  const vacationIds = new Set(vacationsToday.map((person) => person.id))
+  const idleCrew = crewSummaries.filter(
+    (entry) => entry.shoots.length === 0 && !vacationIds.has(entry.person.id)
+  )
 
   const formattedDate = new Date(selectedDate + "T12:00:00").toLocaleDateString(
     "es-CL",
@@ -149,7 +187,8 @@ export default function DashboardPage() {
             <div>
               <h1 style={pageTitleStyle}>Dashboard crew</h1>
               <p style={pageSubtitleStyle}>
-                {activeCrew.length} con llamados · {idleCrew.length} libres ·{" "}
+                {activeCrew.length} con llamados · {vacationsToday.length} de vacaciones ·{" "}
+                {birthdaysToday.length} cumpleaños · {idleCrew.length} libres ·{" "}
                 {shootsOnDate.length} llamado{shootsOnDate.length === 1 ? "" : "s"}
               </p>
             </div>
@@ -164,12 +203,14 @@ export default function DashboardPage() {
               >
                 Hoy
               </button>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                style={dateInputStyle}
-              />
+              <div style={datePickerWrapStyle}>
+                <DatePickerField
+                  label="Fecha"
+                  hideLabel
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                />
+              </div>
               <button onClick={() => shiftDate(1)} style={ghostButtonStyle}>
                 →
               </button>
@@ -179,9 +220,68 @@ export default function DashboardPage() {
           <section style={dateBannerStyle}>
             <p style={dateBannerTitleStyle}>{formattedDate}</p>
             <p style={dateBannerHintStyle}>
-              Resumen de llamados asignados a cada empleado de Retro
+              Llamados, vacaciones y cumpleaños del equipo Retro
             </p>
           </section>
+
+          <div
+            style={{
+              ...summaryGridStyle,
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            }}
+          >
+            <section style={summaryPanelStyle}>
+              <div style={panelHeaderStyle}>
+                <p style={panelTitleStyle}>Vacaciones</p>
+                <p style={panelHintStyle}>
+                  {vacationsToday.length} persona{vacationsToday.length === 1 ? "" : "s"} fuera
+                </p>
+              </div>
+              {vacationsToday.length > 0 ? (
+                <div style={summaryChipGridStyle}>
+                  {vacationsToday.map((person) => (
+                    <div key={person.id} style={vacationChipStyle}>
+                      <span style={avatarStyle(employeeDisplayName(person), "vacation")}>
+                        {employeeDisplayName(person).charAt(0).toUpperCase()}
+                      </span>
+                      <div>
+                        <p style={summaryNameStyle}>{employeeDisplayName(person)}</p>
+                        <p style={summaryMetaStyle}>{person.puesto}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={summaryEmptyStyle}>Nadie de vacaciones este día</p>
+              )}
+            </section>
+
+            <section style={summaryPanelStyle}>
+              <div style={panelHeaderStyle}>
+                <p style={panelTitleStyle}>Cumpleaños</p>
+                <p style={panelHintStyle}>
+                  {birthdaysToday.length} celebración{birthdaysToday.length === 1 ? "" : "es"} hoy
+                </p>
+              </div>
+              {birthdaysToday.length > 0 ? (
+                <div style={summaryChipGridStyle}>
+                  {birthdaysToday.map((person) => (
+                    <div key={person.id} style={birthdayChipStyle}>
+                      <span style={avatarStyle(employeeDisplayName(person), "birthday")}>
+                        🎂
+                      </span>
+                      <div>
+                        <p style={summaryNameStyle}>{employeeDisplayName(person)}</p>
+                        <p style={summaryMetaStyle}>{person.puesto}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={summaryEmptyStyle}>Sin cumpleaños este día</p>
+              )}
+            </section>
+          </div>
 
           {crewSummaries.length === 0 ? (
             <section style={emptyPanelStyle}>
@@ -257,7 +357,7 @@ export default function DashboardPage() {
                   <div style={idleGridStyle}>
                     {idleCrew.map(({ person }) => (
                       <div key={person.id} style={idleChipStyle}>
-                        <span style={avatarStyle(employeeDisplayName(person), true)}>
+                        <span style={avatarStyle(employeeDisplayName(person), "muted")}>
                           {employeeDisplayName(person).charAt(0).toUpperCase()}
                         </span>
                         <div>
@@ -281,10 +381,6 @@ export default function DashboardPage() {
       </main>
     </div>
   )
-}
-
-function employeeDisplayName(employee: any) {
-  return employee.nickname?.trim() || employee.nombre
 }
 
 function getLocalDateString(date = new Date()) {
@@ -367,7 +463,46 @@ function timeBadgeStyle(status: string): React.CSSProperties {
   }
 }
 
-function avatarStyle(name: string, muted = false): React.CSSProperties {
+function avatarStyle(
+  name: string,
+  variant: "default" | "muted" | "vacation" | "birthday" = "default"
+): React.CSSProperties {
+  if (variant === "vacation") {
+    return {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      background: "rgba(147,51,234,0.22)",
+      border: "1px solid rgba(167,139,250,0.28)",
+      color: "#f8fafc",
+      fontSize: 13,
+      fontWeight: 700,
+    }
+  }
+
+  if (variant === "birthday") {
+    return {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      background: "rgba(245,158,11,0.18)",
+      border: "1px solid rgba(251,191,36,0.28)",
+      color: "#fde68a",
+      fontSize: 15,
+      fontWeight: 700,
+    }
+  }
+
+  const muted = variant === "muted"
+
   return {
     width: 34,
     height: 34,
@@ -432,6 +567,10 @@ const dateControlsStyle: React.CSSProperties = {
   flexWrap: "wrap",
 }
 
+const datePickerWrapStyle: React.CSSProperties = {
+  minWidth: 190,
+}
+
 const ghostButtonStyle: React.CSSProperties = {
   padding: "7px 10px",
   background: "transparent",
@@ -440,15 +579,6 @@ const ghostButtonStyle: React.CSSProperties = {
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
-  fontSize: 12,
-}
-
-const dateInputStyle: React.CSSProperties = {
-  padding: "7px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
-  borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
   fontSize: 12,
 }
 
@@ -473,6 +603,64 @@ const dateBannerHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
   color: "#94a3b8",
   fontSize: 12,
+}
+
+const summaryGridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 12,
+  marginBottom: 14,
+}
+
+const summaryPanelStyle: React.CSSProperties = {
+  background: "rgba(15, 23, 42, 0.72)",
+  border: "1px solid rgba(148,163,184,0.14)",
+  borderRadius: 16,
+  padding: "14px 16px",
+}
+
+const summaryChipGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+  gap: 8,
+}
+
+const summaryNameStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#f8fafc",
+  fontSize: 13,
+  fontWeight: 600,
+}
+
+const summaryMetaStyle: React.CSSProperties = {
+  margin: "2px 0 0",
+  color: "#64748b",
+  fontSize: 11,
+}
+
+const summaryEmptyStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 12,
+}
+
+const vacationChipStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "8px 10px",
+  borderRadius: 10,
+  background: "rgba(147,51,234,0.10)",
+  border: "1px solid rgba(167,139,250,0.18)",
+}
+
+const birthdayChipStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "8px 10px",
+  borderRadius: 10,
+  background: "rgba(245,158,11,0.10)",
+  border: "1px solid rgba(251,191,36,0.18)",
 }
 
 const crewGridStyle: React.CSSProperties = {

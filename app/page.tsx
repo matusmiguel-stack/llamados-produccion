@@ -8,9 +8,16 @@ import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 import { AppSidebar } from "../components/AppSidebar"
+import { DatePickerField } from "../components/DatePickerField"
+import {
+  BIRTHDAY_EVENT_PREFIX,
+  buildBirthdayCalendarEvents,
+  employeeDisplayName,
+} from "../lib/employee-dates"
 
 const VACATION_COLOR = "#9333ea"
 const VACATION_EVENT_PREFIX = "vacation:"
+const BIRTHDAY_COLOR = "#f59e0b"
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
@@ -231,10 +238,16 @@ export default function Home() {
       editable: false,
     }))
 
-    setEvents([...shootEvents, ...vacationEvents])
+    const birthdayEvents = buildBirthdayCalendarEvents(employees, {
+      filterEmployeeId: filterHumanResource || undefined,
+      color: BIRTHDAY_COLOR,
+    })
+
+    setEvents([...shootEvents, ...vacationEvents, ...birthdayEvents])
   }, [
     allShoots,
     allVacations,
+    employees,
     shootResources,
     shootEmployees,
     vacationEmployees,
@@ -304,11 +317,16 @@ export default function Home() {
   function handleEventClick(info: any) {
     const eventId = String(info.event.id)
 
-    if (eventId.startsWith(VACATION_EVENT_PREFIX)) {
-      const vacationId = eventId.slice(VACATION_EVENT_PREFIX.length)
-      const vacation = allVacations.find((item) => item.id === vacationId)
-      setSelectedVacation(vacation || null)
-      setVacationDetailsOpen(true)
+    if (
+      eventId.startsWith(VACATION_EVENT_PREFIX) ||
+      eventId.startsWith(BIRTHDAY_EVENT_PREFIX)
+    ) {
+      if (eventId.startsWith(VACATION_EVENT_PREFIX)) {
+        const vacationId = eventId.slice(VACATION_EVENT_PREFIX.length)
+        const vacation = allVacations.find((item) => item.id === vacationId)
+        setSelectedVacation(vacation || null)
+        setVacationDetailsOpen(true)
+      }
       return
     }
 
@@ -336,10 +354,6 @@ function getShootTechnicalResources(shootId: string) {
     .filter((a) => a.shoot_id === shootId && a.resources?.type === "technical")
     .map((a) => a.resources)
     .filter(Boolean)
-}
-
-function employeeDisplayName(employee: any) {
-  return employee.nickname?.trim() || employee.nombre
 }
 
 function employeeSelectLabel(employee: any) {
@@ -670,7 +684,12 @@ function openEditVacation() {
   }
 
   async function updateEventDate(info: any) {
-    if (String(info.event.id).startsWith(VACATION_EVENT_PREFIX)) {
+    const eventId = String(info.event.id)
+
+    if (
+      eventId.startsWith(VACATION_EVENT_PREFIX) ||
+      eventId.startsWith(BIRTHDAY_EVENT_PREFIX)
+    ) {
       info.revert()
       return
     }
@@ -1018,30 +1037,24 @@ function openEditVacation() {
                     <p style={formModalSectionLabelStyle}>Vacaciones</p>
 
                     <div style={formModalRowStyle}>
-                      <div style={formModalFieldStyle}>
-                        <label style={formModalLabelStyle}>Desde</label>
-                        <input
-                          type="date"
-                          value={vacationStartDate}
-                          onChange={(e) => {
-                            setVacationStartDate(e.target.value)
-                            if (vacationEndDate && e.target.value > vacationEndDate) {
-                              setVacationEndDate(e.target.value)
-                            }
-                          }}
-                          style={formModalInputStyle}
-                        />
-                      </div>
-                      <div style={formModalFieldStyle}>
-                        <label style={formModalLabelStyle}>Hasta</label>
-                        <input
-                          type="date"
-                          value={vacationEndDate}
-                          min={vacationStartDate || undefined}
-                          onChange={(e) => setVacationEndDate(e.target.value)}
-                          style={formModalInputStyle}
-                        />
-                      </div>
+                      <DatePickerField
+                        label="Desde"
+                        value={vacationStartDate}
+                        labelStyle={formModalLabelStyle}
+                        onChange={(nextValue) => {
+                          setVacationStartDate(nextValue)
+                          if (vacationEndDate && nextValue > vacationEndDate) {
+                            setVacationEndDate(nextValue)
+                          }
+                        }}
+                      />
+                      <DatePickerField
+                        label="Hasta"
+                        value={vacationEndDate}
+                        minDate={vacationStartDate || undefined}
+                        labelStyle={formModalLabelStyle}
+                        onChange={setVacationEndDate}
+                      />
                     </div>
 
                     <div style={formModalFieldStyle}>
@@ -1658,10 +1671,6 @@ function datesOverlapInclusive(
   endB: string
 ) {
   return startA <= endB && endA >= startB
-}
-
-function employeeDisplayName(employee: any) {
-  return employee.nickname?.trim() || employee.nombre
 }
 
 function formatVacationTitle(vacation: any, assignments: any[]) {

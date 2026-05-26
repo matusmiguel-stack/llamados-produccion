@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { AppSidebar } from "../../components/AppSidebar"
+import { DatePickerField } from "../../components/DatePickerField"
 
 type Employee = {
   id: string
@@ -14,6 +15,7 @@ type Employee = {
   puesto: string
   sueldo_mensual: number
   fecha_ingreso: string
+  cumpleanos: string | null
 }
 
 type EmployeeForm = {
@@ -25,6 +27,7 @@ type EmployeeForm = {
   puesto: string
   sueldo_mensual: string
   fecha_ingreso: string
+  cumpleanos: string
 }
 
 const emptyForm: EmployeeForm = {
@@ -36,6 +39,7 @@ const emptyForm: EmployeeForm = {
   puesto: "",
   sueldo_mensual: "",
   fecha_ingreso: "",
+  cumpleanos: "",
 }
 
 export default function EmpleadosPage() {
@@ -124,6 +128,7 @@ export default function EmpleadosPage() {
       puesto: values.puesto.trim(),
       sueldo_mensual: sueldo,
       fecha_ingreso: values.fecha_ingreso,
+      cumpleanos: values.cumpleanos.trim() || null,
     }
   }
 
@@ -150,6 +155,7 @@ export default function EmpleadosPage() {
       puesto: employee.puesto,
       sueldo_mensual: String(employee.sueldo_mensual),
       fecha_ingreso: employee.fecha_ingreso,
+      cumpleanos: employee.cumpleanos || "",
     })
   }
 
@@ -203,6 +209,15 @@ export default function EmpleadosPage() {
     return `${day}/${month}/${year}`
   }
 
+  function formatBirthday(value: string | null) {
+    if (!value) return "—"
+
+    const [year, month, day] = value.split("-")
+    if (!year || !month || !day) return value
+
+    return `${day}/${month}/${year}`
+  }
+
   function fullName(employee: Employee) {
     return [employee.nombre, employee.apellido_paterno, employee.apellido_materno]
       .filter(Boolean)
@@ -239,7 +254,7 @@ export default function EmpleadosPage() {
             <div style={panelHeaderStyle}>
               <p style={panelTitleStyle}>Nuevo empleado</p>
               <p style={panelHintStyle}>
-                Registra al personal de la empresa con su puesto y sueldo
+                Registra al personal con puesto, sueldo, fecha de ingreso y cumpleaños
               </p>
             </div>
 
@@ -267,6 +282,7 @@ export default function EmpleadosPage() {
                 <span>Puesto</span>
                 <span>Sueldo</span>
                 <span>Ingreso</span>
+                <span>Cumpleaños</span>
                 <span>Acciones</span>
               </div>
             )}
@@ -311,7 +327,7 @@ export default function EmpleadosPage() {
                         ...rowStyle,
                         gridTemplateColumns: isMobile
                           ? "1fr"
-                          : "minmax(180px, 1.3fr) 140px 120px 100px 180px",
+                          : "minmax(180px, 1.2fr) 130px 110px 96px 96px 170px",
                       }}
                     >
                       <div style={employeeCellStyle}>
@@ -335,6 +351,10 @@ export default function EmpleadosPage() {
 
                       <div style={metaCellStyle}>
                         <span style={dateStyle}>{formatDate(employee.fecha_ingreso)}</span>
+                      </div>
+
+                      <div style={metaCellStyle}>
+                        <span style={dateStyle}>{formatBirthday(employee.cumpleanos)}</span>
                       </div>
 
                       <div style={rowActionsStyle}>
@@ -449,7 +469,7 @@ function EmployeeFormFields({
       <div
         style={{
           ...formGridStyle,
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr auto",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
         }}
       >
         <Field label="Sueldo mensual">
@@ -463,18 +483,31 @@ function EmployeeFormFields({
             style={inputStyle}
           />
         </Field>
-
-        <Field label="Fecha de ingreso">
-          <input
-            type="date"
-            value={values.fecha_ingreso}
-            onChange={(e) => updateField("fecha_ingreso", e.target.value)}
-            style={inputStyle}
-          />
-        </Field>
-
-        <div style={formActionStyle}>{action}</div>
       </div>
+
+      <div
+        style={{
+          ...formGridStyle,
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        }}
+      >
+        <DatePickerField
+          label="Fecha de ingreso"
+          value={values.fecha_ingreso}
+          labelStyle={fieldLabelStyle}
+          onChange={(value) => updateField("fecha_ingreso", value)}
+        />
+
+        <DatePickerField
+          label="Cumpleaños"
+          value={values.cumpleanos}
+          labelStyle={fieldLabelStyle}
+          placeholder="Opcional"
+          onChange={(value) => updateField("cumpleanos", value)}
+        />
+      </div>
+
+      <div style={formActionRowStyle}>{action}</div>
     </div>
   )
 }
@@ -605,10 +638,10 @@ const formGridStyle: React.CSSProperties = {
   alignItems: "end",
 }
 
-const formActionStyle: React.CSSProperties = {
+const formActionRowStyle: React.CSSProperties = {
   display: "flex",
-  alignItems: "flex-end",
-  height: "100%",
+  justifyContent: "flex-start",
+  paddingTop: 2,
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -637,7 +670,7 @@ const inputStyle: React.CSSProperties = {
 
 const tableHeaderStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(180px, 1.3fr) 140px 120px 100px 180px",
+  gridTemplateColumns: "minmax(180px, 1.2fr) 130px 110px 96px 96px 170px",
   gap: 12,
   padding: "0 4px 10px",
   color: "#64748b",
