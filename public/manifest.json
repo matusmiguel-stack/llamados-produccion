@@ -1,0 +1,17 @@
+{
+    "name": "Llamados Retro",
+    "short_name": "Retro",
+    "description": "Sistema de llamados de producción audiovisual",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#05070d",
+    "theme_color": "#05070d",
+    "orientation": "portrait",
+    "icons": [
+      {
+        "src": "/logo-retro.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
