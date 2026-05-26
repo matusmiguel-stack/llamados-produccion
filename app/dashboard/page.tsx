@@ -6,7 +6,9 @@ import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 import {
   employeeDisplayName,
+  formatAnniversaryYears,
   getEmployeesOnVacationOnDate,
+  getEmployeesWithAnniversaryOnDate,
   getEmployeesWithBirthdayOnDate,
 } from "../../lib/employee-dates"
 
@@ -122,6 +124,11 @@ export default function DashboardPage() {
     [employees, selectedDate]
   )
 
+  const anniversariesToday = useMemo(
+    () => getEmployeesWithAnniversaryOnDate(employees, selectedDate),
+    [employees, selectedDate]
+  )
+
   const crewSummaries = useMemo(() => {
     return employees
       .map((person) => {
@@ -188,8 +195,9 @@ export default function DashboardPage() {
               <h1 style={pageTitleStyle}>Dashboard crew</h1>
               <p style={pageSubtitleStyle}>
                 {activeCrew.length} con llamados · {vacationsToday.length} de vacaciones ·{" "}
-                {birthdaysToday.length} cumpleaños · {idleCrew.length} libres ·{" "}
-                {shootsOnDate.length} llamado{shootsOnDate.length === 1 ? "" : "s"}
+                {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios ·{" "}
+                {idleCrew.length} libres · {shootsOnDate.length} llamado
+                {shootsOnDate.length === 1 ? "" : "s"}
               </p>
             </div>
 
@@ -220,14 +228,14 @@ export default function DashboardPage() {
           <section style={dateBannerStyle}>
             <p style={dateBannerTitleStyle}>{formattedDate}</p>
             <p style={dateBannerHintStyle}>
-              Llamados, vacaciones y cumpleaños del equipo Retro
+              Llamados, vacaciones, cumpleaños y aniversarios del equipo Retro
             </p>
           </section>
 
           <div
             style={{
               ...summaryGridStyle,
-              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
             }}
           >
             <section style={summaryPanelStyle}>
@@ -279,6 +287,36 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <p style={summaryEmptyStyle}>Sin cumpleaños este día</p>
+              )}
+            </section>
+
+            <section style={summaryPanelStyle}>
+              <div style={panelHeaderStyle}>
+                <p style={panelTitleStyle}>Aniversarios</p>
+                <p style={panelHintStyle}>
+                  {anniversariesToday.length} aniversario
+                  {anniversariesToday.length === 1 ? "" : "s"} laboral
+                  {anniversariesToday.length === 1 ? "" : "es"} hoy
+                </p>
+              </div>
+              {anniversariesToday.length > 0 ? (
+                <div style={summaryChipGridStyle}>
+                  {anniversariesToday.map(({ employee, years }) => (
+                    <div key={employee.id} style={anniversaryChipStyle}>
+                      <span style={avatarStyle(employeeDisplayName(employee), "anniversary")}>
+                        🎉
+                      </span>
+                      <div>
+                        <p style={summaryNameStyle}>{employeeDisplayName(employee)}</p>
+                        <p style={summaryMetaStyle}>
+                          {formatAnniversaryYears(years)} · {employee.puesto}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={summaryEmptyStyle}>Sin aniversarios este día</p>
               )}
             </section>
           </div>
@@ -465,7 +503,7 @@ function timeBadgeStyle(status: string): React.CSSProperties {
 
 function avatarStyle(
   name: string,
-  variant: "default" | "muted" | "vacation" | "birthday" = "default"
+  variant: "default" | "muted" | "vacation" | "birthday" | "anniversary" = "default"
 ): React.CSSProperties {
   if (variant === "vacation") {
     return {
@@ -496,6 +534,23 @@ function avatarStyle(
       background: "rgba(245,158,11,0.18)",
       border: "1px solid rgba(251,191,36,0.28)",
       color: "#fde68a",
+      fontSize: 15,
+      fontWeight: 700,
+    }
+  }
+
+  if (variant === "anniversary") {
+    return {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      background: "rgba(20,184,166,0.18)",
+      border: "1px solid rgba(45,212,191,0.28)",
+      color: "#99f6e4",
       fontSize: 15,
       fontWeight: 700,
     }
@@ -661,6 +716,16 @@ const birthdayChipStyle: React.CSSProperties = {
   borderRadius: 10,
   background: "rgba(245,158,11,0.10)",
   border: "1px solid rgba(251,191,36,0.18)",
+}
+
+const anniversaryChipStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "8px 10px",
+  borderRadius: 10,
+  background: "rgba(20,184,166,0.10)",
+  border: "1px solid rgba(45,212,191,0.18)",
 }
 
 const crewGridStyle: React.CSSProperties = {

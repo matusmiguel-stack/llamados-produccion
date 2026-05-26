@@ -10,7 +10,9 @@ import { supabase } from "../lib/supabase"
 import { AppSidebar } from "../components/AppSidebar"
 import { DatePickerField } from "../components/DatePickerField"
 import {
+  ANNIVERSARY_EVENT_PREFIX,
   BIRTHDAY_EVENT_PREFIX,
+  buildAnniversaryCalendarEvents,
   buildBirthdayCalendarEvents,
   employeeDisplayName,
 } from "../lib/employee-dates"
@@ -18,6 +20,7 @@ import {
 const VACATION_COLOR = "#9333ea"
 const VACATION_EVENT_PREFIX = "vacation:"
 const BIRTHDAY_COLOR = "#f59e0b"
+const ANNIVERSARY_COLOR = "#14b8a6"
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
@@ -243,7 +246,12 @@ export default function Home() {
       color: BIRTHDAY_COLOR,
     })
 
-    setEvents([...shootEvents, ...vacationEvents, ...birthdayEvents])
+    const anniversaryEvents = buildAnniversaryCalendarEvents(employees, {
+      filterEmployeeId: filterHumanResource || undefined,
+      color: ANNIVERSARY_COLOR,
+    })
+
+    setEvents([...shootEvents, ...vacationEvents, ...birthdayEvents, ...anniversaryEvents])
   }, [
     allShoots,
     allVacations,
@@ -319,7 +327,8 @@ export default function Home() {
 
     if (
       eventId.startsWith(VACATION_EVENT_PREFIX) ||
-      eventId.startsWith(BIRTHDAY_EVENT_PREFIX)
+      eventId.startsWith(BIRTHDAY_EVENT_PREFIX) ||
+      eventId.startsWith(ANNIVERSARY_EVENT_PREFIX)
     ) {
       if (eventId.startsWith(VACATION_EVENT_PREFIX)) {
         const vacationId = eventId.slice(VACATION_EVENT_PREFIX.length)
@@ -688,7 +697,8 @@ function openEditVacation() {
 
     if (
       eventId.startsWith(VACATION_EVENT_PREFIX) ||
-      eventId.startsWith(BIRTHDAY_EVENT_PREFIX)
+      eventId.startsWith(BIRTHDAY_EVENT_PREFIX) ||
+      eventId.startsWith(ANNIVERSARY_EVENT_PREFIX)
     ) {
       info.revert()
       return
