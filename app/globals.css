@@ -196,6 +196,30 @@ button {
 @media (max-width: 768px) {
   body {
     overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .calendar-shell-mobile {
+    overflow: visible;
+    flex: none;
+    min-height: auto;
+  }
+
+  .calendar-shell-mobile .fc,
+  .calendar-shell-mobile .fc-view-harness {
+    flex: none;
+    min-height: auto;
+  }
+
+  .calendar-shell-mobile .fc-dayGridMonth-view .fc-scroller,
+  .calendar-shell-mobile .fc-dayGridMonth-view .fc-scroller-liquid-absolute {
+    overflow: visible !important;
+    position: static !important;
+    height: auto !important;
+  }
+
+  .calendar-shell-mobile .fc-daygrid-day-frame {
+    min-height: 72px;
   }
 
   .calendar-shell .fc-header-toolbar {
@@ -219,9 +243,5 @@ button {
   .calendar-shell .fc-button {
     padding: 6px 8px !important;
     font-size: 11px !important;
-  }
-
-  .calendar-shell .fc-daygrid-day-frame {
-    min-height: 0;
   }
 }

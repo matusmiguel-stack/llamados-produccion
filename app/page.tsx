@@ -65,6 +65,11 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
+    if (isMobile) {
+      setCalendarHeight(undefined)
+      return
+    }
+
     const shell = calendarShellRef.current
     if (!shell) return
 
@@ -485,7 +490,12 @@ function openEditShoot() {
   }
 
   return (
-    <div style={appShellStyle}>
+    <div
+      style={{
+        ...appShellStyle,
+        ...(isMobile ? appShellMobileStyle : {}),
+      }}
+    >
       <AppSidebar
         profile={profile}
         user={user}
@@ -497,8 +507,19 @@ function openEditShoot() {
         onLogout={logout}
       />
 
-      <main style={{ ...mainStyle, padding: isMobile ? "76px 14px 24px" : "28px 32px" }}>
-        <div style={pageContainerStyle}>
+      <main
+        style={{
+          ...mainStyle,
+          ...(isMobile ? mainMobileStyle : {}),
+          padding: isMobile ? "76px 14px 24px" : "28px 32px",
+        }}
+      >
+        <div
+          style={{
+            ...pageContainerStyle,
+            ...(isMobile ? pageContainerMobileStyle : {}),
+          }}
+        >
           <header style={pageHeaderStyle}>
             <div>
               <h1 style={pageTitleStyle}>Calendario</h1>
@@ -585,7 +606,12 @@ function openEditShoot() {
             )}
           </section>
 
-          <section style={calendarPanelStyle}>
+          <section
+            style={{
+              ...calendarPanelStyle,
+              ...(isMobile ? calendarPanelMobileStyle : {}),
+            }}
+          >
             <div style={calendarPanelHeaderStyle}>
               <p style={panelHintStyle}>
                 {canEdit
@@ -594,7 +620,14 @@ function openEditShoot() {
               </p>
             </div>
 
-            <div ref={calendarShellRef} className="calendar-shell" style={calendarShellStyle}>
+            <div
+              ref={calendarShellRef}
+              className={isMobile ? "calendar-shell calendar-shell-mobile" : "calendar-shell"}
+              style={{
+                ...calendarShellStyle,
+                ...(isMobile ? calendarShellMobileStyle : {}),
+              }}
+            >
               <FullCalendar
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
@@ -603,10 +636,13 @@ function openEditShoot() {
                   center: "title",
                   right: "dayGridMonth,timeGridWeek,timeGridDay",
                 }}
-                height={calendarHeight}
+                height={isMobile ? "auto" : calendarHeight}
                 dayMaxEvents={3}
                 views={{
-                  dayGridMonth: { expandRows: true, dayMaxEvents: 3 },
+                  dayGridMonth: {
+                    expandRows: !isMobile,
+                    dayMaxEvents: 3,
+                  },
                 }}
                 events={events}
                 selectable={canEdit}
@@ -1263,6 +1299,12 @@ const appShellStyle: React.CSSProperties = {
   color: "#f8fafc",
 }
 
+const appShellMobileStyle: React.CSSProperties = {
+  height: "auto",
+  minHeight: "100vh",
+  overflow: "visible",
+}
+
 const mainStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
@@ -1270,6 +1312,11 @@ const mainStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
+}
+
+const mainMobileStyle: React.CSSProperties = {
+  overflow: "visible",
+  minHeight: "auto",
 }
 
 const pageContainerStyle: React.CSSProperties = {
@@ -1281,6 +1328,12 @@ const pageContainerStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
+}
+
+const pageContainerMobileStyle: React.CSSProperties = {
+  flex: "none",
+  minHeight: "auto",
+  overflow: "visible",
 }
 
 const pageHeaderStyle: React.CSSProperties = {
@@ -1347,6 +1400,12 @@ const calendarPanelStyle: React.CSSProperties = {
   overflow: "hidden",
 }
 
+const calendarPanelMobileStyle: React.CSSProperties = {
+  flex: "none",
+  minHeight: "auto",
+  overflow: "visible",
+}
+
 const calendarPanelHeaderStyle: React.CSSProperties = {
   marginBottom: 8,
   flexShrink: 0,
@@ -1358,6 +1417,12 @@ const calendarShellStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
+}
+
+const calendarShellMobileStyle: React.CSSProperties = {
+  flex: "none",
+  minHeight: "auto",
+  overflow: "visible",
 }
 
 const panelHintStyle: React.CSSProperties = {
