@@ -426,6 +426,29 @@ function openEditShoot() {
     singleValue: (base: any) => ({ ...base, color: "#f8fafc" }),
   }
 
+  const compactSelectThemeStyles = {
+    ...selectThemeStyles,
+    control: (base: any) => ({
+      ...selectThemeStyles.control(base),
+      borderRadius: 10,
+      minHeight: 36,
+      fontSize: 13,
+    }),
+    valueContainer: (base: any) => ({
+      ...base,
+      padding: "0 8px",
+    }),
+    input: (base: any) => ({
+      ...selectThemeStyles.input(base),
+      margin: 0,
+      padding: 0,
+    }),
+    indicatorsContainer: (base: any) => ({
+      ...base,
+      height: 34,
+    }),
+  }
+
   return (
     <div style={appShellStyle}>
       {isMobile && (
@@ -585,7 +608,7 @@ function openEditShoot() {
             onChange={(e) => setFilterHumanResource(e.target.value)}
             style={filterInput}
           >
-            <option value="">Todos los recursos humanos</option>
+            <option value="">Todo Personal Retro</option>
             {humanResources.map((resource) => (
               <option key={resource.id} value={resource.id}>
                 {resource.name} — {resource.category}
@@ -620,23 +643,26 @@ function openEditShoot() {
           <div style={overlayStyle}>
             <div
               style={{
-                ...compactModalStyle,
-                width: isMobile ? "100%" : 860,
+                ...formModalStyle,
+                width: isMobile ? "100%" : 680,
                 height: isMobile ? "100%" : "auto",
-                borderRadius: isMobile ? 0 : 28,
+                maxHeight: isMobile ? "100%" : "88vh",
+                borderRadius: isMobile ? 0 : 16,
               }}
             >
-              <div style={compactHeaderStyle}>
+              <div style={formModalHeaderStyle}>
                 <div>
-                  <p style={eyebrowStyle}>
+                  <h2 style={formModalTitleStyle}>
                     {selectedShoot ? "Editar llamado" : "Nuevo llamado"}
-                  </p>
-                  <h2 style={compactTitleStyle}>
-                    {selectedShoot ? title || "Editar llamado" : "Crear llamado"}
                   </h2>
-                  <p style={compactMutedStyle}>
-                    Configura datos, horario, notas y recursos asignados.
-                  </p>
+                  {selectedDate && (
+                    <p style={formModalMetaStyle}>
+                      {new Date(selectedDate + "T12:00:00").toLocaleDateString(
+                        "es-CL",
+                        { weekday: "short", day: "numeric", month: "short", year: "numeric" }
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -644,265 +670,298 @@ function openEditShoot() {
                     setModalOpen(false)
                     resetForm()
                   }}
-                  style={compactCloseButtonStyle}
+                  style={formModalCloseStyle}
+                  aria-label="Cerrar"
                 >
                   ×
                 </button>
               </div>
 
-              <div style={compactBodyStyle}>
-                <section style={compactCardStyle}>
-                  <div style={compactSectionHeaderStyle}>
-                    <span>01</span>
-                    <strong>Información</strong>
-                  </div>
+              <div style={formModalBodyStyle}>
+                <div
+                  style={{
+                    ...formModalColumnsStyle,
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  }}
+                >
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>Detalles</p>
 
-                  <div
-                    style={{
-                      ...compactGridStyle,
-                      gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr",
-                    }}
-                  >
-                    <input
-                      placeholder="Nombre del llamado"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      style={compactInputStyle}
-                    />
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Nombre</label>
+                      <input
+                        placeholder="Nombre del llamado"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        style={formModalInputStyle}
+                      />
+                    </div>
 
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      style={compactInputStyle}
-                    >
-                      <option value="tentative">Tentativo</option>
-                      <option value="confirmed">Confirmado</option>
-                      <option value="cancelled">Cancelado</option>
-                      <option value="wrap">Wrap</option>
-                    </select>
-                  </div>
-
-                  <div style={compactGridStyle}>
-                    <input
-                      placeholder="Cliente"
-                      value={client}
-                      onChange={(e) => setClient(e.target.value)}
-                      style={compactInputStyle}
-                    />
-
-                    <input
-                      placeholder="Proyecto"
-                      value={project}
-                      onChange={(e) => setProject(e.target.value)}
-                      style={compactInputStyle}
-                    />
-                  </div>
-
-                  <div style={compactGridStyle}>
-                    <input
-                      placeholder="Locación"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      style={compactInputStyle}
-                    />
-
-                    <input
-                      placeholder="Contacto"
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      style={compactInputStyle}
-                    />
-                  </div>
-
-                  <input
-                    placeholder="Dirección"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    style={compactInputStyle}
-                  />
-
-                  <label style={compactCheckStyle}>
-                    <input
-                      type="checkbox"
-                      checked={useCustomColor}
-                      onChange={(e) => setUseCustomColor(e.target.checked)}
-                    />
-                    Usar color especial
-                  </label>
-
-                  {useCustomColor && (
-                    <input
-                      type="color"
-                      value={color}
-                      onChange={(e) => setColor(e.target.value)}
-                      style={{
-                        ...compactInputStyle,
-                        height: 44,
-                        padding: 6,
-                      }}
-                    />
-                  )}
-                </section>
-
-                <section style={compactCardStyle}>
-                  <div style={compactSectionHeaderStyle}>
-                    <span>02</span>
-                    <strong>Producción y horario</strong>
-                  </div>
-
-                  <div style={compactGridStyle}>
-                    <input
-                      placeholder="Director / Realizador"
-                      value={director}
-                      onChange={(e) => setDirector(e.target.value)}
-                      style={compactInputStyle}
-                    />
-
-                    <input
-                      placeholder="DOP / Fotógrafo"
-                      value={dop}
-                      onChange={(e) => setDop(e.target.value)}
-                      style={compactInputStyle}
-                    />
-                  </div>
-
-                  <label style={compactCheckStyle}>
-                    <input
-                      type="checkbox"
-                      checked={allDay}
-                      onChange={(e) => setAllDay(e.target.checked)}
-                    />
-                    Todo el día
-                  </label>
-
-                  {!allDay && (
-                    <div style={compactGridStyle}>
-                      <div>
-                        <p style={compactFieldLabelStyle}>Inicio</p>
+                    <div style={formModalRowStyle}>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Cliente</label>
                         <input
-                          type="time"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          style={compactInputStyle}
+                          placeholder="Cliente"
+                          value={client}
+                          onChange={(e) => setClient(e.target.value)}
+                          style={formModalInputStyle}
                         />
                       </div>
-
-                      <div>
-                        <p style={compactFieldLabelStyle}>Fin</p>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Proyecto</label>
                         <input
-                          type="time"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                          style={compactInputStyle}
+                          placeholder="Proyecto"
+                          value={project}
+                          onChange={(e) => setProject(e.target.value)}
+                          style={formModalInputStyle}
                         />
                       </div>
                     </div>
-                  )}
-                </section>
 
-                <section style={compactCardStyle}>
-                  <div style={compactSectionHeaderStyle}>
-                    <span>03</span>
-                    <strong>Recursos</strong>
+                    <div style={formModalRowStyle}>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Locación</label>
+                        <input
+                          placeholder="Locación"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          style={formModalInputStyle}
+                        />
+                      </div>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Contacto</label>
+                        <input
+                          placeholder="Contacto"
+                          value={contact}
+                          onChange={(e) => setContact(e.target.value)}
+                          style={formModalInputStyle}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Dirección</label>
+                      <input
+                        placeholder="Dirección"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        style={formModalInputStyle}
+                      />
+                    </div>
+
+                    <div style={formModalInlineOptionsStyle}>
+                      <label style={formModalInlineCheckStyle}>
+                        <input
+                          type="checkbox"
+                          checked={useCustomColor}
+                          onChange={(e) => setUseCustomColor(e.target.checked)}
+                        />
+                        Color especial
+                      </label>
+                      {useCustomColor && (
+                        <input
+                          type="color"
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          style={formModalColorInputStyle}
+                        />
+                      )}
+                    </div>
                   </div>
 
-                  <p style={compactFieldLabelStyle}>Recursos humanos</p>
-                  <Select
-                    isMulti
-                    styles={selectThemeStyles}
-                    options={humanResources.map((resource) => ({
-                      value: resource.id,
-                      label: `${resource.name} — ${resource.category}${
-                        isResourceBusy(resource.id) ? " — OCUPADO" : ""
-                      }`,
-                      isDisabled: isResourceBusy(resource.id),
-                    }))}
-                    value={humanResources
-                      .filter((r) => selectedResources.includes(r.id))
-                      .map((r) => ({
-                        value: r.id,
-                        label: `${r.name} — ${r.category}`,
-                      }))}
-                    onChange={(selected) => {
-                      const humanIds = selected.map((item) => item.value)
-                      const technicalIds = selectedResources.filter((id) =>
-                        technicalResources.some((r) => r.id === id)
-                      )
-                      setSelectedResources([...humanIds, ...technicalIds])
-                    }}
-                  />
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>Producción</p>
 
-                  <p style={compactFieldLabelStyle}>Recursos técnicos</p>
-                  <Select
-                    isMulti
-                    styles={selectThemeStyles}
-                    options={technicalResources.map((resource) => ({
-                      value: resource.id,
-                      label: `${resource.name} — ${resource.category}${
-                        isResourceBusy(resource.id) ? " — OCUPADO" : ""
-                      }`,
-                      isDisabled: isResourceBusy(resource.id),
-                    }))}
-                    value={technicalResources
-                      .filter((r) => selectedResources.includes(r.id))
-                      .map((r) => ({
-                        value: r.id,
-                        label: `${r.name} — ${r.category}`,
-                      }))}
-                    onChange={(selected) => {
-                      const technicalIds = selected.map((item) => item.value)
-                      const humanIds = selectedResources.filter((id) =>
-                        humanResources.some((r) => r.id === id)
-                      )
-                      setSelectedResources([...humanIds, ...technicalIds])
-                    }}
-                  />
-                </section>
+                    <div style={formModalRowStyle}>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Estado</label>
+                        <select
+                          value={status}
+                          onChange={(e) => setStatus(e.target.value)}
+                          style={formModalInputStyle}
+                        >
+                          <option value="tentative">Tentativo</option>
+                          <option value="confirmed">Confirmado</option>
+                          <option value="cancelled">Cancelado</option>
+                          <option value="wrap">Wrap</option>
+                        </select>
+                      </div>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Horario</label>
+                        <label style={formModalInlineCheckStyle}>
+                          <input
+                            type="checkbox"
+                            checked={allDay}
+                            onChange={(e) => setAllDay(e.target.checked)}
+                          />
+                          Todo el día
+                        </label>
+                      </div>
+                    </div>
 
-                <section style={compactCardStyle}>
-                  <div style={compactSectionHeaderStyle}>
-                    <span>04</span>
-                    <strong>Notas</strong>
+                    {!allDay && (
+                      <div style={formModalRowStyle}>
+                        <div style={formModalFieldStyle}>
+                          <label style={formModalLabelStyle}>Inicio</label>
+                          <input
+                            type="time"
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                            style={formModalInputStyle}
+                          />
+                        </div>
+                        <div style={formModalFieldStyle}>
+                          <label style={formModalLabelStyle}>Fin</label>
+                          <input
+                            type="time"
+                            value={endTime}
+                            onChange={(e) => setEndTime(e.target.value)}
+                            style={formModalInputStyle}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={formModalRowStyle}>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Director</label>
+                        <input
+                          placeholder="Director / Realizador"
+                          value={director}
+                          onChange={(e) => setDirector(e.target.value)}
+                          style={formModalInputStyle}
+                        />
+                      </div>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>DOP</label>
+                        <input
+                          placeholder="DOP / Fotógrafo"
+                          value={dop}
+                          onChange={(e) => setDop(e.target.value)}
+                          style={formModalInputStyle}
+                        />
+                      </div>
+                    </div>
+
+                    <p style={{ ...formModalSectionLabelStyle, marginTop: 14 }}>
+                      Recursos
+                    </p>
+
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Humanos</label>
+                      <Select
+                        isMulti
+                        styles={compactSelectThemeStyles}
+                        placeholder="Seleccionar..."
+                        options={humanResources.map((resource) => ({
+                          value: resource.id,
+                          label: `${resource.name} — ${resource.category}${
+                            isResourceBusy(resource.id) ? " — OCUPADO" : ""
+                          }`,
+                          isDisabled: isResourceBusy(resource.id),
+                        }))}
+                        value={humanResources
+                          .filter((r) => selectedResources.includes(r.id))
+                          .map((r) => ({
+                            value: r.id,
+                            label: `${r.name} — ${r.category}`,
+                          }))}
+                        onChange={(selected) => {
+                          const humanIds = selected.map((item) => item.value)
+                          const technicalIds = selectedResources.filter((id) =>
+                            technicalResources.some((r) => r.id === id)
+                          )
+                          setSelectedResources([...humanIds, ...technicalIds])
+                        }}
+                      />
+                    </div>
+
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Técnicos</label>
+                      <Select
+                        isMulti
+                        styles={compactSelectThemeStyles}
+                        placeholder="Seleccionar..."
+                        options={technicalResources.map((resource) => ({
+                          value: resource.id,
+                          label: `${resource.name} — ${resource.category}${
+                            isResourceBusy(resource.id) ? " — OCUPADO" : ""
+                          }`,
+                          isDisabled: isResourceBusy(resource.id),
+                        }))}
+                        value={technicalResources
+                          .filter((r) => selectedResources.includes(r.id))
+                          .map((r) => ({
+                            value: r.id,
+                            label: `${r.name} — ${r.category}`,
+                          }))}
+                        onChange={(selected) => {
+                          const technicalIds = selected.map((item) => item.value)
+                          const humanIds = selectedResources.filter((id) =>
+                            humanResources.some((r) => r.id === id)
+                          )
+                          setSelectedResources([...humanIds, ...technicalIds])
+                        }}
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <textarea
-                    placeholder="Notas públicas"
-                    value={publicNotes}
-                    onChange={(e) => setPublicNotes(e.target.value)}
-                    style={compactTextareaStyle}
-                  />
+                <div style={formModalNotesBlockStyle}>
+                  <p style={formModalSectionLabelStyle}>Notas</p>
+                  <div
+                    style={{
+                      ...formModalNotesGridStyle,
+                      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+                    }}
+                  >
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Públicas</label>
+                      <textarea
+                        placeholder="Visibles para el equipo"
+                        value={publicNotes}
+                        onChange={(e) => setPublicNotes(e.target.value)}
+                        style={formModalTextareaStyle}
+                      />
+                    </div>
 
-                  {canEdit && (
-                    <textarea
-                      placeholder="Notas privadas"
-                      value={privateNotes}
-                      onChange={(e) => setPrivateNotes(e.target.value)}
-                      style={compactTextareaStyle}
-                    />
-                  )}
+                    {canEdit && (
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Privadas</label>
+                        <textarea
+                          placeholder="Solo admins"
+                          value={privateNotes}
+                          onChange={(e) => setPrivateNotes(e.target.value)}
+                          style={formModalTextareaStyle}
+                        />
+                      </div>
+                    )}
 
-                  <textarea
-                    placeholder="Notas de producción"
-                    value={productionNotes}
-                    onChange={(e) => setProductionNotes(e.target.value)}
-                    style={compactTextareaStyle}
-                  />
-                </section>
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Producción</label>
+                      <textarea
+                        placeholder="Logística y detalles"
+                        value={productionNotes}
+                        onChange={(e) => setProductionNotes(e.target.value)}
+                        style={formModalTextareaStyle}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style={compactFooterStyle}>
-                <button onClick={saveShoot} style={compactPrimaryButtonStyle}>
-                  {selectedShoot ? "Guardar cambios" : "Crear llamado"}
-                </button>
-
+              <div style={formModalFooterStyle}>
                 <button
                   onClick={() => {
                     setModalOpen(false)
                     resetForm()
                   }}
-                  style={compactSecondaryButtonStyle}
+                  style={formModalSecondaryButtonStyle}
                 >
                   Cancelar
+                </button>
+                <button onClick={saveShoot} style={formModalPrimaryButtonStyle}>
+                  {selectedShoot ? "Guardar" : "Crear llamado"}
                 </button>
               </div>
             </div>
@@ -913,19 +972,19 @@ function openEditShoot() {
           <div style={overlayStyle}>
             <div
               style={{
-                ...compactModalStyle,
-                width: isMobile ? "100%" : 760,
+                ...formModalStyle,
+                width: isMobile ? "100%" : 680,
                 height: isMobile ? "100%" : "auto",
-                borderRadius: isMobile ? 0 : 28,
+                maxHeight: isMobile ? "100%" : "88vh",
+                borderRadius: isMobile ? 0 : 16,
               }}
             >
-              <div style={compactHeaderStyle}>
+              <div style={formModalHeaderStyle}>
                 <div>
-                  <p style={eyebrowStyle}>Detalle de llamado</p>
-                  <h2 style={compactTitleStyle}>
+                  <h2 style={formModalTitleStyle}>
                     {statusEmoji(selectedShoot.status)} {selectedShoot.title}
                   </h2>
-                  <p style={compactMutedStyle}>
+                  <p style={formModalMetaStyle}>
                     {selectedShoot.client || "Sin cliente"} ·{" "}
                     {selectedShoot.project || "Sin proyecto"}
                   </p>
@@ -933,121 +992,158 @@ function openEditShoot() {
 
                 <button
                   onClick={() => setDetailsOpen(false)}
-                  style={compactCloseButtonStyle}
+                  style={formModalCloseStyle}
+                  aria-label="Cerrar"
                 >
                   ×
                 </button>
               </div>
 
-              <div
-                style={{
-                  ...compactHeroGridStyle,
-                  gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr",
-                }}
-              >
-                <div style={compactProducerCardStyle}>
-                  <p style={compactFieldLabelStyle}>Productor</p>
-                  <h3 style={compactProducerNameStyle}>
-                    {getProducer(selectedShoot.id)?.name || "Sin productor"}
-                  </h3>
-                  <span style={compactMutedStyle}>
-                    Asignado desde recursos humanos
-                  </span>
+              <div style={formModalBodyStyle}>
+                <div
+                  style={{
+                    ...formModalColumnsStyle,
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  }}
+                >
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>Detalles</p>
+
+                    <div style={formModalRowStyle}>
+                      <FormModalPreviewField
+                        label="Cliente"
+                        value={selectedShoot.client}
+                      />
+                      <FormModalPreviewField
+                        label="Proyecto"
+                        value={selectedShoot.project}
+                      />
+                    </div>
+
+                    <div style={formModalRowStyle}>
+                      <FormModalPreviewField
+                        label="Locación"
+                        value={selectedShoot.location}
+                      />
+                      <FormModalPreviewField
+                        label="Contacto"
+                        value={selectedShoot.contact}
+                      />
+                    </div>
+
+                    <FormModalPreviewField
+                      label="Dirección"
+                      value={selectedShoot.address}
+                    />
+                  </div>
+
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>Producción</p>
+
+                    <div style={formModalRowStyle}>
+                      <div style={formModalFieldStyle}>
+                        <span style={formModalLabelStyle}>Estado</span>
+                        <span style={formModalStatusBadgeStyle(selectedShoot.status)}>
+                          {statusLabel(selectedShoot.status)}
+                        </span>
+                      </div>
+                      <FormModalPreviewField
+                        label="Productor"
+                        value={getProducer(selectedShoot.id)?.name}
+                      />
+                    </div>
+
+                    <div style={formModalRowStyle}>
+                      <FormModalPreviewField
+                        label="Inicio"
+                        value={formatShootDateTime(selectedShoot.start_time)}
+                      />
+                      <FormModalPreviewField
+                        label="Fin"
+                        value={formatShootDateTime(selectedShoot.end_time)}
+                      />
+                    </div>
+
+                    <div style={formModalRowStyle}>
+                      <FormModalPreviewField
+                        label="Director"
+                        value={selectedShoot.director}
+                      />
+                      <FormModalPreviewField label="DOP" value={selectedShoot.dop} />
+                    </div>
+
+                    <div style={formModalFieldStyle}>
+                      <span style={formModalLabelStyle}>
+                        Personal Retro ({getShootResources(selectedShoot.id).length})
+                      </span>
+                      {getShootResources(selectedShoot.id).length > 0 ? (
+                        <div style={formModalPillGridStyle}>
+                          {getShootResources(selectedShoot.id).map((resource) => (
+                            <span key={resource.id} style={formModalPillStyle}>
+                              {resource.name}
+                              <span style={formModalPillMetaStyle}>
+                                {resource.category}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={formModalValueStyle}>—</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div style={compactStatusCardStyle(selectedShoot.status)}>
-                  <p style={compactFieldLabelStyle}>Status</p>
-                  <h3 style={compactStatusTextStyle}>
-                    {statusLabel(selectedShoot.status)}
-                  </h3>
+                <div style={formModalNotesBlockStyle}>
+                  <p style={formModalSectionLabelStyle}>Notas</p>
+                  <div
+                    style={{
+                      ...formModalNotesGridStyle,
+                      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+                    }}
+                  >
+                    <FormModalPreviewField
+                      label="Públicas"
+                      value={selectedShoot.public_notes}
+                      multiline
+                    />
+
+                    {canEdit && (
+                      <FormModalPreviewField
+                        label="Privadas"
+                        value={selectedShoot.private_notes}
+                        multiline
+                      />
+                    )}
+
+                    <FormModalPreviewField
+                      label="Producción"
+                      value={selectedShoot.production_notes}
+                      multiline
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div style={compactMiniGridStyle}>
-                <CompactDetail label="Cliente" value={selectedShoot.client || "-"} />
-                <CompactDetail label="Proyecto" value={selectedShoot.project || "-"} />
-                <CompactDetail label="Locación" value={selectedShoot.location || "-"} />
-                <CompactDetail label="Dirección" value={selectedShoot.address || "-"} />
-                <CompactDetail label="Contacto" value={selectedShoot.contact || "-"} />
-                <CompactDetail
-                  label="Inicio"
-                  value={new Date(selectedShoot.start_time).toLocaleString()}
-                />
-                <CompactDetail
-                  label="Fin"
-                  value={new Date(selectedShoot.end_time).toLocaleString()}
-                />
-                <CompactDetail label="Director" value={selectedShoot.director || "-"} />
-                <CompactDetail label="DOP" value={selectedShoot.dop || "-"} />
-              </div>
+              <div style={formModalFooterStyle}>
+                <button
+                  onClick={() => setDetailsOpen(false)}
+                  style={formModalSecondaryButtonStyle}
+                >
+                  Cerrar
+                </button>
 
-              <section style={compactCardStyle}>
-                <div style={compactSectionHeaderStyle}>
-                  <span>Recursos</span>
-                  <strong>{getShootResources(selectedShoot.id).length}</strong>
-                </div>
-
-                <div style={compactResourceGridStyle}>
-                  {getShootResources(selectedShoot.id).map((resource) => (
-                    <div key={resource.id} style={compactResourceCardStyle}>
-                      <strong>{resource.name}</strong>
-                      <span>{resource.category}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section style={compactCardStyle}>
-                <div style={compactSectionHeaderStyle}>
-                  <span>Notas</span>
-                  <strong>Producción</strong>
-                </div>
-
-                <div style={compactNotesGridStyle}>
-                  <div style={compactNoteStyle}>
-                    <span>Públicas</span>
-                    <p>{selectedShoot.public_notes || "-"}</p>
-                  </div>
-
-                  {canEdit && (
-                    <div style={compactNoteStyle}>
-                      <span>Privadas</span>
-                      <p>{selectedShoot.private_notes || "-"}</p>
-                    </div>
-                  )}
-
-                  <div style={compactNoteStyle}>
-                    <span>Producción</span>
-                    <p>{selectedShoot.production_notes || "-"}</p>
-                  </div>
-                </div>
-              </section>
-
-              <div style={compactFooterStyle}>
                 {canEdit && (
-                  <button onClick={openEditShoot} style={compactPrimaryButtonStyle}>
-                    Editar llamado
+                  <button onClick={openEditShoot} style={formModalPrimaryButtonStyle}>
+                    Editar
                   </button>
                 )}
 
                 {isAdmin && (
-                  <button
-                    onClick={deleteShoot}
-                    style={{
-                      ...compactPrimaryButtonStyle,
-                      background: "linear-gradient(135deg, #dc2626, #991b1b)",
-                    }}
-                  >
-                    Borrar llamado
+                  <button onClick={deleteShoot} style={formModalDangerButtonStyle}>
+                    Borrar
                   </button>
                 )}
-
-                <button
-                  onClick={() => setDetailsOpen(false)}
-                  style={compactSecondaryButtonStyle}
-                >
-                  Cerrar
-                </button>
               </div>
             </div>
           </div>
@@ -1058,6 +1154,40 @@ function openEditShoot() {
 }
 
 
+function formatShootDateTime(iso: string) {
+  return new Date(iso).toLocaleString("es-CL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function FormModalPreviewField({
+  label,
+  value,
+  multiline = false,
+}: {
+  label: string
+  value?: string | null
+  multiline?: boolean
+}) {
+  return (
+    <div style={formModalFieldStyle}>
+      <span style={formModalLabelStyle}>{label}</span>
+      <div
+        style={{
+          ...formModalValueStyle,
+          ...(multiline ? formModalNoteValueStyle : {}),
+        }}
+      >
+        {value?.trim() || "—"}
+      </div>
+    </div>
+  )
+}
+
 function statusLabel(status: string) {
   if (status === "confirmed") return "Confirmado"
   if (status === "cancelled") return "Cancelado"
@@ -1065,13 +1195,20 @@ function statusLabel(status: string) {
   return "Tentativo"
 }
 
-function CompactDetail({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={compactDetailCardStyle}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  )
+function formModalStatusBadgeStyle(status: string): React.CSSProperties {
+  const color = getStatusColor(status)
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    padding: "4px 8px",
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 600,
+    background: `${color}22`,
+    border: `1px solid ${color}44`,
+    color: "#f8fafc",
+  }
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
@@ -1496,6 +1633,247 @@ const resourcePillStyle: React.CSSProperties = {
   color: "#ddd6fe",
 }
 
+const formModalStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  maxWidth: "calc(100vw - 28px)",
+  overflow: "hidden",
+  background: "rgba(15, 23, 42, 0.96)",
+  color: "#f8fafc",
+  border: "1px solid rgba(148,163,184,0.14)",
+  boxShadow: "0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset",
+  backdropFilter: "blur(20px)",
+}
+
+const formModalHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+  padding: "14px 16px 12px",
+  borderBottom: "1px solid rgba(148,163,184,0.10)",
+}
+
+const formModalTitleStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 16,
+  fontWeight: 600,
+  letterSpacing: -0.3,
+  lineHeight: 1.2,
+}
+
+const formModalMetaStyle: React.CSSProperties = {
+  margin: "4px 0 0",
+  color: "#64748b",
+  fontSize: 12,
+}
+
+const formModalCloseStyle: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#94a3b8",
+  fontSize: 18,
+  lineHeight: 1,
+  cursor: "pointer",
+  flexShrink: 0,
+}
+
+const formModalBodyStyle: React.CSSProperties = {
+  flex: 1,
+  overflowY: "auto",
+  padding: "14px 16px",
+  display: "grid",
+  gap: 14,
+}
+
+const formModalColumnsStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+}
+
+const formModalColumnStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  alignContent: "start",
+}
+
+const formModalSectionLabelStyle: React.CSSProperties = {
+  margin: "0 0 2px",
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
+}
+
+const formModalFieldStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 4,
+  minWidth: 0,
+}
+
+const formModalLabelStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 500,
+}
+
+const formModalRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 8,
+}
+
+const formModalInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "7px 10px",
+  border: "1px solid rgba(148,163,184,0.14)",
+  borderRadius: 8,
+  background: "rgba(2,6,23,0.55)",
+  color: "#f8fafc",
+  outline: "none",
+  fontSize: 13,
+  lineHeight: 1.35,
+}
+
+const formModalTextareaStyle: React.CSSProperties = {
+  ...formModalInputStyle,
+  minHeight: 56,
+  resize: "vertical",
+  fontFamily: "inherit",
+}
+
+const formModalInlineOptionsStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+  marginTop: 2,
+}
+
+const formModalInlineCheckStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#cbd5e1",
+  fontSize: 12,
+  cursor: "pointer",
+  minHeight: 32,
+}
+
+const formModalColorInputStyle: React.CSSProperties = {
+  width: 32,
+  height: 32,
+  padding: 2,
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.14)",
+  background: "rgba(2,6,23,0.55)",
+  cursor: "pointer",
+}
+
+const formModalNotesBlockStyle: React.CSSProperties = {
+  paddingTop: 12,
+  borderTop: "1px solid rgba(148,163,184,0.08)",
+}
+
+const formModalNotesGridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+}
+
+const formModalFooterStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: 8,
+  padding: "12px 16px",
+  borderTop: "1px solid rgba(148,163,184,0.10)",
+  background: "rgba(2,6,23,0.72)",
+}
+
+const formModalPrimaryButtonStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+  color: "white",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
+  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+}
+
+const formModalSecondaryButtonStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  background: "transparent",
+  color: "#94a3b8",
+  border: "1px solid rgba(148,163,184,0.16)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 500,
+  fontSize: 13,
+}
+
+const formModalValueStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "7px 10px",
+  border: "1px solid rgba(148,163,184,0.10)",
+  borderRadius: 8,
+  background: "rgba(2,6,23,0.35)",
+  color: "#e2e8f0",
+  fontSize: 13,
+  lineHeight: 1.35,
+  minHeight: 32,
+  display: "flex",
+  alignItems: "center",
+  wordBreak: "break-word",
+}
+
+const formModalNoteValueStyle: React.CSSProperties = {
+  minHeight: 56,
+  alignItems: "flex-start",
+  whiteSpace: "pre-wrap",
+}
+
+const formModalPillGridStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 6,
+}
+
+const formModalPillStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "4px 8px",
+  borderRadius: 6,
+  background: "rgba(124,58,237,0.16)",
+  border: "1px solid rgba(167,139,250,0.22)",
+  color: "#f8fafc",
+  fontSize: 12,
+  fontWeight: 600,
+}
+
+const formModalPillMetaStyle: React.CSSProperties = {
+  color: "#a78bfa",
+  fontWeight: 500,
+}
+
+const formModalDangerButtonStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  background: "linear-gradient(135deg, #dc2626, #991b1b)",
+  color: "white",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
+  boxShadow: "0 8px 24px rgba(220,38,38,0.22)",
+}
 
 const compactModalStyle: React.CSSProperties = {
   maxWidth: "calc(100vw - 28px)",
