@@ -19,6 +19,8 @@ export default function Home() {
   const [allShoots, setAllShoots] = useState<any[]>([])
   const [resources, setResources] = useState<any[]>([])
   const [shootResources, setShootResources] = useState<any[]>([])
+  const [employees, setEmployees] = useState<any[]>([])
+  const [shootEmployees, setShootEmployees] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
 
@@ -50,6 +52,7 @@ export default function Home() {
   const [startTime, setStartTime] = useState("09:00")
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
 
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
@@ -121,9 +124,21 @@ export default function Home() {
       .from("shoot_resources")
       .select("*, shoots(*), resources(*)")
 
+    const { data: emps } = await supabase
+      .from("employees")
+      .select("*")
+      .order("nombre")
+      .order("apellido_paterno")
+
+    const { data: employeeAssignments } = await supabase
+      .from("shoot_employees")
+      .select("*, shoots(*), employees(*)")
+
     setAllShoots(shoots || [])
     setResources(res || [])
     setShootResources(assignments || [])
+    setEmployees(emps || [])
+    setShootEmployees(employeeAssignments || [])
   }
 
   useEffect(() => {
@@ -152,10 +167,10 @@ export default function Home() {
 
       const humanResourceOk =
         !filterHumanResource ||
-        shootResources.some(
+        shootEmployees.some(
           (assignment) =>
             assignment.shoot_id === shoot.id &&
-            assignment.resource_id === filterHumanResource
+            assignment.employee_id === filterHumanResource
         )
 
       return clientOk && projectOk && statusOk && humanResourceOk
@@ -176,6 +191,7 @@ export default function Home() {
   }, [
     allShoots,
     shootResources,
+    shootEmployees,
     filterClient,
     filterProject,
     filterStatus,
@@ -201,6 +217,7 @@ export default function Home() {
     setStartTime("09:00")
     setEndTime("18:00")
     setSelectedResources([])
+    setSelectedEmployees([])
   }
 
   function clearFilters() {
@@ -236,20 +253,36 @@ export default function Home() {
     setSelectedShoot(shoot || null)
     setDetailsOpen(true)
   }
-function getShootResources(shootId: string) {
-  return shootResources
+function getShootEmployees(shootId: string) {
+  return shootEmployees
     .filter((a) => a.shoot_id === shootId)
+    .map((a) => a.employees)
+    .filter(Boolean)
+}
+
+function getShootTechnicalResources(shootId: string) {
+  return shootResources
+    .filter((a) => a.shoot_id === shootId && a.resources?.type === "technical")
     .map((a) => a.resources)
     .filter(Boolean)
 }
 
-function getProducer(shootId: string) {
-  return getShootResources(shootId).find((resource) => {
-    const category = resource.category?.trim().toLowerCase()
+function employeeDisplayName(employee: any) {
+  return employee.nickname?.trim() || employee.nombre
+}
 
-    return category === "productor" || category === "productora"
+function employeeSelectLabel(employee: any) {
+  return `${employeeDisplayName(employee)} — ${employee.puesto}`
+}
+
+function getProducer(shootId: string) {
+  return getShootEmployees(shootId).find((employee) => {
+    const puesto = employee.puesto?.trim().toLowerCase()
+
+    return puesto === "productor" || puesto === "productora"
   })
 }
+
 function openEditShoot() {
     if (!selectedShoot || !canEdit) return
 
@@ -273,10 +306,38 @@ function openEditShoot() {
     setSelectedDate(start.toISOString().slice(0, 10))
     setStartTime(start.toTimeString().slice(0, 5))
     setEndTime(end.toTimeString().slice(0, 5))
-    setSelectedResources(getShootResources(selectedShoot.id).map((r) => r.id))
+    setSelectedEmployees(getShootEmployees(selectedShoot.id).map((employee) => employee.id))
+    setSelectedResources(
+      getShootTechnicalResources(selectedShoot.id).map((resource) => resource.id)
+    )
 
     setDetailsOpen(false)
     setModalOpen(true)
+  }
+
+  function isEmployeeBusy(employeeId: string) {
+    if (!selectedDate) return false
+
+    let newStart = `${selectedDate}T${startTime}:00`
+    let newEnd = `${selectedDate}T${endTime}:00`
+
+    if (allDay) {
+      newStart = `${selectedDate}T00:00:00`
+      newEnd = `${selectedDate}T23:59:59`
+    }
+
+    return shootEmployees.some((assignment) => {
+      if (assignment.employee_id !== employeeId) return false
+      if (!assignment.shoots) return false
+      if (selectedShoot && assignment.shoot_id === selectedShoot.id) return false
+
+      const existingStart = new Date(assignment.shoots.start_time)
+      const existingEnd = new Date(assignment.shoots.end_time)
+      const proposedStart = new Date(newStart)
+      const proposedEnd = new Date(newEnd)
+
+      return proposedStart < existingEnd && proposedEnd > existingStart
+    })
   }
 
   function isResourceBusy(resourceId: string) {
@@ -307,7 +368,9 @@ function openEditShoot() {
   async function saveShoot() {
     if (!canEdit) return alert("No tienes permisos para editar.")
     if (!title) return alert("Ponle nombre al llamado")
-    if (selectedResources.length === 0) return alert("Selecciona al menos un recurso")
+    if (selectedEmployees.length === 0 && selectedResources.length === 0) {
+      return alert("Selecciona al menos un empleado o recurso técnico")
+    }
 
     let start = `${selectedDate}T${startTime}:00`
     let end = `${selectedDate}T${endTime}:00`
@@ -350,6 +413,11 @@ function openEditShoot() {
         .from("shoot_resources")
         .delete()
         .eq("shoot_id", selectedShoot.id)
+
+      await supabase
+        .from("shoot_employees")
+        .delete()
+        .eq("shoot_id", selectedShoot.id)
     } else {
       const { data, error } = await supabase
         .from("shoots")
@@ -361,12 +429,23 @@ function openEditShoot() {
       shootId = data.id
     }
 
-    await supabase.from("shoot_resources").insert(
-      selectedResources.map((resourceId) => ({
-        shoot_id: shootId,
-        resource_id: resourceId,
-      }))
-    )
+    if (selectedEmployees.length > 0) {
+      await supabase.from("shoot_employees").insert(
+        selectedEmployees.map((employeeId) => ({
+          shoot_id: shootId,
+          employee_id: employeeId,
+        }))
+      )
+    }
+
+    if (selectedResources.length > 0) {
+      await supabase.from("shoot_resources").insert(
+        selectedResources.map((resourceId) => ({
+          shoot_id: shootId,
+          resource_id: resourceId,
+        }))
+      )
+    }
 
     setModalOpen(false)
     resetForm()
@@ -419,7 +498,6 @@ function openEditShoot() {
     window.location.href = "/login"
   }
 
-  const humanResources = resources.filter((r) => r.type === "human")
   const technicalResources = resources.filter((r) => r.type === "technical")
 
   const clients = useMemo(
@@ -586,9 +664,9 @@ function openEditShoot() {
               style={compactFilterSelectStyle}
             >
               <option value="">Personal</option>
-              {humanResources.map((resource) => (
-                <option key={resource.id} value={resource.id}>
-                  {resource.name} — {resource.category}
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employeeSelectLabel(employee)}
                 </option>
               ))}
             </select>
@@ -867,30 +945,26 @@ function openEditShoot() {
                     </p>
 
                     <div style={formModalFieldStyle}>
-                      <label style={formModalLabelStyle}>Humanos</label>
+                      <label style={formModalLabelStyle}>Personal Retro</label>
                       <Select
                         isMulti
                         styles={compactSelectThemeStyles}
                         placeholder="Seleccionar..."
-                        options={humanResources.map((resource) => ({
-                          value: resource.id,
-                          label: `${resource.name} — ${resource.category}${
-                            isResourceBusy(resource.id) ? " — OCUPADO" : ""
+                        options={employees.map((employee) => ({
+                          value: employee.id,
+                          label: `${employeeSelectLabel(employee)}${
+                            isEmployeeBusy(employee.id) ? " — OCUPADO" : ""
                           }`,
-                          isDisabled: isResourceBusy(resource.id),
+                          isDisabled: isEmployeeBusy(employee.id),
                         }))}
-                        value={humanResources
-                          .filter((r) => selectedResources.includes(r.id))
-                          .map((r) => ({
-                            value: r.id,
-                            label: `${r.name} — ${r.category}`,
+                        value={employees
+                          .filter((employee) => selectedEmployees.includes(employee.id))
+                          .map((employee) => ({
+                            value: employee.id,
+                            label: employeeSelectLabel(employee),
                           }))}
                         onChange={(selected) => {
-                          const humanIds = selected.map((item) => item.value)
-                          const technicalIds = selectedResources.filter((id) =>
-                            technicalResources.some((r) => r.id === id)
-                          )
-                          setSelectedResources([...humanIds, ...technicalIds])
+                          setSelectedEmployees(selected.map((item) => item.value))
                         }}
                       />
                     </div>
@@ -915,11 +989,7 @@ function openEditShoot() {
                             label: `${r.name} — ${r.category}`,
                           }))}
                         onChange={(selected) => {
-                          const technicalIds = selected.map((item) => item.value)
-                          const humanIds = selectedResources.filter((id) =>
-                            humanResources.some((r) => r.id === id)
-                          )
-                          setSelectedResources([...humanIds, ...technicalIds])
+                          setSelectedResources(selected.map((item) => item.value))
                         }}
                       />
                     </div>
@@ -1068,7 +1138,11 @@ function openEditShoot() {
                       </div>
                       <FormModalPreviewField
                         label="Productor"
-                        value={getProducer(selectedShoot.id)?.name}
+                        value={
+                          getProducer(selectedShoot.id)
+                            ? employeeDisplayName(getProducer(selectedShoot.id))
+                            : undefined
+                        }
                       />
                     </div>
 
@@ -1093,16 +1167,14 @@ function openEditShoot() {
 
                     <div style={formModalFieldStyle}>
                       <span style={formModalLabelStyle}>
-                        Personal Retro ({getShootResources(selectedShoot.id).length})
+                        Personal Retro ({getShootEmployees(selectedShoot.id).length})
                       </span>
-                      {getShootResources(selectedShoot.id).length > 0 ? (
+                      {getShootEmployees(selectedShoot.id).length > 0 ? (
                         <div style={formModalPillGridStyle}>
-                          {getShootResources(selectedShoot.id).map((resource) => (
-                            <span key={resource.id} style={formModalPillStyle}>
-                              {resource.name}
-                              <span style={formModalPillMetaStyle}>
-                                {resource.category}
-                              </span>
+                          {getShootEmployees(selectedShoot.id).map((employee) => (
+                            <span key={employee.id} style={formModalPillStyle}>
+                              {employeeDisplayName(employee)}
+                              <span style={formModalPillMetaStyle}>{employee.puesto}</span>
                             </span>
                           ))}
                         </div>

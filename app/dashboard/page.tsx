@@ -7,9 +7,9 @@ import { AppSidebar } from "../../components/AppSidebar"
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
-  const [resources, setResources] = useState<any[]>([])
+  const [employees, setEmployees] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
-  const [shootResources, setShootResources] = useState<any[]>([])
+  const [shootEmployees, setShootEmployees] = useState<any[]>([])
   const [selectedDate, setSelectedDate] = useState(getLocalDateString)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -52,18 +52,19 @@ export default function DashboardPage() {
       .select("*")
       .order("start_time")
 
-    const { data: res } = await supabase
-      .from("resources")
+    const { data: emps } = await supabase
+      .from("employees")
       .select("*")
-      .order("name")
+      .order("nombre")
+      .order("apellido_paterno")
 
-    const { data: assignments } = await supabase
-      .from("shoot_resources")
-      .select("*, shoots(*), resources(*)")
+    const { data: employeeAssignments } = await supabase
+      .from("shoot_employees")
+      .select("*, shoots(*), employees(*)")
 
     setAllShoots(shoots || [])
-    setResources(res || [])
-    setShootResources(assignments || [])
+    setEmployees(emps || [])
+    setShootEmployees(employeeAssignments || [])
   }
 
   useEffect(() => {
@@ -81,21 +82,16 @@ export default function DashboardPage() {
     setSelectedDate(getLocalDateString(date))
   }
 
-  const humanResources = useMemo(
-    () => resources.filter((r) => r.type === "human"),
-    [resources]
-  )
-
   const shootsOnDate = useMemo(
     () => allShoots.filter((shoot) => shootOverlapsDate(shoot, selectedDate)),
     [allShoots, selectedDate]
   )
 
   const crewSummaries = useMemo(() => {
-    return humanResources
+    return employees
       .map((person) => {
-        const shoots = shootResources
-          .filter((assignment) => assignment.resource_id === person.id)
+        const shoots = shootEmployees
+          .filter((assignment) => assignment.employee_id === person.id)
           .map((assignment) =>
             allShoots.find((shoot) => shoot.id === assignment.shoot_id)
           )
@@ -114,9 +110,12 @@ export default function DashboardPage() {
         if (a.shoots.length !== b.shoots.length) {
           return b.shoots.length - a.shoots.length
         }
-        return a.person.name.localeCompare(b.person.name, "es")
+        return employeeDisplayName(a.person).localeCompare(
+          employeeDisplayName(b.person),
+          "es"
+        )
       })
-  }, [humanResources, shootResources, allShoots, selectedDate])
+  }, [employees, shootEmployees, allShoots, selectedDate])
 
   const activeCrew = crewSummaries.filter((entry) => entry.shoots.length > 0)
   const idleCrew = crewSummaries.filter((entry) => entry.shoots.length === 0)
@@ -180,13 +179,13 @@ export default function DashboardPage() {
           <section style={dateBannerStyle}>
             <p style={dateBannerTitleStyle}>{formattedDate}</p>
             <p style={dateBannerHintStyle}>
-              Resumen de llamados asignados a cada persona del inventario humano
+              Resumen de llamados asignados a cada empleado de Retro
             </p>
           </section>
 
           {crewSummaries.length === 0 ? (
             <section style={emptyPanelStyle}>
-              No hay recursos humanos en el inventario.
+              No hay empleados registrados.
             </section>
           ) : (
             <>
@@ -200,12 +199,12 @@ export default function DashboardPage() {
                   <section key={person.id} style={crewCardStyle}>
                     <div style={crewCardHeaderStyle}>
                       <div style={crewIdentityStyle}>
-                        <span style={avatarStyle(person.name)}>
-                          {person.name.charAt(0).toUpperCase()}
+                        <span style={avatarStyle(employeeDisplayName(person))}>
+                          {employeeDisplayName(person).charAt(0).toUpperCase()}
                         </span>
                         <div>
-                          <p style={crewNameStyle}>{person.name}</p>
-                          <p style={crewRoleStyle}>{person.category}</p>
+                          <p style={crewNameStyle}>{employeeDisplayName(person)}</p>
+                          <p style={crewRoleStyle}>{person.puesto}</p>
                         </div>
                       </div>
                       <span style={countBadgeStyle}>
@@ -258,12 +257,12 @@ export default function DashboardPage() {
                   <div style={idleGridStyle}>
                     {idleCrew.map(({ person }) => (
                       <div key={person.id} style={idleChipStyle}>
-                        <span style={avatarStyle(person.name, true)}>
-                          {person.name.charAt(0).toUpperCase()}
+                        <span style={avatarStyle(employeeDisplayName(person), true)}>
+                          {employeeDisplayName(person).charAt(0).toUpperCase()}
                         </span>
                         <div>
-                          <p style={idleNameStyle}>{person.name}</p>
-                          <p style={idleRoleStyle}>{person.category}</p>
+                          <p style={idleNameStyle}>{employeeDisplayName(person)}</p>
+                          <p style={idleRoleStyle}>{person.puesto}</p>
                         </div>
                       </div>
                     ))}
@@ -282,6 +281,10 @@ export default function DashboardPage() {
       </main>
     </div>
   )
+}
+
+function employeeDisplayName(employee: any) {
+  return employee.nickname?.trim() || employee.nombre
 }
 
 function getLocalDateString(date = new Date()) {
