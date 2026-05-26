@@ -9,6 +9,9 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 import { AppSidebar } from "../components/AppSidebar"
 
+const VACATION_COLOR = "#9333ea"
+const VACATION_EVENT_PREFIX = "vacation:"
+
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -21,12 +24,20 @@ export default function Home() {
   const [shootResources, setShootResources] = useState<any[]>([])
   const [employees, setEmployees] = useState<any[]>([])
   const [shootEmployees, setShootEmployees] = useState<any[]>([])
+  const [allVacations, setAllVacations] = useState<any[]>([])
+  const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [vacationDetailsOpen, setVacationDetailsOpen] = useState(false)
   const [selectedShoot, setSelectedShoot] = useState<any>(null)
+  const [selectedVacation, setSelectedVacation] = useState<any>(null)
+
+  const [entryMode, setEntryMode] = useState<"shoot" | "vacation">("shoot")
+  const [vacationStartDate, setVacationStartDate] = useState("")
+  const [vacationEndDate, setVacationEndDate] = useState("")
 
   const [filterClient, setFilterClient] = useState("")
   const [filterProject, setFilterProject] = useState("")
@@ -134,11 +145,22 @@ export default function Home() {
       .from("shoot_employees")
       .select("*, shoots(*), employees(*)")
 
+    const { data: vacations } = await supabase
+      .from("vacations")
+      .select("*")
+      .order("start_date")
+
+    const { data: vacationAssignments } = await supabase
+      .from("vacation_employees")
+      .select("*, vacations(*), employees(*)")
+
     setAllShoots(shoots || [])
     setResources(res || [])
     setShootResources(assignments || [])
     setEmployees(emps || [])
     setShootEmployees(employeeAssignments || [])
+    setAllVacations(vacations || [])
+    setVacationEmployees(vacationAssignments || [])
   }
 
   useEffect(() => {
@@ -176,22 +198,46 @@ export default function Home() {
       return clientOk && projectOk && statusOk && humanResourceOk
     })
 
-    setEvents(
-      filtered.map((shoot) => ({
-        id: shoot.id,
-        title: `${statusEmoji(shoot.status)} ${shoot.title}`,
-        start: shoot.start_time,
-        end: shoot.end_time,
-        allDay: shoot.all_day,
-        backgroundColor: shoot.color || "#7c3aed",
-        borderColor: shoot.color || "#7c3aed",
-        textColor: "#ffffff",
-      }))
-    )
+    const filteredVacations = allVacations.filter((vacation) => {
+      if (!filterHumanResource) return true
+
+      return vacationEmployees.some(
+        (assignment) =>
+          assignment.vacation_id === vacation.id &&
+          assignment.employee_id === filterHumanResource
+      )
+    })
+
+    const shootEvents = filtered.map((shoot) => ({
+      id: shoot.id,
+      title: `${statusEmoji(shoot.status)} ${shoot.title}`,
+      start: shoot.start_time,
+      end: shoot.end_time,
+      allDay: shoot.all_day,
+      backgroundColor: shoot.color || "#7c3aed",
+      borderColor: shoot.color || "#7c3aed",
+      textColor: "#ffffff",
+    }))
+
+    const vacationEvents = filteredVacations.map((vacation) => ({
+      id: `${VACATION_EVENT_PREFIX}${vacation.id}`,
+      title: `🏖️ ${formatVacationTitle(vacation, vacationEmployees)}`,
+      start: vacation.start_date,
+      end: addDaysToDateString(vacation.end_date, 1),
+      allDay: true,
+      backgroundColor: VACATION_COLOR,
+      borderColor: VACATION_COLOR,
+      textColor: "#ffffff",
+      editable: false,
+    }))
+
+    setEvents([...shootEvents, ...vacationEvents])
   }, [
     allShoots,
+    allVacations,
     shootResources,
     shootEmployees,
+    vacationEmployees,
     filterClient,
     filterProject,
     filterStatus,
@@ -200,6 +246,10 @@ export default function Home() {
 
   function resetForm() {
     setSelectedShoot(null)
+    setSelectedVacation(null)
+    setEntryMode("shoot")
+    setVacationStartDate("")
+    setVacationEndDate("")
     setTitle("")
     setClient("")
     setProject("")
@@ -238,7 +288,10 @@ export default function Home() {
     resetForm()
 
     const clickedDate = new Date(info.date)
-    setSelectedDate(clickedDate.toISOString().slice(0, 10))
+    const dateStr = toDateInputValue(clickedDate)
+    setSelectedDate(dateStr)
+    setVacationStartDate(dateStr)
+    setVacationEndDate(dateStr)
     setStartTime(clickedDate.toTimeString().slice(0, 5))
 
     const endDate = new Date(clickedDate)
@@ -249,10 +302,28 @@ export default function Home() {
   }
 
   function handleEventClick(info: any) {
-    const shoot = allShoots.find((s) => s.id === info.event.id)
+    const eventId = String(info.event.id)
+
+    if (eventId.startsWith(VACATION_EVENT_PREFIX)) {
+      const vacationId = eventId.slice(VACATION_EVENT_PREFIX.length)
+      const vacation = allVacations.find((item) => item.id === vacationId)
+      setSelectedVacation(vacation || null)
+      setVacationDetailsOpen(true)
+      return
+    }
+
+    const shoot = allShoots.find((s) => s.id === eventId)
     setSelectedShoot(shoot || null)
     setDetailsOpen(true)
   }
+
+function getVacationEmployees(vacationId: string) {
+  return vacationEmployees
+    .filter((assignment) => assignment.vacation_id === vacationId)
+    .map((assignment) => assignment.employees)
+    .filter(Boolean)
+}
+
 function getShootEmployees(shootId: string) {
   return shootEmployees
     .filter((a) => a.shoot_id === shootId)
@@ -313,6 +384,55 @@ function openEditShoot() {
 
     setDetailsOpen(false)
     setModalOpen(true)
+  }
+
+function openEditVacation() {
+    if (!selectedVacation || !canEdit) return
+
+    setVacationStartDate(selectedVacation.start_date)
+    setVacationEndDate(selectedVacation.end_date)
+    setSelectedEmployees(
+      getVacationEmployees(selectedVacation.id).map((employee) => employee.id)
+    )
+    setEntryMode("vacation")
+    setVacationDetailsOpen(false)
+    setModalOpen(true)
+  }
+
+  function isEmployeeUnavailableForVacation(employeeId: string) {
+    if (!vacationStartDate || !vacationEndDate) return false
+
+    const shootConflict = shootEmployees.some((assignment) => {
+      if (assignment.employee_id !== employeeId) return false
+      if (!assignment.shoots) return false
+
+      const shootStart = assignment.shoots.start_time.slice(0, 10)
+      const shootEnd = assignment.shoots.end_time.slice(0, 10)
+
+      return datesOverlapInclusive(
+        vacationStartDate,
+        vacationEndDate,
+        shootStart,
+        shootEnd
+      )
+    })
+
+    const vacationConflict = vacationEmployees.some((assignment) => {
+      if (assignment.employee_id !== employeeId) return false
+      if (!assignment.vacations) return false
+      if (selectedVacation && assignment.vacation_id === selectedVacation.id) {
+        return false
+      }
+
+      return datesOverlapInclusive(
+        vacationStartDate,
+        vacationEndDate,
+        assignment.vacations.start_date,
+        assignment.vacations.end_date
+      )
+    })
+
+    return shootConflict || vacationConflict
   }
 
   function isEmployeeBusy(employeeId: string) {
@@ -452,6 +572,69 @@ function openEditShoot() {
     await loadAll()
   }
 
+  async function saveVacation() {
+    if (!canEdit) return alert("No tienes permisos para editar.")
+    if (!vacationStartDate || !vacationEndDate) {
+      return alert("Selecciona las fechas de vacaciones")
+    }
+    if (vacationEndDate < vacationStartDate) {
+      return alert("La fecha final debe ser igual o posterior a la inicial")
+    }
+    if (selectedEmployees.length === 0) {
+      return alert("Selecciona al menos un empleado")
+    }
+
+    const payload = {
+      start_date: vacationStartDate,
+      end_date: vacationEndDate,
+    }
+
+    let vacationId = selectedVacation?.id
+
+    if (selectedVacation) {
+      const { error } = await supabase
+        .from("vacations")
+        .update(payload)
+        .eq("id", selectedVacation.id)
+
+      if (error) return alert(error.message)
+
+      await supabase
+        .from("vacation_employees")
+        .delete()
+        .eq("vacation_id", selectedVacation.id)
+    } else {
+      const { data, error } = await supabase
+        .from("vacations")
+        .insert(payload)
+        .select()
+        .single()
+
+      if (error) return alert(error.message)
+      vacationId = data.id
+    }
+
+    await supabase.from("vacation_employees").insert(
+      selectedEmployees.map((employeeId) => ({
+        vacation_id: vacationId,
+        employee_id: employeeId,
+      }))
+    )
+
+    setModalOpen(false)
+    resetForm()
+    await loadAll()
+  }
+
+  async function saveEntry() {
+    if (entryMode === "vacation" || selectedVacation) {
+      await saveVacation()
+      return
+    }
+
+    await saveShoot()
+  }
+
   async function deleteShoot() {
     if (!isAdmin) return alert("Solo admin puede borrar.")
     if (!selectedShoot) return
@@ -469,7 +652,29 @@ function openEditShoot() {
     await loadAll()
   }
 
+  async function deleteVacation() {
+    if (!isAdmin) return alert("Solo admin puede borrar.")
+    if (!selectedVacation) return
+    if (!confirm("¿Seguro que quieres borrar estas vacaciones?")) return
+
+    const { error } = await supabase
+      .from("vacations")
+      .delete()
+      .eq("id", selectedVacation.id)
+
+    if (error) return alert(error.message)
+
+    setVacationDetailsOpen(false)
+    setSelectedVacation(null)
+    await loadAll()
+  }
+
   async function updateEventDate(info: any) {
+    if (String(info.event.id).startsWith(VACATION_EVENT_PREFIX)) {
+      info.revert()
+      return
+    }
+
     if (!canEdit) {
       info.revert()
       return
@@ -497,6 +702,8 @@ function openEditShoot() {
     await supabase.auth.signOut()
     window.location.href = "/login"
   }
+
+  const isVacationForm = entryMode === "vacation" || !!selectedVacation
 
   const technicalResources = resources.filter((r) => r.type === "technical")
 
@@ -750,9 +957,15 @@ function openEditShoot() {
               <div style={formModalHeaderStyle}>
                 <div>
                   <h2 style={formModalTitleStyle}>
-                    {selectedShoot ? "Editar llamado" : "Nuevo llamado"}
+                    {selectedVacation
+                      ? "Editar vacaciones"
+                      : selectedShoot
+                        ? "Editar llamado"
+                        : isVacationForm
+                          ? "Nuevas vacaciones"
+                          : "Nuevo llamado"}
                   </h2>
-                  {selectedDate && (
+                  {!isVacationForm && selectedDate && (
                     <p style={formModalMetaStyle}>
                       {new Date(selectedDate + "T12:00:00").toLocaleDateString(
                         "es-CL",
@@ -775,6 +988,91 @@ function openEditShoot() {
               </div>
 
               <div style={formModalBodyStyle}>
+                {!selectedShoot && !selectedVacation && (
+                  <div style={entryModeSwitchWrapStyle}>
+                    <button
+                      type="button"
+                      onClick={() => setEntryMode("shoot")}
+                      style={{
+                        ...entryModeSwitchButtonStyle,
+                        ...(entryMode === "shoot" ? entryModeSwitchActiveStyle : {}),
+                      }}
+                    >
+                      Llamado
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEntryMode("vacation")}
+                      style={{
+                        ...entryModeSwitchButtonStyle,
+                        ...(entryMode === "vacation" ? entryModeSwitchActiveStyle : {}),
+                      }}
+                    >
+                      Vacaciones
+                    </button>
+                  </div>
+                )}
+
+                {isVacationForm ? (
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>Vacaciones</p>
+
+                    <div style={formModalRowStyle}>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Desde</label>
+                        <input
+                          type="date"
+                          value={vacationStartDate}
+                          onChange={(e) => {
+                            setVacationStartDate(e.target.value)
+                            if (vacationEndDate && e.target.value > vacationEndDate) {
+                              setVacationEndDate(e.target.value)
+                            }
+                          }}
+                          style={formModalInputStyle}
+                        />
+                      </div>
+                      <div style={formModalFieldStyle}>
+                        <label style={formModalLabelStyle}>Hasta</label>
+                        <input
+                          type="date"
+                          value={vacationEndDate}
+                          min={vacationStartDate || undefined}
+                          onChange={(e) => setVacationEndDate(e.target.value)}
+                          style={formModalInputStyle}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Empleados</label>
+                      <Select
+                        isMulti
+                        styles={compactSelectThemeStyles}
+                        placeholder="Seleccionar..."
+                        options={employees.map((employee) => ({
+                          value: employee.id,
+                          label: `${employeeSelectLabel(employee)}${
+                            isEmployeeUnavailableForVacation(employee.id)
+                              ? " — NO DISPONIBLE"
+                              : ""
+                          }`,
+                          isDisabled: isEmployeeUnavailableForVacation(employee.id),
+                        }))}
+                        value={employees
+                          .filter((employee) => selectedEmployees.includes(employee.id))
+                          .map((employee) => ({
+                            value: employee.id,
+                            label: employeeSelectLabel(employee),
+                          }))}
+                        onChange={(selected) => {
+                          setSelectedEmployees(selected.map((item) => item.value))
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 <div
                   style={{
                     ...formModalColumnsStyle,
@@ -1037,6 +1335,8 @@ function openEditShoot() {
                     </div>
                   </div>
                 </div>
+                  </>
+                )}
               </div>
 
               <div style={formModalFooterStyle}>
@@ -1049,9 +1349,102 @@ function openEditShoot() {
                 >
                   Cancelar
                 </button>
-                <button onClick={saveShoot} style={formModalPrimaryButtonStyle}>
-                  {selectedShoot ? "Guardar" : "Crear llamado"}
+                <button onClick={saveEntry} style={formModalPrimaryButtonStyle}>
+                  {isVacationForm
+                    ? selectedVacation
+                      ? "Guardar"
+                      : "Crear vacaciones"
+                    : selectedShoot
+                      ? "Guardar"
+                      : "Crear llamado"}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {vacationDetailsOpen && selectedVacation && (
+          <div style={overlayStyle}>
+            <div
+              style={{
+                ...formModalStyle,
+                width: isMobile ? "100%" : 680,
+                height: isMobile ? "100%" : "auto",
+                maxHeight: isMobile ? "100%" : "88vh",
+                borderRadius: isMobile ? 0 : 16,
+              }}
+            >
+              <div style={formModalHeaderStyle}>
+                <div>
+                  <h2 style={formModalTitleStyle}>
+                    🏖️ {formatVacationTitle(selectedVacation, vacationEmployees)}
+                  </h2>
+                  <p style={formModalMetaStyle}>
+                    {formatVacationRange(selectedVacation.start_date, selectedVacation.end_date)}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setVacationDetailsOpen(false)}
+                  style={formModalCloseStyle}
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={formModalBodyStyle}>
+                <div style={formModalColumnStyle}>
+                  <div style={formModalRowStyle}>
+                    <FormModalPreviewField
+                      label="Desde"
+                      value={formatVacationDate(selectedVacation.start_date)}
+                    />
+                    <FormModalPreviewField
+                      label="Hasta"
+                      value={formatVacationDate(selectedVacation.end_date)}
+                    />
+                  </div>
+
+                  <div style={formModalFieldStyle}>
+                    <span style={formModalLabelStyle}>
+                      Empleados ({getVacationEmployees(selectedVacation.id).length})
+                    </span>
+                    {getVacationEmployees(selectedVacation.id).length > 0 ? (
+                      <div style={formModalPillGridStyle}>
+                        {getVacationEmployees(selectedVacation.id).map((employee) => (
+                          <span key={employee.id} style={formModalVacationPillStyle}>
+                            {employeeDisplayName(employee)}
+                            <span style={formModalPillMetaStyle}>{employee.puesto}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={formModalValueStyle}>—</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={formModalFooterStyle}>
+                <button
+                  onClick={() => setVacationDetailsOpen(false)}
+                  style={formModalSecondaryButtonStyle}
+                >
+                  Cerrar
+                </button>
+
+                {canEdit && (
+                  <button onClick={openEditVacation} style={formModalPrimaryButtonStyle}>
+                    Editar
+                  </button>
+                )}
+
+                {isAdmin && (
+                  <button onClick={deleteVacation} style={formModalDangerButtonStyle}>
+                    Borrar
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1244,6 +1637,57 @@ function openEditShoot() {
   )
 }
 
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function addDaysToDateString(dateStr: string, days: number) {
+  const date = new Date(`${dateStr}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  return toDateInputValue(date)
+}
+
+function datesOverlapInclusive(
+  startA: string,
+  endA: string,
+  startB: string,
+  endB: string
+) {
+  return startA <= endB && endA >= startB
+}
+
+function employeeDisplayName(employee: any) {
+  return employee.nickname?.trim() || employee.nombre
+}
+
+function formatVacationTitle(vacation: any, assignments: any[]) {
+  const people = assignments
+    .filter((assignment) => assignment.vacation_id === vacation.id)
+    .map((assignment) => assignment.employees)
+    .filter(Boolean)
+    .map((employee) => employeeDisplayName(employee))
+
+  if (people.length === 0) return "Vacaciones"
+  return people.join(", ")
+}
+
+function formatVacationDate(dateStr: string) {
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString("es-CL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function formatVacationRange(startDate: string, endDate: string) {
+  if (startDate === endDate) return formatVacationDate(startDate)
+  return `${formatVacationDate(startDate)} – ${formatVacationDate(endDate)}`
+}
 
 function formatShootDateTime(iso: string) {
   return new Date(iso).toLocaleString("es-CL", {
@@ -1914,6 +2358,48 @@ const formModalPillStyle: React.CSSProperties = {
 const formModalPillMetaStyle: React.CSSProperties = {
   color: "#a78bfa",
   fontWeight: 500,
+}
+
+const formModalVacationPillStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "4px 8px",
+  borderRadius: 6,
+  background: "rgba(147,51,234,0.18)",
+  border: "1px solid rgba(167,139,250,0.28)",
+  color: "#f8fafc",
+  fontSize: 12,
+  fontWeight: 600,
+}
+
+const entryModeSwitchWrapStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 8,
+  padding: 4,
+  borderRadius: 10,
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(148,163,184,0.12)",
+  marginBottom: 14,
+}
+
+const entryModeSwitchButtonStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid transparent",
+  background: "transparent",
+  color: "#94a3b8",
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: "pointer",
+}
+
+const entryModeSwitchActiveStyle: React.CSSProperties = {
+  background: "rgba(124,58,237,0.18)",
+  border: "1px solid rgba(167,139,250,0.24)",
+  color: "#f8fafc",
+  boxShadow: "inset 0 0 0 1px rgba(167,139,250,0.08)",
 }
 
 const formModalDangerButtonStyle: React.CSSProperties = {
