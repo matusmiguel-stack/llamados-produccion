@@ -618,133 +618,290 @@ function openEditShoot() {
 
         {modalOpen && (
           <div style={overlayStyle}>
-            <div style={{ ...modalStyle, width: isMobile ? "100%" : 720, height: isMobile ? "100%" : "auto", borderRadius: isMobile ? 0 : 24 }}>
-              <div style={modalHeaderStyle}>
+            <div
+              style={{
+                ...compactModalStyle,
+                width: isMobile ? "100%" : 860,
+                height: isMobile ? "100%" : "auto",
+                borderRadius: isMobile ? 0 : 28,
+              }}
+            >
+              <div style={compactHeaderStyle}>
                 <div>
-                  <p style={eyebrowStyle}>{selectedShoot ? "Editar" : "Nuevo"}</p>
-                  <h2 style={modalTitleStyle}>{selectedShoot ? "Editar llamado" : "Nuevo llamado"}</h2>
+                  <p style={eyebrowStyle}>
+                    {selectedShoot ? "Editar llamado" : "Nuevo llamado"}
+                  </p>
+                  <h2 style={compactTitleStyle}>
+                    {selectedShoot ? title || "Editar llamado" : "Crear llamado"}
+                  </h2>
+                  <p style={compactMutedStyle}>
+                    Configura datos, horario, notas y recursos asignados.
+                  </p>
                 </div>
-                <button onClick={() => { setModalOpen(false); resetForm() }} style={iconButtonStyle}>×</button>
-              </div>
 
-              <div style={sectionTitleStyle}>Información general</div>
-              <input placeholder="Nombre del llamado" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
-              <input placeholder="Cliente" value={client} onChange={(e) => setClient(e.target.value)} style={inputStyle} />
-              <input placeholder="Proyecto" value={project} onChange={(e) => setProject(e.target.value)} style={inputStyle} />
-              <input placeholder="Locación" value={location} onChange={(e) => setLocation(e.target.value)} style={inputStyle} />
-              <input placeholder="Dirección" value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
-              <input placeholder="Contacto" value={contact} onChange={(e) => setContact(e.target.value)} style={inputStyle} />
-
-              <div style={sectionTitleStyle}>Status y color</div>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} style={inputStyle}>
-                <option value="tentative">Tentativo</option>
-                <option value="confirmed">Confirmado</option>
-                <option value="cancelled">Cancelado</option>
-                <option value="wrap">Wrap</option>
-              </select>
-              <div style={{ marginTop: 16 }}>
-  <label>
-    <input
-      type="checkbox"
-      checked={useCustomColor}
-      onChange={(e) =>
-        setUseCustomColor(e.target.checked)
-      }
-    />{" "}
-    Usar color especial
-  </label>
-</div>
-
-{useCustomColor && (
-  <input
-    type="color"
-    value={color}
-    onChange={(e) => setColor(e.target.value)}
-    style={{
-      ...inputStyle,
-      height: 48,
-      marginTop: 12,
-    }}
-  />
-)}
-
-              <div style={sectionTitleStyle}>Producción</div>
-              <input placeholder="Director / Realizador" value={director} onChange={(e) => setDirector(e.target.value)} style={inputStyle} />
-              <input placeholder="DOP / Fotógrafo" value={dop} onChange={(e) => setDop(e.target.value)} style={inputStyle} />
-
-              <div style={checkRowStyle}>
-                <label>
-                  <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Todo el día
-                </label>
-              </div>
-
-              {!allDay && (
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label style={labelStyle}>Hora inicio</label>
-                    <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Hora fin</label>
-                    <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={inputStyle} />
-                  </div>
-                </div>
-              )}
-
-              <div style={sectionTitleStyle}>Notas</div>
-              <textarea placeholder="Notas públicas" value={publicNotes} onChange={(e) => setPublicNotes(e.target.value)} style={textareaStyle} />
-              {canEdit && (
-                <textarea placeholder="Notas privadas" value={privateNotes} onChange={(e) => setPrivateNotes(e.target.value)} style={textareaStyle} />
-              )}
-              <textarea placeholder="Notas de producción" value={productionNotes} onChange={(e) => setProductionNotes(e.target.value)} style={textareaStyle} />
-
-              <div style={sectionTitleStyle}>Recursos humanos</div>
-              <Select
-                isMulti
-                styles={selectThemeStyles}
-                options={humanResources.map((resource) => ({
-                  value: resource.id,
-                  label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
-                  isDisabled: isResourceBusy(resource.id),
-                }))}
-                value={humanResources
-                  .filter((r) => selectedResources.includes(r.id))
-                  .map((r) => ({ value: r.id, label: `${r.name} — ${r.category}` }))}
-                onChange={(selected) => {
-                  const humanIds = selected.map((item) => item.value)
-                  const technicalIds = selectedResources.filter((id) =>
-                    technicalResources.some((r) => r.id === id)
-                  )
-                  setSelectedResources([...humanIds, ...technicalIds])
-                }}
-              />
-
-              <div style={sectionTitleStyle}>Recursos técnicos</div>
-              <Select
-                isMulti
-                styles={selectThemeStyles}
-                options={technicalResources.map((resource) => ({
-                  value: resource.id,
-                  label: `${resource.name} — ${resource.category}${isResourceBusy(resource.id) ? " — OCUPADO" : ""}`,
-                  isDisabled: isResourceBusy(resource.id),
-                }))}
-                value={technicalResources
-                  .filter((r) => selectedResources.includes(r.id))
-                  .map((r) => ({ value: r.id, label: `${r.name} — ${r.category}` }))}
-                onChange={(selected) => {
-                  const technicalIds = selected.map((item) => item.value)
-                  const humanIds = selectedResources.filter((id) =>
-                    humanResources.some((r) => r.id === id)
-                  )
-                  setSelectedResources([...humanIds, ...technicalIds])
-                }}
-              />
-
-              <div style={stickyActionsStyle}>
-                <button onClick={saveShoot} style={primaryButton}>
-                  {selectedShoot ? "Guardar cambios" : "Guardar llamado"}
+                <button
+                  onClick={() => {
+                    setModalOpen(false)
+                    resetForm()
+                  }}
+                  style={compactCloseButtonStyle}
+                >
+                  ×
                 </button>
-                <button onClick={() => { setModalOpen(false); resetForm() }} style={secondaryButton}>
+              </div>
+
+              <div style={compactBodyStyle}>
+                <section style={compactCardStyle}>
+                  <div style={compactSectionHeaderStyle}>
+                    <span>01</span>
+                    <strong>Información</strong>
+                  </div>
+
+                  <div
+                    style={{
+                      ...compactGridStyle,
+                      gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr",
+                    }}
+                  >
+                    <input
+                      placeholder="Nombre del llamado"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      style={compactInputStyle}
+                    />
+
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      style={compactInputStyle}
+                    >
+                      <option value="tentative">Tentativo</option>
+                      <option value="confirmed">Confirmado</option>
+                      <option value="cancelled">Cancelado</option>
+                      <option value="wrap">Wrap</option>
+                    </select>
+                  </div>
+
+                  <div style={compactGridStyle}>
+                    <input
+                      placeholder="Cliente"
+                      value={client}
+                      onChange={(e) => setClient(e.target.value)}
+                      style={compactInputStyle}
+                    />
+
+                    <input
+                      placeholder="Proyecto"
+                      value={project}
+                      onChange={(e) => setProject(e.target.value)}
+                      style={compactInputStyle}
+                    />
+                  </div>
+
+                  <div style={compactGridStyle}>
+                    <input
+                      placeholder="Locación"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      style={compactInputStyle}
+                    />
+
+                    <input
+                      placeholder="Contacto"
+                      value={contact}
+                      onChange={(e) => setContact(e.target.value)}
+                      style={compactInputStyle}
+                    />
+                  </div>
+
+                  <input
+                    placeholder="Dirección"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    style={compactInputStyle}
+                  />
+
+                  <label style={compactCheckStyle}>
+                    <input
+                      type="checkbox"
+                      checked={useCustomColor}
+                      onChange={(e) => setUseCustomColor(e.target.checked)}
+                    />
+                    Usar color especial
+                  </label>
+
+                  {useCustomColor && (
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      style={{
+                        ...compactInputStyle,
+                        height: 44,
+                        padding: 6,
+                      }}
+                    />
+                  )}
+                </section>
+
+                <section style={compactCardStyle}>
+                  <div style={compactSectionHeaderStyle}>
+                    <span>02</span>
+                    <strong>Producción y horario</strong>
+                  </div>
+
+                  <div style={compactGridStyle}>
+                    <input
+                      placeholder="Director / Realizador"
+                      value={director}
+                      onChange={(e) => setDirector(e.target.value)}
+                      style={compactInputStyle}
+                    />
+
+                    <input
+                      placeholder="DOP / Fotógrafo"
+                      value={dop}
+                      onChange={(e) => setDop(e.target.value)}
+                      style={compactInputStyle}
+                    />
+                  </div>
+
+                  <label style={compactCheckStyle}>
+                    <input
+                      type="checkbox"
+                      checked={allDay}
+                      onChange={(e) => setAllDay(e.target.checked)}
+                    />
+                    Todo el día
+                  </label>
+
+                  {!allDay && (
+                    <div style={compactGridStyle}>
+                      <div>
+                        <p style={compactFieldLabelStyle}>Inicio</p>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          style={compactInputStyle}
+                        />
+                      </div>
+
+                      <div>
+                        <p style={compactFieldLabelStyle}>Fin</p>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          style={compactInputStyle}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <section style={compactCardStyle}>
+                  <div style={compactSectionHeaderStyle}>
+                    <span>03</span>
+                    <strong>Recursos</strong>
+                  </div>
+
+                  <p style={compactFieldLabelStyle}>Recursos humanos</p>
+                  <Select
+                    isMulti
+                    styles={selectThemeStyles}
+                    options={humanResources.map((resource) => ({
+                      value: resource.id,
+                      label: `${resource.name} — ${resource.category}${
+                        isResourceBusy(resource.id) ? " — OCUPADO" : ""
+                      }`,
+                      isDisabled: isResourceBusy(resource.id),
+                    }))}
+                    value={humanResources
+                      .filter((r) => selectedResources.includes(r.id))
+                      .map((r) => ({
+                        value: r.id,
+                        label: `${r.name} — ${r.category}`,
+                      }))}
+                    onChange={(selected) => {
+                      const humanIds = selected.map((item) => item.value)
+                      const technicalIds = selectedResources.filter((id) =>
+                        technicalResources.some((r) => r.id === id)
+                      )
+                      setSelectedResources([...humanIds, ...technicalIds])
+                    }}
+                  />
+
+                  <p style={compactFieldLabelStyle}>Recursos técnicos</p>
+                  <Select
+                    isMulti
+                    styles={selectThemeStyles}
+                    options={technicalResources.map((resource) => ({
+                      value: resource.id,
+                      label: `${resource.name} — ${resource.category}${
+                        isResourceBusy(resource.id) ? " — OCUPADO" : ""
+                      }`,
+                      isDisabled: isResourceBusy(resource.id),
+                    }))}
+                    value={technicalResources
+                      .filter((r) => selectedResources.includes(r.id))
+                      .map((r) => ({
+                        value: r.id,
+                        label: `${r.name} — ${r.category}`,
+                      }))}
+                    onChange={(selected) => {
+                      const technicalIds = selected.map((item) => item.value)
+                      const humanIds = selectedResources.filter((id) =>
+                        humanResources.some((r) => r.id === id)
+                      )
+                      setSelectedResources([...humanIds, ...technicalIds])
+                    }}
+                  />
+                </section>
+
+                <section style={compactCardStyle}>
+                  <div style={compactSectionHeaderStyle}>
+                    <span>04</span>
+                    <strong>Notas</strong>
+                  </div>
+
+                  <textarea
+                    placeholder="Notas públicas"
+                    value={publicNotes}
+                    onChange={(e) => setPublicNotes(e.target.value)}
+                    style={compactTextareaStyle}
+                  />
+
+                  {canEdit && (
+                    <textarea
+                      placeholder="Notas privadas"
+                      value={privateNotes}
+                      onChange={(e) => setPrivateNotes(e.target.value)}
+                      style={compactTextareaStyle}
+                    />
+                  )}
+
+                  <textarea
+                    placeholder="Notas de producción"
+                    value={productionNotes}
+                    onChange={(e) => setProductionNotes(e.target.value)}
+                    style={compactTextareaStyle}
+                  />
+                </section>
+              </div>
+
+              <div style={compactFooterStyle}>
+                <button onClick={saveShoot} style={compactPrimaryButtonStyle}>
+                  {selectedShoot ? "Guardar cambios" : "Crear llamado"}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setModalOpen(false)
+                    resetForm()
+                  }}
+                  style={compactSecondaryButtonStyle}
+                >
                   Cancelar
                 </button>
               </div>
@@ -754,82 +911,165 @@ function openEditShoot() {
 
         {detailsOpen && selectedShoot && (
           <div style={overlayStyle}>
-            <div style={{ ...modalStyle, width: isMobile ? "100%" : 680, height: isMobile ? "100%" : "auto", borderRadius: isMobile ? 0 : 24 }}>
-              <div style={modalHeaderStyle}>
+            <div
+              style={{
+                ...compactModalStyle,
+                width: isMobile ? "100%" : 760,
+                height: isMobile ? "100%" : "auto",
+                borderRadius: isMobile ? 0 : 28,
+              }}
+            >
+              <div style={compactHeaderStyle}>
                 <div>
-                  <p style={eyebrowStyle}>Detalle</p>
-                  <h2 style={modalTitleStyle}>{statusEmoji(selectedShoot.status)} {selectedShoot.title}</h2>
-                  <div
-  style={{
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(148,163,184,0.18)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 18,
-  }}
->
-  <p
-    style={{
-      margin: 0,
-      fontSize: 12,
-      color: "#a78bfa",
-      textTransform: "uppercase",
-      letterSpacing: 1.2,
-      fontWeight: 700,
-    }}
-  >
-    Productor
-  </p>
-
-  <p
-    style={{
-      margin: "8px 0 0",
-      fontSize: 22,
-      fontWeight: 700,
-      color: "#f8fafc",
-    }}
-  >
-    {getProducer(selectedShoot.id)?.name || "Sin productor asignado"}
-  </p>
-</div>
+                  <p style={eyebrowStyle}>Detalle de llamado</p>
+                  <h2 style={compactTitleStyle}>
+                    {statusEmoji(selectedShoot.status)} {selectedShoot.title}
+                  </h2>
+                  <p style={compactMutedStyle}>
+                    {selectedShoot.client || "Sin cliente"} ·{" "}
+                    {selectedShoot.project || "Sin proyecto"}
+                  </p>
                 </div>
-                <button onClick={() => setDetailsOpen(false)} style={iconButtonStyle}>×</button>
+
+                <button
+                  onClick={() => setDetailsOpen(false)}
+                  style={compactCloseButtonStyle}
+                >
+                  ×
+                </button>
               </div>
 
-              <div style={detailGridStyle}>
-                <Detail label="Status" value={selectedShoot.status || "tentative"} />
-                <Detail label="Cliente" value={selectedShoot.client || "-"} />
-                <Detail label="Proyecto" value={selectedShoot.project || "-"} />
-                <Detail label="Locación" value={selectedShoot.location || "-"} />
-                <Detail label="Dirección" value={selectedShoot.address || "-"} />
-                <Detail label="Contacto" value={selectedShoot.contact || "-"} />
-                <Detail label="Inicio" value={new Date(selectedShoot.start_time).toLocaleString()} />
-                <Detail label="Fin" value={new Date(selectedShoot.end_time).toLocaleString()} />
-                <Detail label="Director" value={selectedShoot.director || "-"} />
-                <Detail label="DOP" value={selectedShoot.dop || "-"} />
+              <div
+                style={{
+                  ...compactHeroGridStyle,
+                  gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr",
+                }}
+              >
+                <div style={compactProducerCardStyle}>
+                  <p style={compactFieldLabelStyle}>Productor</p>
+                  <h3 style={compactProducerNameStyle}>
+                    {getProducer(selectedShoot.id)?.name || "Sin productor"}
+                  </h3>
+                  <span style={compactMutedStyle}>
+                    Asignado desde recursos humanos
+                  </span>
+                </div>
+
+                <div style={compactStatusCardStyle(selectedShoot.status)}>
+                  <p style={compactFieldLabelStyle}>Status</p>
+                  <h3 style={compactStatusTextStyle}>
+                    {statusLabel(selectedShoot.status)}
+                  </h3>
+                </div>
               </div>
 
-              <div style={sectionTitleStyle}>Notas</div>
-              <p style={noteBoxStyle}><strong>Públicas:</strong> {selectedShoot.public_notes || "-"}</p>
-              {canEdit && <p style={noteBoxStyle}><strong>Privadas:</strong> {selectedShoot.private_notes || "-"}</p>}
-              <p style={noteBoxStyle}><strong>Producción:</strong> {selectedShoot.production_notes || "-"}</p>
+              <div style={compactMiniGridStyle}>
+                <CompactDetail label="Cliente" value={selectedShoot.client || "-"} />
+                <CompactDetail label="Proyecto" value={selectedShoot.project || "-"} />
+                <CompactDetail label="Locación" value={selectedShoot.location || "-"} />
+                <CompactDetail label="Dirección" value={selectedShoot.address || "-"} />
+                <CompactDetail label="Contacto" value={selectedShoot.contact || "-"} />
+                <CompactDetail
+                  label="Inicio"
+                  value={new Date(selectedShoot.start_time).toLocaleString()}
+                />
+                <CompactDetail
+                  label="Fin"
+                  value={new Date(selectedShoot.end_time).toLocaleString()}
+                />
+                <CompactDetail label="Director" value={selectedShoot.director || "-"} />
+                <CompactDetail label="DOP" value={selectedShoot.dop || "-"} />
+              </div>
 
-              <div style={sectionTitleStyle}>Recursos asignados</div>
-              <ul style={resourceListStyle}>
-                {getShootResources(selectedShoot.id).map((resource) => (
-                  <li key={resource.id} style={resourcePillStyle}>{resource.name}</li>
-                ))}
-              </ul>
+              <section style={compactCardStyle}>
+                <div style={compactSectionHeaderStyle}>
+                  <span>Recursos</span>
+                  <strong>{getShootResources(selectedShoot.id).length}</strong>
+                </div>
 
-              <div style={stickyActionsStyle}>
-                {canEdit && <button onClick={openEditShoot} style={primaryButton}>Editar llamado</button>}
-                {isAdmin && <button onClick={deleteShoot} style={{ ...primaryButton, background: "linear-gradient(135deg, #dc2626, #991b1b)" }}>Borrar llamado</button>}
-                <button onClick={() => setDetailsOpen(false)} style={secondaryButton}>Cerrar</button>
+                <div style={compactResourceGridStyle}>
+                  {getShootResources(selectedShoot.id).map((resource) => (
+                    <div key={resource.id} style={compactResourceCardStyle}>
+                      <strong>{resource.name}</strong>
+                      <span>{resource.category}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section style={compactCardStyle}>
+                <div style={compactSectionHeaderStyle}>
+                  <span>Notas</span>
+                  <strong>Producción</strong>
+                </div>
+
+                <div style={compactNotesGridStyle}>
+                  <div style={compactNoteStyle}>
+                    <span>Públicas</span>
+                    <p>{selectedShoot.public_notes || "-"}</p>
+                  </div>
+
+                  {canEdit && (
+                    <div style={compactNoteStyle}>
+                      <span>Privadas</span>
+                      <p>{selectedShoot.private_notes || "-"}</p>
+                    </div>
+                  )}
+
+                  <div style={compactNoteStyle}>
+                    <span>Producción</span>
+                    <p>{selectedShoot.production_notes || "-"}</p>
+                  </div>
+                </div>
+              </section>
+
+              <div style={compactFooterStyle}>
+                {canEdit && (
+                  <button onClick={openEditShoot} style={compactPrimaryButtonStyle}>
+                    Editar llamado
+                  </button>
+                )}
+
+                {isAdmin && (
+                  <button
+                    onClick={deleteShoot}
+                    style={{
+                      ...compactPrimaryButtonStyle,
+                      background: "linear-gradient(135deg, #dc2626, #991b1b)",
+                    }}
+                  >
+                    Borrar llamado
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setDetailsOpen(false)}
+                  style={compactSecondaryButtonStyle}
+                >
+                  Cerrar
+                </button>
               </div>
             </div>
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+
+function statusLabel(status: string) {
+  if (status === "confirmed") return "Confirmado"
+  if (status === "cancelled") return "Cancelado"
+  if (status === "wrap") return "Wrap"
+  return "Tentativo"
+}
+
+function CompactDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={compactDetailCardStyle}>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   )
 }
@@ -1254,4 +1494,240 @@ const resourcePillStyle: React.CSSProperties = {
   background: "rgba(124,58,237,0.24)",
   border: "1px solid rgba(167,139,250,0.24)",
   color: "#ddd6fe",
+}
+
+
+const compactModalStyle: React.CSSProperties = {
+  maxWidth: "calc(100vw - 28px)",
+  maxHeight: "92vh",
+  overflowY: "auto",
+  background:
+    "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))",
+  color: "#f8fafc",
+  border: "1px solid rgba(148,163,184,0.18)",
+  boxShadow: "0 40px 140px rgba(0,0,0,0.7)",
+  backdropFilter: "blur(24px)",
+  padding: 18,
+}
+
+const compactHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 16,
+  alignItems: "flex-start",
+  paddingBottom: 14,
+  marginBottom: 14,
+  borderBottom: "1px solid rgba(148,163,184,0.14)",
+}
+
+const compactTitleStyle: React.CSSProperties = {
+  margin: "4px 0 0",
+  fontSize: 24,
+  letterSpacing: -0.8,
+  lineHeight: 1.1,
+}
+
+const compactMutedStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  color: "#94a3b8",
+  fontSize: 13,
+}
+
+const compactCloseButtonStyle: React.CSSProperties = {
+  width: 36,
+  height: 36,
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.07)",
+  color: "white",
+  fontSize: 22,
+  cursor: "pointer",
+}
+
+const compactBodyStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 12,
+}
+
+const compactGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+  gap: 10,
+}
+
+const compactCardStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.045)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 18,
+  padding: 14,
+  boxShadow: "0 18px 50px rgba(0,0,0,0.18)",
+}
+
+const compactSectionHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  color: "#c4b5fd",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: 1.2,
+  marginBottom: 10,
+}
+
+const compactInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 12px",
+  marginTop: 0,
+  border: "1px solid rgba(148,163,184,0.18)",
+  borderRadius: 14,
+  background: "rgba(2,6,23,0.62)",
+  color: "#f8fafc",
+  outline: "none",
+  fontSize: 14,
+}
+
+const compactTextareaStyle: React.CSSProperties = {
+  ...compactInputStyle,
+  minHeight: 74,
+  resize: "vertical",
+  marginTop: 8,
+}
+
+const compactCheckStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  marginTop: 10,
+  padding: "10px 12px",
+  borderRadius: 14,
+  background: "rgba(255,255,255,0.045)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  color: "#cbd5e1",
+  fontSize: 13,
+}
+
+const compactFieldLabelStyle: React.CSSProperties = {
+  margin: "10px 0 6px",
+  color: "#94a3b8",
+  fontSize: 12,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: 0.8,
+}
+
+const compactFooterStyle: React.CSSProperties = {
+  position: "sticky",
+  bottom: -18,
+  margin: "16px -18px -18px",
+  padding: 16,
+  display: "grid",
+  gap: 10,
+  background:
+    "linear-gradient(180deg, rgba(2,6,23,0.72), rgba(2,6,23,0.98))",
+  borderTop: "1px solid rgba(148,163,184,0.14)",
+  backdropFilter: "blur(18px)",
+}
+
+const compactPrimaryButtonStyle: React.CSSProperties = {
+  width: "100%",
+  padding: 13,
+  background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+  color: "white",
+  border: "none",
+  borderRadius: 16,
+  cursor: "pointer",
+  fontWeight: 800,
+  fontSize: 14,
+  boxShadow: "0 16px 40px rgba(124,58,237,0.28)",
+}
+
+const compactSecondaryButtonStyle: React.CSSProperties = {
+  width: "100%",
+  padding: 12,
+  background: "rgba(255,255,255,0.08)",
+  color: "#f8fafc",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 16,
+  cursor: "pointer",
+  fontWeight: 700,
+}
+
+const compactHeroGridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 12,
+  marginBottom: 12,
+}
+
+const compactProducerCardStyle: React.CSSProperties = {
+  borderRadius: 20,
+  padding: 16,
+  background:
+    "linear-gradient(135deg, rgba(124,58,237,0.22), rgba(14,165,233,0.12))",
+  border: "1px solid rgba(167,139,250,0.24)",
+}
+
+const compactProducerNameStyle: React.CSSProperties = {
+  margin: "4px 0 0",
+  fontSize: 24,
+  letterSpacing: -0.6,
+}
+
+function compactStatusCardStyle(status: string): React.CSSProperties {
+  const color = getStatusColor(status)
+  return {
+    borderRadius: 20,
+    padding: 16,
+    background: `${color}22`,
+    border: `1px solid ${color}55`,
+  }
+}
+
+const compactStatusTextStyle: React.CSSProperties = {
+  margin: "4px 0 0",
+  fontSize: 22,
+  fontWeight: 900,
+}
+
+const compactMiniGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+  gap: 10,
+  marginBottom: 12,
+}
+
+const compactDetailCardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  padding: 12,
+  background: "rgba(255,255,255,0.045)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  display: "grid",
+  gap: 5,
+}
+
+const compactResourceGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gap: 10,
+}
+
+const compactResourceCardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  padding: 12,
+  background: "rgba(124,58,237,0.16)",
+  border: "1px solid rgba(167,139,250,0.22)",
+  display: "grid",
+  gap: 4,
+}
+
+const compactNotesGridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+}
+
+const compactNoteStyle: React.CSSProperties = {
+  borderRadius: 16,
+  padding: 12,
+  background: "rgba(255,255,255,0.045)",
+  border: "1px solid rgba(255,255,255,0.08)",
 }
