@@ -24,6 +24,7 @@ export function DraggableModalPanel({
   enabled = true,
   resetKey,
 }: DraggableModalPanelProps) {
+  const dragSurfaceRef = useRef<HTMLDivElement>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragRef = useRef<{
@@ -46,6 +47,8 @@ export function DraggableModalPanel({
     function handlePointerMove(event: PointerEvent) {
       if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) return
 
+      event.preventDefault()
+
       setOffset({
         x:
           dragRef.current.originX +
@@ -58,11 +61,16 @@ export function DraggableModalPanel({
 
     function stopDrag(event: PointerEvent) {
       if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) return
+
       dragRef.current = null
       setIsDragging(false)
+
+      if (dragSurfaceRef.current?.hasPointerCapture(event.pointerId)) {
+        dragSurfaceRef.current.releasePointerCapture(event.pointerId)
+      }
     }
 
-    window.addEventListener("pointermove", handlePointerMove)
+    window.addEventListener("pointermove", handlePointerMove, { passive: false })
     window.addEventListener("pointerup", stopDrag)
     window.addEventListener("pointercancel", stopDrag)
 
@@ -78,7 +86,7 @@ export function DraggableModalPanel({
 
     const target = event.target as HTMLElement
     if (!target.closest("[data-drag-handle]")) return
-    if (target.closest("button, input, select, textarea, a, label, [data-no-drag]")) {
+    if (target.closest("button, input, select, textarea, a, [data-no-drag]")) {
       return
     }
 
@@ -90,21 +98,38 @@ export function DraggableModalPanel({
       originY: offset.y,
     }
     setIsDragging(true)
+    event.preventDefault()
+
+    if (dragSurfaceRef.current) {
+      dragSurfaceRef.current.setPointerCapture(event.pointerId)
+    }
   }
 
   return (
     <div
       className={className}
-      data-dragging={isDragging || undefined}
-      onPointerDown={handlePointerDown}
       style={{
         ...style,
         pointerEvents: "auto",
-        transform: enabled ? `translate(${offset.x}px, ${offset.y}px)` : style?.transform,
-        transition: isDragging ? "none" : undefined,
       }}
     >
-      {children}
+      <div
+        ref={dragSurfaceRef}
+        data-dragging={isDragging || undefined}
+        onPointerDown={handlePointerDown}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          flex: style?.height === "100%" ? 1 : undefined,
+          height: style?.height === "100%" ? "100%" : undefined,
+          transform: enabled ? `translate3d(${offset.x}px, ${offset.y}px, 0)` : undefined,
+          transition: isDragging ? "none" : undefined,
+          willChange: isDragging ? "transform" : undefined,
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }

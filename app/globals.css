@@ -322,6 +322,10 @@ button {
   cursor: grabbing;
 }
 
+.modal-panel-draggable {
+  animation: modal-overlay-in 0.16s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-panel,

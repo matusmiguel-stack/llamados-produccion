@@ -1120,7 +1120,11 @@ function openEditVacation() {
             <DraggableModalPanel
               enabled={!isMobile}
               resetKey={modalOpen ? "form-modal" : "form-modal-closed"}
-              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
+              className={
+                isMobile
+                  ? "modal-panel modal-panel-mobile"
+                  : "modal-panel modal-panel-draggable"
+              }
               style={{
                 ...formModalStyle,
                 width: isMobile ? "100%" : 680,
@@ -1672,7 +1676,11 @@ function openEditVacation() {
             <DraggableModalPanel
               enabled={!isMobile}
               resetKey={selectedShoot.id}
-              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
+              className={
+                isMobile
+                  ? "modal-panel modal-panel-mobile"
+                  : "modal-panel modal-panel-draggable"
+              }
               style={{
                 ...formModalStyle,
                 width: isMobile ? "100%" : 680,
