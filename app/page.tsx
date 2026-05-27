@@ -26,6 +26,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const calendarShellRef = useRef<HTMLDivElement>(null)
+  const calendarRef = useRef<FullCalendar>(null)
   const [calendarHeight, setCalendarHeight] = useState<number>()
 
   const [events, setEvents] = useState<any[]>([])
@@ -114,6 +115,30 @@ export default function Home() {
       window.removeEventListener("resize", updateHeight)
     }
   }, [isMobile])
+
+  useEffect(() => {
+    const shell = calendarShellRef.current
+    if (!shell) return
+
+    function handleDayNumberClick(event: MouseEvent) {
+      const target = event.target as HTMLElement | null
+      if (!target?.closest(".fc-daygrid-day-number")) return
+
+      const calendarApi = calendarRef.current?.getApi()
+      if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
+
+      const dayCell = target.closest(".fc-daygrid-day")
+      const dateStr = dayCell?.getAttribute("data-date")
+      if (!dateStr) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      calendarApi.changeView("timeGridDay", dateStr)
+    }
+
+    shell.addEventListener("click", handleDayNumberClick, true)
+    return () => shell.removeEventListener("click", handleDayNumberClick, true)
+  }, [])
 
   async function loadUser() {
     const {
@@ -1025,8 +1050,8 @@ function openEditVacation() {
             <div style={calendarPanelHeaderStyle}>
               <p style={panelHintStyle}>
                 {canEdit
-                  ? "Arrastra días seguidos o haz clic para crear llamado o vacaciones"
-                  : "Consulta los llamados programados"}
+                  ? "Clic en el número del día para verlo; arrastra o haz clic en la celda para crear"
+                  : "Clic en el número del día para verlo en detalle"}
               </p>
             </div>
 
@@ -1039,6 +1064,7 @@ function openEditVacation() {
               }}
             >
               <FullCalendar
+                ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
                 headerToolbar={{

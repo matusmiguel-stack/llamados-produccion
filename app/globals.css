@@ -177,6 +177,18 @@ button {
   background: rgba(124, 58, 237, 0.14) !important;
 }
 
+.calendar-shell .fc-dayGridMonth-view .fc-daygrid-day-number {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 1px 5px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.calendar-shell .fc-dayGridMonth-view .fc-daygrid-day-number:hover {
+  color: #ede9fe;
+  background: rgba(124, 58, 237, 0.18);
+}
+
 .calendar-shell .fc-timegrid-slot {
   height: 2.6em;
 }
