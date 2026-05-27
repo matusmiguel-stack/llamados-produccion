@@ -83,6 +83,7 @@ export default function Home() {
 
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
+  const canManageVacations = isAdmin
 
   useEffect(() => {
     function checkMobile() {
@@ -470,7 +471,7 @@ function openEditShoot() {
   }
 
 function openEditVacation() {
-    if (!selectedVacation || !canEdit) return
+    if (!selectedVacation || !canManageVacations) return
 
     setVacationStartDate(selectedVacation.start_date)
     setVacationEndDate(selectedVacation.end_date)
@@ -706,7 +707,9 @@ function openEditVacation() {
   }
 
   async function saveVacation() {
-    if (!canEdit) return alert("No tienes permisos para editar.")
+    if (!canManageVacations) {
+      return alert("Solo admin puede gestionar vacaciones.")
+    }
     if (!vacationStartDate || !vacationEndDate) {
       return alert("Selecciona las fechas de vacaciones")
     }
@@ -761,6 +764,9 @@ function openEditVacation() {
 
   async function saveEntry() {
     if (entryMode === "vacation" || selectedVacation) {
+      if (!canManageVacations) {
+        return alert("Solo admin puede gestionar vacaciones.")
+      }
       await saveVacation()
       return
     }
@@ -873,7 +879,8 @@ function openEditVacation() {
     window.location.href = "/login"
   }
 
-  const isVacationForm = entryMode === "vacation" || !!selectedVacation
+  const isVacationForm =
+    canManageVacations && (entryMode === "vacation" || !!selectedVacation)
 
   const technicalResources = resources.filter((r) => r.type === "technical")
 
@@ -1173,7 +1180,7 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
-                {!selectedShoot && !selectedVacation && (
+                {!selectedShoot && !selectedVacation && canManageVacations && (
                   <div style={entryModeSwitchWrapStyle}>
                     <button
                       type="button"
@@ -1655,7 +1662,7 @@ function openEditVacation() {
                   Cerrar
                 </button>
 
-                {canEdit && (
+                {isAdmin && (
                   <button onClick={openEditVacation} style={formModalPrimaryButtonStyle}>
                     Editar
                   </button>
