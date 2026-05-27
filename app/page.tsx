@@ -775,7 +775,7 @@ function openEditVacation() {
   }
 
   async function deleteShoot() {
-    if (!isAdmin) return alert("Solo admin puede borrar.")
+    if (!canEdit) return alert("No tienes permisos para borrar.")
     if (!selectedShoot) return
     if (!confirm("¿Seguro que quieres borrar este llamado?")) return
 
@@ -1858,7 +1858,7 @@ function openEditVacation() {
                   </button>
                 )}
 
-                {isAdmin && (
+                {canEdit && (
                   <button onClick={deleteShoot} style={formModalDangerButtonStyle}>
                     Borrar
                   </button>
