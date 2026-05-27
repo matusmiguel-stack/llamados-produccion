@@ -28,7 +28,6 @@ export default function Home() {
   const calendarShellRef = useRef<HTMLDivElement>(null)
   const calendarRef = useRef<FullCalendar>(null)
   const dayNumberNavRef = useRef(false)
-  const [calendarHeight, setCalendarHeight] = useState<number>()
 
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
@@ -90,32 +89,6 @@ export default function Home() {
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
-
-  useEffect(() => {
-    if (isMobile) {
-      setCalendarHeight(undefined)
-      return
-    }
-
-    const shell = calendarShellRef.current
-    if (!shell) return
-
-    function updateHeight() {
-      if (!calendarShellRef.current) return
-      setCalendarHeight(calendarShellRef.current.clientHeight)
-    }
-
-    updateHeight()
-
-    const observer = new ResizeObserver(updateHeight)
-    observer.observe(shell)
-    window.addEventListener("resize", updateHeight)
-
-    return () => {
-      observer.disconnect()
-      window.removeEventListener("resize", updateHeight)
-    }
-  }, [isMobile])
 
   useEffect(() => {
     const shell = calendarShellRef.current
@@ -1115,12 +1088,11 @@ function openEditVacation() {
                   center: "title",
                   right: "dayGridMonth,timeGridWeek,timeGridDay",
                 }}
-                height={isMobile ? "auto" : calendarHeight}
-                dayMaxEvents={3}
+                height="auto"
                 views={{
                   dayGridMonth: {
-                    expandRows: !isMobile,
-                    dayMaxEvents: 3,
+                    dayMaxEvents: false,
+                    fixedWeekCount: false,
                   },
                 }}
                 events={events}
@@ -2142,8 +2114,9 @@ function getStatusColor(status: string) {
 
 const appShellStyle: React.CSSProperties = {
   display: "flex",
-  height: "100vh",
-  overflow: "hidden",
+  minHeight: "100vh",
+  height: "auto",
+  overflow: "visible",
   background: "transparent",
   color: "#f8fafc",
 }
@@ -2157,10 +2130,9 @@ const appShellMobileStyle: React.CSSProperties = {
 const mainStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
-  minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  overflow: "hidden",
+  overflow: "visible",
 }
 
 const mainMobileStyle: React.CSSProperties = {
@@ -2172,11 +2144,9 @@ const pageContainerStyle: React.CSSProperties = {
   maxWidth: 1180,
   margin: "0 auto",
   width: "100%",
-  flex: 1,
-  minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  overflow: "hidden",
+  overflow: "visible",
 }
 
 const pageContainerMobileStyle: React.CSSProperties = {
@@ -2242,11 +2212,9 @@ const calendarPanelStyle: React.CSSProperties = {
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "10px 12px 12px",
-  flex: 1,
-  minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  overflow: "hidden",
+  overflow: "visible",
 }
 
 const calendarPanelMobileStyle: React.CSSProperties = {
@@ -2261,11 +2229,10 @@ const calendarPanelHeaderStyle: React.CSSProperties = {
 }
 
 const calendarShellStyle: React.CSSProperties = {
-  flex: 1,
-  minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  overflow: "hidden",
+  overflow: "visible",
+  minHeight: "auto",
 }
 
 const calendarShellMobileStyle: React.CSSProperties = {
