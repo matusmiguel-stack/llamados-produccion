@@ -27,6 +27,7 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false)
   const calendarShellRef = useRef<HTMLDivElement>(null)
   const calendarRef = useRef<FullCalendar>(null)
+  const dayNumberNavRef = useRef(false)
   const [calendarHeight, setCalendarHeight] = useState<number>()
 
   const [events, setEvents] = useState<any[]>([])
@@ -120,24 +121,50 @@ export default function Home() {
     const shell = calendarShellRef.current
     if (!shell) return
 
-    function handleDayNumberClick(event: MouseEvent) {
-      const target = event.target as HTMLElement | null
-      if (!target?.closest(".fc-daygrid-day-number")) return
+    function isDayNumberTarget(target: EventTarget | null) {
+      return Boolean((target as HTMLElement | null)?.closest(".fc-daygrid-day-number"))
+    }
+
+    function handleDayNumberPointerDown(event: PointerEvent) {
+      if (!isDayNumberTarget(event.target)) return
 
       const calendarApi = calendarRef.current?.getApi()
       if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
 
-      const dayCell = target.closest(".fc-daygrid-day")
+      dayNumberNavRef.current = true
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+    }
+
+    function handleDayNumberClick(event: MouseEvent) {
+      if (!isDayNumberTarget(event.target)) return
+
+      const calendarApi = calendarRef.current?.getApi()
+      if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
+
+      const dayCell = (event.target as HTMLElement).closest(".fc-daygrid-day")
       const dateStr = dayCell?.getAttribute("data-date")
       if (!dateStr) return
 
       event.preventDefault()
       event.stopPropagation()
+      event.stopImmediatePropagation()
+
+      calendarApi.unselect()
       calendarApi.changeView("timeGridDay", dateStr)
+
+      window.setTimeout(() => {
+        dayNumberNavRef.current = false
+      }, 0)
     }
 
+    shell.addEventListener("pointerdown", handleDayNumberPointerDown, true)
     shell.addEventListener("click", handleDayNumberClick, true)
-    return () => shell.removeEventListener("click", handleDayNumberClick, true)
+    return () => {
+      shell.removeEventListener("pointerdown", handleDayNumberPointerDown, true)
+      shell.removeEventListener("click", handleDayNumberClick, true)
+    }
   }, [])
 
   async function loadUser() {
@@ -337,6 +364,16 @@ export default function Home() {
     !!filterHumanResource
 
   function handleCalendarSelect(info: any) {
+    if (dayNumberNavRef.current) {
+      info.view.calendar.unselect()
+      return
+    }
+
+    if (info.jsEvent?.target?.closest?.(".fc-daygrid-day-number")) {
+      info.view.calendar.unselect()
+      return
+    }
+
     if (!canEdit) return
     resetForm()
 
@@ -361,6 +398,12 @@ export default function Home() {
   }
 
   function handleEventClick(info: any) {
+    if (dayNumberNavRef.current) return
+
+    if (info.jsEvent?.target?.closest?.(".fc-daygrid-day-number")) {
+      return
+    }
+
     const eventId = String(info.event.id)
 
     if (
