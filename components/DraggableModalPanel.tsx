@@ -24,7 +24,7 @@ export function DraggableModalPanel({
   enabled = true,
   resetKey,
 }: DraggableModalPanelProps) {
-  const dragSurfaceRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragRef = useRef<{
@@ -65,8 +65,8 @@ export function DraggableModalPanel({
       dragRef.current = null
       setIsDragging(false)
 
-      if (dragSurfaceRef.current?.hasPointerCapture(event.pointerId)) {
-        dragSurfaceRef.current.releasePointerCapture(event.pointerId)
+      if (panelRef.current?.hasPointerCapture(event.pointerId)) {
+        panelRef.current.releasePointerCapture(event.pointerId)
       }
     }
 
@@ -100,36 +100,24 @@ export function DraggableModalPanel({
     setIsDragging(true)
     event.preventDefault()
 
-    if (dragSurfaceRef.current) {
-      dragSurfaceRef.current.setPointerCapture(event.pointerId)
-    }
+    panelRef.current?.setPointerCapture(event.pointerId)
   }
 
   return (
     <div
+      ref={panelRef}
       className={className}
+      data-dragging={isDragging || undefined}
+      onPointerDown={handlePointerDown}
       style={{
         ...style,
         pointerEvents: "auto",
+        transform: enabled ? `translate3d(${offset.x}px, ${offset.y}px, 0)` : style?.transform,
+        transition: isDragging ? "none" : undefined,
+        willChange: isDragging ? "transform" : undefined,
       }}
     >
-      <div
-        ref={dragSurfaceRef}
-        data-dragging={isDragging || undefined}
-        onPointerDown={handlePointerDown}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          flex: style?.height === "100%" ? 1 : undefined,
-          height: style?.height === "100%" ? "100%" : undefined,
-          transform: enabled ? `translate3d(${offset.x}px, ${offset.y}px, 0)` : undefined,
-          transition: isDragging ? "none" : undefined,
-          willChange: isDragging ? "transform" : undefined,
-        }}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   )
 }
