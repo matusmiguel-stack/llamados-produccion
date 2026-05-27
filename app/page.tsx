@@ -408,11 +408,11 @@ function openEditShoot() {
     setProductionNotes(selectedShoot.production_notes || "")
     setStatus(selectedShoot.status || "tentative")
     setColor(selectedShoot.color || "#7c3aed")
-    setAllDay(selectedShoot.all_day || false)
     setSelectedDate(startDate)
     setSelectedEndDate(endDate)
     setStartTime(timePartFromTimestamp(selectedShoot.start_time))
     setEndTime(timePartFromTimestamp(selectedShoot.end_time))
+    setAllDay(!!selectedShoot.all_day)
     setSelectedEmployees(getShootEmployees(selectedShoot.id).map((employee) => employee.id))
     setSelectedResources(
       getShootTechnicalResources(selectedShoot.id).map((resource) => resource.id)
@@ -488,10 +488,18 @@ function openEditVacation() {
     const endDate = getEffectiveShootEndDate()
     const multiDay = endDate > selectedDate
 
-    if (allDay || multiDay) {
+    if (multiDay) {
       return {
         start: `${selectedDate}T00:00:00`,
         end: `${addDaysToDateString(endDate, 1)}T00:00:00`,
+        allDay: true,
+      }
+    }
+
+    if (allDay) {
+      return {
+        start: `${selectedDate}T00:00:00`,
+        end: `${addDaysToDateString(selectedDate, 1)}T00:00:00`,
         allDay: true,
       }
     }
@@ -765,13 +773,44 @@ function openEditVacation() {
       return
     }
 
+    let payload: {
+      start_time: string
+      end_time: string
+      all_day: boolean
+    }
+
+    if (info.event.allDay) {
+      const startDate =
+        info.event.startStr || toDateInputValue(info.event.start as Date)
+      const endExclusive =
+        info.event.endStr ||
+        toDateInputValue(info.event.end as Date) ||
+        addDaysToDateString(startDate, 1)
+      let endDate = addDaysToDateString(endExclusive, -1)
+
+      if (endDate < startDate) {
+        endDate = startDate
+      }
+
+      payload = {
+        start_time: `${startDate}T00:00:00`,
+        end_time: `${addDaysToDateString(endDate, 1)}T00:00:00`,
+        all_day: true,
+      }
+    } else {
+      const start = info.event.start as Date
+      const end = (info.event.end as Date) || start
+
+      payload = {
+        start_time: formatLocalDateTime(start),
+        end_time: formatLocalDateTime(end),
+        all_day: false,
+      }
+    }
+
     const { error } = await supabase
       .from("shoots")
-      .update({
-        start_time: info.event.start?.toISOString(),
-        end_time: info.event.end?.toISOString() || info.event.start?.toISOString(),
-        all_day: info.event.allDay,
-      })
+      .update(payload)
       .eq("id", info.event.id)
 
     if (error) {
@@ -1285,8 +1324,6 @@ function openEditVacation() {
                           setVacationEndDate(nextValue)
                           if (selectedDate && nextValue > selectedDate) {
                             setAllDay(true)
-                          } else if (selectedDate && nextValue === selectedDate) {
-                            setAllDay(true)
                           }
                         }}
                       />
@@ -1771,20 +1808,31 @@ function datePartFromTimestamp(iso: string) {
   return toDateInputValue(new Date(iso))
 }
 
-function timePartFromTimestamp(iso: string) {
-  const date = new Date(iso)
+function storedDatePart(iso: string) {
+  return iso.slice(0, 10)
+}
+
+function storedTimePart(iso: string) {
+  const match = iso.match(/T(\d{2}:\d{2}:\d{2})/)
+  return match?.[1] ?? "00:00:00"
+}
+
+function timePartFromDate(date: Date) {
   const hours = String(date.getHours()).padStart(2, "0")
   const minutes = String(date.getMinutes()).padStart(2, "0")
   return `${hours}:${minutes}`
 }
 
-function isLocalMidnight(iso: string) {
-  const date = new Date(iso)
-  return (
-    date.getHours() === 0 &&
-    date.getMinutes() === 0 &&
-    date.getSeconds() === 0
-  )
+function timePartFromTimestamp(iso: string) {
+  return timePartFromDate(new Date(iso))
+}
+
+function formatLocalDateTime(date: Date) {
+  return `${toDateInputValue(date)}T${timePartFromDate(date)}:00`
+}
+
+function isExclusiveEndTimestamp(iso: string) {
+  return storedTimePart(iso) === "00:00:00"
 }
 
 function shootToDateRange(shoot: {
@@ -1792,17 +1840,22 @@ function shootToDateRange(shoot: {
   end_time: string
   all_day: boolean
 }) {
-  const startDate = datePartFromTimestamp(shoot.start_time)
-  let endDate = datePartFromTimestamp(shoot.end_time)
-
-  if (shoot.all_day) {
-    if (isLocalMidnight(shoot.end_time) && endDate > startDate) {
-      endDate = addDaysToDateString(endDate, -1)
+  if (!shoot.all_day) {
+    return {
+      startDate: datePartFromTimestamp(shoot.start_time),
+      endDate: datePartFromTimestamp(shoot.end_time),
     }
+  }
 
-    if (endDate < startDate) {
-      endDate = startDate
-    }
+  const startDate = storedDatePart(shoot.start_time)
+  let endDate = storedDatePart(shoot.end_time)
+
+  if (isExclusiveEndTimestamp(shoot.end_time) && endDate > startDate) {
+    endDate = addDaysToDateString(endDate, -1)
+  }
+
+  if (endDate < startDate) {
+    endDate = startDate
   }
 
   return { startDate, endDate }
@@ -1820,8 +1873,8 @@ function shootToCalendarEventTimes(shoot: {
   const { startDate, endDate } = shootToDateRange(shoot)
 
   return {
-    start: `${startDate}T00:00:00`,
-    end: `${addDaysToDateString(endDate, 1)}T00:00:00`,
+    start: startDate,
+    end: addDaysToDateString(endDate, 1),
   }
 }
 
