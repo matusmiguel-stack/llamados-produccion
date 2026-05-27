@@ -32,9 +32,16 @@ type CatalogClient = {
   name: string
 }
 
+type CatalogSubfolder = {
+  id: string
+  client_id: string
+  name: string
+}
+
 type CatalogProject = {
   id: string
   client_id: string
+  subfolder_id: string
   name: string
 }
 
@@ -72,15 +79,32 @@ function resolveShootClientId(shoot: any, clients: CatalogClient[]) {
   )
 }
 
-function resolveShootProjectId(
+function resolveShootSubfolderId(
   shoot: any,
   clientId: string,
+  subfolderIdFromProject: string,
+  subfolders: CatalogSubfolder[]
+) {
+  if (subfolderIdFromProject) return subfolderIdFromProject
+
+  const scopedSubfolders = clientId
+    ? subfolders.filter((subfolder) => subfolder.client_id === clientId)
+    : subfolders
+
+  if (scopedSubfolders.length === 1) return scopedSubfolders[0].id
+
+  return ""
+}
+
+function resolveShootProjectId(
+  shoot: any,
+  subfolderId: string,
   projects: CatalogProject[]
 ) {
   if (shoot.project_id) return shoot.project_id
 
-  const scopedProjects = clientId
-    ? projects.filter((project) => project.client_id === clientId)
+  const scopedProjects = subfolderId
+    ? projects.filter((project) => project.subfolder_id === subfolderId)
     : projects
 
   return (
@@ -102,6 +126,7 @@ export default function Home() {
   const [employees, setEmployees] = useState<any[]>([])
   const [shootEmployees, setShootEmployees] = useState<any[]>([])
   const [allClients, setAllClients] = useState<CatalogClient[]>([])
+  const [allSubfolders, setAllSubfolders] = useState<CatalogSubfolder[]>([])
   const [allProjects, setAllProjects] = useState<CatalogProject[]>([])
   const [allVacations, setAllVacations] = useState<any[]>([])
   const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
@@ -119,6 +144,7 @@ export default function Home() {
   const [vacationEndDate, setVacationEndDate] = useState("")
 
   const [filterClient, setFilterClient] = useState("")
+  const [filterSubfolder, setFilterSubfolder] = useState("")
   const [filterProject, setFilterProject] = useState("")
   const [filterStatus, setFilterStatus] = useState("")
   const [filterHumanResource, setFilterHumanResource] = useState("")
@@ -127,6 +153,7 @@ export default function Home() {
   const [selectedEndDate, setSelectedEndDate] = useState("")
   const [title, setTitle] = useState("")
   const [clientId, setClientId] = useState("")
+  const [subfolderId, setSubfolderId] = useState("")
   const [projectId, setProjectId] = useState("")
   const [location, setLocation] = useState("")
   const [address, setAddress] = useState("")
@@ -219,6 +246,7 @@ export default function Home() {
       { data: vacations },
       { data: vacationAssignments },
       { data: clients },
+      { data: subfolders },
       { data: projects },
     ] = await Promise.all([
       supabase.from("shoots").select("*").order("start_time"),
@@ -233,7 +261,14 @@ export default function Home() {
       supabase.from("vacations").select("*").order("start_date"),
       supabase.from("vacation_employees").select("*, vacations(*), employees(*)"),
       supabase.from("clients").select("id, name").order("name"),
-      supabase.from("projects").select("id, client_id, name").order("name"),
+      supabase
+        .from("client_subfolders")
+        .select("id, client_id, name")
+        .order("name"),
+      supabase
+        .from("projects")
+        .select("id, client_id, subfolder_id, name")
+        .order("name"),
     ])
 
     setAllShoots(shoots || [])
@@ -244,6 +279,7 @@ export default function Home() {
     setAllVacations(vacations || [])
     setVacationEmployees(vacationAssignments || [])
     setAllClients(clients || [])
+    setAllSubfolders(subfolders || [])
     setAllProjects(projects || [])
   }
 
@@ -337,10 +373,12 @@ export default function Home() {
     shootEmployees,
     vacationEmployees,
     filterClient,
+    filterSubfolder,
     filterProject,
     filterStatus,
     filterHumanResource,
     allClients,
+    allSubfolders,
     allProjects,
   ])
 
@@ -354,6 +392,7 @@ export default function Home() {
     setSelectedEndDate("")
     setTitle("")
     setClientId("")
+    setSubfolderId("")
     setProjectId("")
     setLocation("")
     setAddress("")
@@ -374,6 +413,7 @@ export default function Home() {
 
   function clearFilters() {
     setFilterClient("")
+    setFilterSubfolder("")
     setFilterProject("")
     setFilterStatus("")
     setFilterHumanResource("")
@@ -381,6 +421,7 @@ export default function Home() {
 
   const hasActiveFilters =
     !!filterClient ||
+    !!filterSubfolder ||
     !!filterProject ||
     !!filterStatus ||
     !!filterHumanResource
@@ -488,9 +529,24 @@ function openEditShoot() {
 
     setTitle(selectedShoot.title || "")
     const nextClientId = resolveShootClientId(selectedShoot, allClients)
+    const nextProjectId = resolveShootProjectId(
+      selectedShoot,
+      "",
+      allProjects
+    )
+    const nextSubfolderId = resolveShootSubfolderId(
+      selectedShoot,
+      nextClientId,
+      allProjects.find((project) => project.id === nextProjectId)?.subfolder_id ||
+        "",
+      allSubfolders
+    )
+
     setClientId(nextClientId)
+    setSubfolderId(nextSubfolderId)
     setProjectId(
-      resolveShootProjectId(selectedShoot, nextClientId, allProjects)
+      nextProjectId ||
+        resolveShootProjectId(selectedShoot, nextSubfolderId, allProjects)
     )
     setLocation(selectedShoot.location || "")
     setAddress(selectedShoot.address || "")
@@ -682,10 +738,23 @@ function openEditVacation() {
     }
 
     const selectedClient = allClients.find((item) => item.id === clientId)
+    const selectedSubfolder = allSubfolders.find((item) => item.id === subfolderId)
     const selectedProject = allProjects.find((item) => item.id === projectId)
 
-    if (projectId && selectedProject && selectedProject.client_id !== clientId) {
-      return alert("El proyecto seleccionado no pertenece al cliente elegido")
+    if (
+      subfolderId &&
+      selectedSubfolder &&
+      selectedSubfolder.client_id !== clientId
+    ) {
+      return alert("La subcarpeta seleccionada no pertenece al cliente elegido")
+    }
+
+    if (
+      projectId &&
+      selectedProject &&
+      selectedProject.subfolder_id !== subfolderId
+    ) {
+      return alert("El proyecto seleccionado no pertenece a la subcarpeta elegida")
     }
 
     const payload = {
@@ -940,15 +1009,48 @@ function openEditVacation() {
 
   const technicalResources = resources.filter((r) => r.type === "technical")
 
+  const filterSubfolderOptions = useMemo(() => {
+    if (!filterClient) return allSubfolders
+    return allSubfolders.filter((subfolder) => subfolder.client_id === filterClient)
+  }, [allSubfolders, filterClient])
+
   const filterProjectOptions = useMemo(() => {
-    if (!filterClient) return allProjects
-    return allProjects.filter((project) => project.client_id === filterClient)
-  }, [allProjects, filterClient])
+    if (filterSubfolder) {
+      return allProjects.filter(
+        (project) => project.subfolder_id === filterSubfolder
+      )
+    }
+
+    if (filterClient) {
+      return allProjects.filter((project) => project.client_id === filterClient)
+    }
+
+    return allProjects
+  }, [allProjects, filterClient, filterSubfolder])
+
+  const formSubfolderOptions = useMemo(() => {
+    if (!clientId) return []
+    return allSubfolders.filter((subfolder) => subfolder.client_id === clientId)
+  }, [allSubfolders, clientId])
 
   const formProjectOptions = useMemo(() => {
-    if (!clientId) return []
-    return allProjects.filter((project) => project.client_id === clientId)
-  }, [allProjects, clientId])
+    if (!subfolderId) return []
+    return allProjects.filter((project) => project.subfolder_id === subfolderId)
+  }, [allProjects, subfolderId])
+
+  useEffect(() => {
+    if (!filterSubfolder) return
+
+    const subfolder = allSubfolders.find((item) => item.id === filterSubfolder)
+    if (!subfolder) {
+      setFilterSubfolder("")
+      return
+    }
+
+    if (filterClient && subfolder.client_id !== filterClient) {
+      setFilterSubfolder("")
+    }
+  }, [filterClient, filterSubfolder, allSubfolders])
 
   useEffect(() => {
     if (!filterProject) return
@@ -959,10 +1061,15 @@ function openEditVacation() {
       return
     }
 
+    if (filterSubfolder && project.subfolder_id !== filterSubfolder) {
+      setFilterProject("")
+      return
+    }
+
     if (filterClient && project.client_id !== filterClient) {
       setFilterProject("")
     }
-  }, [filterClient, filterProject, allProjects])
+  }, [filterClient, filterSubfolder, filterProject, allProjects])
 
   const selectThemeStyles = {
     control: (base: any) => ({
@@ -1067,7 +1174,9 @@ function openEditVacation() {
           <section
             style={{
               ...filtersToolbarStyle,
-              gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr)) auto",
+              gridTemplateColumns: isMobile
+                ? "1fr 1fr"
+                : "repeat(5, minmax(0, 1fr)) auto",
             }}
           >
             <select
@@ -1082,6 +1191,20 @@ function openEditVacation() {
               {allClients.map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              aria-label="Subcarpeta"
+              value={filterSubfolder}
+              onChange={(e) => setFilterSubfolder(e.target.value)}
+              style={compactFilterSelectStyle}
+            >
+              <option value="">Subcarpeta</option>
+              {filterSubfolderOptions.map((subfolder) => (
+                <option key={subfolder.id} value={subfolder.id}>
+                  {subfolder.name}
                 </option>
               ))}
             </select>
@@ -1370,18 +1493,8 @@ function openEditVacation() {
                           onChange={(event) => {
                             const nextClientId = event.target.value
                             setClientId(nextClientId)
-
-                            if (projectId) {
-                              const currentProject = allProjects.find(
-                                (item) => item.id === projectId
-                              )
-                              if (
-                                currentProject &&
-                                currentProject.client_id !== nextClientId
-                              ) {
-                                setProjectId("")
-                              }
-                            }
+                            setSubfolderId("")
+                            setProjectId("")
                           }}
                           style={formModalSelectStyle}
                         >
@@ -1394,10 +1507,13 @@ function openEditVacation() {
                         </select>
                       </div>
                       <div style={formModalFieldStyle}>
-                        <label style={formModalLabelStyle}>Proyecto</label>
+                        <label style={formModalLabelStyle}>Subcarpeta</label>
                         <select
-                          value={projectId}
-                          onChange={(event) => setProjectId(event.target.value)}
+                          value={subfolderId}
+                          onChange={(event) => {
+                            setSubfolderId(event.target.value)
+                            setProjectId("")
+                          }}
                           disabled={!clientId}
                           style={{
                             ...formModalSelectStyle,
@@ -1406,16 +1522,40 @@ function openEditVacation() {
                         >
                           <option value="">
                             {clientId
-                              ? "Selecciona proyecto"
+                              ? "Selecciona subcarpeta"
                               : "Primero elige cliente"}
                           </option>
-                          {formProjectOptions.map((project) => (
-                            <option key={project.id} value={project.id}>
-                              {project.name}
+                          {formSubfolderOptions.map((subfolder) => (
+                            <option key={subfolder.id} value={subfolder.id}>
+                              {subfolder.name}
                             </option>
                           ))}
                         </select>
                       </div>
+                    </div>
+
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Proyecto</label>
+                      <select
+                        value={projectId}
+                        onChange={(event) => setProjectId(event.target.value)}
+                        disabled={!subfolderId}
+                        style={{
+                          ...formModalSelectStyle,
+                          opacity: subfolderId ? 1 : 0.65,
+                        }}
+                      >
+                        <option value="">
+                          {subfolderId
+                            ? "Selecciona proyecto"
+                            : "Primero elige subcarpeta"}
+                        </option>
+                        {formProjectOptions.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     {allClients.length === 0 && isAdmin && (
@@ -1826,7 +1966,16 @@ function openEditVacation() {
                   </h2>
                   <p style={formModalMetaStyle}>
                     {selectedShoot.client || "Sin cliente"} ·{" "}
-                    {selectedShoot.project || "Sin proyecto"}
+                    {allProjects.find((item) => item.id === selectedShoot.project_id)
+                      ? allSubfolders.find(
+                          (subfolder) =>
+                            subfolder.id ===
+                            allProjects.find(
+                              (project) => project.id === selectedShoot.project_id
+                            )?.subfolder_id
+                        )?.name || "Sin subcarpeta"
+                      : "Sin subcarpeta"}{" "}
+                    · {selectedShoot.project || "Sin proyecto"}
                   </p>
                 </div>
 

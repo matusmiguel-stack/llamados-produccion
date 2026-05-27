@@ -11,9 +11,17 @@ type Client = {
   created_at: string
 }
 
+type Subfolder = {
+  id: string
+  client_id: string
+  name: string
+  created_at: string
+}
+
 type Project = {
   id: string
   client_id: string
+  subfolder_id: string
   name: string
   description: string | null
   created_at: string
@@ -22,6 +30,7 @@ type Project = {
 
 export default function ProyectosPage() {
   const [clients, setClients] = useState<Client[]>([])
+  const [subfolders, setSubfolders] = useState<Subfolder[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [profile, setProfile] = useState<any>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -29,14 +38,19 @@ export default function ProyectosPage() {
 
   const [newClientName, setNewClientName] = useState("")
   const [expandedClientIds, setExpandedClientIds] = useState<string[]>([])
+  const [expandedSubfolderIds, setExpandedSubfolderIds] = useState<string[]>([])
 
   const [editingClientId, setEditingClientId] = useState("")
   const [editingClientName, setEditingClientName] = useState("")
+
+  const [editingSubfolderId, setEditingSubfolderId] = useState("")
+  const [editingSubfolderName, setEditingSubfolderName] = useState("")
 
   const [editingProjectId, setEditingProjectId] = useState("")
   const [editingProjectName, setEditingProjectName] = useState("")
   const [editingProjectDescription, setEditingProjectDescription] = useState("")
 
+  const [newSubfolderNames, setNewSubfolderNames] = useState<Record<string, string>>({})
   const [newProjectNames, setNewProjectNames] = useState<Record<string, string>>({})
   const [newProjectDescriptions, setNewProjectDescriptions] = useState<
     Record<string, string>
@@ -44,16 +58,31 @@ export default function ProyectosPage() {
 
   const isAdmin = profile?.role === "admin"
 
-  const projectsByClient = useMemo(() => {
-    const grouped: Record<string, Project[]> = {}
+  const subfoldersByClient = useMemo(() => {
+    const grouped: Record<string, Subfolder[]> = {}
 
-    for (const project of projects) {
-      if (!grouped[project.client_id]) grouped[project.client_id] = []
-      grouped[project.client_id].push(project)
+    for (const subfolder of subfolders) {
+      if (!grouped[subfolder.client_id]) grouped[subfolder.client_id] = []
+      grouped[subfolder.client_id].push(subfolder)
     }
 
     for (const clientId of Object.keys(grouped)) {
       grouped[clientId].sort((a, b) => a.name.localeCompare(b.name, "es"))
+    }
+
+    return grouped
+  }, [subfolders])
+
+  const projectsBySubfolder = useMemo(() => {
+    const grouped: Record<string, Project[]> = {}
+
+    for (const project of projects) {
+      if (!grouped[project.subfolder_id]) grouped[project.subfolder_id] = []
+      grouped[project.subfolder_id].push(project)
+    }
+
+    for (const subfolderId of Object.keys(grouped)) {
+      grouped[subfolderId].sort((a, b) => a.name.localeCompare(b.name, "es"))
     }
 
     return grouped
@@ -84,16 +113,22 @@ export default function ProyectosPage() {
 
     setProfile(myProfile)
 
-    const [{ data: clientsData, error: clientsError }, { data: projectsData, error: projectsError }] =
-      await Promise.all([
-        supabase.from("clients").select("*").order("name", { ascending: true }),
-        supabase.from("projects").select("*").order("name", { ascending: true }),
-      ])
+    const [
+      { data: clientsData, error: clientsError },
+      { data: subfoldersData, error: subfoldersError },
+      { data: projectsData, error: projectsError },
+    ] = await Promise.all([
+      supabase.from("clients").select("*").order("name", { ascending: true }),
+      supabase.from("client_subfolders").select("*").order("name", { ascending: true }),
+      supabase.from("projects").select("*").order("name", { ascending: true }),
+    ])
 
     if (clientsError) return alert(clientsError.message)
+    if (subfoldersError) return alert(subfoldersError.message)
     if (projectsError) return alert(projectsError.message)
 
     setClients(clientsData || [])
+    setSubfolders(subfoldersData || [])
     setProjects(projectsData || [])
   }
 
@@ -107,6 +142,24 @@ export default function ProyectosPage() {
         ? current.filter((id) => id !== clientId)
         : [...current, clientId]
     )
+  }
+
+  function toggleSubfolder(subfolderId: string) {
+    setExpandedSubfolderIds((current) =>
+      current.includes(subfolderId)
+        ? current.filter((id) => id !== subfolderId)
+        : [...current, subfolderId]
+    )
+  }
+
+  function countClientProjects(clientId: string) {
+    const clientSubfolderIds = (subfoldersByClient[clientId] || []).map(
+      (subfolder) => subfolder.id
+    )
+
+    return projects.filter((project) =>
+      clientSubfolderIds.includes(project.subfolder_id)
+    ).length
   }
 
   async function createClient() {
@@ -165,10 +218,11 @@ export default function ProyectosPage() {
   }
 
   async function deleteClient(client: Client) {
-    const projectCount = projectsByClient[client.id]?.length || 0
+    const subfolderCount = subfoldersByClient[client.id]?.length || 0
+    const projectCount = countClientProjects(client.id)
     const warning =
-      projectCount > 0
-        ? `¿Eliminar la carpeta "${client.name}" y sus ${projectCount} proyecto${projectCount === 1 ? "" : "s"}?`
+      subfolderCount > 0 || projectCount > 0
+        ? `¿Eliminar "${client.name}" con ${subfolderCount} subcarpeta${subfolderCount === 1 ? "" : "s"} y ${projectCount} proyecto${projectCount === 1 ? "" : "s"}?`
         : `¿Eliminar la carpeta "${client.name}"?`
 
     if (!confirm(`${warning} Esta acción no se puede deshacer.`)) return
@@ -182,9 +236,90 @@ export default function ProyectosPage() {
     await loadPage()
   }
 
-  async function createProject(clientId: string) {
-    const name = (newProjectNames[clientId] || "").trim()
-    const description = (newProjectDescriptions[clientId] || "").trim()
+  async function createSubfolder(clientId: string) {
+    const name = (newSubfolderNames[clientId] || "").trim()
+
+    if (!name) {
+      alert("Escribe el nombre de la subcarpeta")
+      return
+    }
+
+    const { data, error } = await supabase
+      .from("client_subfolders")
+      .insert({ client_id: clientId, name })
+      .select("*")
+      .single()
+
+    if (error) return alert(error.message)
+
+    setNewSubfolderNames((current) => ({ ...current, [clientId]: "" }))
+    setExpandedClientIds((current) =>
+      current.includes(clientId) ? current : [...current, clientId]
+    )
+    if (data) {
+      setExpandedSubfolderIds((current) =>
+        current.includes(data.id) ? current : [...current, data.id]
+      )
+    }
+
+    await loadPage()
+  }
+
+  function startEditSubfolder(subfolder: Subfolder) {
+    setEditingSubfolderId(subfolder.id)
+    setEditingSubfolderName(subfolder.name)
+  }
+
+  function cancelEditSubfolder() {
+    setEditingSubfolderId("")
+    setEditingSubfolderName("")
+  }
+
+  async function saveSubfolder(subfolderId: string) {
+    const name = editingSubfolderName.trim()
+
+    if (!name) {
+      alert("Escribe el nombre de la subcarpeta")
+      return
+    }
+
+    const { error } = await supabase
+      .from("client_subfolders")
+      .update({ name })
+      .eq("id", subfolderId)
+
+    if (error) return alert(error.message)
+
+    cancelEditSubfolder()
+    await loadPage()
+  }
+
+  async function deleteSubfolder(subfolder: Subfolder) {
+    const projectCount = projectsBySubfolder[subfolder.id]?.length || 0
+    const warning =
+      projectCount > 0
+        ? `¿Eliminar la subcarpeta "${subfolder.name}" y sus ${projectCount} proyecto${projectCount === 1 ? "" : "s"}?`
+        : `¿Eliminar la subcarpeta "${subfolder.name}"?`
+
+    if (!confirm(`${warning} Esta acción no se puede deshacer.`)) return
+
+    const { error } = await supabase
+      .from("client_subfolders")
+      .delete()
+      .eq("id", subfolder.id)
+
+    if (error) return alert(error.message)
+
+    if (editingSubfolderId === subfolder.id) cancelEditSubfolder()
+    setExpandedSubfolderIds((current) =>
+      current.filter((id) => id !== subfolder.id)
+    )
+    await loadPage()
+  }
+
+  async function createProject(subfolderId: string, clientId: string) {
+    const name = (newProjectNames[subfolderId] || "").trim()
+    const description = (newProjectDescriptions[subfolderId] || "").trim()
 
     if (!name) {
       alert("Escribe el nombre del proyecto")
@@ -193,6 +328,7 @@ export default function ProyectosPage() {
 
     const { error } = await supabase.from("projects").insert({
       client_id: clientId,
+      subfolder_id: subfolderId,
       name,
       description: description || null,
       updated_at: new Date().toISOString(),
@@ -200,10 +336,13 @@ export default function ProyectosPage() {
 
     if (error) return alert(error.message)
 
-    setNewProjectNames((current) => ({ ...current, [clientId]: "" }))
-    setNewProjectDescriptions((current) => ({ ...current, [clientId]: "" }))
+    setNewProjectNames((current) => ({ ...current, [subfolderId]: "" }))
+    setNewProjectDescriptions((current) => ({ ...current, [subfolderId]: "" }))
     setExpandedClientIds((current) =>
       current.includes(clientId) ? current : [...current, clientId]
+    )
+    setExpandedSubfolderIds((current) =>
+      current.includes(subfolderId) ? current : [...current, subfolderId]
     )
     await loadPage()
   }
@@ -287,6 +426,7 @@ export default function ProyectosPage() {
               <h1 style={pageTitleStyle}>Proyectos</h1>
               <p style={pageSubtitleStyle}>
                 {clients.length} cliente{clients.length === 1 ? "" : "s"} ·{" "}
+                {subfolders.length} subcarpeta{subfolders.length === 1 ? "" : "s"} ·{" "}
                 {totalProjects} proyecto{totalProjects === 1 ? "" : "s"}
               </p>
             </div>
@@ -296,7 +436,7 @@ export default function ProyectosPage() {
             <div style={panelHeaderStyle}>
               <p style={panelTitleStyle}>Nueva carpeta de cliente</p>
               <p style={panelHintStyle}>
-                Crea una carpeta por cliente para organizar sus proyectos
+                Ej. Isla, Nike, Coca-Cola — luego crea subcarpetas como Tangamanga o Bernina
               </p>
             </div>
 
@@ -308,7 +448,7 @@ export default function ProyectosPage() {
             >
               <Field label="Nombre del cliente">
                 <input
-                  placeholder="Ej. Nike, Coca-Cola, Netflix..."
+                  placeholder="Ej. Isla"
                   value={newClientName}
                   onChange={(event) => setNewClientName(event.target.value)}
                   style={inputStyle}
@@ -317,7 +457,7 @@ export default function ProyectosPage() {
 
               <div style={formActionStyle}>
                 <button onClick={createClient} style={primaryButtonStyle}>
-                  Crear carpeta
+                  Crear cliente
                 </button>
               </div>
             </div>
@@ -325,22 +465,23 @@ export default function ProyectosPage() {
 
           <section style={{ ...panelStyle, marginTop: 14 }}>
             <div style={panelHeaderStyle}>
-              <p style={panelTitleStyle}>Carpetas y proyectos</p>
+              <p style={panelTitleStyle}>Estructura de carpetas</p>
               <p style={panelHintStyle}>
-                Abre cada carpeta de cliente para crear y administrar sus proyectos
+                Cliente → subcarpeta interna → proyectos
               </p>
             </div>
 
             {clients.length === 0 ? (
               <div style={emptyStateStyle}>
-                Aún no hay clientes. Crea la primera carpeta arriba.
+                Aún no hay clientes. Crea el primero arriba.
               </div>
             ) : (
               <div style={folderListStyle}>
                 {clients.map((client) => {
-                  const clientProjects = projectsByClient[client.id] || []
+                  const clientSubfolders = subfoldersByClient[client.id] || []
                   const isExpanded = expandedClientIds.includes(client.id)
                   const isEditingClient = editingClientId === client.id
+                  const clientProjectCount = countClientProjects(client.id)
 
                   return (
                     <article key={client.id} style={folderCardStyle}>
@@ -351,7 +492,7 @@ export default function ProyectosPage() {
                           style={folderToggleStyle}
                           aria-expanded={isExpanded}
                         >
-                          <span style={folderIconWrapStyle}>
+                          <span style={clientIconWrapStyle}>
                             <FolderIcon open={isExpanded} />
                           </span>
                           <span style={folderMetaStyle}>
@@ -368,8 +509,10 @@ export default function ProyectosPage() {
                               <>
                                 <span style={folderNameStyle}>{client.name}</span>
                                 <span style={folderCountStyle}>
-                                  {clientProjects.length} proyecto
-                                  {clientProjects.length === 1 ? "" : "s"}
+                                  {clientSubfolders.length} subcarpeta
+                                  {clientSubfolders.length === 1 ? "" : "s"} ·{" "}
+                                  {clientProjectCount} proyecto
+                                  {clientProjectCount === 1 ? "" : "s"}
                                 </span>
                               </>
                             )}
@@ -411,20 +554,20 @@ export default function ProyectosPage() {
 
                       {isExpanded && (
                         <div style={folderBodyStyle}>
-                          <div style={newProjectPanelStyle}>
-                            <p style={nestedTitleStyle}>Nuevo proyecto</p>
+                          <div style={newSubfolderPanelStyle}>
+                            <p style={nestedTitleStyle}>Nueva subcarpeta</p>
                             <div
                               style={{
-                                ...nestedFormGridStyle,
-                                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                                ...formRowStyle,
+                                gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
                               }}
                             >
-                              <Field label="Nombre del proyecto">
+                              <Field label="Nombre de la subcarpeta">
                                 <input
-                                  placeholder="Ej. Spot verano 2026"
-                                  value={newProjectNames[client.id] || ""}
+                                  placeholder="Ej. Tangamanga, Bernina, San Rafael"
+                                  value={newSubfolderNames[client.id] || ""}
                                   onChange={(event) =>
-                                    setNewProjectNames((current) => ({
+                                    setNewSubfolderNames((current) => ({
                                       ...current,
                                       [client.id]: event.target.value,
                                     }))
@@ -432,119 +575,270 @@ export default function ProyectosPage() {
                                   style={inputStyle}
                                 />
                               </Field>
-
-                              <Field label="Descripción breve (opcional)">
-                                <input
-                                  placeholder="Notas iniciales del proyecto"
-                                  value={newProjectDescriptions[client.id] || ""}
-                                  onChange={(event) =>
-                                    setNewProjectDescriptions((current) => ({
-                                      ...current,
-                                      [client.id]: event.target.value,
-                                    }))
-                                  }
-                                  style={inputStyle}
-                                />
-                              </Field>
-                            </div>
-
-                            <div style={formActionStyle}>
-                              <button
-                                onClick={() => createProject(client.id)}
-                                style={primaryButtonStyle}
-                              >
-                                Agregar proyecto
-                              </button>
+                              <div style={formActionStyle}>
+                                <button
+                                  onClick={() => createSubfolder(client.id)}
+                                  style={primaryButtonStyle}
+                                >
+                                  Crear subcarpeta
+                                </button>
+                              </div>
                             </div>
                           </div>
 
-                          {clientProjects.length === 0 ? (
+                          {clientSubfolders.length === 0 ? (
                             <div style={nestedEmptyStyle}>
-                              Esta carpeta aún no tiene proyectos.
+                              Este cliente aún no tiene subcarpetas.
                             </div>
                           ) : (
-                            <div style={projectListStyle}>
-                              {clientProjects.map((project) => {
-                                const isEditingProject = editingProjectId === project.id
-
-                                if (isEditingProject) {
-                                  return (
-                                    <div key={project.id} style={projectEditPanelStyle}>
-                                      <div
-                                        style={{
-                                          ...nestedFormGridStyle,
-                                          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                                        }}
-                                      >
-                                        <Field label="Nombre del proyecto">
-                                          <input
-                                            value={editingProjectName}
-                                            onChange={(event) =>
-                                              setEditingProjectName(event.target.value)
-                                            }
-                                            style={inputStyle}
-                                          />
-                                        </Field>
-
-                                        <Field label="Descripción breve">
-                                          <input
-                                            value={editingProjectDescription}
-                                            onChange={(event) =>
-                                              setEditingProjectDescription(event.target.value)
-                                            }
-                                            style={inputStyle}
-                                          />
-                                        </Field>
-                                      </div>
-
-                                      <div style={rowActionsStyle}>
-                                        <button
-                                          onClick={() => saveProject(project.id)}
-                                          style={primaryButtonStyle}
-                                        >
-                                          Guardar
-                                        </button>
-                                        <button
-                                          onClick={cancelEditProject}
-                                          style={secondaryButtonStyle}
-                                        >
-                                          Cancelar
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )
-                                }
+                            <div style={subfolderListStyle}>
+                              {clientSubfolders.map((subfolder) => {
+                                const subfolderProjects =
+                                  projectsBySubfolder[subfolder.id] || []
+                                const isSubfolderExpanded =
+                                  expandedSubfolderIds.includes(subfolder.id)
+                                const isEditingSubfolder =
+                                  editingSubfolderId === subfolder.id
 
                                 return (
-                                  <div key={project.id} style={projectRowStyle}>
-                                    <div style={projectMainStyle}>
-                                      <span style={projectIconWrapStyle}>
-                                        <ProjectIcon />
-                                      </span>
-                                      <div style={{ minWidth: 0 }}>
-                                        <p style={projectNameStyle}>{project.name}</p>
-                                        <p style={projectMetaStyle}>
-                                          {project.description?.trim() ||
-                                            "Listo para cargar información del proyecto"}
-                                        </p>
+                                  <article key={subfolder.id} style={subfolderCardStyle}>
+                                    <div style={subfolderHeaderStyle}>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleSubfolder(subfolder.id)}
+                                        style={folderToggleStyle}
+                                        aria-expanded={isSubfolderExpanded}
+                                      >
+                                        <span style={subfolderIconWrapStyle}>
+                                          <SubfolderIcon open={isSubfolderExpanded} />
+                                        </span>
+                                        <span style={folderMetaStyle}>
+                                          {isEditingSubfolder ? (
+                                            <input
+                                              value={editingSubfolderName}
+                                              onChange={(event) =>
+                                                setEditingSubfolderName(event.target.value)
+                                              }
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                              style={{ ...inputStyle, marginTop: 2 }}
+                                            />
+                                          ) : (
+                                            <>
+                                              <span style={folderNameStyle}>
+                                                {subfolder.name}
+                                              </span>
+                                              <span style={folderCountStyle}>
+                                                {subfolderProjects.length} proyecto
+                                                {subfolderProjects.length === 1 ? "" : "s"}
+                                              </span>
+                                            </>
+                                          )}
+                                        </span>
+                                        <span style={chevronStyle(isSubfolderExpanded)}>
+                                          ›
+                                        </span>
+                                      </button>
+
+                                      <div style={folderActionsStyle}>
+                                        {isEditingSubfolder ? (
+                                          <>
+                                            <button
+                                              onClick={() => saveSubfolder(subfolder.id)}
+                                              style={primaryButtonStyle}
+                                            >
+                                              Guardar
+                                            </button>
+                                            <button
+                                              onClick={cancelEditSubfolder}
+                                              style={secondaryButtonStyle}
+                                            >
+                                              Cancelar
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <button
+                                              onClick={() => startEditSubfolder(subfolder)}
+                                              style={secondaryButtonStyle}
+                                            >
+                                              Editar
+                                            </button>
+                                            <button
+                                              onClick={() => deleteSubfolder(subfolder)}
+                                              style={dangerButtonStyle}
+                                            >
+                                              Borrar
+                                            </button>
+                                          </>
+                                        )}
                                       </div>
                                     </div>
 
-                                    <div style={rowActionsStyle}>
-                                      <button
-                                        onClick={() => startEditProject(project)}
-                                        style={secondaryButtonStyle}
-                                      >
-                                        Editar
-                                      </button>
-                                      <button
-                                        onClick={() => deleteProject(project)}
-                                        style={dangerButtonStyle}
-                                      >
-                                        Borrar
-                                      </button>
-                                    </div>
-                                  </div>
+                                    {isSubfolderExpanded && (
+                                      <div style={subfolderBodyStyle}>
+                                        <div style={newProjectPanelStyle}>
+                                          <p style={nestedTitleStyle}>Nuevo proyecto</p>
+                                          <div
+                                            style={{
+                                              ...nestedFormGridStyle,
+                                              gridTemplateColumns: isMobile
+                                                ? "1fr"
+                                                : "1fr 1fr",
+                                            }}
+                                          >
+                                            <Field label="Nombre del proyecto">
+                                              <input
+                                                placeholder="Ej. Spot verano 2026"
+                                                value={newProjectNames[subfolder.id] || ""}
+                                                onChange={(event) =>
+                                                  setNewProjectNames((current) => ({
+                                                    ...current,
+                                                    [subfolder.id]: event.target.value,
+                                                  }))
+                                                }
+                                                style={inputStyle}
+                                              />
+                                            </Field>
+
+                                            <Field label="Descripción breve (opcional)">
+                                              <input
+                                                placeholder="Notas iniciales del proyecto"
+                                                value={
+                                                  newProjectDescriptions[subfolder.id] || ""
+                                                }
+                                                onChange={(event) =>
+                                                  setNewProjectDescriptions((current) => ({
+                                                    ...current,
+                                                    [subfolder.id]: event.target.value,
+                                                  }))
+                                                }
+                                                style={inputStyle}
+                                              />
+                                            </Field>
+                                          </div>
+
+                                          <div style={formActionStyle}>
+                                            <button
+                                              onClick={() =>
+                                                createProject(subfolder.id, client.id)
+                                              }
+                                              style={primaryButtonStyle}
+                                            >
+                                              Agregar proyecto
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {subfolderProjects.length === 0 ? (
+                                          <div style={nestedEmptyStyle}>
+                                            Esta subcarpeta aún no tiene proyectos.
+                                          </div>
+                                        ) : (
+                                          <div style={projectListStyle}>
+                                            {subfolderProjects.map((project) => {
+                                              const isEditingProject =
+                                                editingProjectId === project.id
+
+                                              if (isEditingProject) {
+                                                return (
+                                                  <div
+                                                    key={project.id}
+                                                    style={projectEditPanelStyle}
+                                                  >
+                                                    <div
+                                                      style={{
+                                                        ...nestedFormGridStyle,
+                                                        gridTemplateColumns: isMobile
+                                                          ? "1fr"
+                                                          : "1fr 1fr",
+                                                      }}
+                                                    >
+                                                      <Field label="Nombre del proyecto">
+                                                        <input
+                                                          value={editingProjectName}
+                                                          onChange={(event) =>
+                                                            setEditingProjectName(
+                                                              event.target.value
+                                                            )
+                                                          }
+                                                          style={inputStyle}
+                                                        />
+                                                      </Field>
+
+                                                      <Field label="Descripción breve">
+                                                        <input
+                                                          value={editingProjectDescription}
+                                                          onChange={(event) =>
+                                                            setEditingProjectDescription(
+                                                              event.target.value
+                                                            )
+                                                          }
+                                                          style={inputStyle}
+                                                        />
+                                                      </Field>
+                                                    </div>
+
+                                                    <div style={rowActionsStyle}>
+                                                      <button
+                                                        onClick={() =>
+                                                          saveProject(project.id)
+                                                        }
+                                                        style={primaryButtonStyle}
+                                                      >
+                                                        Guardar
+                                                      </button>
+                                                      <button
+                                                        onClick={cancelEditProject}
+                                                        style={secondaryButtonStyle}
+                                                      >
+                                                        Cancelar
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                )
+                                              }
+
+                                              return (
+                                                <div key={project.id} style={projectRowStyle}>
+                                                  <div style={projectMainStyle}>
+                                                    <span style={projectIconWrapStyle}>
+                                                      <ProjectIcon />
+                                                    </span>
+                                                    <div style={{ minWidth: 0 }}>
+                                                      <p style={projectNameStyle}>
+                                                        {project.name}
+                                                      </p>
+                                                      <p style={projectMetaStyle}>
+                                                        {project.description?.trim() ||
+                                                          "Listo para cargar información del proyecto"}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+
+                                                  <div style={rowActionsStyle}>
+                                                    <button
+                                                      onClick={() => startEditProject(project)}
+                                                      style={secondaryButtonStyle}
+                                                    >
+                                                      Editar
+                                                    </button>
+                                                    <button
+                                                      onClick={() => deleteProject(project)}
+                                                      style={dangerButtonStyle}
+                                                    >
+                                                      Borrar
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </article>
                                 )
                               })}
                             </div>
@@ -588,15 +882,20 @@ function FolderIcon({ open }: { open: boolean }) {
         strokeLinejoin="round"
         fill={open ? "rgba(245,158,11,0.18)" : "transparent"}
       />
-      {open && (
-        <path
-          d="M3 10h18"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          opacity="0.45"
-        />
-      )}
+    </svg>
+  )
+}
+
+function SubfolderIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 8.5A1.5 1.5 0 0 1 5.5 7H10l1.5 1.5H18.5A1.5 1.5 0 0 1 20 10v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17V8.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        fill={open ? "rgba(20,184,166,0.18)" : "transparent"}
+      />
     </svg>
   )
 }
@@ -796,7 +1095,7 @@ const folderToggleStyle: React.CSSProperties = {
   textAlign: "left",
 }
 
-const folderIconWrapStyle: React.CSSProperties = {
+const clientIconWrapStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -807,6 +1106,19 @@ const folderIconWrapStyle: React.CSSProperties = {
   color: "#fbbf24",
   background: "rgba(245,158,11,0.12)",
   border: "1px solid rgba(251,191,36,0.18)",
+}
+
+const subfolderIconWrapStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
+  borderRadius: 9,
+  flexShrink: 0,
+  color: "#5eead4",
+  background: "rgba(20,184,166,0.12)",
+  border: "1px solid rgba(45,212,191,0.18)",
 }
 
 const folderMetaStyle: React.CSSProperties = {
@@ -852,6 +1164,40 @@ const folderBodyStyle: React.CSSProperties = {
   borderTop: "1px solid rgba(148,163,184,0.10)",
   padding: "12px",
   background: "rgba(2,6,23,0.28)",
+}
+
+const newSubfolderPanelStyle: React.CSSProperties = {
+  padding: "12px",
+  borderRadius: 12,
+  border: "1px dashed rgba(251,191,36,0.22)",
+  background: "rgba(245,158,11,0.04)",
+  marginBottom: 12,
+}
+
+const subfolderListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+}
+
+const subfolderCardStyle: React.CSSProperties = {
+  borderRadius: 12,
+  border: "1px solid rgba(45,212,191,0.12)",
+  background: "rgba(255,255,255,0.02)",
+  overflow: "hidden",
+}
+
+const subfolderHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "8px 10px",
+}
+
+const subfolderBodyStyle: React.CSSProperties = {
+  borderTop: "1px solid rgba(45,212,191,0.10)",
+  padding: "10px",
+  background: "rgba(2,6,23,0.22)",
 }
 
 const newProjectPanelStyle: React.CSSProperties = {
