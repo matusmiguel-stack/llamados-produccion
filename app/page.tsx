@@ -27,6 +27,67 @@ const VACATION_EVENT_PREFIX = "vacation:"
 const BIRTHDAY_COLOR = "#f59e0b"
 const ANNIVERSARY_COLOR = "#14b8a6"
 
+type CatalogClient = {
+  id: string
+  name: string
+}
+
+type CatalogProject = {
+  id: string
+  client_id: string
+  name: string
+}
+
+function shootMatchesClientFilter(
+  shoot: any,
+  filterClientId: string,
+  clients: CatalogClient[]
+) {
+  if (!filterClientId) return true
+
+  if (shoot.client_id === filterClientId) return true
+
+  const clientName = clients.find((client) => client.id === filterClientId)?.name
+  return !shoot.client_id && !!clientName && shoot.client === clientName
+}
+
+function shootMatchesProjectFilter(
+  shoot: any,
+  filterProjectId: string,
+  projects: CatalogProject[]
+) {
+  if (!filterProjectId) return true
+
+  if (shoot.project_id === filterProjectId) return true
+
+  const projectName = projects.find((project) => project.id === filterProjectId)?.name
+  return !shoot.project_id && !!projectName && shoot.project === projectName
+}
+
+function resolveShootClientId(shoot: any, clients: CatalogClient[]) {
+  if (shoot.client_id) return shoot.client_id
+
+  return (
+    clients.find((client) => client.name === shoot.client)?.id || ""
+  )
+}
+
+function resolveShootProjectId(
+  shoot: any,
+  clientId: string,
+  projects: CatalogProject[]
+) {
+  if (shoot.project_id) return shoot.project_id
+
+  const scopedProjects = clientId
+    ? projects.filter((project) => project.client_id === clientId)
+    : projects
+
+  return (
+    scopedProjects.find((project) => project.name === shoot.project)?.id || ""
+  )
+}
+
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -40,6 +101,8 @@ export default function Home() {
   const [shootResources, setShootResources] = useState<any[]>([])
   const [employees, setEmployees] = useState<any[]>([])
   const [shootEmployees, setShootEmployees] = useState<any[]>([])
+  const [allClients, setAllClients] = useState<CatalogClient[]>([])
+  const [allProjects, setAllProjects] = useState<CatalogProject[]>([])
   const [allVacations, setAllVacations] = useState<any[]>([])
   const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
@@ -63,8 +126,8 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedEndDate, setSelectedEndDate] = useState("")
   const [title, setTitle] = useState("")
-  const [client, setClient] = useState("")
-  const [project, setProject] = useState("")
+  const [clientId, setClientId] = useState("")
+  const [projectId, setProjectId] = useState("")
   const [location, setLocation] = useState("")
   const [address, setAddress] = useState("")
   const [contact, setContact] = useState("")
@@ -147,38 +210,31 @@ export default function Home() {
   }, [])
 
   async function loadAll() {
-    const { data: shoots } = await supabase
-      .from("shoots")
-      .select("*")
-      .order("start_time")
-
-    const { data: res } = await supabase
-      .from("resources")
-      .select("*")
-      .order("type")
-
-    const { data: assignments } = await supabase
-      .from("shoot_resources")
-      .select("*, shoots(*), resources(*)")
-
-    const { data: emps } = await supabase
-      .from("employees")
-      .select("*")
-      .order("nombre")
-      .order("apellido_paterno")
-
-    const { data: employeeAssignments } = await supabase
-      .from("shoot_employees")
-      .select("*, shoots(*), employees(*)")
-
-    const { data: vacations } = await supabase
-      .from("vacations")
-      .select("*")
-      .order("start_date")
-
-    const { data: vacationAssignments } = await supabase
-      .from("vacation_employees")
-      .select("*, vacations(*), employees(*)")
+    const [
+      { data: shoots },
+      { data: res },
+      { data: assignments },
+      { data: emps },
+      { data: employeeAssignments },
+      { data: vacations },
+      { data: vacationAssignments },
+      { data: clients },
+      { data: projects },
+    ] = await Promise.all([
+      supabase.from("shoots").select("*").order("start_time"),
+      supabase.from("resources").select("*").order("type"),
+      supabase.from("shoot_resources").select("*, shoots(*), resources(*)"),
+      supabase
+        .from("employees")
+        .select("*")
+        .order("nombre")
+        .order("apellido_paterno"),
+      supabase.from("shoot_employees").select("*, shoots(*), employees(*)"),
+      supabase.from("vacations").select("*").order("start_date"),
+      supabase.from("vacation_employees").select("*, vacations(*), employees(*)"),
+      supabase.from("clients").select("id, name").order("name"),
+      supabase.from("projects").select("id, client_id, name").order("name"),
+    ])
 
     setAllShoots(shoots || [])
     setResources(res || [])
@@ -187,6 +243,8 @@ export default function Home() {
     setShootEmployees(employeeAssignments || [])
     setAllVacations(vacations || [])
     setVacationEmployees(vacationAssignments || [])
+    setAllClients(clients || [])
+    setAllProjects(projects || [])
   }
 
   useEffect(() => {
@@ -204,8 +262,12 @@ export default function Home() {
 
   useEffect(() => {
     const filtered = allShoots.filter((shoot) => {
-      const clientOk = !filterClient || shoot.client === filterClient
-      const projectOk = !filterProject || shoot.project === filterProject
+      const clientOk = shootMatchesClientFilter(shoot, filterClient, allClients)
+      const projectOk = shootMatchesProjectFilter(
+        shoot,
+        filterProject,
+        allProjects
+      )
       const statusOk = !filterStatus || shoot.status === filterStatus
 
       const humanResourceOk =
@@ -278,6 +340,8 @@ export default function Home() {
     filterProject,
     filterStatus,
     filterHumanResource,
+    allClients,
+    allProjects,
   ])
 
   function resetForm() {
@@ -289,8 +353,8 @@ export default function Home() {
     setSelectedDate("")
     setSelectedEndDate("")
     setTitle("")
-    setClient("")
-    setProject("")
+    setClientId("")
+    setProjectId("")
     setLocation("")
     setAddress("")
     setContact("")
@@ -423,8 +487,11 @@ function openEditShoot() {
     const singleDay = endDate === startDate
 
     setTitle(selectedShoot.title || "")
-    setClient(selectedShoot.client || "")
-    setProject(selectedShoot.project || "")
+    const nextClientId = resolveShootClientId(selectedShoot, allClients)
+    setClientId(nextClientId)
+    setProjectId(
+      resolveShootProjectId(selectedShoot, nextClientId, allProjects)
+    )
     setLocation(selectedShoot.location || "")
     setAddress(selectedShoot.address || "")
     setContact(selectedShoot.contact || "")
@@ -614,10 +681,19 @@ function openEditVacation() {
       )
     }
 
+    const selectedClient = allClients.find((item) => item.id === clientId)
+    const selectedProject = allProjects.find((item) => item.id === projectId)
+
+    if (projectId && selectedProject && selectedProject.client_id !== clientId) {
+      return alert("El proyecto seleccionado no pertenece al cliente elegido")
+    }
+
     const payload = {
       title,
-      client,
-      project,
+      client_id: clientId || null,
+      project_id: projectId || null,
+      client: selectedClient?.name || null,
+      project: selectedProject?.name || null,
       location,
       address,
       contact,
@@ -864,15 +940,29 @@ function openEditVacation() {
 
   const technicalResources = resources.filter((r) => r.type === "technical")
 
-  const clients = useMemo(
-    () => [...new Set(allShoots.map((s) => s.client).filter(Boolean))],
-    [allShoots]
-  )
+  const filterProjectOptions = useMemo(() => {
+    if (!filterClient) return allProjects
+    return allProjects.filter((project) => project.client_id === filterClient)
+  }, [allProjects, filterClient])
 
-  const projects = useMemo(
-    () => [...new Set(allShoots.map((s) => s.project).filter(Boolean))],
-    [allShoots]
-  )
+  const formProjectOptions = useMemo(() => {
+    if (!clientId) return []
+    return allProjects.filter((project) => project.client_id === clientId)
+  }, [allProjects, clientId])
+
+  useEffect(() => {
+    if (!filterProject) return
+
+    const project = allProjects.find((item) => item.id === filterProject)
+    if (!project) {
+      setFilterProject("")
+      return
+    }
+
+    if (filterClient && project.client_id !== filterClient) {
+      setFilterProject("")
+    }
+  }, [filterClient, filterProject, allProjects])
 
   const selectThemeStyles = {
     control: (base: any) => ({
@@ -983,13 +1073,15 @@ function openEditVacation() {
             <select
               aria-label="Cliente"
               value={filterClient}
-              onChange={(e) => setFilterClient(e.target.value)}
+              onChange={(e) => {
+                setFilterClient(e.target.value)
+              }}
               style={compactFilterSelectStyle}
             >
               <option value="">Cliente</option>
-              {clients.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {allClients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
                 </option>
               ))}
             </select>
@@ -1001,9 +1093,9 @@ function openEditVacation() {
               style={compactFilterSelectStyle}
             >
               <option value="">Proyecto</option>
-              {projects.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+              {filterProjectOptions.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -1273,23 +1365,68 @@ function openEditVacation() {
                     <div style={formModalRowStyle}>
                       <div style={formModalFieldStyle}>
                         <label style={formModalLabelStyle}>Cliente</label>
-                        <input
-                          placeholder="Cliente"
-                          value={client}
-                          onChange={(e) => setClient(e.target.value)}
-                          style={formModalInputStyle}
-                        />
+                        <select
+                          value={clientId}
+                          onChange={(event) => {
+                            const nextClientId = event.target.value
+                            setClientId(nextClientId)
+
+                            if (projectId) {
+                              const currentProject = allProjects.find(
+                                (item) => item.id === projectId
+                              )
+                              if (
+                                currentProject &&
+                                currentProject.client_id !== nextClientId
+                              ) {
+                                setProjectId("")
+                              }
+                            }
+                          }}
+                          style={formModalSelectStyle}
+                        >
+                          <option value="">Selecciona cliente</option>
+                          {allClients.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {client.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div style={formModalFieldStyle}>
                         <label style={formModalLabelStyle}>Proyecto</label>
-                        <input
-                          placeholder="Proyecto"
-                          value={project}
-                          onChange={(e) => setProject(e.target.value)}
-                          style={formModalInputStyle}
-                        />
+                        <select
+                          value={projectId}
+                          onChange={(event) => setProjectId(event.target.value)}
+                          disabled={!clientId}
+                          style={{
+                            ...formModalSelectStyle,
+                            opacity: clientId ? 1 : 0.65,
+                          }}
+                        >
+                          <option value="">
+                            {clientId
+                              ? "Selecciona proyecto"
+                              : "Primero elige cliente"}
+                          </option>
+                          {formProjectOptions.map((project) => (
+                            <option key={project.id} value={project.id}>
+                              {project.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
+
+                    {allClients.length === 0 && isAdmin && (
+                      <p style={formModalHintStyle}>
+                        Crea carpetas de cliente en{" "}
+                        <a href="/proyectos" style={formModalLinkStyle}>
+                          Proyectos
+                        </a>
+                        .
+                      </p>
+                    )}
 
                     <div style={formModalRowStyle}>
                       <div style={formModalFieldStyle}>
@@ -2556,6 +2693,31 @@ const formModalInputStyle: React.CSSProperties = {
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
+}
+
+const formModalSelectStyle: React.CSSProperties = {
+  ...formModalInputStyle,
+  appearance: "none",
+  WebkitAppearance: "none",
+  backgroundImage:
+    "linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%)",
+  backgroundPosition: "calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px)",
+  backgroundSize: "5px 5px, 5px 5px",
+  backgroundRepeat: "no-repeat",
+  paddingRight: 28,
+}
+
+const formModalHintStyle: React.CSSProperties = {
+  margin: "0 0 4px",
+  color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.45,
+}
+
+const formModalLinkStyle: React.CSSProperties = {
+  color: "#a78bfa",
+  textDecoration: "none",
+  fontWeight: 600,
 }
 
 const formModalTextareaStyle: React.CSSProperties = {
