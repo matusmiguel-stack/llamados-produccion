@@ -15,6 +15,8 @@ export default function ResourcesPage() {
   const [isMobile, setIsMobile] = useState(false)
 
   const isAdmin = profile?.role === "admin"
+  const canEdit =
+    profile?.role === "admin" || profile?.role === "editor"
 
   useEffect(() => {
     function checkMobile() {
@@ -44,7 +46,10 @@ export default function ResourcesPage() {
         session.user.email?.trim().toLowerCase()
     )
 
-    if (!myProfile || myProfile.role !== "admin") {
+    if (
+      !myProfile ||
+      (myProfile.role !== "admin" && myProfile.role !== "editor")
+    ) {
       window.location.href = "/"
       return
     }
@@ -67,6 +72,7 @@ export default function ResourcesPage() {
   }, [])
 
   async function createResource() {
+    if (!canEdit) return alert("No tienes permisos para editar el inventario.")
     if (!name) return alert("Escribe el nombre del recurso")
     if (!category) return alert("Escribe la categoría")
 
@@ -84,6 +90,7 @@ export default function ResourcesPage() {
   }
 
   async function deleteResource(id: string) {
+    if (!canEdit) return alert("No tienes permisos para editar el inventario.")
     if (!confirm("¿Seguro que quieres borrar este recurso?")) return
 
     const { error } = await supabase.from("resources").delete().eq("id", id)
@@ -118,7 +125,7 @@ export default function ResourcesPage() {
         <div style={pageContainerStyle}>
           <header style={pageHeaderStyle}>
             <div>
-              <p style={eyebrowStyle}>Admin</p>
+              <p style={eyebrowStyle}>Catálogo</p>
               <h1 style={pageTitleStyle}>Inventario</h1>
               <p style={pageSubtitleStyle}>
                 {resources.length} recurso{resources.length === 1 ? "" : "s"} ·{" "}
