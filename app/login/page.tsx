@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { supabase } from "../../lib/supabase"
+import { redirectAfterLogin } from "../../lib/session-profile"
 import Image from "next/image"
 
 export default function LoginPage() {
@@ -29,7 +30,7 @@ export default function LoginPage() {
       return
     }
 
-    window.location.href = "/"
+    await redirectAfterLogin()
   }
 
   return (

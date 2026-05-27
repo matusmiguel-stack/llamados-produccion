@@ -39,6 +39,10 @@ export function AppSidebar({
   const displayName = profile?.full_name || email.split("@")[0] || "Usuario"
   const role = profile?.role || "viewer"
   const initial = displayName.charAt(0).toUpperCase()
+  const mustChangePassword = !!profile?.must_change_password
+  const visibleNavItems = mustChangePassword
+    ? []
+    : navItems.filter((item) => !item.adminOnly || isAdmin)
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/"
@@ -90,9 +94,7 @@ export function AppSidebar({
           </div>
 
           <nav style={navStyle}>
-            {navItems
-              .filter((item) => !item.adminOnly || isAdmin)
-              .map((item) => {
+            {visibleNavItems.map((item) => {
                 const active = isActive(item.href)
                 return (
                   <Link
@@ -116,7 +118,16 @@ export function AppSidebar({
         </div>
 
         <div style={sidebarFooterStyle}>
-          <div style={profileCardStyle}>
+          <Link
+            href="/perfil"
+            onClick={() => isMobile && onMenuClose()}
+            style={{
+              ...profileCardStyle,
+              ...(pathname === "/perfil" ? profileCardActiveStyle : {}),
+              textDecoration: "none",
+              color: "inherit",
+            }}
+          >
             <div style={profileRowStyle}>
               <span style={avatarStyle}>{initial}</span>
               <div style={profileMetaStyle}>
@@ -126,11 +137,12 @@ export function AppSidebar({
             </div>
             <div style={profileFooterRowStyle}>
               <span style={roleBadgeStyle(role)}>{role}</span>
-              <button onClick={onLogout} style={logoutButtonStyle}>
-                Salir
-              </button>
+              <span style={profileLinkHintStyle}>Mi perfil</span>
             </div>
-          </div>
+          </Link>
+          <button onClick={onLogout} style={logoutButtonStyle}>
+            Salir
+          </button>
         </div>
       </aside>
     </>
@@ -333,6 +345,8 @@ const activeIndicatorStyle: React.CSSProperties = {
 const sidebarFooterStyle: React.CSSProperties = {
   paddingTop: 12,
   borderTop: "1px solid rgba(148,163,184,0.08)",
+  display: "grid",
+  gap: 8,
 }
 
 const profileCardStyle: React.CSSProperties = {
@@ -340,6 +354,13 @@ const profileCardStyle: React.CSSProperties = {
   borderRadius: 12,
   background: "rgba(255,255,255,0.03)",
   border: "1px solid rgba(148,163,184,0.10)",
+  display: "block",
+  transition: "background 0.15s ease, border-color 0.15s ease",
+}
+
+const profileCardActiveStyle: React.CSSProperties = {
+  background: "rgba(124,58,237,0.10)",
+  border: "1px solid rgba(167,139,250,0.18)",
 }
 
 const profileRowStyle: React.CSSProperties = {
@@ -396,8 +417,15 @@ const profileFooterRowStyle: React.CSSProperties = {
   marginTop: 10,
 }
 
+const profileLinkHintStyle: React.CSSProperties = {
+  color: "#a78bfa",
+  fontSize: 11,
+  fontWeight: 600,
+}
+
 const logoutButtonStyle: React.CSSProperties = {
-  padding: "5px 10px",
+  width: "100%",
+  padding: "8px 10px",
   borderRadius: 8,
   border: "1px solid rgba(148,163,184,0.14)",
   background: "transparent",

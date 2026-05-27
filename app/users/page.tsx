@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
+import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 
 export default function UsersPage() {
@@ -31,32 +32,23 @@ export default function UsersPage() {
   }, [])
 
   async function loadPage() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const auth = await requireSessionProfile()
+    if (!auth) return
 
-    if (!session) {
-      window.location.href = "/login"
+    const myProfile = auth.profile
+
+    if (myProfile.role !== "admin") {
+      window.location.href = "/"
       return
     }
+
+    setProfile(myProfile)
 
     const { data: profiles } = await supabase
       .from("profiles")
       .select("*")
       .order("email")
 
-    const myProfile = profiles?.find(
-      (p) =>
-        p.email?.trim().toLowerCase() ===
-        session.user.email?.trim().toLowerCase()
-    )
-
-    if (!myProfile || myProfile.role !== "admin") {
-      window.location.href = "/"
-      return
-    }
-
-    setProfile(myProfile)
     setUsers(profiles || [])
   }
 
@@ -122,6 +114,7 @@ export default function UsersPage() {
           password: newPassword,
           full_name: newName,
           role: newRole,
+          must_change_password: true,
         }),
       }
     )
@@ -131,6 +124,20 @@ export default function UsersPage() {
     if (!response.ok) {
       alert(JSON.stringify(result, null, 2))
       return
+    }
+
+    const createdUserId = result.user?.id || result.id
+
+    if (createdUserId) {
+      await supabase
+        .from("profiles")
+        .update({ must_change_password: true })
+        .eq("id", createdUserId)
+    } else {
+      await supabase
+        .from("profiles")
+        .update({ must_change_password: true })
+        .eq("email", newEmail.trim().toLowerCase())
     }
 
     alert("Usuario creado")

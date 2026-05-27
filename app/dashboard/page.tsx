@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../../lib/supabase"
+import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 import {
@@ -37,25 +38,11 @@ export default function DashboardPage() {
   }, [])
 
   async function loadPage() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const auth = await requireSessionProfile()
+    if (!auth) return
 
-    if (!session) {
-      window.location.href = "/login"
-      return
-    }
-
-    setUser(session.user)
-
-    const { data: profiles } = await supabase.from("profiles").select("*")
-    const myProfile = profiles?.find(
-      (p) =>
-        p.email?.trim().toLowerCase() ===
-        session.user.email?.trim().toLowerCase()
-    )
-
-    setProfile(myProfile)
+    setUser(auth.session.user)
+    setProfile(auth.profile)
 
     const { data: shoots } = await supabase
       .from("shoots")
