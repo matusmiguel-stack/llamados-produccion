@@ -219,16 +219,20 @@ export default function Home() {
       )
     })
 
-    const shootEvents = filtered.map((shoot) => ({
-      id: shoot.id,
-      title: `${statusEmoji(shoot.status)} ${shoot.title}`,
-      start: shoot.start_time,
-      end: shoot.end_time,
-      allDay: shoot.all_day,
-      backgroundColor: shoot.color || "#7c3aed",
-      borderColor: shoot.color || "#7c3aed",
-      textColor: "#ffffff",
-    }))
+    const shootEvents = filtered.map((shoot) => {
+      const { start, end } = shootToCalendarEventTimes(shoot)
+
+      return {
+        id: shoot.id,
+        title: `${statusEmoji(shoot.status)} ${shoot.title}`,
+        start,
+        end,
+        allDay: shoot.all_day,
+        backgroundColor: shoot.color || "#7c3aed",
+        borderColor: shoot.color || "#7c3aed",
+        textColor: "#ffffff",
+      }
+    })
 
     const vacationEvents = filteredVacations.map((vacation) => ({
       id: `${VACATION_EVENT_PREFIX}${vacation.id}`,
@@ -389,8 +393,7 @@ function getProducer(shootId: string) {
 function openEditShoot() {
     if (!selectedShoot || !canEdit) return
 
-    const start = new Date(selectedShoot.start_time)
-    const end = new Date(selectedShoot.end_time)
+    const { startDate, endDate } = shootToDateRange(selectedShoot)
 
     setTitle(selectedShoot.title || "")
     setClient(selectedShoot.client || "")
@@ -406,14 +409,15 @@ function openEditShoot() {
     setStatus(selectedShoot.status || "tentative")
     setColor(selectedShoot.color || "#7c3aed")
     setAllDay(selectedShoot.all_day || false)
-    setSelectedDate(start.toISOString().slice(0, 10))
-    setSelectedEndDate(end.toISOString().slice(0, 10))
-    setStartTime(start.toTimeString().slice(0, 5))
-    setEndTime(end.toTimeString().slice(0, 5))
+    setSelectedDate(startDate)
+    setSelectedEndDate(endDate)
+    setStartTime(timePartFromTimestamp(selectedShoot.start_time))
+    setEndTime(timePartFromTimestamp(selectedShoot.end_time))
     setSelectedEmployees(getShootEmployees(selectedShoot.id).map((employee) => employee.id))
     setSelectedResources(
       getShootTechnicalResources(selectedShoot.id).map((resource) => resource.id)
     )
+    setEntryMode("shoot")
 
     setDetailsOpen(false)
     setModalOpen(true)
@@ -439,8 +443,9 @@ function openEditVacation() {
       if (assignment.employee_id !== employeeId) return false
       if (!assignment.shoots) return false
 
-      const shootStart = assignment.shoots.start_time.slice(0, 10)
-      const shootEnd = assignment.shoots.end_time.slice(0, 10)
+      const { startDate: shootStart, endDate: shootEnd } = shootToDateRange(
+        assignment.shoots
+      )
 
       return datesOverlapInclusive(
         vacationStartDate,
@@ -486,7 +491,7 @@ function openEditVacation() {
     if (allDay || multiDay) {
       return {
         start: `${selectedDate}T00:00:00`,
-        end: `${endDate}T23:59:59`,
+        end: `${addDaysToDateString(endDate, 1)}T00:00:00`,
         allDay: true,
       }
     }
@@ -502,8 +507,8 @@ function openEditVacation() {
     const range = getShootDateTimeRange()
     if (!range) return false
 
-    const shootStartDate = range.start.slice(0, 10)
-    const shootEndDate = range.end.slice(0, 10)
+    const shootStartDate = selectedDate
+    const shootEndDate = getEffectiveShootEndDate()
 
     const onVacation = vacationEmployees.some((assignment) => {
       if (assignment.employee_id !== employeeId) return false
@@ -1280,6 +1285,8 @@ function openEditVacation() {
                           setVacationEndDate(nextValue)
                           if (selectedDate && nextValue > selectedDate) {
                             setAllDay(true)
+                          } else if (selectedDate && nextValue === selectedDate) {
+                            setAllDay(true)
                           }
                         }}
                       />
@@ -1660,16 +1667,10 @@ function openEditVacation() {
                       />
                     </div>
 
-                    <div style={formModalRowStyle}>
-                      <FormModalPreviewField
-                        label="Inicio"
-                        value={formatShootDateTime(selectedShoot.start_time)}
-                      />
-                      <FormModalPreviewField
-                        label="Fin"
-                        value={formatShootDateTime(selectedShoot.end_time)}
-                      />
-                    </div>
+                    <FormModalPreviewField
+                      label="Fechas"
+                      value={formatShootSchedule(selectedShoot)}
+                    />
 
                     <div style={formModalRowStyle}>
                       <FormModalPreviewField
@@ -1766,6 +1767,86 @@ function toDateInputValue(date: Date) {
   return `${year}-${month}-${day}`
 }
 
+function datePartFromTimestamp(iso: string) {
+  return toDateInputValue(new Date(iso))
+}
+
+function timePartFromTimestamp(iso: string) {
+  const date = new Date(iso)
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${hours}:${minutes}`
+}
+
+function isLocalMidnight(iso: string) {
+  const date = new Date(iso)
+  return (
+    date.getHours() === 0 &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0
+  )
+}
+
+function shootToDateRange(shoot: {
+  start_time: string
+  end_time: string
+  all_day: boolean
+}) {
+  const startDate = datePartFromTimestamp(shoot.start_time)
+  let endDate = datePartFromTimestamp(shoot.end_time)
+
+  if (shoot.all_day) {
+    if (isLocalMidnight(shoot.end_time) && endDate > startDate) {
+      endDate = addDaysToDateString(endDate, -1)
+    }
+
+    if (endDate < startDate) {
+      endDate = startDate
+    }
+  }
+
+  return { startDate, endDate }
+}
+
+function shootToCalendarEventTimes(shoot: {
+  start_time: string
+  end_time: string
+  all_day: boolean
+}) {
+  if (!shoot.all_day) {
+    return { start: shoot.start_time, end: shoot.end_time }
+  }
+
+  const { startDate, endDate } = shootToDateRange(shoot)
+
+  return {
+    start: `${startDate}T00:00:00`,
+    end: `${addDaysToDateString(endDate, 1)}T00:00:00`,
+  }
+}
+
+function formatShootSchedule(shoot: {
+  start_time: string
+  end_time: string
+  all_day: boolean
+}) {
+  if (shoot.all_day) {
+    const { startDate, endDate } = shootToDateRange(shoot)
+    return formatVacationRange(startDate, endDate)
+  }
+
+  const startDate = datePartFromTimestamp(shoot.start_time)
+  const endDate = datePartFromTimestamp(shoot.end_time)
+  const startTime = timePartFromTimestamp(shoot.start_time)
+  const endTime = timePartFromTimestamp(shoot.end_time)
+
+  if (startDate === endDate) {
+    return `${formatVacationDate(startDate)} · ${startTime} – ${endTime}`
+  }
+
+  return `${formatVacationDate(startDate)} ${startTime} – ${formatVacationDate(endDate)} ${endTime}`
+}
+
 function selectionToDateRange(info: {
   start: Date
   end: Date
@@ -1823,16 +1904,6 @@ function formatVacationDate(dateStr: string) {
 function formatVacationRange(startDate: string, endDate: string) {
   if (startDate === endDate) return formatVacationDate(startDate)
   return `${formatVacationDate(startDate)} – ${formatVacationDate(endDate)}`
-}
-
-function formatShootDateTime(iso: string) {
-  return new Date(iso).toLocaleString("es-CL", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
 }
 
 function FormModalPreviewField({
