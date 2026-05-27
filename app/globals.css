@@ -318,6 +318,10 @@ button {
   }
 }
 
+.modal-panel[data-dragging="true"] [data-drag-handle] {
+  cursor: grabbing;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-panel,

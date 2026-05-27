@@ -10,6 +10,10 @@ import { supabase } from "../lib/supabase"
 import { AppSidebar } from "../components/AppSidebar"
 import { DatePickerField } from "../components/DatePickerField"
 import {
+  DraggableModalPanel,
+  draggableModalHeaderStyle,
+} from "../components/DraggableModalPanel"
+import {
   ANNIVERSARY_EVENT_PREFIX,
   BIRTHDAY_EVENT_PREFIX,
   buildAnniversaryCalendarEvents,
@@ -1112,8 +1116,10 @@ function openEditVacation() {
         </div>
 
         {modalOpen && (
-          <div style={overlayStyle} className="modal-overlay">
-            <div
+          <div style={peekOverlayStyle} className="modal-overlay">
+            <DraggableModalPanel
+              enabled={!isMobile}
+              resetKey={modalOpen ? "form-modal" : "form-modal-closed"}
               className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
               style={{
                 ...formModalStyle,
@@ -1123,7 +1129,13 @@ function openEditVacation() {
                 borderRadius: isMobile ? 0 : 16,
               }}
             >
-              <div style={formModalHeaderStyle}>
+              <div
+                data-drag-handle
+                style={{
+                  ...formModalHeaderStyle,
+                  ...(!isMobile ? draggableModalHeaderStyle : {}),
+                }}
+              >
                 <div>
                   <h2 style={formModalTitleStyle}>
                     {selectedVacation
@@ -1563,7 +1575,7 @@ function openEditVacation() {
                       : "Crear llamado"}
                 </button>
               </div>
-            </div>
+            </DraggableModalPanel>
           </div>
         )}
 
@@ -1656,8 +1668,10 @@ function openEditVacation() {
         )}
 
         {detailsOpen && selectedShoot && (
-          <div style={overlayStyle} className="modal-overlay">
-            <div
+          <div style={peekOverlayStyle} className="modal-overlay">
+            <DraggableModalPanel
+              enabled={!isMobile}
+              resetKey={selectedShoot.id}
               className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
               style={{
                 ...formModalStyle,
@@ -1667,7 +1681,13 @@ function openEditVacation() {
                 borderRadius: isMobile ? 0 : 16,
               }}
             >
-              <div style={formModalHeaderStyle}>
+              <div
+                data-drag-handle
+                style={{
+                  ...formModalHeaderStyle,
+                  ...(!isMobile ? draggableModalHeaderStyle : {}),
+                }}
+              >
                 <div>
                   <h2 style={formModalTitleStyle}>
                     {statusEmoji(selectedShoot.status)} {selectedShoot.title}
@@ -1829,7 +1849,7 @@ function openEditVacation() {
                   </button>
                 )}
               </div>
-            </div>
+            </DraggableModalPanel>
           </div>
         )}
       </main>
@@ -2269,6 +2289,12 @@ const overlayStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   padding: 18,
+}
+
+const peekOverlayStyle: React.CSSProperties = {
+  ...overlayStyle,
+  background: "rgba(0,0,0,0.16)",
+  pointerEvents: "none",
 }
 
 const modalStyle: React.CSSProperties = {
