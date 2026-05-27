@@ -502,6 +502,23 @@ function openEditVacation() {
     const range = getShootDateTimeRange()
     if (!range) return false
 
+    const shootStartDate = range.start.slice(0, 10)
+    const shootEndDate = range.end.slice(0, 10)
+
+    const onVacation = vacationEmployees.some((assignment) => {
+      if (assignment.employee_id !== employeeId) return false
+      if (!assignment.vacations) return false
+
+      return datesOverlapInclusive(
+        shootStartDate,
+        shootEndDate,
+        assignment.vacations.start_date,
+        assignment.vacations.end_date
+      )
+    })
+
+    if (onVacation) return true
+
     const proposedStart = new Date(range.start)
     const proposedEnd = new Date(range.end)
 
@@ -546,6 +563,16 @@ function openEditVacation() {
 
     const range = getShootDateTimeRange()
     if (!range) return alert("Selecciona las fechas del llamado")
+
+    const busyEmployee = selectedEmployees.find((employeeId) =>
+      isEmployeeBusy(employeeId)
+    )
+    if (busyEmployee) {
+      const employee = employees.find((item) => item.id === busyEmployee)
+      return alert(
+        `${employee ? employeeSelectLabel(employee) : "Un empleado"} no está disponible en esas fechas`
+      )
+    }
 
     const payload = {
       title,
