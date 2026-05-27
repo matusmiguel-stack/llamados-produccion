@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 type DatePickerFieldProps = {
   label: string
@@ -40,6 +41,7 @@ export function DatePickerField({
   hideLabel = false,
 }: DatePickerFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
@@ -55,9 +57,10 @@ export function DatePickerField({
     if (!open) return
 
     function handlePointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
+      const target = event.target as Node
+      if (rootRef.current?.contains(target)) return
+      if (popoverRef.current?.contains(target)) return
+      setOpen(false)
     }
 
     document.addEventListener("mousedown", handlePointerDown)
@@ -129,6 +132,107 @@ export function DatePickerField({
 
   const displayValue = value ? formatDisplayDate(value) : placeholder
 
+  const popover = open ? (
+    <div
+      ref={popoverRef}
+      style={{
+        ...popoverStyle,
+        top: popoverPosition.top,
+        left: popoverPosition.left,
+      }}
+    >
+      <div style={popoverHeaderStyle}>
+        <button
+          type="button"
+          onClick={() => shiftMonth(-1)}
+          style={navButtonStyle}
+          aria-label="Mes anterior"
+        >
+          ‹
+        </button>
+
+        <div style={selectorRowStyle}>
+          <select
+            value={viewMonth.getMonth()}
+            onChange={(event) => setViewMonthIndex(Number(event.target.value))}
+            style={selectorStyle}
+            aria-label="Mes"
+          >
+            {MONTH_LABELS.map((monthLabel, index) => (
+              <option key={monthLabel} value={index}>
+                {monthLabel}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={viewMonth.getFullYear()}
+            onChange={(event) => setViewYear(Number(event.target.value))}
+            style={selectorStyle}
+            aria-label="Año"
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => shiftMonth(1)}
+          style={navButtonStyle}
+          aria-label="Mes siguiente"
+        >
+          ›
+        </button>
+      </div>
+
+      <div style={weekdayRowStyle}>
+        {WEEKDAY_LABELS.map((weekday) => (
+          <span key={weekday} style={weekdayLabelStyle}>
+            {weekday}
+          </span>
+        ))}
+      </div>
+
+      <div style={daysGridStyle}>
+        {calendarDays.map((day, index) => {
+          if (!day) {
+            return <span key={`empty-${index}`} style={emptyDayStyle} />
+          }
+
+          const dateValue = toDateInputValue(
+            new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day)
+          )
+          const isSelected = value === dateValue
+          const isDisabled =
+            (minDate ? dateValue < minDate : false) ||
+            (maxDate ? dateValue > maxDate : false)
+          const isToday = dateValue === toDateInputValue(new Date())
+
+          return (
+            <button
+              key={dateValue}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => selectDate(day)}
+              style={{
+                ...dayButtonStyle,
+                ...(isSelected ? daySelectedStyle : {}),
+                ...(isToday && !isSelected ? dayTodayStyle : {}),
+                ...(isDisabled ? dayDisabledStyle : {}),
+              }}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  ) : null
+
   return (
     <label style={fieldWrapStyle}>
       {!hideLabel && (
@@ -148,105 +252,9 @@ export function DatePickerField({
           <CalendarIcon />
         </button>
 
-        {open && (
-          <div
-            style={{
-              ...popoverStyle,
-              top: popoverPosition.top,
-              left: popoverPosition.left,
-            }}
-          >
-            <div style={popoverHeaderStyle}>
-              <button
-                type="button"
-                onClick={() => shiftMonth(-1)}
-                style={navButtonStyle}
-                aria-label="Mes anterior"
-              >
-                ‹
-              </button>
-
-              <div style={selectorRowStyle}>
-                <select
-                  value={viewMonth.getMonth()}
-                  onChange={(event) => setViewMonthIndex(Number(event.target.value))}
-                  style={selectorStyle}
-                  aria-label="Mes"
-                >
-                  {MONTH_LABELS.map((monthLabel, index) => (
-                    <option key={monthLabel} value={index}>
-                      {monthLabel}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={viewMonth.getFullYear()}
-                  onChange={(event) => setViewYear(Number(event.target.value))}
-                  style={selectorStyle}
-                  aria-label="Año"
-                >
-                  {yearOptions.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => shiftMonth(1)}
-                style={navButtonStyle}
-                aria-label="Mes siguiente"
-              >
-                ›
-              </button>
-            </div>
-
-            <div style={weekdayRowStyle}>
-              {WEEKDAY_LABELS.map((weekday) => (
-                <span key={weekday} style={weekdayLabelStyle}>
-                  {weekday}
-                </span>
-              ))}
-            </div>
-
-            <div style={daysGridStyle}>
-              {calendarDays.map((day, index) => {
-                if (!day) {
-                  return <span key={`empty-${index}`} style={emptyDayStyle} />
-                }
-
-                const dateValue = toDateInputValue(
-                  new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day)
-                )
-                const isSelected = value === dateValue
-                const isDisabled =
-                  (minDate ? dateValue < minDate : false) ||
-                  (maxDate ? dateValue > maxDate : false)
-                const isToday = dateValue === toDateInputValue(new Date())
-
-                return (
-                  <button
-                    key={dateValue}
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => selectDate(day)}
-                    style={{
-                      ...dayButtonStyle,
-                      ...(isSelected ? daySelectedStyle : {}),
-                      ...(isToday && !isSelected ? dayTodayStyle : {}),
-                      ...(isDisabled ? dayDisabledStyle : {}),
-                    }}
-                  >
-                    {day}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        {typeof document !== "undefined" && popover
+          ? createPortal(popover, document.body)
+          : null}
       </div>
     </label>
   )

@@ -394,6 +394,7 @@ function openEditShoot() {
     if (!selectedShoot || !canEdit) return
 
     const { startDate, endDate } = shootToDateRange(selectedShoot)
+    const singleDay = endDate === startDate
 
     setTitle(selectedShoot.title || "")
     setClient(selectedShoot.client || "")
@@ -412,7 +413,7 @@ function openEditShoot() {
     setSelectedEndDate(endDate)
     setStartTime(timePartFromTimestamp(selectedShoot.start_time))
     setEndTime(timePartFromTimestamp(selectedShoot.end_time))
-    setAllDay(!!selectedShoot.all_day)
+    setAllDay(singleDay ? !!selectedShoot.all_day : true)
     setSelectedEmployees(getShootEmployees(selectedShoot.id).map((employee) => employee.id))
     setSelectedResources(
       getShootTechnicalResources(selectedShoot.id).map((resource) => resource.id)
@@ -1348,8 +1349,7 @@ function openEditVacation() {
                         <label style={formModalInlineCheckStyle}>
                           <input
                             type="checkbox"
-                            checked={allDay || isMultiDayShoot()}
-                            disabled={isMultiDayShoot()}
+                            checked={allDay}
                             onChange={(e) => setAllDay(e.target.checked)}
                           />
                           Todo el día
@@ -1357,7 +1357,7 @@ function openEditVacation() {
                       </div>
                     </div>
 
-                    {!allDay && !isMultiDayShoot() && (
+                    {!allDay && (
                       <div style={formModalRowStyle}>
                         <div style={formModalFieldStyle}>
                           <label style={formModalLabelStyle}>Inicio</label>
@@ -1831,8 +1831,8 @@ function formatLocalDateTime(date: Date) {
   return `${toDateInputValue(date)}T${timePartFromDate(date)}:00`
 }
 
-function isExclusiveEndTimestamp(iso: string) {
-  return storedTimePart(iso) === "00:00:00"
+function isEndOfDayTimestamp(iso: string) {
+  return storedTimePart(iso).startsWith("23:59")
 }
 
 function shootToDateRange(shoot: {
@@ -1841,16 +1841,20 @@ function shootToDateRange(shoot: {
   all_day: boolean
 }) {
   if (!shoot.all_day) {
+    const startDate = datePartFromTimestamp(shoot.start_time)
+    const endDate = datePartFromTimestamp(shoot.end_time)
+
     return {
-      startDate: datePartFromTimestamp(shoot.start_time),
-      endDate: datePartFromTimestamp(shoot.end_time),
+      startDate,
+      endDate: endDate < startDate ? startDate : endDate,
     }
   }
 
   const startDate = storedDatePart(shoot.start_time)
   let endDate = storedDatePart(shoot.end_time)
 
-  if (isExclusiveEndTimestamp(shoot.end_time) && endDate > startDate) {
+  // Fin exclusivo (medianoche del día siguiente), también si Supabase lo devuelve desplazado en UTC.
+  if (endDate > startDate && !isEndOfDayTimestamp(shoot.end_time)) {
     endDate = addDaysToDateString(endDate, -1)
   }
 
