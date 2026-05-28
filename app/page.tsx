@@ -2327,7 +2327,8 @@ function buildShootWhatsAppMessage(
   employees: any[]
 ) {
   const lines: string[] = [
-    `🎬 *${shoot.title || "Llamado"}*`,
+    "🎬 LLAMADO",
+    `*${shoot.title || "Sin título"}*`,
     `📅 ${formatShootSchedule(shoot)}`,
   ]
 
@@ -2359,7 +2360,7 @@ function buildShootWhatsAppMessage(
 
   if (employees.length > 0) {
     lines.push("")
-    lines.push("👥 *Crew:*")
+    lines.push("👥 CREW")
     for (const employee of employees) {
       lines.push(`• ${employeeDisplayName(employee)} — ${employee.puesto}`)
     }
@@ -2367,7 +2368,7 @@ function buildShootWhatsAppMessage(
 
   if (shoot.public_notes?.trim()) {
     lines.push("")
-    lines.push("📝 *Notas:*")
+    lines.push("📝 NOTAS")
     lines.push(shoot.public_notes.trim())
   }
 
@@ -2375,8 +2376,19 @@ function buildShootWhatsAppMessage(
 }
 
 function shareShootOnWhatsApp(message: string) {
-  const url = `https://wa.me/?text=${encodeURIComponent(message)}`
-  window.open(url, "_blank", "noopener,noreferrer")
+  const encoded = encodeURIComponent(message)
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  const url = isMobile
+    ? `https://api.whatsapp.com/send?text=${encoded}`
+    : `https://web.whatsapp.com/send?text=${encoded}`
+
+  const link = document.createElement("a")
+  link.href = url
+  link.target = "_blank"
+  link.rel = "noopener noreferrer"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 function FormModalPreviewField({
