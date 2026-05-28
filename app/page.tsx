@@ -2380,12 +2380,14 @@ function shareShootOnWhatsApp(message: string) {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
   const url = isMobile
     ? `https://api.whatsapp.com/send?text=${encoded}`
-    : `https://web.whatsapp.com/send?text=${encoded}`
+    : `whatsapp://send?text=${encoded}`
 
   const link = document.createElement("a")
   link.href = url
-  link.target = "_blank"
-  link.rel = "noopener noreferrer"
+  if (isMobile) {
+    link.target = "_blank"
+    link.rel = "noopener noreferrer"
+  }
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
