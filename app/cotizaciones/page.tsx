@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
+import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
 type Client = { id: string; name: string }
 type Project = { id: string; name: string; client_id: string }
@@ -373,6 +374,61 @@ export default function CotizacionesPage() {
     }
   }
 
+  async function handleExportPdf() {
+    const { exportQuotePdf } = await import("../../lib/exportQuotePdf")
+
+    const clientName = clients.find((c) => c.id === clientId)?.name || "—"
+    const projectName = projects.find((p) => p.id === projectId)?.name || "—"
+    const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" }).format(new Date())
+
+    const rubros: QuoteRubroPDF[] = RUBROS.map((rubro) => {
+      const items = rubro.items.map((item) => {
+        if (item.special === "agency_commission") {
+          return {
+            label: item.label,
+            qty: "1",
+            days: "1",
+            cost: String(commissionGasto),
+            markup: commissionMarkup,
+            isInternal: false,
+            isCommission: true,
+            commissionPct,
+          }
+        }
+        const v = values[item.id] || DEFAULT_ITEM
+        return { label: item.label, qty: v.qty, days: v.days, cost: v.cost, markup: v.markup, isInternal: v.isInternal }
+      })
+      const extraItems = (extras[rubro.id] || []).map((e) => ({
+        label: e.description || "Concepto adicional",
+        qty: e.qty,
+        days: e.days,
+        cost: e.cost,
+        markup: e.markup,
+        isInternal: e.isInternal,
+      }))
+      return {
+        num: rubro.num,
+        label: rubro.label,
+        hexColor: rubro.color,
+        items: [...items, ...extraItems],
+        financials: getRubroFinancials(rubro),
+      }
+    })
+
+    const pdfData: QuotePDFData = {
+      quoteName: quoteName || "Cotización",
+      clientName,
+      projectName,
+      status,
+      date,
+      rubros,
+      globalFinancials,
+      marginPct,
+    }
+
+    await exportQuotePdf(pdfData)
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     window.location.href = "/login"
@@ -546,9 +602,14 @@ export default function CotizacionesPage() {
                   </div>
                 </div>
 
-                <button onClick={handleSave} disabled={saving} style={{ ...primaryButtonStyle, marginTop: 16 }}>
-                  {saving ? "Guardando..." : "Guardar cotización"}
-                </button>
+                <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
+                  <button onClick={handleSave} disabled={saving} style={primaryButtonStyle}>
+                    {saving ? "Guardando..." : "Guardar cotización"}
+                  </button>
+                  <button onClick={handleExportPdf} style={pdfButtonStyle}>
+                    ↓ Exportar PDF
+                  </button>
+                </div>
               </div>
             </div>
           </section>
@@ -1069,4 +1130,16 @@ const primaryButtonStyle: React.CSSProperties = {
   fontWeight: 600,
   fontSize: 14,
   boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+}
+
+const pdfButtonStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 20px",
+  background: "transparent",
+  color: "#94a3b8",
+  border: "1px solid rgba(148,163,184,0.22)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
 }
