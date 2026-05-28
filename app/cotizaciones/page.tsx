@@ -128,7 +128,7 @@ const RUBROS: RubroDef[] = [
   },
 ]
 
-const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "0", markup: "0", isInternal: false }
+const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "", markup: "0", isInternal: false }
 
 function initValues(): Record<string, ItemValues> {
   const vals: Record<string, ItemValues> = {}
@@ -239,7 +239,7 @@ export default function CotizacionesPage() {
   function addExtra(rubroId: string) {
     setExtras((prev) => ({
       ...prev,
-      [rubroId]: [...(prev[rubroId] || []), { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", cost: "0", markup: "0", isInternal: false }],
+      [rubroId]: [...(prev[rubroId] || []), { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", cost: "", markup: "0", isInternal: false }],
     }))
   }
 
@@ -436,11 +436,10 @@ export default function CotizacionesPage() {
           {/* Rubros */}
           <div style={{ display: "grid", gap: 12 }}>
 
-            <div style={twoCol}>
-              <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[0])} extras={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[0].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[0].id, t)} isMobile={isMobile} />
-              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
-            </div>
+            {/* R1 */}
+            <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[0])} extras={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[0].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[0].id, t)} isMobile={isMobile} />
 
+            {/* R2 ancho completo */}
             <RubroCard
               rubro={RUBROS[1]}
               values={values}
@@ -454,33 +453,39 @@ export default function CotizacionesPage() {
               isMobile={isMobile}
             />
 
+            {/* R3 + R4 */}
             <div style={twoCol}>
               <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[2])} extras={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[2].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[2].id, t)} isMobile={isMobile} />
               <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[3])} extras={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[3].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[3].id, t)} isMobile={isMobile} />
             </div>
 
+            {/* R5 + R6 */}
             <div style={twoCol}>
               <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[4])} extras={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[4].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[4].id, t)} isMobile={isMobile} />
               <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[5])} extras={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[5].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[5].id, t)} isMobile={isMobile} />
             </div>
 
+            {/* R7 solo (comisión de agencia) */}
+            <RubroCard
+              rubro={RUBROS[6]}
+              values={values}
+              onUpdate={updateItem}
+              financials={getRubroFinancials(RUBROS[6])}
+              commissionPct={commissionPct}
+              commissionMarkup={commissionMarkup}
+              commissionGasto={commissionGasto}
+              onCommissionPctChange={setCommissionPct}
+              onCommissionMarkupChange={setCommissionMarkup}
+              extras={extras[RUBROS[6].id] || []}
+              onAddExtra={() => addExtra(RUBROS[6].id)}
+              onUpdateExtra={(t, p) => updateExtra(RUBROS[6].id, t, p)}
+              onRemoveExtra={(t) => removeExtra(RUBROS[6].id, t)}
+              isMobile={isMobile}
+            />
+
+            {/* R8 + R9 */}
             <div style={twoCol}>
-              <RubroCard
-                rubro={RUBROS[6]}
-                values={values}
-                onUpdate={updateItem}
-                financials={getRubroFinancials(RUBROS[6])}
-                commissionPct={commissionPct}
-                commissionMarkup={commissionMarkup}
-                commissionGasto={commissionGasto}
-                onCommissionPctChange={setCommissionPct}
-                onCommissionMarkupChange={setCommissionMarkup}
-                extras={extras[RUBROS[6].id] || []}
-                onAddExtra={() => addExtra(RUBROS[6].id)}
-                onUpdateExtra={(t, p) => updateExtra(RUBROS[6].id, t, p)}
-                onRemoveExtra={(t) => removeExtra(RUBROS[6].id, t)}
-                isMobile={isMobile}
-              />
+              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
               <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[8])} extras={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[8].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[8].id, t)} isMobile={isMobile} />
             </div>
           </div>
@@ -660,15 +665,36 @@ function RubroCard({
               const v = values[item.id] || DEFAULT_ITEM
               const c = calcItem(v)
 
+              if (isMobile) {
+                return (
+                  <div key={item.id} style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+                      <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.label}</span>
+                      <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)}>INT</button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+                      <span style={sepStyle}>×</span>
+                      <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+                      <span style={sepStyle}>×</span>
+                      <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
+                      <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: v.isInternal ? 0.25 : 1 }} disabled={v.isInternal} placeholder="%" />
+                      <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
+                      <span style={{ color: v.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
-                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
+                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
                   <span style={itemLabelStyle}>{item.label}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
-                    <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
+                    <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
                     <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} />
                     <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
                     <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
@@ -687,23 +713,41 @@ function RubroCard({
         <div style={{ display: "grid", gap: 2, paddingTop: 6, borderTop: "1px dashed rgba(148,163,184,0.12)" }}>
           {extras.map((item) => {
             const c = calcItem(item)
+
+            if (isMobile) {
+              return (
+                <div key={item.tempId} style={{ borderBottom: "1px solid rgba(148,163,184,0.08)", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                    <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1 }} />
+                    <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
+                    <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle}>✕</button>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+                    <span style={sepStyle}>×</span>
+                    <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+                    <span style={sepStyle}>×</span>
+                    <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
+                    <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: item.isInternal ? 0.25 : 1 }} disabled={item.isInternal} placeholder="%" />
+                    <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
+                    <span style={{ color: item.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
+                  </div>
+                </div>
+              )
+            }
+
             return (
-              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6, flexWrap: isMobile ? "wrap" : "nowrap", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
-                <input
-                  value={item.description}
-                  onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })}
-                  placeholder="Nombre del concepto"
-                  style={{ ...extraDescInputStyle, flex: 1, minWidth: 80 }}
-                />
+              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6, background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
+                <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1, minWidth: 80 }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                   <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
                   <span style={sepStyle}>×</span>
                   <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                   <span style={sepStyle}>×</span>
-                  <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
+                  <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
                   <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} />
                   <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
-                  <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)} title={item.isInternal ? "Interno: click para quitar" : "Marcar como interno"}>INT</button>
+                  <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
                   <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
                   <span style={{ ...ventaStyle, color: item.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
                   <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
