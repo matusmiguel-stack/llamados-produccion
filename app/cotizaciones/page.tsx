@@ -14,6 +14,14 @@ type ItemValues = {
   unit_price: string
 }
 
+type ExtraItem = {
+  tempId: string
+  description: string
+  qty: string
+  days: string
+  unit_price: string
+}
+
 type ItemDef = {
   id: string
   label: string
@@ -156,6 +164,7 @@ export default function CotizacionesPage() {
   const [status, setStatus] = useState<"draft" | "sent" | "approved">("draft")
   const [values, setValues] = useState<Record<string, ItemValues>>(initValues())
   const [commissionPct, setCommissionPct] = useState("30")
+  const [extras, setExtras] = useState<Record<string, ExtraItem[]>>({})
 
   const isAdmin = profile?.role === "admin"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
@@ -166,11 +175,42 @@ export default function CotizacionesPage() {
     calcItem(values["extras"] || DEFAULT_ITEM)
   const commissionAmt = commissionBase * ((parseFloat(commissionPct) || 0) / 100)
 
+  function addExtra(rubroId: string) {
+    setExtras((prev) => ({
+      ...prev,
+      [rubroId]: [
+        ...(prev[rubroId] || []),
+        { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", unit_price: "0" },
+      ],
+    }))
+  }
+
+  function updateExtra(rubroId: string, tempId: string, patch: Partial<ExtraItem>) {
+    setExtras((prev) => ({
+      ...prev,
+      [rubroId]: (prev[rubroId] || []).map((i) =>
+        i.tempId === tempId ? { ...i, ...patch } : i
+      ),
+    }))
+  }
+
+  function removeExtra(rubroId: string, tempId: string) {
+    setExtras((prev) => ({
+      ...prev,
+      [rubroId]: (prev[rubroId] || []).filter((i) => i.tempId !== tempId),
+    }))
+  }
+
   function getRubroTotal(rubro: RubroDef): number {
-    return rubro.items.reduce((sum, item) => {
+    const predefined = rubro.items.reduce((sum, item) => {
       if (item.special === "agency_commission") return sum + commissionAmt
       return sum + calcItem(values[item.id] || DEFAULT_ITEM)
     }, 0)
+    const extraTotal = (extras[rubro.id] || []).reduce(
+      (sum, i) => sum + calcItem({ qty: i.qty, days: i.days, unit_price: i.unit_price }),
+      0
+    )
+    return predefined + extraTotal
   }
 
   const grandSubtotal = RUBROS.reduce((sum, r) => sum + getRubroTotal(r), 0)
@@ -237,7 +277,7 @@ export default function CotizacionesPage() {
 
         if (secErr) throw secErr
 
-        const itemsToInsert = rubro.items.map((item, ii) => {
+        const predefinedRows = rubro.items.map((item, ii) => {
           if (item.special === "agency_commission") {
             return {
               section_id: secData.id,
@@ -265,11 +305,26 @@ export default function CotizacionesPage() {
           }
         })
 
+        const extraRows = (extras[rubro.id] || []).map((item, ei) => ({
+          section_id: secData.id,
+          description: item.description || "Concepto adicional",
+          qty: parseFloat(item.qty) || 0,
+          days: parseFloat(item.days) || 0,
+          unit_price: parseFloat(item.unit_price) || 0,
+          released_expense: 0,
+          real_expense: 0,
+          supplier: null,
+          order_index: rubro.items.length + ei,
+        }))
+
+        const itemsToInsert = [...predefinedRows, ...extraRows]
+
         const { error: itemsErr } = await supabase.from("quote_items").insert(itemsToInsert)
         if (itemsErr) throw itemsErr
       }
 
       setValues(initValues())
+      setExtras({})
       setClientId("")
       setProjectId("")
       setQuoteName("")
@@ -351,8 +406,8 @@ export default function CotizacionesPage() {
 
             {/* Fila A: Preproducción + Edición y Audio */}
             <div style={twoCol}>
-              <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[0])} />
-              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[7])} />
+              <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[0])} extraItems={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[0].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[0].id, tid)} />
+              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[7])} extraItems={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[7].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[7].id, tid)} />
             </div>
 
             {/* Fila B: Personal Técnico — full width por su tamaño */}
@@ -362,18 +417,22 @@ export default function CotizacionesPage() {
               onUpdate={updateItem}
               rubroTotal={getRubroTotal(RUBROS[1])}
               twoColItems={!isMobile}
+              extraItems={extras[RUBROS[1].id] || []}
+              onAddExtra={() => addExtra(RUBROS[1].id)}
+              onUpdateExtra={(tid, p) => updateExtra(RUBROS[1].id, tid, p)}
+              onRemoveExtra={(tid) => removeExtra(RUBROS[1].id, tid)}
             />
 
             {/* Fila C: Gastos de Producción + Utilería y Vestuario */}
             <div style={twoCol}>
-              <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[2])} />
-              <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[3])} />
+              <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[2])} extraItems={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[2].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[2].id, tid)} />
+              <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[3])} extraItems={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[3].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[3].id, tid)} />
             </div>
 
             {/* Fila D: Foro y Escenografía + Renta de Equipo */}
             <div style={twoCol}>
-              <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[4])} />
-              <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[5])} />
+              <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[4])} extraItems={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[4].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[4].id, tid)} />
+              <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[5])} extraItems={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[5].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[5].id, tid)} />
             </div>
 
             {/* Fila E: Talento + Postproducción */}
@@ -386,8 +445,12 @@ export default function CotizacionesPage() {
                 commissionPct={commissionPct}
                 commissionAmt={commissionAmt}
                 onCommissionChange={setCommissionPct}
+                extraItems={extras[RUBROS[6].id] || []}
+                onAddExtra={() => addExtra(RUBROS[6].id)}
+                onUpdateExtra={(tid, p) => updateExtra(RUBROS[6].id, tid, p)}
+                onRemoveExtra={(tid) => removeExtra(RUBROS[6].id, tid)}
               />
-              <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[8])} />
+              <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[8])} extraItems={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[8].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[8].id, tid)} />
             </div>
           </div>
 
@@ -457,6 +520,10 @@ function RubroCard({
   commissionPct,
   commissionAmt,
   onCommissionChange,
+  extraItems,
+  onAddExtra,
+  onUpdateExtra,
+  onRemoveExtra,
 }: {
   rubro: RubroDef
   values: Record<string, ItemValues>
@@ -466,6 +533,10 @@ function RubroCard({
   commissionPct?: string
   commissionAmt?: number
   onCommissionChange?: (v: string) => void
+  extraItems: ExtraItem[]
+  onAddExtra: () => void
+  onUpdateExtra: (tempId: string, patch: Partial<ExtraItem>) => void
+  onRemoveExtra: (tempId: string) => void
 }) {
   const items = rubro.items
   const mid = twoColItems ? Math.ceil(items.length / 2) : items.length
@@ -485,7 +556,7 @@ function RubroCard({
         </span>
       </div>
 
-      {/* Items */}
+      {/* Items predefinidos */}
       <div style={{ display: "grid", gridTemplateColumns: twoColItems ? "1fr 1fr" : "1fr", gap: "4px 16px" }}>
         {[col1, col2].map((col, ci) => (
           <div key={ci} style={{ display: "grid", gap: 2 }}>
@@ -518,32 +589,11 @@ function RubroCard({
                 <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)" }}>
                   <span style={itemLabelStyle}>{item.label}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <input
-                      type="number"
-                      value={v.qty}
-                      onChange={(e) => onUpdate(item.id, { qty: e.target.value })}
-                      min="0"
-                      style={numInputStyle}
-                      title="Cantidad"
-                    />
+                    <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
                     <span style={sepStyle}>×</span>
-                    <input
-                      type="number"
-                      value={v.days}
-                      onChange={(e) => onUpdate(item.id, { days: e.target.value })}
-                      min="0"
-                      style={numInputStyle}
-                      title="Días"
-                    />
+                    <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
-                    <input
-                      type="number"
-                      value={v.unit_price}
-                      onChange={(e) => onUpdate(item.id, { unit_price: e.target.value })}
-                      min="0"
-                      style={priceInputStyle}
-                      title="Precio unitario"
-                    />
+                    <input type="number" value={v.unit_price} onChange={(e) => onUpdate(item.id, { unit_price: e.target.value })} min="0" style={priceInputStyle} title="Precio unitario" />
                     <span style={itemTotalStyle}>{fmt(tot)}</span>
                   </div>
                 </div>
@@ -552,6 +602,39 @@ function RubroCard({
           </div>
         ))}
       </div>
+
+      {/* Conceptos adicionales */}
+      {extraItems.length > 0 && (
+        <div style={{ display: "grid", gap: 2, paddingTop: 6, borderTop: "1px dashed rgba(148,163,184,0.12)" }}>
+          {extraItems.map((item) => {
+            const tot = calcItem({ qty: item.qty, days: item.days, unit_price: item.unit_price })
+            return (
+              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6 }}>
+                <input
+                  value={item.description}
+                  onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })}
+                  placeholder="Nombre del concepto"
+                  style={{ ...extraDescInputStyle, flex: 1 }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                  <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
+                  <span style={sepStyle}>×</span>
+                  <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
+                  <span style={sepStyle}>×</span>
+                  <input type="number" value={item.unit_price} onChange={(e) => onUpdateExtra(item.tempId, { unit_price: e.target.value })} min="0" style={priceInputStyle} title="Precio unitario" />
+                  <span style={itemTotalStyle}>{fmt(tot)}</span>
+                  <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Botón agregar concepto */}
+      <button onClick={onAddExtra} style={addExtraButtonStyle(rubro.color)}>
+        + Agregar concepto
+      </button>
     </div>
   )
 }
@@ -735,4 +818,49 @@ const primaryButtonStyle: React.CSSProperties = {
   fontWeight: 600,
   fontSize: 13,
   boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+}
+
+const extraDescInputStyle: React.CSSProperties = {
+  padding: "4px 8px",
+  border: "1px solid rgba(148,163,184,0.20)",
+  borderRadius: 6,
+  background: "rgba(124,58,237,0.06)",
+  color: "#e2e8f0",
+  outline: "none",
+  fontSize: 12,
+  minWidth: 0,
+  boxSizing: "border-box",
+}
+
+const removeExtraStyle: React.CSSProperties = {
+  width: 22,
+  height: 22,
+  borderRadius: 5,
+  border: "1px solid rgba(248,113,113,0.24)",
+  background: "transparent",
+  color: "#f87171",
+  cursor: "pointer",
+  fontSize: 10,
+  flexShrink: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+}
+
+function addExtraButtonStyle(color: string): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "5px 10px",
+    borderRadius: 7,
+    border: `1px dashed ${color}55`,
+    background: "transparent",
+    color,
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: "pointer",
+    marginTop: 4,
+    opacity: 0.8,
+  }
 }
