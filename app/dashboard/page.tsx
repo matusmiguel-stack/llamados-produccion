@@ -117,41 +117,57 @@ export default function DashboardPage() {
     [employees, selectedDate]
   )
 
-  const crewSummaries = useMemo(() => {
-    return employees
-      .map((person) => {
-        const shoots = shootEmployees
-          .filter((assignment) => assignment.employee_id === person.id)
-          .map((assignment) =>
-            allShoots.find((shoot) => shoot.id === assignment.shoot_id)
+  const shootSummaries = useMemo(() => {
+    return shootsOnDate
+      .map((shoot) => {
+        const participants = shootEmployees
+          .filter((assignment) => assignment.shoot_id === shoot.id)
+          .map(
+            (assignment) =>
+              assignment.employees ||
+              employees.find((person) => person.id === assignment.employee_id)
           )
-          .filter(
-            (shoot): shoot is NonNullable<typeof shoot> =>
-              !!shoot && shootOverlapsDate(shoot, selectedDate)
-          )
-          .sort(
-            (a, b) =>
-              new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+          .filter(Boolean)
+          .sort((a, b) =>
+            employeeDisplayName(a).localeCompare(employeeDisplayName(b), "es")
           )
 
-        return { person, shoots }
+        return { shoot, participants }
       })
-      .sort((a, b) => {
-        if (a.shoots.length !== b.shoots.length) {
-          return b.shoots.length - a.shoots.length
-        }
-        return employeeDisplayName(a.person).localeCompare(
-          employeeDisplayName(b.person),
-          "es"
-        )
-      })
-  }, [employees, shootEmployees, allShoots, selectedDate])
+      .sort(
+        (a, b) =>
+          new Date(a.shoot.start_time).getTime() -
+          new Date(b.shoot.start_time).getTime()
+      )
+  }, [shootsOnDate, shootEmployees, employees])
 
-  const activeCrew = crewSummaries.filter((entry) => entry.shoots.length > 0)
-  const vacationIds = new Set(vacationsToday.map((person) => person.id))
-  const idleCrew = crewSummaries.filter(
-    (entry) => entry.shoots.length === 0 && !vacationIds.has(entry.person.id)
+  const assignedEmployeeIds = useMemo(() => {
+    return new Set(
+      shootSummaries.flatMap((entry) =>
+        entry.participants.map((person) => person.id)
+      )
+    )
+  }, [shootSummaries])
+
+  const vacationIds = useMemo(
+    () => new Set(vacationsToday.map((person) => person.id)),
+    [vacationsToday]
   )
+
+  const idleCrew = useMemo(
+    () =>
+      employees
+        .filter(
+          (person) =>
+            !assignedEmployeeIds.has(person.id) && !vacationIds.has(person.id)
+        )
+        .sort((a, b) =>
+          employeeDisplayName(a).localeCompare(employeeDisplayName(b), "es")
+        ),
+    [employees, assignedEmployeeIds, vacationIds]
+  )
+
+  const participantsCount = assignedEmployeeIds.size
 
   const formattedDate = new Date(selectedDate + "T12:00:00").toLocaleDateString(
     "es-CL",
@@ -182,10 +198,10 @@ export default function DashboardPage() {
             <div>
               <h1 style={pageTitleStyle}>Dashboard crew</h1>
               <p style={pageSubtitleStyle}>
-                {activeCrew.length} con llamados · {vacationsToday.length} de vacaciones ·{" "}
+                {shootsOnDate.length} llamado{shootsOnDate.length === 1 ? "" : "s"} ·{" "}
+                {participantsCount} en set · {vacationsToday.length} de vacaciones ·{" "}
                 {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios ·{" "}
-                {idleCrew.length} libres · {shootsOnDate.length} llamado
-                {shootsOnDate.length === 1 ? "" : "s"}
+                {idleCrew.length} libre{idleCrew.length === 1 ? "" : "s"}
               </p>
             </div>
 
@@ -309,67 +325,80 @@ export default function DashboardPage() {
             </section>
           </div>
 
-          {crewSummaries.length === 0 ? (
+          {employees.length === 0 ? (
             <section style={emptyPanelStyle}>
               No hay empleados registrados.
             </section>
           ) : (
             <>
-              <div
-                style={{
-                  ...crewGridStyle,
-                  gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-                }}
-              >
-                {activeCrew.map(({ person, shoots }) => (
-                  <section key={person.id} style={crewCardStyle}>
-                    <div style={crewCardHeaderStyle}>
-                      <div style={crewIdentityStyle}>
-                        <span style={avatarStyle(employeeDisplayName(person))}>
-                          {employeeDisplayName(person).charAt(0).toUpperCase()}
+              {shootSummaries.length > 0 ? (
+                <div
+                  style={{
+                    ...shootsGridStyle,
+                    gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+                  }}
+                >
+                  {shootSummaries.map(({ shoot, participants }) => (
+                    <section key={shoot.id} style={shootCardStyle}>
+                      <div style={shootRowTopStyle}>
+                        <span style={timeBadgeStyle(shoot.status)}>
+                          {formatShootSchedule(shoot)}
                         </span>
-                        <div>
-                          <p style={crewNameStyle}>{employeeDisplayName(person)}</p>
-                          <p style={crewRoleStyle}>{person.puesto}</p>
-                        </div>
+                        <span style={statusBadgeStyle(shoot.status)}>
+                          {statusLabel(shoot.status)}
+                        </span>
                       </div>
-                      <span style={countBadgeStyle}>
-                        {shoots.length} llamado{shoots.length === 1 ? "" : "s"}
-                      </span>
-                    </div>
 
-                    <div style={shootListStyle}>
-                      {shoots.map((shoot) => (
-                        <div key={shoot.id} style={shootRowStyle}>
-                          <div style={shootRowTopStyle}>
-                            <span style={timeBadgeStyle(shoot.status)}>
-                              {formatShootSchedule(shoot)}
-                            </span>
-                            <span style={statusBadgeStyle(shoot.status)}>
-                              {statusLabel(shoot.status)}
-                            </span>
+                      <p style={shootTitleStyle}>
+                        {statusEmoji(shoot.status)} {shoot.title}
+                      </p>
+                      <p style={shootMetaStyle}>
+                        {shoot.client || "Sin cliente"} ·{" "}
+                        {shoot.project || "Sin proyecto"}
+                      </p>
+                      {(shoot.location || shoot.address) && (
+                        <p style={shootLocationStyle}>
+                          📍 {shoot.location || shoot.address}
+                        </p>
+                      )}
+                      {shoot.public_notes && (
+                        <p style={shootNotesStyle}>{shoot.public_notes}</p>
+                      )}
+
+                      <div style={shootCrewSectionStyle}>
+                        <p style={shootCrewLabelStyle}>
+                          Crew ({participants.length})
+                        </p>
+                        {participants.length > 0 ? (
+                          <div style={participantGridStyle}>
+                            {participants.map((person) => (
+                              <div key={person.id} style={participantChipStyle}>
+                                <span style={avatarStyle(employeeDisplayName(person))}>
+                                  {employeeDisplayName(person).charAt(0).toUpperCase()}
+                                </span>
+                                <div>
+                                  <p style={participantNameStyle}>
+                                    {employeeDisplayName(person)}
+                                  </p>
+                                  <p style={participantRoleStyle}>{person.puesto}</p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <p style={shootTitleStyle}>
-                            {statusEmoji(shoot.status)} {shoot.title}
+                        ) : (
+                          <p style={shootCrewEmptyStyle}>
+                            Sin crew asignado a este llamado
                           </p>
-                          <p style={shootMetaStyle}>
-                            {shoot.client || "Sin cliente"} ·{" "}
-                            {shoot.project || "Sin proyecto"}
-                          </p>
-                          {(shoot.location || shoot.address) && (
-                            <p style={shootLocationStyle}>
-                              📍 {shoot.location || shoot.address}
-                            </p>
-                          )}
-                          {shoot.public_notes && (
-                            <p style={shootNotesStyle}>{shoot.public_notes}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <section style={emptyPanelStyle}>
+                  No hay llamados para este día.
+                </section>
+              )}
 
               {idleCrew.length > 0 && (
                 <section style={panelStyle}>
@@ -381,7 +410,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div style={idleGridStyle}>
-                    {idleCrew.map(({ person }) => (
+                    {idleCrew.map((person) => (
                       <div key={person.id} style={idleChipStyle}>
                         <span style={avatarStyle(employeeDisplayName(person), "muted")}>
                           {employeeDisplayName(person).charAt(0).toUpperCase()}
@@ -393,12 +422,6 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
-                </section>
-              )}
-
-              {activeCrew.length === 0 && (
-                <section style={emptyPanelStyle}>
-                  No hay llamados asignados al crew para este día.
                 </section>
               )}
             </>
@@ -693,12 +716,13 @@ const anniversaryChipStyle: React.CSSProperties = {
   border: "1px solid rgba(45,212,191,0.18)",
 }
 
-const crewGridStyle: React.CSSProperties = {
+const shootsGridStyle: React.CSSProperties = {
   display: "grid",
   gap: 12,
+  marginBottom: 14,
 }
 
-const crewCardStyle: React.CSSProperties = {
+const shootCardStyle: React.CSSProperties = {
   background: "rgba(15, 23, 42, 0.72)",
   border: "1px solid rgba(148,163,184,0.14)",
   boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
@@ -707,59 +731,54 @@ const crewCardStyle: React.CSSProperties = {
   padding: "14px 16px",
 }
 
-const crewCardHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 10,
-  marginBottom: 12,
-  paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+const shootCrewSectionStyle: React.CSSProperties = {
+  marginTop: 12,
+  paddingTop: 12,
+  borderTop: "1px solid rgba(148,163,184,0.10)",
 }
 
-const crewIdentityStyle: React.CSSProperties = {
+const shootCrewLabelStyle: React.CSSProperties = {
+  margin: "0 0 8px",
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: 0.8,
+}
+
+const shootCrewEmptyStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 12,
+}
+
+const participantGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+  gap: 8,
+}
+
+const participantChipStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  minWidth: 0,
+  padding: "8px 10px",
+  borderRadius: 10,
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(255,255,255,0.06)",
 }
 
-const crewNameStyle: React.CSSProperties = {
+const participantNameStyle: React.CSSProperties = {
   margin: 0,
   color: "#f8fafc",
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 600,
 }
 
-const crewRoleStyle: React.CSSProperties = {
+const participantRoleStyle: React.CSSProperties = {
   margin: "2px 0 0",
   color: "#64748b",
   fontSize: 11,
-}
-
-const countBadgeStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "4px 8px",
-  borderRadius: 999,
-  background: "rgba(124,58,237,0.16)",
-  border: "1px solid rgba(167,139,250,0.22)",
-  color: "#ddd6fe",
-  fontSize: 11,
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-}
-
-const shootListStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-}
-
-const shootRowStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
 }
 
 const shootRowTopStyle: React.CSSProperties = {
