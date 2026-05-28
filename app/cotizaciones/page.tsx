@@ -48,7 +48,6 @@ const RUBROS: RubroDef[] = [
   {
     id: "r2", num: 2, label: "Personal Técnico", color: "#a78bfa",
     items: [
-      { id: "personal_tecnico_gen", label: "Personal Técnico" },
       { id: "productor", label: "Productor" },
       { id: "asist_produccion", label: "Asistente Producción" },
       { id: "director", label: "Director" },
@@ -433,19 +432,6 @@ export default function CotizacionesPage() {
             </div>
           </section>
 
-          {/* Leyenda de columnas */}
-          {!isMobile && (
-            <div style={columnLegendStyle}>
-              <span style={{ flex: 1 }} />
-              <span style={legendItemStyle}>Cant.</span>
-              <span style={legendItemStyle}>Días</span>
-              <span style={legendItemStyle}>Costo real</span>
-              <span style={legendItemStyle}>Mkp %</span>
-              <span style={{ ...legendItemStyle, color: "#4ade80", minWidth: 30 }}>Int.</span>
-              <span style={{ ...legendItemStyle, color: "#64748b" }}>Gasto</span>
-              <span style={{ ...legendItemStyle, color: "#a78bfa" }}>Precio venta</span>
-            </div>
-          )}
 
           {/* Rubros */}
           <div style={{ display: "grid", gap: 12 }}>
@@ -630,6 +616,21 @@ function RubroCard({
         </div>
       </div>
 
+      {/* Encabezados de columna */}
+      {!isMobile && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingBottom: 4, borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
+          <span style={colHdrStyle}>Cantidad</span>
+          <span style={{ width: 10, flexShrink: 0 }} />
+          <span style={colHdrStyle}>Días</span>
+          <span style={{ width: 10, flexShrink: 0 }} />
+          <span style={{ ...colHdrStyle, minWidth: 64 }}>Costo</span>
+          <span style={{ width: 34, flexShrink: 0 }} />
+          <span style={{ width: 30, flexShrink: 0 }} />
+          <span style={{ width: 70, flexShrink: 0 }} />
+          <span style={{ ...colHdrStyle, minWidth: 78, textAlign: "right" }}>Utilidad</span>
+        </div>
+      )}
+
       {/* Columnas predefinidas */}
       <div style={{ display: "grid", gridTemplateColumns: twoColItems ? "1fr 1fr" : "1fr", gap: "2px 16px" }}>
         {[col1, col2].map((col, ci) => (
@@ -645,9 +646,9 @@ function RubroCard({
                   <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
                     <span style={itemLabelStyle}>{item.label}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                      <input type="number" value={commissionPct} onChange={(e) => onCommissionPctChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 44 }} title="% comisión" />
+                      <input type="number" value={commissionPct} onChange={(e) => onCommissionPctChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% comisión" />
                       <span style={sepStyle}>%  ·  Mkp</span>
-                      <input type="number" value={commissionMarkup} onChange={(e) => onCommissionMarkupChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 44 }} title="% markup" />
+                      <input type="number" value={commissionMarkup} onChange={(e) => onCommissionMarkupChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% markup" />
                       <span style={sepStyle}>%</span>
                       <span style={gastoStyle}>{fmt(cg)}</span>
                       <span style={ventaStyle}>{fmt(cv)}</span>
@@ -668,7 +669,7 @@ function RubroCard({
                     <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
-                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} />
+                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} />
                     <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
                     <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
                     <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
@@ -700,7 +701,7 @@ function RubroCard({
                   <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                   <span style={sepStyle}>×</span>
                   <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
-                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} />
+                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} />
                   <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
                   <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)} title={item.isInternal ? "Interno: click para quitar" : "Marcar como interno"}>INT</button>
                   <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
@@ -814,8 +815,8 @@ const ventaStyle: React.CSSProperties = {
 }
 
 const numInputStyle: React.CSSProperties = {
-  width: 46,
-  padding: "4px 5px",
+  width: 34,
+  padding: "4px 4px",
   border: "1px solid rgba(148,163,184,0.16)",
   borderRadius: 6,
   background: "rgba(2,6,23,0.55)",
@@ -828,7 +829,7 @@ const numInputStyle: React.CSSProperties = {
 
 const costInputStyle: React.CSSProperties = {
   ...numInputStyle,
-  width: 82,
+  width: 64,
 }
 
 const sepStyle: React.CSSProperties = {
@@ -899,22 +900,15 @@ function addExtraButtonStyle(color: string): React.CSSProperties {
   }
 }
 
-const columnLegendStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 4,
-  padding: "6px 18px 2px",
-  marginTop: 10,
-}
-
-const legendItemStyle: React.CSSProperties = {
+const colHdrStyle: React.CSSProperties = {
   color: "#475569",
-  fontSize: 10,
-  fontWeight: 600,
+  fontSize: 9,
+  fontWeight: 700,
   textTransform: "uppercase",
-  letterSpacing: 0.5,
-  minWidth: 46,
-  textAlign: "right",
+  letterSpacing: 0.4,
+  minWidth: 34,
+  textAlign: "center",
+  flexShrink: 0,
 }
 
 const summaryHeaderRowStyle: React.CSSProperties = {
@@ -969,9 +963,9 @@ const marginBarFillStyle: React.CSSProperties = {
   transition: "width 0.3s ease",
 }
 
-const appShellStyle: React.CSSProperties = { display: "flex", minHeight: "100vh" }
-const mainStyle: React.CSSProperties = { flex: 1, minWidth: 0 }
-const pageContainerStyle: React.CSSProperties = { maxWidth: 1100, margin: "0 auto" }
+const appShellStyle: React.CSSProperties = { display: "flex", minHeight: "100vh", overflow: "hidden" }
+const mainStyle: React.CSSProperties = { flex: 1, minWidth: 0, overflowX: "auto" }
+const pageContainerStyle: React.CSSProperties = { maxWidth: 1200, margin: "0 auto", minWidth: 0 }
 const pageHeaderStyle: React.CSSProperties = { marginBottom: 18 }
 
 const eyebrowStyle: React.CSSProperties = {
