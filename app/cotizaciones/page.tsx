@@ -11,7 +11,8 @@ type Project = { id: string; name: string; client_id: string }
 type ItemValues = {
   qty: string
   days: string
-  unit_price: string
+  cost: string    // costo real por unidad
+  markup: string  // markup % individual
 }
 
 type ExtraItem = {
@@ -19,7 +20,8 @@ type ExtraItem = {
   description: string
   qty: string
   days: string
-  unit_price: string
+  cost: string
+  markup: string
 }
 
 type ItemDef = {
@@ -39,9 +41,7 @@ type RubroDef = {
 const RUBROS: RubroDef[] = [
   {
     id: "r1", num: 1, label: "Preproducción", color: "#6366f1",
-    items: [
-      { id: "guiones", label: "Desarrollo de guiones" },
-    ],
+    items: [{ id: "guiones", label: "Desarrollo de guiones" }],
   },
   {
     id: "r2", num: 2, label: "Personal Técnico", color: "#a78bfa",
@@ -115,9 +115,7 @@ const RUBROS: RubroDef[] = [
   },
   {
     id: "r8", num: 8, label: "Edición y Audio", color: "#818cf8",
-    items: [
-      { id: "edicion_video", label: "Edición de video" },
-    ],
+    items: [{ id: "edicion_video", label: "Edición de video" }],
   },
   {
     id: "r9", num: 9, label: "Postproducción", color: "#c084fc",
@@ -129,7 +127,7 @@ const RUBROS: RubroDef[] = [
   },
 ]
 
-const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", unit_price: "0" }
+const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "0", markup: "0" }
 
 function initValues(): Record<string, ItemValues> {
   const vals: Record<string, ItemValues> = {}
@@ -141,13 +139,27 @@ function initValues(): Record<string, ItemValues> {
   return vals
 }
 
-function calcItem(v: ItemValues): number {
-  return (parseFloat(v.qty) || 0) * (parseFloat(v.days) || 0) * (parseFloat(v.unit_price) || 0)
+function gasto(v: { qty: string; days: string; cost: string }): number {
+  return (parseFloat(v.qty) || 0) * (parseFloat(v.days) || 0) * (parseFloat(v.cost) || 0)
+}
+
+function utilidad(g: number, markupPct: string): number {
+  return g * ((parseFloat(markupPct) || 0) / 100)
+}
+
+function venta(g: number, markupPct: string): number {
+  return g + utilidad(g, markupPct)
 }
 
 function fmt(n: number): string {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 }
+
+function fmtPct(n: number): string {
+  return `${n.toFixed(1)}%`
+}
+
+type RubroFinancials = { gasto: number; utilidad: number; venta: number }
 
 export default function CotizacionesPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -160,37 +172,75 @@ export default function CotizacionesPage() {
   const [clientId, setClientId] = useState("")
   const [projectId, setProjectId] = useState("")
   const [quoteName, setQuoteName] = useState("")
-  const [markup, setMarkup] = useState("0")
   const [status, setStatus] = useState<"draft" | "sent" | "approved">("draft")
   const [values, setValues] = useState<Record<string, ItemValues>>(initValues())
-  const [commissionPct, setCommissionPct] = useState("30")
   const [extras, setExtras] = useState<Record<string, ExtraItem[]>>({})
+  const [commissionPct, setCommissionPct] = useState("30")
+  const [commissionMarkup, setCommissionMarkup] = useState("0")
 
   const isAdmin = profile?.role === "admin"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
 
-  const commissionBase =
-    calcItem(values["talento_principal"] || DEFAULT_ITEM) +
-    calcItem(values["talento_secundario"] || DEFAULT_ITEM) +
-    calcItem(values["extras"] || DEFAULT_ITEM)
-  const commissionAmt = commissionBase * ((parseFloat(commissionPct) || 0) / 100)
+  // Comisión: % del gasto base de talento
+  const talentoBaseGasto =
+    gasto(values["talento_principal"] || DEFAULT_ITEM) +
+    gasto(values["talento_secundario"] || DEFAULT_ITEM) +
+    gasto(values["extras"] || DEFAULT_ITEM)
+  const commissionGasto = talentoBaseGasto * ((parseFloat(commissionPct) || 0) / 100)
+
+  function getRubroFinancials(rubro: RubroDef): RubroFinancials {
+    let g = 0
+    let u = 0
+
+    for (const item of rubro.items) {
+      if (item.special === "agency_commission") {
+        g += commissionGasto
+        u += utilidad(commissionGasto, commissionMarkup)
+      } else {
+        const v = values[item.id] || DEFAULT_ITEM
+        const ig = gasto(v)
+        g += ig
+        u += utilidad(ig, v.markup)
+      }
+    }
+
+    for (const item of extras[rubro.id] || []) {
+      const ig = gasto(item)
+      g += ig
+      u += utilidad(ig, item.markup)
+    }
+
+    return { gasto: g, utilidad: u, venta: g + u }
+  }
+
+  const globalFinancials = RUBROS.reduce(
+    (acc, r) => {
+      const f = getRubroFinancials(r)
+      return { gasto: acc.gasto + f.gasto, utilidad: acc.utilidad + f.utilidad, venta: acc.venta + f.venta }
+    },
+    { gasto: 0, utilidad: 0, venta: 0 }
+  )
+
+  const marginPct =
+    globalFinancials.venta > 0
+      ? (globalFinancials.utilidad / globalFinancials.venta) * 100
+      : 0
+
+  function updateItem(itemId: string, patch: Partial<ItemValues>) {
+    setValues((prev) => ({ ...prev, [itemId]: { ...(prev[itemId] || DEFAULT_ITEM), ...patch } }))
+  }
 
   function addExtra(rubroId: string) {
     setExtras((prev) => ({
       ...prev,
-      [rubroId]: [
-        ...(prev[rubroId] || []),
-        { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", unit_price: "0" },
-      ],
+      [rubroId]: [...(prev[rubroId] || []), { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", cost: "0", markup: "0" }],
     }))
   }
 
   function updateExtra(rubroId: string, tempId: string, patch: Partial<ExtraItem>) {
     setExtras((prev) => ({
       ...prev,
-      [rubroId]: (prev[rubroId] || []).map((i) =>
-        i.tempId === tempId ? { ...i, ...patch } : i
-      ),
+      [rubroId]: (prev[rubroId] || []).map((i) => i.tempId === tempId ? { ...i, ...patch } : i),
     }))
   }
 
@@ -199,26 +249,6 @@ export default function CotizacionesPage() {
       ...prev,
       [rubroId]: (prev[rubroId] || []).filter((i) => i.tempId !== tempId),
     }))
-  }
-
-  function getRubroTotal(rubro: RubroDef): number {
-    const predefined = rubro.items.reduce((sum, item) => {
-      if (item.special === "agency_commission") return sum + commissionAmt
-      return sum + calcItem(values[item.id] || DEFAULT_ITEM)
-    }, 0)
-    const extraTotal = (extras[rubro.id] || []).reduce(
-      (sum, i) => sum + calcItem({ qty: i.qty, days: i.days, unit_price: i.unit_price }),
-      0
-    )
-    return predefined + extraTotal
-  }
-
-  const grandSubtotal = RUBROS.reduce((sum, r) => sum + getRubroTotal(r), 0)
-  const markupAmt = grandSubtotal * ((parseFloat(markup) || 0) / 100)
-  const grandTotal = grandSubtotal + markupAmt
-
-  function updateItem(itemId: string, patch: Partial<ItemValues>) {
-    setValues((prev) => ({ ...prev, [itemId]: { ...(prev[itemId] || DEFAULT_ITEM), ...patch } }))
   }
 
   useEffect(() => {
@@ -259,7 +289,7 @@ export default function CotizacionesPage() {
           project_id: projectId,
           name: quoteName.trim(),
           status,
-          markup_percentage: parseFloat(markup) || 0,
+          markup_percentage: 0,
           created_by: profile.id,
         })
         .select("id")
@@ -284,8 +314,8 @@ export default function CotizacionesPage() {
               description: `Comisión de agencia (${commissionPct}%)`,
               qty: 1,
               days: 1,
-              unit_price: commissionAmt,
-              released_expense: 0,
+              unit_price: commissionGasto,       // costo real
+              released_expense: parseFloat(commissionMarkup) || 0, // markup %
               real_expense: 0,
               supplier: commissionPct,
               order_index: ii,
@@ -297,8 +327,8 @@ export default function CotizacionesPage() {
             description: item.label,
             qty: parseFloat(v.qty) || 0,
             days: parseFloat(v.days) || 0,
-            unit_price: parseFloat(v.unit_price) || 0,
-            released_expense: 0,
+            unit_price: parseFloat(v.cost) || 0,
+            released_expense: parseFloat(v.markup) || 0,
             real_expense: 0,
             supplier: null,
             order_index: ii,
@@ -310,16 +340,14 @@ export default function CotizacionesPage() {
           description: item.description || "Concepto adicional",
           qty: parseFloat(item.qty) || 0,
           days: parseFloat(item.days) || 0,
-          unit_price: parseFloat(item.unit_price) || 0,
-          released_expense: 0,
+          unit_price: parseFloat(item.cost) || 0,
+          released_expense: parseFloat(item.markup) || 0,
           real_expense: 0,
           supplier: null,
           order_index: rubro.items.length + ei,
         }))
 
-        const itemsToInsert = [...predefinedRows, ...extraRows]
-
-        const { error: itemsErr } = await supabase.from("quote_items").insert(itemsToInsert)
+        const { error: itemsErr } = await supabase.from("quote_items").insert([...predefinedRows, ...extraRows])
         if (itemsErr) throw itemsErr
       }
 
@@ -328,8 +356,8 @@ export default function CotizacionesPage() {
       setClientId("")
       setProjectId("")
       setQuoteName("")
-      setMarkup("0")
       setCommissionPct("30")
+      setCommissionMarkup("0")
       setStatus("draft")
       alert("Cotización guardada. Revísala desde la sección de Proyectos.")
     } catch (err: any) {
@@ -364,7 +392,7 @@ export default function CotizacionesPage() {
           <header style={pageHeaderStyle}>
             <p style={eyebrowStyle}>Finanzas</p>
             <h1 style={pageTitleStyle}>Nueva cotización</h1>
-            <p style={pageSubtitleStyle}>Presupuesto estructurado por rubros</p>
+            <p style={pageSubtitleStyle}>Presupuesto estructurado por rubros con análisis de utilidad</p>
           </header>
 
           {/* Datos generales */}
@@ -372,7 +400,7 @@ export default function CotizacionesPage() {
             <div style={panelHeaderStyle}>
               <p style={panelTitleStyle}>Datos generales</p>
             </div>
-            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 120px 140px" }}>
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 140px" }}>
               <Field label="Cliente">
                 <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={inputStyle}>
                   <option value="">Selecciona...</option>
@@ -388,9 +416,6 @@ export default function CotizacionesPage() {
               <Field label="Nombre de la cotización">
                 <input value={quoteName} onChange={(e) => setQuoteName(e.target.value)} placeholder="Ej. Propuesta v1" style={inputStyle} />
               </Field>
-              <Field label="Markup (%)">
-                <input type="number" value={markup} onChange={(e) => setMarkup(e.target.value)} min="0" style={inputStyle} />
-              </Field>
               <Field label="Estado">
                 <select value={status} onChange={(e) => setStatus(e.target.value as any)} style={inputStyle}>
                   <option value="draft">Borrador</option>
@@ -401,105 +426,128 @@ export default function CotizacionesPage() {
             </div>
           </section>
 
-          {/* Rubros */}
-          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+          {/* Leyenda de columnas */}
+          {!isMobile && (
+            <div style={columnLegendStyle}>
+              <span style={{ flex: 1 }} />
+              <span style={legendItemStyle}>Cant.</span>
+              <span style={legendItemStyle}>Días</span>
+              <span style={legendItemStyle}>Costo real</span>
+              <span style={legendItemStyle}>Mkp %</span>
+              <span style={{ ...legendItemStyle, color: "#64748b" }}>Gasto</span>
+              <span style={{ ...legendItemStyle, color: "#a78bfa" }}>Precio venta</span>
+            </div>
+          )}
 
-            {/* Fila A: Preproducción + Edición y Audio */}
+          {/* Rubros */}
+          <div style={{ display: "grid", gap: 12 }}>
+
             <div style={twoCol}>
-              <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[0])} extraItems={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[0].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[0].id, tid)} />
-              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[7])} extraItems={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[7].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[7].id, tid)} />
+              <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[0])} extras={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[0].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[0].id, t)} isMobile={isMobile} />
+              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
             </div>
 
-            {/* Fila B: Personal Técnico — full width por su tamaño */}
             <RubroCard
               rubro={RUBROS[1]}
               values={values}
               onUpdate={updateItem}
-              rubroTotal={getRubroTotal(RUBROS[1])}
+              financials={getRubroFinancials(RUBROS[1])}
               twoColItems={!isMobile}
-              extraItems={extras[RUBROS[1].id] || []}
+              extras={extras[RUBROS[1].id] || []}
               onAddExtra={() => addExtra(RUBROS[1].id)}
-              onUpdateExtra={(tid, p) => updateExtra(RUBROS[1].id, tid, p)}
-              onRemoveExtra={(tid) => removeExtra(RUBROS[1].id, tid)}
+              onUpdateExtra={(t, p) => updateExtra(RUBROS[1].id, t, p)}
+              onRemoveExtra={(t) => removeExtra(RUBROS[1].id, t)}
+              isMobile={isMobile}
             />
 
-            {/* Fila C: Gastos de Producción + Utilería y Vestuario */}
             <div style={twoCol}>
-              <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[2])} extraItems={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[2].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[2].id, tid)} />
-              <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[3])} extraItems={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[3].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[3].id, tid)} />
+              <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[2])} extras={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[2].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[2].id, t)} isMobile={isMobile} />
+              <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[3])} extras={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[3].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[3].id, t)} isMobile={isMobile} />
             </div>
 
-            {/* Fila D: Foro y Escenografía + Renta de Equipo */}
             <div style={twoCol}>
-              <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[4])} extraItems={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[4].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[4].id, tid)} />
-              <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[5])} extraItems={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[5].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[5].id, tid)} />
+              <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[4])} extras={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[4].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[4].id, t)} isMobile={isMobile} />
+              <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[5])} extras={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[5].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[5].id, t)} isMobile={isMobile} />
             </div>
 
-            {/* Fila E: Talento + Postproducción */}
             <div style={twoCol}>
               <RubroCard
                 rubro={RUBROS[6]}
                 values={values}
                 onUpdate={updateItem}
-                rubroTotal={getRubroTotal(RUBROS[6])}
+                financials={getRubroFinancials(RUBROS[6])}
                 commissionPct={commissionPct}
-                commissionAmt={commissionAmt}
-                onCommissionChange={setCommissionPct}
-                extraItems={extras[RUBROS[6].id] || []}
+                commissionMarkup={commissionMarkup}
+                commissionGasto={commissionGasto}
+                onCommissionPctChange={setCommissionPct}
+                onCommissionMarkupChange={setCommissionMarkup}
+                extras={extras[RUBROS[6].id] || []}
                 onAddExtra={() => addExtra(RUBROS[6].id)}
-                onUpdateExtra={(tid, p) => updateExtra(RUBROS[6].id, tid, p)}
-                onRemoveExtra={(tid) => removeExtra(RUBROS[6].id, tid)}
+                onUpdateExtra={(t, p) => updateExtra(RUBROS[6].id, t, p)}
+                onRemoveExtra={(t) => removeExtra(RUBROS[6].id, t)}
+                isMobile={isMobile}
               />
-              <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[8])} extraItems={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(tid, p) => updateExtra(RUBROS[8].id, tid, p)} onRemoveExtra={(tid) => removeExtra(RUBROS[8].id, tid)} />
+              <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[8])} extras={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[8].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[8].id, t)} isMobile={isMobile} />
             </div>
           </div>
 
-          {/* Totales + guardar */}
+          {/* Resumen financiero global */}
           <section style={{ ...panelStyle, marginTop: 12 }}>
-            <div style={{ display: "grid", gap: isMobile ? 20 : 0, gridTemplateColumns: isMobile ? "1fr" : "1fr auto" }}>
+            <div style={panelHeaderStyle}>
+              <p style={panelTitleStyle}>Resumen financiero</p>
+            </div>
 
+            <div style={{ display: "grid", gap: isMobile ? 20 : 0, gridTemplateColumns: isMobile ? "1fr" : "1fr auto" }}>
               {/* Breakdown por rubro */}
-              <div style={{ display: "grid", gap: 6, paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
-                <p style={{ margin: "0 0 6px", color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                  Resumen por rubro
-                </p>
+              <div style={{ paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
+                {/* Header */}
+                <div style={summaryHeaderRowStyle}>
+                  <span style={{ flex: 1, color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Rubro</span>
+                  <span style={summaryColHeaderStyle}>Gasto</span>
+                  <span style={summaryColHeaderStyle}>Utilidad</span>
+                  <span style={summaryColHeaderStyle}>Venta</span>
+                </div>
+
                 {RUBROS.map((r) => {
-                  const t = getRubroTotal(r)
+                  const f = getRubroFinancials(r)
+                  const hasValue = f.venta > 0
                   return (
-                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: 999, background: r.color, flexShrink: 0 }} />
-                        <span style={{ color: t > 0 ? "#cbd5e1" : "#475569", fontSize: 12 }}>
+                    <div key={r.id} style={summaryRowStyle}>
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
+                        <span style={{ color: hasValue ? "#cbd5e1" : "#475569", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {r.num}. {r.label}
                         </span>
                       </div>
-                      <span style={{ color: t > 0 ? "#e2e8f0" : "#475569", fontSize: 12, fontWeight: t > 0 ? 600 : 400 }}>
-                        {fmt(t)}
-                      </span>
+                      <span style={{ ...summaryColStyle, color: hasValue ? "#94a3b8" : "#334155" }}>{fmt(f.gasto)}</span>
+                      <span style={{ ...summaryColStyle, color: hasValue ? "#34d399" : "#334155" }}>{fmt(f.utilidad)}</span>
+                      <span style={{ ...summaryColStyle, color: hasValue ? "#e2e8f0" : "#334155", fontWeight: hasValue ? 600 : 400 }}>{fmt(f.venta)}</span>
                     </div>
                   )
                 })}
               </div>
 
-              {/* Totales finales + botón */}
-              <div style={{ display: "grid", gap: 10, alignContent: "start", paddingLeft: isMobile ? 0 : 32, minWidth: 260 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                  <span style={{ color: "#64748b", fontSize: 13 }}>Subtotal</span>
-                  <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{fmt(grandSubtotal)}</span>
+              {/* Totales globales + guardar */}
+              <div style={{ paddingLeft: isMobile ? 0 : 32, display: "grid", gap: 0, alignContent: "start", minWidth: 240 }}>
+                <TotalBlock label="Total gasto" value={fmt(globalFinancials.gasto)} color="#94a3b8" />
+                <TotalBlock label="Total utilidad" value={fmt(globalFinancials.utilidad)} color="#34d399" />
+                <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
+                <TotalBlock label="Total precio de venta" value={fmt(globalFinancials.venta)} color="#a78bfa" large />
+
+                {/* Margen */}
+                <div style={marginBarContainerStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ color: "#64748b", fontSize: 11 }}>Margen de utilidad</span>
+                    <span style={{ color: marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171", fontSize: 12, fontWeight: 700 }}>
+                      {fmtPct(marginPct)}
+                    </span>
+                  </div>
+                  <div style={marginBarBgStyle}>
+                    <div style={{ ...marginBarFillStyle, width: `${Math.min(marginPct, 100)}%`, background: marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171" }} />
+                  </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                  <span style={{ color: "#64748b", fontSize: 13 }}>Markup ({markup || 0}%)</span>
-                  <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{fmt(markupAmt)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16, borderTop: "1px solid rgba(148,163,184,0.16)", paddingTop: 10 }}>
-                  <span style={{ color: "#f8fafc", fontSize: 15, fontWeight: 700 }}>Total</span>
-                  <span style={{ color: "#a78bfa", fontSize: 22, fontWeight: 700 }}>{fmt(grandTotal)}</span>
-                </div>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{ ...primaryButtonStyle, marginTop: 6, padding: "11px 20px", fontSize: 14 }}
-                >
+
+                <button onClick={handleSave} disabled={saving} style={{ ...primaryButtonStyle, marginTop: 16 }}>
                   {saving ? "Guardando..." : "Guardar cotización"}
                 </button>
               </div>
@@ -511,29 +559,33 @@ export default function CotizacionesPage() {
   )
 }
 
+function TotalBlock({ label, value, color, large }: { label: string; value: string; color: string; large?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "8px 0" }}>
+      <span style={{ color: "#64748b", fontSize: large ? 13 : 12 }}>{label}</span>
+      <span style={{ color, fontSize: large ? 20 : 14, fontWeight: 700 }}>{value}</span>
+    </div>
+  )
+}
+
 function RubroCard({
-  rubro,
-  values,
-  onUpdate,
-  rubroTotal,
-  twoColItems,
-  commissionPct,
-  commissionAmt,
-  onCommissionChange,
-  extraItems,
-  onAddExtra,
-  onUpdateExtra,
-  onRemoveExtra,
+  rubro, values, onUpdate, financials, twoColItems, isMobile,
+  commissionPct, commissionMarkup, commissionGasto,
+  onCommissionPctChange, onCommissionMarkupChange,
+  extras, onAddExtra, onUpdateExtra, onRemoveExtra,
 }: {
   rubro: RubroDef
   values: Record<string, ItemValues>
   onUpdate: (id: string, patch: Partial<ItemValues>) => void
-  rubroTotal: number
+  financials: RubroFinancials
   twoColItems?: boolean
+  isMobile: boolean
   commissionPct?: string
-  commissionAmt?: number
-  onCommissionChange?: (v: string) => void
-  extraItems: ExtraItem[]
+  commissionMarkup?: string
+  commissionGasto?: number
+  onCommissionPctChange?: (v: string) => void
+  onCommissionMarkupChange?: (v: string) => void
+  extras: ExtraItem[]
   onAddExtra: () => void
   onUpdateExtra: (tempId: string, patch: Partial<ExtraItem>) => void
   onRemoveExtra: (tempId: string) => void
@@ -543,6 +595,8 @@ function RubroCard({
   const col1 = twoColItems ? items.slice(0, mid) : items
   const col2 = twoColItems ? items.slice(mid) : []
 
+  const hasValue = financials.venta > 0
+
   return (
     <div style={rubroCardStyle(rubro.color)}>
       {/* Header */}
@@ -551,50 +605,65 @@ function RubroCard({
           <span style={rubroNumStyle(rubro.color)}>{rubro.num}</span>
           <p style={rubroLabelStyle}>{rubro.label}</p>
         </div>
-        <span style={{ color: rubroTotal > 0 ? rubro.color : "#475569", fontSize: 13, fontWeight: 700 }}>
-          {fmt(rubroTotal)}
-        </span>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {hasValue && (
+            <>
+              <span style={{ color: "#64748b", fontSize: 11 }}>
+                Gasto <strong style={{ color: "#94a3b8" }}>{fmt(financials.gasto)}</strong>
+              </span>
+              <span style={{ color: "#64748b", fontSize: 11 }}>
+                Utilidad <strong style={{ color: "#34d399" }}>{fmt(financials.utilidad)}</strong>
+              </span>
+            </>
+          )}
+          <span style={{ color: hasValue ? rubro.color : "#334155", fontSize: 13, fontWeight: 700 }}>
+            {fmt(financials.venta)}
+          </span>
+        </div>
       </div>
 
-      {/* Items predefinidos */}
-      <div style={{ display: "grid", gridTemplateColumns: twoColItems ? "1fr 1fr" : "1fr", gap: "4px 16px" }}>
+      {/* Columnas predefinidas */}
+      <div style={{ display: "grid", gridTemplateColumns: twoColItems ? "1fr 1fr" : "1fr", gap: "2px 16px" }}>
         {[col1, col2].map((col, ci) => (
-          <div key={ci} style={{ display: "grid", gap: 2 }}>
+          <div key={ci} style={{ display: "grid", gap: 0 }}>
             {col.map((item, idx) => {
               const isLast = idx === col.length - 1
-              const v = values[item.id] || DEFAULT_ITEM
-              const tot = calcItem(v)
 
               if (item.special === "agency_commission") {
+                const cg = commissionGasto || 0
+                const cv = venta(cg, commissionMarkup || "0")
                 return (
-                  <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)" }}>
+                  <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
                     <span style={itemLabelStyle}>{item.label}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <input
-                        type="number"
-                        value={commissionPct}
-                        onChange={(e) => onCommissionChange?.(e.target.value)}
-                        min="0"
-                        style={{ ...numInputStyle, width: 46 }}
-                        title="% de comisión"
-                      />
-                      <span style={{ color: "#64748b", fontSize: 11 }}>%</span>
-                      <span style={itemTotalStyle}>{fmt(commissionAmt || 0)}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                      <input type="number" value={commissionPct} onChange={(e) => onCommissionPctChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 44 }} title="% comisión" />
+                      <span style={sepStyle}>%  ·  Mkp</span>
+                      <input type="number" value={commissionMarkup} onChange={(e) => onCommissionMarkupChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 44 }} title="% markup" />
+                      <span style={sepStyle}>%</span>
+                      <span style={gastoStyle}>{fmt(cg)}</span>
+                      <span style={ventaStyle}>{fmt(cv)}</span>
                     </div>
                   </div>
                 )
               }
 
+              const v = values[item.id] || DEFAULT_ITEM
+              const ig = gasto(v)
+              const iv = venta(ig, v.markup)
+
               return (
-                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)" }}>
+                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
                   <span style={itemLabelStyle}>{item.label}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
-                    <input type="number" value={v.unit_price} onChange={(e) => onUpdate(item.id, { unit_price: e.target.value })} min="0" style={priceInputStyle} title="Precio unitario" />
-                    <span style={itemTotalStyle}>{fmt(tot)}</span>
+                    <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
+                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44 }} title="Markup %" />
+                    <span style={sepStyle}>%</span>
+                    <span style={gastoStyle}>{fmt(ig)}</span>
+                    <span style={ventaStyle}>{fmt(iv)}</span>
                   </div>
                 </div>
               )
@@ -604,25 +673,29 @@ function RubroCard({
       </div>
 
       {/* Conceptos adicionales */}
-      {extraItems.length > 0 && (
+      {extras.length > 0 && (
         <div style={{ display: "grid", gap: 2, paddingTop: 6, borderTop: "1px dashed rgba(148,163,184,0.12)" }}>
-          {extraItems.map((item) => {
-            const tot = calcItem({ qty: item.qty, days: item.days, unit_price: item.unit_price })
+          {extras.map((item) => {
+            const ig = gasto(item)
+            const iv = venta(ig, item.markup)
             return (
-              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6 }}>
+              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                 <input
                   value={item.description}
                   onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })}
                   placeholder="Nombre del concepto"
-                  style={{ ...extraDescInputStyle, flex: 1 }}
+                  style={{ ...extraDescInputStyle, flex: 1, minWidth: 80 }}
                 />
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                   <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
                   <span style={sepStyle}>×</span>
                   <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                   <span style={sepStyle}>×</span>
-                  <input type="number" value={item.unit_price} onChange={(e) => onUpdateExtra(item.tempId, { unit_price: e.target.value })} min="0" style={priceInputStyle} title="Precio unitario" />
-                  <span style={itemTotalStyle}>{fmt(tot)}</span>
+                  <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
+                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44 }} title="Markup %" />
+                  <span style={sepStyle}>%</span>
+                  <span style={gastoStyle}>{fmt(ig)}</span>
+                  <span style={ventaStyle}>{fmt(iv)}</span>
                   <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
                 </div>
               </div>
@@ -631,7 +704,6 @@ function RubroCard({
         </div>
       )}
 
-      {/* Botón agregar concepto */}
       <button onClick={onAddExtra} style={addExtraButtonStyle(rubro.color)}>
         + Agregar concepto
       </button>
@@ -647,6 +719,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   )
 }
+
+// ─── Styles ─────────────────────────────────────────────────────────────────
 
 function rubroCardStyle(color: string): React.CSSProperties {
   return {
@@ -668,6 +742,7 @@ const rubroHeaderStyle: React.CSSProperties = {
   gap: 12,
   paddingBottom: 10,
   borderBottom: "1px solid rgba(148,163,184,0.08)",
+  flexWrap: "wrap",
 }
 
 function rubroNumStyle(color: string): React.CSSProperties {
@@ -698,7 +773,7 @@ const itemRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: 6,
   padding: "5px 0",
 }
 
@@ -706,23 +781,32 @@ const itemLabelStyle: React.CSSProperties = {
   color: "#94a3b8",
   fontSize: 12,
   flex: 1,
-  minWidth: 0,
+  minWidth: 60,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 }
 
-const itemTotalStyle: React.CSSProperties = {
+const gastoStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 11,
+  minWidth: 70,
+  textAlign: "right",
+  fontVariantNumeric: "tabular-nums",
+}
+
+const ventaStyle: React.CSSProperties = {
   color: "#c4b5fd",
   fontSize: 12,
   fontWeight: 600,
-  minWidth: 80,
+  minWidth: 78,
   textAlign: "right",
+  fontVariantNumeric: "tabular-nums",
 }
 
 const numInputStyle: React.CSSProperties = {
   width: 46,
-  padding: "4px 6px",
+  padding: "4px 5px",
   border: "1px solid rgba(148,163,184,0.16)",
   borderRadius: 6,
   background: "rgba(2,6,23,0.55)",
@@ -733,91 +817,16 @@ const numInputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 }
 
-const priceInputStyle: React.CSSProperties = {
+const costInputStyle: React.CSSProperties = {
   ...numInputStyle,
-  width: 88,
+  width: 82,
 }
 
 const sepStyle: React.CSSProperties = {
   color: "#475569",
   fontSize: 11,
   flexShrink: 0,
-}
-
-const appShellStyle: React.CSSProperties = { display: "flex", minHeight: "100vh" }
-const mainStyle: React.CSSProperties = { flex: 1, minWidth: 0 }
-const pageContainerStyle: React.CSSProperties = { maxWidth: 1100, margin: "0 auto" }
-const pageHeaderStyle: React.CSSProperties = { marginBottom: 18 }
-
-const eyebrowStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#a78bfa",
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
-  fontWeight: 700,
-}
-
-const pageTitleStyle: React.CSSProperties = {
-  margin: "6px 0 0",
-  color: "#f8fafc",
-  fontSize: 28,
-  letterSpacing: -0.6,
-  lineHeight: 1.1,
-}
-
-const pageSubtitleStyle: React.CSSProperties = {
-  margin: "6px 0 0",
-  color: "#64748b",
-  fontSize: 13,
-}
-
-const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
-  backdropFilter: "blur(16px)",
-  borderRadius: 16,
-  padding: "16px 18px",
-}
-
-const panelHeaderStyle: React.CSSProperties = {
-  marginBottom: 14,
-  paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
-}
-
-const panelTitleStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#f8fafc",
-  fontSize: 14,
-  fontWeight: 600,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
-  borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
-  outline: "none",
-  fontSize: 13,
-  lineHeight: 1.35,
-  boxSizing: "border-box",
-}
-
-const primaryButtonStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 16px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
-  border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontWeight: 600,
-  fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  whiteSpace: "nowrap",
 }
 
 const extraDescInputStyle: React.CSSProperties = {
@@ -860,7 +869,141 @@ function addExtraButtonStyle(color: string): React.CSSProperties {
     fontSize: 11,
     fontWeight: 600,
     cursor: "pointer",
-    marginTop: 4,
+    marginTop: 2,
     opacity: 0.8,
   }
+}
+
+const columnLegendStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+  padding: "6px 18px 2px",
+  marginTop: 10,
+}
+
+const legendItemStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 10,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+  minWidth: 46,
+  textAlign: "right",
+}
+
+const summaryHeaderRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  paddingBottom: 8,
+  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  marginBottom: 4,
+}
+
+const summaryColHeaderStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 10,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+  minWidth: 90,
+  textAlign: "right",
+}
+
+const summaryRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "4px 0",
+}
+
+const summaryColStyle: React.CSSProperties = {
+  fontSize: 12,
+  minWidth: 90,
+  textAlign: "right",
+  fontVariantNumeric: "tabular-nums",
+}
+
+const marginBarContainerStyle: React.CSSProperties = {
+  marginTop: 12,
+  padding: "10px 0 0",
+  borderTop: "1px solid rgba(148,163,184,0.10)",
+}
+
+const marginBarBgStyle: React.CSSProperties = {
+  height: 6,
+  borderRadius: 999,
+  background: "rgba(148,163,184,0.12)",
+  overflow: "hidden",
+}
+
+const marginBarFillStyle: React.CSSProperties = {
+  height: "100%",
+  borderRadius: 999,
+  transition: "width 0.3s ease",
+}
+
+const appShellStyle: React.CSSProperties = { display: "flex", minHeight: "100vh" }
+const mainStyle: React.CSSProperties = { flex: 1, minWidth: 0 }
+const pageContainerStyle: React.CSSProperties = { maxWidth: 1100, margin: "0 auto" }
+const pageHeaderStyle: React.CSSProperties = { marginBottom: 18 }
+
+const eyebrowStyle: React.CSSProperties = {
+  margin: 0, color: "#a78bfa", fontSize: 11,
+  textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700,
+}
+
+const pageTitleStyle: React.CSSProperties = {
+  margin: "6px 0 0", color: "#f8fafc", fontSize: 28,
+  letterSpacing: -0.6, lineHeight: 1.1,
+}
+
+const pageSubtitleStyle: React.CSSProperties = {
+  margin: "6px 0 0", color: "#64748b", fontSize: 13,
+}
+
+const panelStyle: React.CSSProperties = {
+  background: "rgba(15, 23, 42, 0.72)",
+  border: "1px solid rgba(148,163,184,0.14)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  backdropFilter: "blur(16px)",
+  borderRadius: 16,
+  padding: "16px 18px",
+}
+
+const panelHeaderStyle: React.CSSProperties = {
+  marginBottom: 14,
+  paddingBottom: 12,
+  borderBottom: "1px solid rgba(148,163,184,0.10)",
+}
+
+const panelTitleStyle: React.CSSProperties = {
+  margin: 0, color: "#f8fafc", fontSize: 14, fontWeight: 600,
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 10px",
+  border: "1px solid rgba(148,163,184,0.16)",
+  borderRadius: 8,
+  background: "rgba(2,6,23,0.55)",
+  color: "#f8fafc",
+  outline: "none",
+  fontSize: 13,
+  lineHeight: 1.35,
+  boxSizing: "border-box",
+}
+
+const primaryButtonStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 20px",
+  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+  color: "white",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 14,
+  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
 }
