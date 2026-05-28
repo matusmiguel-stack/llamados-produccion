@@ -12,6 +12,7 @@ import {
   getEmployeesWithAnniversaryOnDate,
   getEmployeesWithBirthdayOnDate,
 } from "../../lib/employee-dates"
+import { formatShootSchedule, shootOverlapsDate } from "../../lib/shoot-dates"
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -413,29 +414,6 @@ function getLocalDateString(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
   return `${year}-${month}-${day}`
-}
-
-function shootOverlapsDate(shoot: any, dateStr: string) {
-  const dayStart = new Date(`${dateStr}T00:00:00`)
-  const dayEnd = new Date(`${dateStr}T23:59:59.999`)
-  const start = new Date(shoot.start_time)
-  const end = new Date(shoot.end_time)
-  return start <= dayEnd && end >= dayStart
-}
-
-function formatShootSchedule(shoot: any) {
-  if (shoot.all_day) return "Todo el día"
-
-  const start = new Date(shoot.start_time)
-  const end = new Date(shoot.end_time)
-
-  return `${start.toLocaleTimeString("es-CL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })} – ${end.toLocaleTimeString("es-CL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`
 }
 
 function statusLabel(status: string) {
