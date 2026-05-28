@@ -8,54 +8,133 @@ import { AppSidebar } from "../../components/AppSidebar"
 type Client = { id: string; name: string }
 type Project = { id: string; name: string; client_id: string }
 
-type LocalItem = {
-  tempId: string
-  description: string
+type ItemValues = {
   qty: string
   days: string
   unit_price: string
-  released_expense: string
-  real_expense: string
-  supplier: string
 }
 
-type LocalSection = {
-  tempId: string
-  name: string
-  items: LocalItem[]
+type ItemDef = {
+  id: string
+  label: string
+  special?: "agency_commission"
 }
 
-function makeItem(): LocalItem {
-  return {
-    tempId: crypto.randomUUID(),
-    description: "",
-    qty: "1",
-    days: "1",
-    unit_price: "0",
-    released_expense: "0",
-    real_expense: "0",
-    supplier: "",
+type RubroDef = {
+  id: string
+  num: number
+  label: string
+  color: string
+  items: ItemDef[]
+}
+
+const RUBROS: RubroDef[] = [
+  {
+    id: "r1", num: 1, label: "Preproducción", color: "#6366f1",
+    items: [
+      { id: "guiones", label: "Desarrollo de guiones" },
+    ],
+  },
+  {
+    id: "r2", num: 2, label: "Personal Técnico", color: "#a78bfa",
+    items: [
+      { id: "personal_tecnico_gen", label: "Personal Técnico" },
+      { id: "productor", label: "Productor" },
+      { id: "asist_produccion", label: "Asistente Producción" },
+      { id: "director", label: "Director" },
+      { id: "ad", label: "AD" },
+      { id: "dp", label: "DP" },
+      { id: "asist_camara", label: "Asist. cámara" },
+      { id: "fotografo", label: "Fotógrafo" },
+      { id: "asist_fotografo", label: "Asist. Fotógrafo" },
+      { id: "gaffer", label: "Gaffer" },
+      { id: "staff", label: "Staff" },
+      { id: "vestuarista", label: "Vestuarista" },
+      { id: "asist_vestuario", label: "Asist. Vestuario" },
+      { id: "makeup", label: "Make up" },
+      { id: "asist_makeup", label: "Asist. Makeup" },
+      { id: "dir_arte", label: "Director de Arte" },
+      { id: "decorador", label: "Decorador" },
+      { id: "swing_arte", label: "Swing Arte" },
+      { id: "sonidista", label: "Sonidista" },
+    ],
+  },
+  {
+    id: "r3", num: 3, label: "Gastos de Producción", color: "#38bdf8",
+    items: [
+      { id: "alimentacion", label: "Alimentación" },
+      { id: "camionetas", label: "Camionetas de producción" },
+      { id: "videoassist", label: "Videoassist" },
+      { id: "disco_duro", label: "Disco Duro" },
+      { id: "radios", label: "Radios" },
+      { id: "caja_chica", label: "Caja chica" },
+      { id: "gastos_prod", label: "Gastos de producción" },
+    ],
+  },
+  {
+    id: "r4", num: 4, label: "Utilería y Vestuario", color: "#34d399",
+    items: [
+      { id: "presup_vestuario", label: "Presupuesto Vestuario" },
+      { id: "presup_arte", label: "Presupuesto Arte y Props" },
+    ],
+  },
+  {
+    id: "r5", num: 5, label: "Foro y Escenografía", color: "#fbbf24",
+    items: [
+      { id: "renta_locacion", label: "Renta de locación" },
+      { id: "construccion_sets", label: "Construcción de sets" },
+      { id: "scouter", label: "Scouter" },
+    ],
+  },
+  {
+    id: "r6", num: 6, label: "Renta de Equipo", color: "#fb923c",
+    items: [
+      { id: "paquete_camara", label: "Paquete de cámara" },
+      { id: "optica", label: "Óptica" },
+      { id: "equipo_ilum", label: "Equipo de iluminación y tramoya" },
+      { id: "equipo_ilum_foto", label: "Equipo de iluminación fotográfica" },
+      { id: "planta_luz", label: "Planta de luz" },
+    ],
+  },
+  {
+    id: "r7", num: 7, label: "Talento", color: "#f472b6",
+    items: [
+      { id: "talento_principal", label: "Talento Principal" },
+      { id: "talento_secundario", label: "Talento Secundario" },
+      { id: "extras", label: "Extras" },
+      { id: "comision_agencia", label: "Comisión de agencia", special: "agency_commission" },
+    ],
+  },
+  {
+    id: "r8", num: 8, label: "Edición y Audio", color: "#818cf8",
+    items: [
+      { id: "edicion_video", label: "Edición de video" },
+    ],
+  },
+  {
+    id: "r9", num: 9, label: "Postproducción", color: "#c084fc",
+    items: [
+      { id: "correccion_color", label: "Corrección de color" },
+      { id: "diseno_sonoro", label: "Diseño sonoro" },
+      { id: "retoque_foto", label: "Retoque fotográfico" },
+    ],
+  },
+]
+
+const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", unit_price: "0" }
+
+function initValues(): Record<string, ItemValues> {
+  const vals: Record<string, ItemValues> = {}
+  for (const rubro of RUBROS) {
+    for (const item of rubro.items) {
+      if (!item.special) vals[item.id] = { ...DEFAULT_ITEM }
+    }
   }
+  return vals
 }
 
-function makeSection(): LocalSection {
-  return { tempId: crypto.randomUUID(), name: "", items: [makeItem()] }
-}
-
-function calcItemTotal(item: LocalItem): number {
-  return (
-    (parseFloat(item.qty) || 0) *
-    (parseFloat(item.days) || 0) *
-    (parseFloat(item.unit_price) || 0)
-  )
-}
-
-function calcSectionSubtotal(section: LocalSection): number {
-  return section.items.reduce((sum, item) => sum + calcItemTotal(item), 0)
-}
-
-function calcSubtotal(sections: LocalSection[]): number {
-  return sections.reduce((sum, sec) => sum + calcSectionSubtotal(sec), 0)
+function calcItem(v: ItemValues): number {
+  return (parseFloat(v.qty) || 0) * (parseFloat(v.days) || 0) * (parseFloat(v.unit_price) || 0)
 }
 
 function fmt(n: number): string {
@@ -75,18 +154,35 @@ export default function CotizacionesPage() {
   const [quoteName, setQuoteName] = useState("")
   const [markup, setMarkup] = useState("0")
   const [status, setStatus] = useState<"draft" | "sent" | "approved">("draft")
-  const [sections, setSections] = useState<LocalSection[]>([makeSection()])
+  const [values, setValues] = useState<Record<string, ItemValues>>(initValues())
+  const [commissionPct, setCommissionPct] = useState("30")
 
   const isAdmin = profile?.role === "admin"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
-  const subtotal = calcSubtotal(sections)
-  const markupAmt = subtotal * ((parseFloat(markup) || 0) / 100)
-  const total = subtotal + markupAmt
+
+  const commissionBase =
+    calcItem(values["talento_principal"] || DEFAULT_ITEM) +
+    calcItem(values["talento_secundario"] || DEFAULT_ITEM) +
+    calcItem(values["extras"] || DEFAULT_ITEM)
+  const commissionAmt = commissionBase * ((parseFloat(commissionPct) || 0) / 100)
+
+  function getRubroTotal(rubro: RubroDef): number {
+    return rubro.items.reduce((sum, item) => {
+      if (item.special === "agency_commission") return sum + commissionAmt
+      return sum + calcItem(values[item.id] || DEFAULT_ITEM)
+    }, 0)
+  }
+
+  const grandSubtotal = RUBROS.reduce((sum, r) => sum + getRubroTotal(r), 0)
+  const markupAmt = grandSubtotal * ((parseFloat(markup) || 0) / 100)
+  const grandTotal = grandSubtotal + markupAmt
+
+  function updateItem(itemId: string, patch: Partial<ItemValues>) {
+    setValues((prev) => ({ ...prev, [itemId]: { ...(prev[itemId] || DEFAULT_ITEM), ...patch } }))
+  }
 
   useEffect(() => {
-    function checkMobile() {
-      setIsMobile(window.innerWidth < 768)
-    }
+    function checkMobile() { setIsMobile(window.innerWidth < 768) }
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
@@ -96,79 +192,24 @@ export default function CotizacionesPage() {
     async function load() {
       const auth = await requireSessionProfile()
       if (!auth) return
-      if (auth.profile.role !== "admin") {
-        window.location.href = "/"
-        return
-      }
+      if (auth.profile.role !== "admin") { window.location.href = "/"; return }
       setProfile(auth.profile)
-      const [{ data: clientsData }, { data: projectsData }] = await Promise.all([
+      const [{ data: c }, { data: p }] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
         supabase.from("projects").select("id, name, client_id").order("name"),
       ])
-      setClients(clientsData || [])
-      setProjects(projectsData || [])
+      setClients(c || [])
+      setProjects(p || [])
     }
     load()
   }, [])
 
-  useEffect(() => {
-    setProjectId("")
-  }, [clientId])
-
-  function updateSection(tempId: string, patch: Partial<Omit<LocalSection, "items">>) {
-    setSections((prev) =>
-      prev.map((s) => (s.tempId === tempId ? { ...s, ...patch } : s))
-    )
-  }
-
-  function removeSection(tempId: string) {
-    setSections((prev) => prev.filter((s) => s.tempId !== tempId))
-  }
-
-  function addItem(sectionTempId: string) {
-    setSections((prev) =>
-      prev.map((s) =>
-        s.tempId === sectionTempId ? { ...s, items: [...s.items, makeItem()] } : s
-      )
-    )
-  }
-
-  function updateItem(
-    sectionTempId: string,
-    itemTempId: string,
-    patch: Partial<LocalItem>
-  ) {
-    setSections((prev) =>
-      prev.map((s) =>
-        s.tempId === sectionTempId
-          ? {
-              ...s,
-              items: s.items.map((i) =>
-                i.tempId === itemTempId ? { ...i, ...patch } : i
-              ),
-            }
-          : s
-      )
-    )
-  }
-
-  function removeItem(sectionTempId: string, itemTempId: string) {
-    setSections((prev) =>
-      prev.map((s) =>
-        s.tempId === sectionTempId
-          ? { ...s, items: s.items.filter((i) => i.tempId !== itemTempId) }
-          : s
-      )
-    )
-  }
+  useEffect(() => { setProjectId("") }, [clientId])
 
   async function handleSave() {
     if (!clientId) return alert("Selecciona un cliente")
     if (!projectId) return alert("Selecciona un proyecto")
     if (!quoteName.trim()) return alert("Escribe el nombre de la cotización")
-    if (sections.length === 0) return alert("Agrega al menos una sección")
-    if (sections.some((s) => !s.name.trim()))
-      return alert("Todas las secciones deben tener nombre")
 
     setSaving(true)
     try {
@@ -186,45 +227,56 @@ export default function CotizacionesPage() {
 
       if (quoteErr) throw quoteErr
 
-      for (let si = 0; si < sections.length; si++) {
-        const sec = sections[si]
+      for (let ri = 0; ri < RUBROS.length; ri++) {
+        const rubro = RUBROS[ri]
         const { data: secData, error: secErr } = await supabase
           .from("quote_sections")
-          .insert({
-            quote_id: quoteData.id,
-            name: sec.name.trim(),
-            order_index: si,
-          })
+          .insert({ quote_id: quoteData.id, name: rubro.label, order_index: ri })
           .select("id")
           .single()
 
         if (secErr) throw secErr
 
-        if (sec.items.length > 0) {
-          const { error: itemsErr } = await supabase.from("quote_items").insert(
-            sec.items.map((item, ii) => ({
+        const itemsToInsert = rubro.items.map((item, ii) => {
+          if (item.special === "agency_commission") {
+            return {
               section_id: secData.id,
-              description: item.description,
-              qty: parseFloat(item.qty) || 0,
-              days: parseFloat(item.days) || 0,
-              unit_price: parseFloat(item.unit_price) || 0,
-              released_expense: parseFloat(item.released_expense) || 0,
-              real_expense: parseFloat(item.real_expense) || 0,
-              supplier: item.supplier || null,
+              description: `Comisión de agencia (${commissionPct}%)`,
+              qty: 1,
+              days: 1,
+              unit_price: commissionAmt,
+              released_expense: 0,
+              real_expense: 0,
+              supplier: commissionPct,
               order_index: ii,
-            }))
-          )
-          if (itemsErr) throw itemsErr
-        }
+            }
+          }
+          const v = values[item.id] || DEFAULT_ITEM
+          return {
+            section_id: secData.id,
+            description: item.label,
+            qty: parseFloat(v.qty) || 0,
+            days: parseFloat(v.days) || 0,
+            unit_price: parseFloat(v.unit_price) || 0,
+            released_expense: 0,
+            real_expense: 0,
+            supplier: null,
+            order_index: ii,
+          }
+        })
+
+        const { error: itemsErr } = await supabase.from("quote_items").insert(itemsToInsert)
+        if (itemsErr) throw itemsErr
       }
 
+      setValues(initValues())
       setClientId("")
       setProjectId("")
       setQuoteName("")
       setMarkup("0")
+      setCommissionPct("30")
       setStatus("draft")
-      setSections([makeSection()])
-      alert("Cotización guardada. Puedes revisarla desde la sección de Proyectos.")
+      alert("Cotización guardada. Revísala desde la sección de Proyectos.")
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -237,9 +289,7 @@ export default function CotizacionesPage() {
     window.location.href = "/login"
   }
 
-  const ITEM_GRID = isMobile
-    ? "1fr"
-    : "2fr 64px 64px 110px 110px 110px 1fr 110px 36px"
+  const twoCol = { display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }
 
   return (
     <div style={appShellStyle}>
@@ -254,19 +304,12 @@ export default function CotizacionesPage() {
         onLogout={logout}
       />
 
-      <main
-        style={{
-          ...mainStyle,
-          padding: isMobile ? "76px 14px 40px" : "28px 32px 40px",
-        }}
-      >
+      <main style={{ ...mainStyle, padding: isMobile ? "76px 14px 40px" : "28px 32px 40px" }}>
         <div style={pageContainerStyle}>
           <header style={pageHeaderStyle}>
             <p style={eyebrowStyle}>Finanzas</p>
             <h1 style={pageTitleStyle}>Nueva cotización</h1>
-            <p style={pageSubtitleStyle}>
-              Crea un presupuesto completo con secciones e ítems
-            </p>
+            <p style={pageSubtitleStyle}>Presupuesto estructurado por rubros</p>
           </header>
 
           {/* Datos generales */}
@@ -274,486 +317,129 @@ export default function CotizacionesPage() {
             <div style={panelHeaderStyle}>
               <p style={panelTitleStyle}>Datos generales</p>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gap: 12,
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-              }}
-            >
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 120px 140px" }}>
               <Field label="Cliente">
-                <select
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="">Selecciona un cliente...</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
+                <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={inputStyle}>
+                  <option value="">Selecciona...</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </Field>
-
               <Field label="Proyecto">
-                <select
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  style={inputStyle}
-                  disabled={!clientId}
-                >
-                  <option value="">Selecciona un proyecto...</option>
-                  {filteredProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
+                <select value={projectId} onChange={(e) => setProjectId(e.target.value)} style={inputStyle} disabled={!clientId}>
+                  <option value="">Selecciona...</option>
+                  {filteredProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </Field>
-
               <Field label="Nombre de la cotización">
-                <input
-                  value={quoteName}
-                  onChange={(e) => setQuoteName(e.target.value)}
-                  placeholder="Ej. Propuesta comercial v1"
-                  style={inputStyle}
-                />
+                <input value={quoteName} onChange={(e) => setQuoteName(e.target.value)} placeholder="Ej. Propuesta v1" style={inputStyle} />
               </Field>
-
-              <div
-                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
-              >
-                <Field label="Markup (%)">
-                  <input
-                    type="number"
-                    value={markup}
-                    onChange={(e) => setMarkup(e.target.value)}
-                    min="0"
-                    style={inputStyle}
-                  />
-                </Field>
-                <Field label="Estado">
-                  <select
-                    value={status}
-                    onChange={(e) =>
-                      setStatus(e.target.value as "draft" | "sent" | "approved")
-                    }
-                    style={inputStyle}
-                  >
-                    <option value="draft">Borrador</option>
-                    <option value="sent">Enviada</option>
-                    <option value="approved">Aprobada</option>
-                  </select>
-                </Field>
-              </div>
+              <Field label="Markup (%)">
+                <input type="number" value={markup} onChange={(e) => setMarkup(e.target.value)} min="0" style={inputStyle} />
+              </Field>
+              <Field label="Estado">
+                <select value={status} onChange={(e) => setStatus(e.target.value as any)} style={inputStyle}>
+                  <option value="draft">Borrador</option>
+                  <option value="sent">Enviada</option>
+                  <option value="approved">Aprobada</option>
+                </select>
+              </Field>
             </div>
           </section>
 
-          {/* Secciones */}
-          {sections.map((section, si) => (
-            <section key={section.tempId} style={{ ...panelStyle, marginTop: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 12,
-                  paddingBottom: 12,
-                  borderBottom: "1px solid rgba(148,163,184,0.10)",
-                }}
-              >
-                <input
-                  value={section.name}
-                  onChange={(e) =>
-                    updateSection(section.tempId, { name: e.target.value })
-                  }
-                  placeholder={`Sección ${si + 1} — Ej. Producción, Locación, Técnica...`}
-                  style={{ ...inputStyle, flex: 1, fontWeight: 600, fontSize: 14 }}
-                />
-                {sections.length > 1 && (
-                  <button
-                    onClick={() => removeSection(section.tempId)}
-                    style={dangerButtonSmallStyle}
-                  >
-                    Eliminar sección
-                  </button>
-                )}
-              </div>
+          {/* Rubros */}
+          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
 
-              {/* Encabezado de tabla — solo desktop */}
-              {!isMobile && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: ITEM_GRID,
-                    gap: 8,
-                    padding: "0 4px 8px",
-                    color: "#64748b",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.6,
-                  }}
-                >
-                  <span>Descripción</span>
-                  <span style={{ textAlign: "right" }}>Cant.</span>
-                  <span style={{ textAlign: "right" }}>Días</span>
-                  <span style={{ textAlign: "right" }}>P. unit.</span>
-                  <span style={{ textAlign: "right" }}>G. lib.</span>
-                  <span style={{ textAlign: "right" }}>G. real</span>
-                  <span>Proveedor</span>
-                  <span style={{ textAlign: "right" }}>Total</span>
-                  <span />
-                </div>
-              )}
+            {/* Fila A: Preproducción + Edición y Audio */}
+            <div style={twoCol}>
+              <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[0])} />
+              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[7])} />
+            </div>
 
-              {/* Ítems */}
-              <div style={{ display: "grid", gap: 6 }}>
-                {section.items.map((item) => {
-                  const itemTot = calcItemTotal(item)
+            {/* Fila B: Personal Técnico — full width por su tamaño */}
+            <RubroCard
+              rubro={RUBROS[1]}
+              values={values}
+              onUpdate={updateItem}
+              rubroTotal={getRubroTotal(RUBROS[1])}
+              twoColItems={!isMobile}
+            />
+
+            {/* Fila C: Gastos de Producción + Utilería y Vestuario */}
+            <div style={twoCol}>
+              <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[2])} />
+              <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[3])} />
+            </div>
+
+            {/* Fila D: Foro y Escenografía + Renta de Equipo */}
+            <div style={twoCol}>
+              <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[4])} />
+              <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[5])} />
+            </div>
+
+            {/* Fila E: Talento + Postproducción */}
+            <div style={twoCol}>
+              <RubroCard
+                rubro={RUBROS[6]}
+                values={values}
+                onUpdate={updateItem}
+                rubroTotal={getRubroTotal(RUBROS[6])}
+                commissionPct={commissionPct}
+                commissionAmt={commissionAmt}
+                onCommissionChange={setCommissionPct}
+              />
+              <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} rubroTotal={getRubroTotal(RUBROS[8])} />
+            </div>
+          </div>
+
+          {/* Totales + guardar */}
+          <section style={{ ...panelStyle, marginTop: 12 }}>
+            <div style={{ display: "grid", gap: isMobile ? 20 : 0, gridTemplateColumns: isMobile ? "1fr" : "1fr auto" }}>
+
+              {/* Breakdown por rubro */}
+              <div style={{ display: "grid", gap: 6, paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
+                <p style={{ margin: "0 0 6px", color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                  Resumen por rubro
+                </p>
+                {RUBROS.map((r) => {
+                  const t = getRubroTotal(r)
                   return (
-                    <div
-                      key={item.tempId}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: ITEM_GRID,
-                        gap: 8,
-                        alignItems: "center",
-                        padding: 8,
-                        borderRadius: 10,
-                        background: "rgba(255,255,255,0.025)",
-                        border: "1px solid rgba(148,163,184,0.08)",
-                      }}
-                    >
-                      {isMobile ? (
-                        <div style={{ display: "grid", gap: 8 }}>
-                          <Field label="Descripción">
-                            <input
-                              value={item.description}
-                              onChange={(e) =>
-                                updateItem(section.tempId, item.tempId, {
-                                  description: e.target.value,
-                                })
-                              }
-                              placeholder="Descripción del ítem"
-                              style={inputStyle}
-                            />
-                          </Field>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr 1fr",
-                              gap: 8,
-                            }}
-                          >
-                            <Field label="Cant.">
-                              <input
-                                type="number"
-                                value={item.qty}
-                                onChange={(e) =>
-                                  updateItem(section.tempId, item.tempId, {
-                                    qty: e.target.value,
-                                  })
-                                }
-                                min="0"
-                                style={inputStyle}
-                              />
-                            </Field>
-                            <Field label="Días">
-                              <input
-                                type="number"
-                                value={item.days}
-                                onChange={(e) =>
-                                  updateItem(section.tempId, item.tempId, {
-                                    days: e.target.value,
-                                  })
-                                }
-                                min="0"
-                                style={inputStyle}
-                              />
-                            </Field>
-                            <Field label="P. unit.">
-                              <input
-                                type="number"
-                                value={item.unit_price}
-                                onChange={(e) =>
-                                  updateItem(section.tempId, item.tempId, {
-                                    unit_price: e.target.value,
-                                  })
-                                }
-                                min="0"
-                                style={inputStyle}
-                              />
-                            </Field>
-                          </div>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 1fr",
-                              gap: 8,
-                            }}
-                          >
-                            <Field label="G. liberado">
-                              <input
-                                type="number"
-                                value={item.released_expense}
-                                onChange={(e) =>
-                                  updateItem(section.tempId, item.tempId, {
-                                    released_expense: e.target.value,
-                                  })
-                                }
-                                min="0"
-                                style={inputStyle}
-                              />
-                            </Field>
-                            <Field label="G. real">
-                              <input
-                                type="number"
-                                value={item.real_expense}
-                                onChange={(e) =>
-                                  updateItem(section.tempId, item.tempId, {
-                                    real_expense: e.target.value,
-                                  })
-                                }
-                                min="0"
-                                style={inputStyle}
-                              />
-                            </Field>
-                          </div>
-                          <Field label="Proveedor">
-                            <input
-                              value={item.supplier}
-                              onChange={(e) =>
-                                updateItem(section.tempId, item.tempId, {
-                                  supplier: e.target.value,
-                                })
-                              }
-                              placeholder="Nombre del proveedor"
-                              style={inputStyle}
-                            />
-                          </Field>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span style={itemTotalStyle}>{fmt(itemTot)}</span>
-                            {section.items.length > 1 && (
-                              <button
-                                onClick={() =>
-                                  removeItem(section.tempId, item.tempId)
-                                }
-                                style={dangerButtonSmallStyle}
-                              >
-                                Quitar
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            value={item.description}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                description: e.target.value,
-                              })
-                            }
-                            placeholder="Descripción"
-                            style={inputStyle}
-                          />
-                          <input
-                            type="number"
-                            value={item.qty}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                qty: e.target.value,
-                              })
-                            }
-                            min="0"
-                            style={{ ...inputStyle, textAlign: "right" }}
-                          />
-                          <input
-                            type="number"
-                            value={item.days}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                days: e.target.value,
-                              })
-                            }
-                            min="0"
-                            style={{ ...inputStyle, textAlign: "right" }}
-                          />
-                          <input
-                            type="number"
-                            value={item.unit_price}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                unit_price: e.target.value,
-                              })
-                            }
-                            min="0"
-                            style={{ ...inputStyle, textAlign: "right" }}
-                          />
-                          <input
-                            type="number"
-                            value={item.released_expense}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                released_expense: e.target.value,
-                              })
-                            }
-                            min="0"
-                            style={{ ...inputStyle, textAlign: "right" }}
-                          />
-                          <input
-                            type="number"
-                            value={item.real_expense}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                real_expense: e.target.value,
-                              })
-                            }
-                            min="0"
-                            style={{ ...inputStyle, textAlign: "right" }}
-                          />
-                          <input
-                            value={item.supplier}
-                            onChange={(e) =>
-                              updateItem(section.tempId, item.tempId, {
-                                supplier: e.target.value,
-                              })
-                            }
-                            placeholder="Proveedor"
-                            style={inputStyle}
-                          />
-                          <span
-                            style={{
-                              ...itemTotalStyle,
-                              textAlign: "right",
-                              display: "block",
-                            }}
-                          >
-                            {fmt(itemTot)}
-                          </span>
-                          <div style={{ display: "flex", justifyContent: "center" }}>
-                            {section.items.length > 1 && (
-                              <button
-                                onClick={() =>
-                                  removeItem(section.tempId, item.tempId)
-                                }
-                                style={{ ...dangerButtonSmallStyle, padding: "5px 8px" }}
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
+                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: 999, background: r.color, flexShrink: 0 }} />
+                        <span style={{ color: t > 0 ? "#cbd5e1" : "#475569", fontSize: 12 }}>
+                          {r.num}. {r.label}
+                        </span>
+                      </div>
+                      <span style={{ color: t > 0 ? "#e2e8f0" : "#475569", fontSize: 12, fontWeight: t > 0 ? 600 : 400 }}>
+                        {fmt(t)}
+                      </span>
                     </div>
                   )
                 })}
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 10,
-                  paddingTop: 10,
-                  borderTop: "1px solid rgba(148,163,184,0.08)",
-                }}
-              >
+              {/* Totales finales + botón */}
+              <div style={{ display: "grid", gap: 10, alignContent: "start", paddingLeft: isMobile ? 0 : 32, minWidth: 260 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ color: "#64748b", fontSize: 13 }}>Subtotal</span>
+                  <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{fmt(grandSubtotal)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ color: "#64748b", fontSize: 13 }}>Markup ({markup || 0}%)</span>
+                  <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{fmt(markupAmt)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16, borderTop: "1px solid rgba(148,163,184,0.16)", paddingTop: 10 }}>
+                  <span style={{ color: "#f8fafc", fontSize: 15, fontWeight: 700 }}>Total</span>
+                  <span style={{ color: "#a78bfa", fontSize: 22, fontWeight: 700 }}>{fmt(grandTotal)}</span>
+                </div>
                 <button
-                  onClick={() => addItem(section.tempId)}
-                  style={ghostButtonStyle}
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{ ...primaryButtonStyle, marginTop: 6, padding: "11px 20px", fontSize: 14 }}
                 >
-                  + Agregar ítem
+                  {saving ? "Guardando..." : "Guardar cotización"}
                 </button>
-                <span style={sectionTotalStyle}>
-                  Sección:{" "}
-                  <strong>{fmt(calcSectionSubtotal(section))}</strong>
-                </span>
               </div>
-            </section>
-          ))}
-
-          <button
-            onClick={() => setSections((prev) => [...prev, makeSection()])}
-            style={{
-              ...ghostButtonStyle,
-              marginTop: 12,
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 12,
-              justifyContent: "center",
-            }}
-          >
-            + Agregar sección
-          </button>
-
-          {/* Totales y guardar */}
-          <section style={{ ...panelStyle, marginTop: 12 }}>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: isMobile ? "column" : "row",
-                alignItems: isMobile ? "stretch" : "flex-end",
-                justifyContent: "space-between",
-                gap: 16,
-              }}
-            >
-              <div style={totalsBoxStyle}>
-                <div style={totalRowStyle}>
-                  <span style={totalLabelStyle}>Subtotal</span>
-                  <span style={totalValueStyle}>{fmt(subtotal)}</span>
-                </div>
-                <div style={totalRowStyle}>
-                  <span style={totalLabelStyle}>Markup ({markup || 0}%)</span>
-                  <span style={totalValueStyle}>{fmt(markupAmt)}</span>
-                </div>
-                <div
-                  style={{
-                    ...totalRowStyle,
-                    borderTop: "1px solid rgba(148,163,184,0.18)",
-                    paddingTop: 10,
-                    marginTop: 4,
-                  }}
-                >
-                  <span
-                    style={{
-                      ...totalLabelStyle,
-                      color: "#f8fafc",
-                      fontWeight: 700,
-                      fontSize: 14,
-                    }}
-                  >
-                    Total
-                  </span>
-                  <span
-                    style={{
-                      ...totalValueStyle,
-                      color: "#a78bfa",
-                      fontSize: 20,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {fmt(total)}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{ ...primaryButtonStyle, padding: "12px 24px", fontSize: 14 }}
-              >
-                {saving ? "Guardando..." : "Guardar cotización"}
-              </button>
             </div>
           </section>
         </div>
@@ -762,39 +448,223 @@ export default function CotizacionesPage() {
   )
 }
 
-function Field({
-  label,
-  children,
+function RubroCard({
+  rubro,
+  values,
+  onUpdate,
+  rubroTotal,
+  twoColItems,
+  commissionPct,
+  commissionAmt,
+  onCommissionChange,
 }: {
-  label: string
-  children: React.ReactNode
+  rubro: RubroDef
+  values: Record<string, ItemValues>
+  onUpdate: (id: string, patch: Partial<ItemValues>) => void
+  rubroTotal: number
+  twoColItems?: boolean
+  commissionPct?: string
+  commissionAmt?: number
+  onCommissionChange?: (v: string) => void
 }) {
+  const items = rubro.items
+  const mid = twoColItems ? Math.ceil(items.length / 2) : items.length
+  const col1 = twoColItems ? items.slice(0, mid) : items
+  const col2 = twoColItems ? items.slice(mid) : []
+
   return (
-    <label style={fieldStyle}>
-      <span style={fieldLabelStyle}>{label}</span>
+    <div style={rubroCardStyle(rubro.color)}>
+      {/* Header */}
+      <div style={rubroHeaderStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={rubroNumStyle(rubro.color)}>{rubro.num}</span>
+          <p style={rubroLabelStyle}>{rubro.label}</p>
+        </div>
+        <span style={{ color: rubroTotal > 0 ? rubro.color : "#475569", fontSize: 13, fontWeight: 700 }}>
+          {fmt(rubroTotal)}
+        </span>
+      </div>
+
+      {/* Items */}
+      <div style={{ display: "grid", gridTemplateColumns: twoColItems ? "1fr 1fr" : "1fr", gap: "4px 16px" }}>
+        {[col1, col2].map((col, ci) => (
+          <div key={ci} style={{ display: "grid", gap: 2 }}>
+            {col.map((item, idx) => {
+              const isLast = idx === col.length - 1
+              const v = values[item.id] || DEFAULT_ITEM
+              const tot = calcItem(v)
+
+              if (item.special === "agency_commission") {
+                return (
+                  <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)" }}>
+                    <span style={itemLabelStyle}>{item.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input
+                        type="number"
+                        value={commissionPct}
+                        onChange={(e) => onCommissionChange?.(e.target.value)}
+                        min="0"
+                        style={{ ...numInputStyle, width: 46 }}
+                        title="% de comisión"
+                      />
+                      <span style={{ color: "#64748b", fontSize: 11 }}>%</span>
+                      <span style={itemTotalStyle}>{fmt(commissionAmt || 0)}</span>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)" }}>
+                  <span style={itemLabelStyle}>{item.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <input
+                      type="number"
+                      value={v.qty}
+                      onChange={(e) => onUpdate(item.id, { qty: e.target.value })}
+                      min="0"
+                      style={numInputStyle}
+                      title="Cantidad"
+                    />
+                    <span style={sepStyle}>×</span>
+                    <input
+                      type="number"
+                      value={v.days}
+                      onChange={(e) => onUpdate(item.id, { days: e.target.value })}
+                      min="0"
+                      style={numInputStyle}
+                      title="Días"
+                    />
+                    <span style={sepStyle}>×</span>
+                    <input
+                      type="number"
+                      value={v.unit_price}
+                      onChange={(e) => onUpdate(item.id, { unit_price: e.target.value })}
+                      min="0"
+                      style={priceInputStyle}
+                      title="Precio unitario"
+                    />
+                    <span style={itemTotalStyle}>{fmt(tot)}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: "grid", gap: 5, minWidth: 0 }}>
+      <span style={{ color: "#94a3b8", fontSize: 11, fontWeight: 500 }}>{label}</span>
       {children}
     </label>
   )
 }
 
-const appShellStyle: React.CSSProperties = {
-  display: "flex",
-  minHeight: "100vh",
+function rubroCardStyle(color: string): React.CSSProperties {
+  return {
+    background: "rgba(15, 23, 42, 0.72)",
+    border: "1px solid rgba(148,163,184,0.12)",
+    borderLeft: `3px solid ${color}`,
+    backdropFilter: "blur(16px)",
+    borderRadius: 14,
+    padding: "14px 16px",
+    display: "grid",
+    gap: 10,
+  }
 }
 
-const mainStyle: React.CSSProperties = {
+const rubroHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  paddingBottom: 10,
+  borderBottom: "1px solid rgba(148,163,184,0.08)",
+}
+
+function rubroNumStyle(color: string): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    background: `${color}22`,
+    border: `1px solid ${color}44`,
+    color,
+    fontSize: 11,
+    fontWeight: 700,
+    flexShrink: 0,
+  }
+}
+
+const rubroLabelStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#f8fafc",
+  fontSize: 13,
+  fontWeight: 600,
+}
+
+const itemRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  padding: "5px 0",
+}
+
+const itemLabelStyle: React.CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 12,
   flex: 1,
   minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 }
 
-const pageContainerStyle: React.CSSProperties = {
-  maxWidth: 1100,
-  margin: "0 auto",
+const itemTotalStyle: React.CSSProperties = {
+  color: "#c4b5fd",
+  fontSize: 12,
+  fontWeight: 600,
+  minWidth: 80,
+  textAlign: "right",
 }
 
-const pageHeaderStyle: React.CSSProperties = {
-  marginBottom: 18,
+const numInputStyle: React.CSSProperties = {
+  width: 46,
+  padding: "4px 6px",
+  border: "1px solid rgba(148,163,184,0.16)",
+  borderRadius: 6,
+  background: "rgba(2,6,23,0.55)",
+  color: "#f8fafc",
+  outline: "none",
+  fontSize: 12,
+  textAlign: "right",
+  boxSizing: "border-box",
 }
+
+const priceInputStyle: React.CSSProperties = {
+  ...numInputStyle,
+  width: 88,
+}
+
+const sepStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 11,
+  flexShrink: 0,
+}
+
+const appShellStyle: React.CSSProperties = { display: "flex", minHeight: "100vh" }
+const mainStyle: React.CSSProperties = { flex: 1, minWidth: 0 }
+const pageContainerStyle: React.CSSProperties = { maxWidth: 1100, margin: "0 auto" }
+const pageHeaderStyle: React.CSSProperties = { marginBottom: 18 }
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
@@ -841,18 +711,6 @@ const panelTitleStyle: React.CSSProperties = {
   fontWeight: 600,
 }
 
-const fieldStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 5,
-  minWidth: 0,
-}
-
-const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 11,
-  fontWeight: 500,
-}
-
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
@@ -866,42 +724,8 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 }
 
-const itemTotalStyle: React.CSSProperties = {
-  color: "#a78bfa",
-  fontSize: 13,
-  fontWeight: 600,
-}
-
-const sectionTotalStyle: React.CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 13,
-}
-
-const totalsBoxStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 8,
-  minWidth: 280,
-}
-
-const totalRowStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 24,
-}
-
-const totalLabelStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
-}
-
-const totalValueStyle: React.CSSProperties = {
-  color: "#e2e8f0",
-  fontSize: 14,
-  fontWeight: 600,
-}
-
 const primaryButtonStyle: React.CSSProperties = {
+  width: "100%",
   padding: "8px 16px",
   background: "linear-gradient(135deg, #7c3aed, #6366f1)",
   color: "white",
@@ -911,31 +735,4 @@ const primaryButtonStyle: React.CSSProperties = {
   fontWeight: 600,
   fontSize: 13,
   boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
-  whiteSpace: "nowrap",
-}
-
-const ghostButtonStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "7px 12px",
-  borderRadius: 8,
-  border: "1px dashed rgba(148,163,184,0.22)",
-  background: "transparent",
-  color: "#94a3b8",
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: "pointer",
-}
-
-const dangerButtonSmallStyle: React.CSSProperties = {
-  padding: "5px 10px",
-  background: "transparent",
-  color: "#f87171",
-  border: "1px solid rgba(248,113,113,0.24)",
-  borderRadius: 7,
-  cursor: "pointer",
-  fontWeight: 500,
-  fontSize: 12,
-  whiteSpace: "nowrap",
 }
