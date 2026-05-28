@@ -51,11 +51,13 @@ export default function ProyectosPage() {
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null)
   const [showCreatePanel, setShowCreatePanel] = useState(false)
   const [showRenamePanel, setShowRenamePanel] = useState(false)
+  const [showMovePanel, setShowMovePanel] = useState(false)
 
   const [createName, setCreateName] = useState("")
   const [createDescription, setCreateDescription] = useState("")
   const [renameName, setRenameName] = useState("")
   const [renameDescription, setRenameDescription] = useState("")
+  const [moveTargetSubfolderId, setMoveTargetSubfolderId] = useState("")
 
   const isAdmin = profile?.role === "admin"
 
@@ -88,6 +90,23 @@ export default function ProyectosPage() {
       .filter((project) => project.subfolder_id === view.subfolderId)
       .sort((a, b) => a.name.localeCompare(b.name, "es"))
   }, [projects, view])
+
+  const selectedProject = useMemo(() => {
+    if (selectedItem?.type !== "project") return null
+    return projects.find((project) => project.id === selectedItem.id) || null
+  }, [projects, selectedItem])
+
+  const moveDestinationSubfolders = useMemo(() => {
+    if (!selectedProject) return []
+
+    return subfolders
+      .filter(
+        (subfolder) =>
+          subfolder.client_id === selectedProject.client_id &&
+          subfolder.id !== selectedProject.subfolder_id
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, "es"))
+  }, [subfolders, selectedProject])
 
   useEffect(() => {
     function checkMobile() {
@@ -152,25 +171,28 @@ export default function ProyectosPage() {
     return projects.filter((project) => project.subfolder_id === subfolderId).length
   }
 
+  function closePanels() {
+    setShowCreatePanel(false)
+    setShowRenamePanel(false)
+    setShowMovePanel(false)
+  }
+
   function goToRoot() {
     setView({ level: "root" })
     setSelectedItem(null)
-    setShowCreatePanel(false)
-    setShowRenamePanel(false)
+    closePanels()
   }
 
   function goToClient(clientId: string) {
     setView({ level: "client", clientId })
     setSelectedItem(null)
-    setShowCreatePanel(false)
-    setShowRenamePanel(false)
+    closePanels()
   }
 
   function goToSubfolder(clientId: string, subfolderId: string) {
     setView({ level: "subfolder", clientId, subfolderId })
     setSelectedItem(null)
-    setShowCreatePanel(false)
-    setShowRenamePanel(false)
+    closePanels()
   }
 
   function goBack() {
@@ -198,6 +220,8 @@ export default function ProyectosPage() {
 
   function handleItemClick(type: NonNullable<SelectedItem>["type"], id: string) {
     setSelectedItem({ type, id })
+    setShowMovePanel(false)
+    setShowRenamePanel(false)
 
     if (isMobile && (type === "client" || type === "subfolder")) {
       openItem(type, id)
@@ -223,6 +247,7 @@ export default function ProyectosPage() {
   function openCreatePanel() {
     resetCreateForm()
     setShowRenamePanel(false)
+    setShowMovePanel(false)
     setShowCreatePanel(true)
   }
 
@@ -230,6 +255,7 @@ export default function ProyectosPage() {
     if (!selectedItem) return
 
     setShowCreatePanel(false)
+    setShowMovePanel(false)
     setShowRenamePanel(true)
 
     if (selectedItem.type === "client") {
@@ -249,6 +275,65 @@ export default function ProyectosPage() {
     const project = projects.find((item) => item.id === selectedItem.id)
     setRenameName(project?.name || "")
     setRenameDescription(project?.description || "")
+  }
+
+  function openMovePanel() {
+    if (!selectedProject) return
+
+    if (moveDestinationSubfolders.length === 0) {
+      alert(
+        "Crea otra subcarpeta en este cliente para poder mover el proyecto."
+      )
+      return
+    }
+
+    setShowCreatePanel(false)
+    setShowRenamePanel(false)
+    setShowMovePanel(true)
+    setMoveTargetSubfolderId(moveDestinationSubfolders[0].id)
+  }
+
+  async function handleMoveProject() {
+    if (!selectedProject) return
+
+    if (!moveTargetSubfolderId) {
+      alert("Selecciona la subcarpeta destino")
+      return
+    }
+
+    if (moveTargetSubfolderId === selectedProject.subfolder_id) {
+      alert("El proyecto ya está en esa subcarpeta")
+      return
+    }
+
+    const targetSubfolder = subfolders.find(
+      (subfolder) => subfolder.id === moveTargetSubfolderId
+    )
+
+    if (
+      !targetSubfolder ||
+      targetSubfolder.client_id !== selectedProject.client_id
+    ) {
+      alert("Solo puedes mover proyectos entre subcarpetas del mismo cliente")
+      return
+    }
+
+    const { error } = await supabase
+      .from("projects")
+      .update({
+        subfolder_id: moveTargetSubfolderId,
+        client_id: targetSubfolder.client_id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", selectedProject.id)
+
+    if (error) return alert(error.message)
+
+    setShowMovePanel(false)
+    setMoveTargetSubfolderId("")
+    setSelectedItem(null)
+    await loadPage()
+    goToSubfolder(targetSubfolder.client_id, targetSubfolder.id)
   }
 
   async function handleCreate() {
@@ -347,6 +432,7 @@ export default function ProyectosPage() {
 
     resetRenameForm()
     setShowRenamePanel(false)
+    setShowMovePanel(false)
     setSelectedItem(null)
     await loadPage()
   }
@@ -414,6 +500,7 @@ export default function ProyectosPage() {
 
     setSelectedItem(null)
     setShowRenamePanel(false)
+    setShowMovePanel(false)
     await loadPage()
   }
 
@@ -542,6 +629,11 @@ export default function ProyectosPage() {
                     <button onClick={openRenamePanel} style={secondaryButtonStyle}>
                       Renombrar
                     </button>
+                    {selectedItem.type === "project" && (
+                      <button onClick={openMovePanel} style={secondaryButtonStyle}>
+                        Mover
+                      </button>
+                    )}
                     <button onClick={handleDeleteSelected} style={dangerButtonStyle}>
                       Borrar
                     </button>
@@ -660,6 +752,60 @@ export default function ProyectosPage() {
                       onClick={() => {
                         setShowRenamePanel(false)
                         resetRenameForm()
+                      }}
+                      style={secondaryButtonStyle}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showMovePanel && selectedProject && (
+              <div style={inlinePanelStyle}>
+                <p style={inlinePanelTitleStyle}>Mover proyecto</p>
+                <p style={moveHintStyle}>
+                  Moviendo{" "}
+                  <strong style={moveHintStrongStyle}>{selectedProject.name}</strong>{" "}
+                  desde{" "}
+                  <strong style={moveHintStrongStyle}>
+                    {subfolders.find(
+                      (subfolder) => subfolder.id === selectedProject.subfolder_id
+                    )?.name || "subcarpeta actual"}
+                  </strong>
+                </p>
+
+                <div
+                  style={{
+                    ...inlineFormGridStyle,
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
+                  }}
+                >
+                  <Field label="Mover a subcarpeta">
+                    <select
+                      value={moveTargetSubfolderId}
+                      onChange={(event) =>
+                        setMoveTargetSubfolderId(event.target.value)
+                      }
+                      style={selectStyle}
+                    >
+                      {moveDestinationSubfolders.map((subfolder) => (
+                        <option key={subfolder.id} value={subfolder.id}>
+                          {subfolder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <div style={inlineFormActionsStyle}>
+                    <button onClick={handleMoveProject} style={primaryButtonStyle}>
+                      Mover aquí
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMovePanel(false)
+                        setMoveTargetSubfolderId("")
                       }}
                       style={secondaryButtonStyle}
                     >
@@ -968,6 +1114,30 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
+}
+
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  appearance: "none",
+  WebkitAppearance: "none",
+  backgroundImage:
+    "linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%)",
+  backgroundPosition: "calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px)",
+  backgroundSize: "5px 5px, 5px 5px",
+  backgroundRepeat: "no-repeat",
+  paddingRight: 28,
+}
+
+const moveHintStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  color: "#94a3b8",
+  fontSize: 12,
+  lineHeight: 1.5,
+}
+
+const moveHintStrongStyle: React.CSSProperties = {
+  color: "#e2e8f0",
+  fontWeight: 600,
 }
 
 const primaryButtonStyle: React.CSSProperties = {
