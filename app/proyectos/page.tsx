@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
@@ -40,6 +41,7 @@ type SelectedItem =
   | null
 
 export default function ProyectosPage() {
+  const router = useRouter()
   const [clients, setClients] = useState<Client[]>([])
   const [subfolders, setSubfolders] = useState<Subfolder[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -154,6 +156,27 @@ export default function ProyectosPage() {
     loadPage()
   }, [])
 
+  useEffect(() => {
+    if (clients.length === 0) return
+
+    const params = new URLSearchParams(window.location.search)
+    const clientId = params.get("client")
+    const subfolderId = params.get("subfolder")
+
+    if (
+      clientId &&
+      subfolderId &&
+      subfolders.some((subfolder) => subfolder.id === subfolderId)
+    ) {
+      setView({ level: "subfolder", clientId, subfolderId })
+      return
+    }
+
+    if (clientId && clients.some((client) => client.id === clientId)) {
+      setView({ level: "client", clientId })
+    }
+  }, [clients, subfolders])
+
   function countSubfolders(clientId: string) {
     return subfolders.filter((subfolder) => subfolder.client_id === clientId).length
   }
@@ -206,6 +229,10 @@ export default function ProyectosPage() {
     }
   }
 
+  function openProject(projectId: string) {
+    router.push(`/proyectos/${projectId}`)
+  }
+
   function openItem(type: "client" | "subfolder", id: string) {
     if (type === "client") {
       goToClient(id)
@@ -225,12 +252,22 @@ export default function ProyectosPage() {
 
     if (isMobile && (type === "client" || type === "subfolder")) {
       openItem(type, id)
+      return
+    }
+
+    if (isMobile && type === "project") {
+      openProject(id)
     }
   }
 
   function handleItemDoubleClick(type: NonNullable<SelectedItem>["type"], id: string) {
     if (type === "client" || type === "subfolder") {
       openItem(type, id)
+      return
+    }
+
+    if (type === "project") {
+      openProject(id)
     }
   }
 
@@ -546,8 +583,8 @@ export default function ProyectosPage() {
             name: project.name,
             meta:
               project.description?.trim() ||
-              "Listo para cargar información del proyecto",
-            openable: false,
+              "Abrir módulos del proyecto",
+            openable: true,
           }))
 
   return (
