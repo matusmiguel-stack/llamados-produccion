@@ -11,8 +11,9 @@ type Project = { id: string; name: string; client_id: string }
 type ItemValues = {
   qty: string
   days: string
-  cost: string    // costo real por unidad
-  markup: string  // markup % individual
+  cost: string
+  markup: string
+  isInternal: boolean
 }
 
 type ExtraItem = {
@@ -22,6 +23,7 @@ type ExtraItem = {
   days: string
   cost: string
   markup: string
+  isInternal: boolean
 }
 
 type ItemDef = {
@@ -127,7 +129,7 @@ const RUBROS: RubroDef[] = [
   },
 ]
 
-const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "0", markup: "0" }
+const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "0", markup: "0", isInternal: false }
 
 function initValues(): Record<string, ItemValues> {
   const vals: Record<string, ItemValues> = {}
@@ -139,16 +141,20 @@ function initValues(): Record<string, ItemValues> {
   return vals
 }
 
-function gasto(v: { qty: string; days: string; cost: string }): number {
+function rawAmt(v: { qty: string; days: string; cost: string }): number {
   return (parseFloat(v.qty) || 0) * (parseFloat(v.days) || 0) * (parseFloat(v.cost) || 0)
 }
 
-function utilidad(g: number, markupPct: string): number {
-  return g * ((parseFloat(markupPct) || 0) / 100)
+function calcItem(v: { qty: string; days: string; cost: string; markup: string; isInternal: boolean }): { gasto: number; utilidad: number; venta: number } {
+  const amount = rawAmt(v)
+  if (v.isInternal) return { gasto: 0, utilidad: amount, venta: amount }
+  const u = amount * ((parseFloat(v.markup) || 0) / 100)
+  return { gasto: amount, utilidad: u, venta: amount + u }
 }
 
-function venta(g: number, markupPct: string): number {
-  return g + utilidad(g, markupPct)
+function calcCommission(g: number, markupPct: string): { gasto: number; utilidad: number; venta: number } {
+  const u = g * ((parseFloat(markupPct) || 0) / 100)
+  return { gasto: g, utilidad: u, venta: g + u }
 }
 
 function fmt(n: number): string {
@@ -183,9 +189,9 @@ export default function CotizacionesPage() {
 
   // Comisión: % del gasto base de talento
   const talentoBaseGasto =
-    gasto(values["talento_principal"] || DEFAULT_ITEM) +
-    gasto(values["talento_secundario"] || DEFAULT_ITEM) +
-    gasto(values["extras"] || DEFAULT_ITEM)
+    rawAmt(values["talento_principal"] || DEFAULT_ITEM) +
+    rawAmt(values["talento_secundario"] || DEFAULT_ITEM) +
+    rawAmt(values["extras"] || DEFAULT_ITEM)
   const commissionGasto = talentoBaseGasto * ((parseFloat(commissionPct) || 0) / 100)
 
   function getRubroFinancials(rubro: RubroDef): RubroFinancials {
@@ -194,20 +200,21 @@ export default function CotizacionesPage() {
 
     for (const item of rubro.items) {
       if (item.special === "agency_commission") {
-        g += commissionGasto
-        u += utilidad(commissionGasto, commissionMarkup)
+        const c = calcCommission(commissionGasto, commissionMarkup)
+        g += c.gasto
+        u += c.utilidad
       } else {
         const v = values[item.id] || DEFAULT_ITEM
-        const ig = gasto(v)
-        g += ig
-        u += utilidad(ig, v.markup)
+        const c = calcItem(v)
+        g += c.gasto
+        u += c.utilidad
       }
     }
 
     for (const item of extras[rubro.id] || []) {
-      const ig = gasto(item)
-      g += ig
-      u += utilidad(ig, item.markup)
+      const c = calcItem(item)
+      g += c.gasto
+      u += c.utilidad
     }
 
     return { gasto: g, utilidad: u, venta: g + u }
@@ -233,7 +240,7 @@ export default function CotizacionesPage() {
   function addExtra(rubroId: string) {
     setExtras((prev) => ({
       ...prev,
-      [rubroId]: [...(prev[rubroId] || []), { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", cost: "0", markup: "0" }],
+      [rubroId]: [...(prev[rubroId] || []), { tempId: crypto.randomUUID(), description: "", qty: "1", days: "1", cost: "0", markup: "0", isInternal: false }],
     }))
   }
 
@@ -329,7 +336,7 @@ export default function CotizacionesPage() {
             days: parseFloat(v.days) || 0,
             unit_price: parseFloat(v.cost) || 0,
             released_expense: parseFloat(v.markup) || 0,
-            real_expense: 0,
+            real_expense: v.isInternal ? 1 : 0,
             supplier: null,
             order_index: ii,
           }
@@ -342,7 +349,7 @@ export default function CotizacionesPage() {
           days: parseFloat(item.days) || 0,
           unit_price: parseFloat(item.cost) || 0,
           released_expense: parseFloat(item.markup) || 0,
-          real_expense: 0,
+          real_expense: item.isInternal ? 1 : 0,
           supplier: null,
           order_index: rubro.items.length + ei,
         }))
@@ -434,6 +441,7 @@ export default function CotizacionesPage() {
               <span style={legendItemStyle}>Días</span>
               <span style={legendItemStyle}>Costo real</span>
               <span style={legendItemStyle}>Mkp %</span>
+              <span style={{ ...legendItemStyle, color: "#4ade80", minWidth: 30 }}>Int.</span>
               <span style={{ ...legendItemStyle, color: "#64748b" }}>Gasto</span>
               <span style={{ ...legendItemStyle, color: "#a78bfa" }}>Precio venta</span>
             </div>
@@ -631,7 +639,8 @@ function RubroCard({
 
               if (item.special === "agency_commission") {
                 const cg = commissionGasto || 0
-                const cv = venta(cg, commissionMarkup || "0")
+                const commCalc = calcCommission(cg, commissionMarkup || "0")
+                const cv = commCalc.venta
                 return (
                   <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
                     <span style={itemLabelStyle}>{item.label}</span>
@@ -648,11 +657,10 @@ function RubroCard({
               }
 
               const v = values[item.id] || DEFAULT_ITEM
-              const ig = gasto(v)
-              const iv = venta(ig, v.markup)
+              const c = calcItem(v)
 
               return (
-                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
                   <span style={itemLabelStyle}>{item.label}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
@@ -660,10 +668,11 @@ function RubroCard({
                     <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
-                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44 }} title="Markup %" />
-                    <span style={sepStyle}>%</span>
-                    <span style={gastoStyle}>{fmt(ig)}</span>
-                    <span style={ventaStyle}>{fmt(iv)}</span>
+                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} />
+                    <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
+                    <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
+                    <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
+                    <span style={{ ...ventaStyle, color: v.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
                   </div>
                 </div>
               )
@@ -676,10 +685,9 @@ function RubroCard({
       {extras.length > 0 && (
         <div style={{ display: "grid", gap: 2, paddingTop: 6, borderTop: "1px dashed rgba(148,163,184,0.12)" }}>
           {extras.map((item) => {
-            const ig = gasto(item)
-            const iv = venta(ig, item.markup)
+            const c = calcItem(item)
             return (
-              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6, flexWrap: isMobile ? "wrap" : "nowrap" }}>
+              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6, flexWrap: isMobile ? "wrap" : "nowrap", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
                 <input
                   value={item.description}
                   onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })}
@@ -692,10 +700,11 @@ function RubroCard({
                   <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                   <span style={sepStyle}>×</span>
                   <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} title="Costo real" />
-                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44 }} title="Markup %" />
-                  <span style={sepStyle}>%</span>
-                  <span style={gastoStyle}>{fmt(ig)}</span>
-                  <span style={ventaStyle}>{fmt(iv)}</span>
+                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 44, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} />
+                  <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
+                  <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)} title={item.isInternal ? "Interno: click para quitar" : "Marcar como interno"}>INT</button>
+                  <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
+                  <span style={{ ...ventaStyle, color: item.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
                   <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
                 </div>
               </div>
@@ -854,6 +863,22 @@ const removeExtraStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+}
+
+function internalToggleStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: "2px 6px",
+    borderRadius: 5,
+    border: active ? "1px solid rgba(22,163,74,0.55)" : "1px solid rgba(148,163,184,0.18)",
+    background: active ? "rgba(5,46,22,0.7)" : "transparent",
+    color: active ? "#4ade80" : "#475569",
+    fontSize: 9,
+    fontWeight: 800,
+    cursor: "pointer",
+    letterSpacing: 0.5,
+    flexShrink: 0,
+    lineHeight: 1,
+  }
 }
 
 function addExtraButtonStyle(color: string): React.CSSProperties {
