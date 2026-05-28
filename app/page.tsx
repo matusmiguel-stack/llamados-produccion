@@ -916,6 +916,16 @@ function openEditVacation() {
     await loadAll()
   }
 
+  function shareSelectedShoot() {
+    if (!selectedShoot) return
+
+    const message = buildShootWhatsAppMessage(
+      selectedShoot,
+      getShootEmployees(selectedShoot.id)
+    )
+    shareShootOnWhatsApp(message)
+  }
+
   async function deleteVacation() {
     if (!isAdmin) return alert("Solo admin puede borrar.")
     if (!selectedVacation) return
@@ -2118,6 +2128,13 @@ function openEditVacation() {
                   Cerrar
                 </button>
 
+                <button
+                  onClick={shareSelectedShoot}
+                  style={formModalWhatsAppButtonStyle}
+                >
+                  Compartir por WhatsApp
+                </button>
+
                 {canEdit && (
                   <button onClick={openEditShoot} style={formModalPrimaryButtonStyle}>
                     Editar
@@ -2303,6 +2320,63 @@ function formatVacationDate(dateStr: string) {
 function formatVacationRange(startDate: string, endDate: string) {
   if (startDate === endDate) return formatVacationDate(startDate)
   return `${formatVacationDate(startDate)} – ${formatVacationDate(endDate)}`
+}
+
+function buildShootWhatsAppMessage(
+  shoot: any,
+  employees: any[]
+) {
+  const lines: string[] = [
+    `🎬 *${shoot.title || "Llamado"}*`,
+    `📅 ${formatShootSchedule(shoot)}`,
+  ]
+
+  const clientProject = [shoot.client, shoot.project].filter(Boolean).join(" · ")
+  if (clientProject) lines.push(`🏢 ${clientProject}`)
+
+  if (shoot.location?.trim()) {
+    lines.push(`📍 ${shoot.location.trim()}`)
+  }
+
+  if (shoot.address?.trim() && shoot.address.trim() !== shoot.location?.trim()) {
+    lines.push(`📌 ${shoot.address.trim()}`)
+  }
+
+  lines.push(`Estado: ${statusLabel(shoot.status)}`)
+
+  if (shoot.contact?.trim()) {
+    lines.push(`Contacto: ${shoot.contact.trim()}`)
+  }
+
+  if (shoot.director?.trim() || shoot.dop?.trim()) {
+    const productionRoles = [
+      shoot.director?.trim() ? `Director: ${shoot.director.trim()}` : "",
+      shoot.dop?.trim() ? `DOP: ${shoot.dop.trim()}` : "",
+    ].filter(Boolean)
+
+    lines.push(productionRoles.join(" | "))
+  }
+
+  if (employees.length > 0) {
+    lines.push("")
+    lines.push("👥 *Crew:*")
+    for (const employee of employees) {
+      lines.push(`• ${employeeDisplayName(employee)} — ${employee.puesto}`)
+    }
+  }
+
+  if (shoot.public_notes?.trim()) {
+    lines.push("")
+    lines.push("📝 *Notas:*")
+    lines.push(shoot.public_notes.trim())
+  }
+
+  return lines.join("\n")
+}
+
+function shareShootOnWhatsApp(message: string) {
+  const url = `https://wa.me/?text=${encodeURIComponent(message)}`
+  window.open(url, "_blank", "noopener,noreferrer")
 }
 
 function FormModalPreviewField({
@@ -2944,6 +3018,17 @@ const formModalSecondaryButtonStyle: React.CSSProperties = {
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
+  fontSize: 13,
+}
+
+const formModalWhatsAppButtonStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  background: "rgba(37, 211, 102, 0.14)",
+  color: "#bbf7d0",
+  border: "1px solid rgba(37, 211, 102, 0.28)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
   fontSize: 13,
 }
 
