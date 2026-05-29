@@ -69,10 +69,16 @@ function itemAmount(item: QuoteItemRow): number {
   return item.qty * item.days * item.unit_price
 }
 
-// Actual raw amount: use filled-in values; fall back to liberado
+// Actual raw amount: use filled-in values; fall back to liberado.
+// If ANY actual value is filled, use Math.max(libValue, 1) as fallback for
+// qty/days so that items saved with 0 (unfilled in cotizaciones) still
+// produce a meaningful real gasto when the user types a unit_price.
 function itemActualAmount(item: QuoteItemRow, actual: ItemActual): number {
-  const q = actual.qty !== "" ? parseFloat(actual.qty) : item.qty
-  const d = actual.days !== "" ? parseFloat(actual.days) : item.days
+  const anyFilled = actual.qty !== "" || actual.days !== "" || actual.unit_price !== ""
+  const fallbackQty = anyFilled ? Math.max(item.qty, 1) : item.qty
+  const fallbackDays = anyFilled ? Math.max(item.days, 1) : item.days
+  const q = actual.qty !== "" ? parseFloat(actual.qty) : fallbackQty
+  const d = actual.days !== "" ? parseFloat(actual.days) : fallbackDays
   const p = actual.unit_price !== "" ? parseFloat(actual.unit_price) : item.unit_price
   if (isNaN(q) || isNaN(d) || isNaN(p)) return itemAmount(item)
   return q * d * p

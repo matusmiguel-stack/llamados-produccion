@@ -185,6 +185,7 @@ export default function CotizacionesPage() {
   const [extras, setExtras] = useState<Record<string, ExtraItem[]>>({})
   const [commissionPct, setCommissionPct] = useState("30")
   const [commissionMarkup, setCommissionMarkup] = useState("0")
+  const [markupGeneral, setMarkupGeneral] = useState("0")
 
   // Inline creation state
   const [subfolders, setSubfolders] = useState<Subfolder[]>([])
@@ -307,7 +308,7 @@ export default function CotizacionesPage() {
 
       const { data: quote, error: qErr } = await supabase
         .from("quotes")
-        .select("id, name, status, project_id, atencion")
+        .select("id, name, status, project_id, atencion, markup_percentage")
         .eq("id", qid)
         .single()
       if (qErr || !quote) { alert("Cotización no encontrada"); return }
@@ -316,6 +317,7 @@ export default function CotizacionesPage() {
       setQuoteName(quote.name)
       setAtencion(quote.atencion || "")
       setStatus(quote.status)
+      setMarkupGeneral(String(quote.markup_percentage || 0))
       if (loadedProj) {
         suppressClientReset.current = true
         setClientId(loadedProj.client_id)
@@ -469,7 +471,7 @@ export default function CotizacionesPage() {
         // ── Modo edición ───────────────────────────────────────────────────
         const { error: updErr } = await supabase
           .from("quotes")
-          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status })
+          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status, markup_percentage: parseFloat(markupGeneral) || 0 })
           .eq("id", editQuoteId)
         if (updErr) throw updErr
 
@@ -509,7 +511,7 @@ export default function CotizacionesPage() {
             name: quoteName.trim(),
             atencion: atencion.trim() || null,
             status,
-            markup_percentage: 0,
+            markup_percentage: parseFloat(markupGeneral) || 0,
             created_by: profile.id,
           })
           .select("id")
@@ -653,7 +655,7 @@ export default function CotizacionesPage() {
       date,
       rubros,
       globalFinancials,
-      visibleMarkupPct: 0,
+      visibleMarkupPct: parseFloat(markupGeneral) || 0,
     }
 
     await exportQuotePdf(pdfData)
@@ -692,7 +694,7 @@ export default function CotizacionesPage() {
             <div style={panelHeaderStyle}>
               <p style={panelTitleStyle}>Datos generales</p>
             </div>
-            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr 140px" }}>
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr 140px 110px" }}>
               <Field label="Cliente">
                 {showNewClient ? (
                   <div style={{ display: "flex", gap: 6 }}>
@@ -785,6 +787,20 @@ export default function CotizacionesPage() {
                   <option value="sent">Enviada</option>
                   <option value="approved">Aprobada</option>
                 </select>
+              </Field>
+              <Field label="Markup %">
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={markupGeneral}
+                    onChange={(e) => setMarkupGeneral(e.target.value)}
+                    style={{ ...inputStyle, paddingRight: 28 }}
+                    placeholder="0"
+                  />
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 13, pointerEvents: "none" }}>%</span>
+                </div>
               </Field>
             </div>
           </section>
