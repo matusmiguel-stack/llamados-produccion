@@ -133,7 +133,7 @@ function rawAmt(qty: string, days: string, cost: string): number {
   return (parseFloat(qty) || 0) * (parseFloat(days) || 0) * (parseFloat(cost) || 0)
 }
 
-// Precio unitario que ve el cliente (markups ocultos ya incluidos)
+// Precio unitario que ve el cliente (markup oculto ya incluido)
 function clientUnitPrice(item: QuoteItemPDF): number {
   const cost = parseFloat(item.cost) || 0
   if (item.isInternal) return cost
@@ -153,6 +153,259 @@ function lightBg(r: number, g: number, b: number): [number, number, number] {
   return [Math.round(r * 0.12 + 240), Math.round(g * 0.12 + 240), Math.round(b * 0.12 + 240)]
 }
 
+async function fetchImageBase64(
+  url: string
+): Promise<{ dataUrl: string; w: number; h: number }> {
+  try {
+    const resp = await fetch(url)
+    const blob = await resp.blob()
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+      img.onerror = () => resolve({ w: 300, h: 100 })
+      img.src = dataUrl
+    })
+    return { dataUrl, ...dims }
+  } catch {
+    return { dataUrl: "", w: 0, h: 0 }
+  }
+}
+
+// ─── Carátula (página 1) ──────────────────────────────────────────────────────
+
+function drawCoverPage(
+  doc: any,
+  data: QuotePDFData,
+  logo: { dataUrl: string; w: number; h: number }
+): void {
+  const pageW = 215.9
+  const pageH = 279.4
+  const mL = 15
+  const mR = 15
+  const contentW = pageW - mL - mR
+
+  // ── Header bar ───────────────────────────────────────────────────────────────
+  const headerH = 52
+  doc.setFillColor(15, 23, 42)
+  doc.rect(0, 0, pageW, headerH, "F")
+
+  if (logo.dataUrl && logo.w > 0 && logo.h > 0) {
+    const targetH = 30
+    const targetW = Math.min((logo.w / logo.h) * targetH, contentW * 0.5)
+    doc.addImage(logo.dataUrl, "PNG", mL, (headerH - targetH) / 2, targetW, targetH)
+  }
+
+  // Tagline derecha
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(9.5)
+  doc.setTextColor(99, 102, 241)
+  doc.text("#TODO ES POSIBLE", pageW - mR, headerH / 2 + 3, { align: "right" })
+
+  let y = headerH + 15
+
+  // ── Info sección ─────────────────────────────────────────────────────────────
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(7)
+  doc.setTextColor(100, 116, 139)
+  doc.text("ATENCIÓN:", mL, y)
+
+  y += 6
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(20)
+  doc.setTextColor(15, 23, 42)
+  doc.text(data.clientName, mL, y)
+
+  y += 11
+  // Grid: Campaña | Marca | Fecha
+  const colW = contentW / 3
+  const infoGrid = [
+    { label: "CAMPAÑA", value: data.projectName },
+    { label: "MARCA", value: data.clientName },
+    { label: "FECHA", value: data.date },
+  ]
+  infoGrid.forEach((col, i) => {
+    const cx = mL + i * colW
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(6.5)
+    doc.setTextColor(100, 116, 139)
+    doc.text(col.label, cx, y)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(9)
+    doc.setTextColor(30, 41, 59)
+    doc.text(col.value, cx, y + 5.5, { maxWidth: colW - 4 })
+  })
+
+  y += 16
+  doc.setDrawColor(226, 232, 240)
+  doc.setLineWidth(0.3)
+  doc.line(mL, y, pageW - mR, y)
+  y += 8
+
+  // ── Tabla de rubros ──────────────────────────────────────────────────────────
+  // Encabezado oscuro
+  const tableHeaderH = 9
+  doc.setFillColor(15, 23, 42)
+  doc.rect(mL, y, contentW, tableHeaderH, "F")
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  doc.text("CONCEPTO", mL + 6, y + 6)
+  doc.text("PESOS", pageW - mR - 4, y + 6, { align: "right" })
+  y += tableHeaderH
+
+  const rowH = 8.5
+  data.rubros.forEach((rubro, idx) => {
+    const rubroClientTotal = rubro.items.reduce(
+      (sum, item) =>
+        sum +
+        (parseFloat(item.qty) || 0) *
+          (parseFloat(item.days) || 0) *
+          clientUnitPrice(item),
+      0
+    )
+
+    const [r, g, b] = hexToRgb(rubro.hexColor)
+
+    // Fondo alternado
+    if (idx % 2 === 1) {
+      doc.setFillColor(248, 250, 252)
+      doc.rect(mL, y, contentW, rowH, "F")
+    }
+
+    // Franja de color izquierda
+    doc.setFillColor(r, g, b)
+    doc.rect(mL, y, 3, rowH, "F")
+
+    // Nombre del rubro
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8.5)
+    doc.setTextColor(30, 41, 59)
+    doc.text(`${rubro.num}. ${rubro.label}`, mL + 7, y + 5.6)
+
+    // Monto
+    if (rubroClientTotal > 0) {
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(15, 23, 42)
+    } else {
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(148, 163, 184)
+    }
+    doc.text(fmt(rubroClientTotal), pageW - mR - 3, y + 5.6, { align: "right" })
+
+    // Línea separadora
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.15)
+    doc.line(mL, y + rowH, pageW - mR, y + rowH)
+
+    y += rowH
+  })
+
+  y += 12
+
+  // ── Sección inferior: términos (izq) + totales (der) ─────────────────────────
+  const clientSubtotal = data.globalFinancials.venta
+  const markupAmt = clientSubtotal * ((data.visibleMarkupPct || 0) / 100)
+  const totalBeforeIva = clientSubtotal + markupAmt
+
+  const rightStartX = pageW - mR - 78
+  let ry = y
+
+  // Sub-Total
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8.5)
+  doc.setTextColor(71, 85, 105)
+  doc.text("Sub-Total", rightStartX, ry)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8.5)
+  doc.setTextColor(30, 41, 59)
+  doc.text(fmt(clientSubtotal), pageW - mR, ry, { align: "right" })
+  ry += 7.5
+
+  if (data.visibleMarkupPct > 0) {
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8.5)
+    doc.setTextColor(71, 85, 105)
+    doc.text(`Markup (${data.visibleMarkupPct}%)`, rightStartX, ry)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(8.5)
+    doc.setTextColor(30, 41, 59)
+    doc.text(fmt(markupAmt), pageW - mR, ry, { align: "right" })
+    ry += 7.5
+  }
+
+  // Caja "Total antes de IVA"
+  const totalBoxH = 15
+  const totalBoxX = rightStartX - 4
+  const totalBoxW = pageW - mR - totalBoxX + 2
+  doc.setFillColor(245, 243, 255)
+  doc.roundedRect(totalBoxX, ry - 2, totalBoxW, totalBoxH, 2, 2, "F")
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(7.5)
+  doc.setTextColor(99, 102, 241)
+  doc.text("Total antes de IVA", rightStartX, ry + 5.5)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(13)
+  doc.setTextColor(99, 102, 241)
+  doc.text(fmt(totalBeforeIva), pageW - mR, ry + 10.5, { align: "right" })
+
+  // Columna izquierda: No incluye / Términos
+  let ly = y
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8)
+  doc.setTextColor(30, 41, 59)
+  doc.text("NO INCLUYE:", mL, ly)
+  ly += 5.5
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8)
+  doc.setTextColor(71, 85, 105)
+  doc.text("· IVA", mL + 2, ly)
+
+  ly += 10
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8)
+  doc.setTextColor(30, 41, 59)
+  doc.text("TÉRMINOS:", mL, ly)
+  ly += 5.5
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(7.5)
+  doc.setTextColor(71, 85, 105)
+  doc.text("Esta cotización no contempla IVA.", mL + 2, ly)
+  ly += 5
+  doc.text("Vigencia: 15 días a partir de su expedición.", mL + 2, ly)
+
+  // ── Footer bar ───────────────────────────────────────────────────────────────
+  const footerH = 18
+  const footerY = pageH - footerH
+
+  // Línea de acento índigo encima del footer
+  doc.setFillColor(99, 102, 241)
+  doc.rect(0, footerY - 1.5, pageW, 1.5, "F")
+
+  doc.setFillColor(5, 8, 22)
+  doc.rect(0, footerY, pageW, footerH, "F")
+
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(9.5)
+  doc.setTextColor(255, 255, 255)
+  doc.text("Miguel Matus", mL, footerY + 7)
+
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(7.5)
+  doc.setTextColor(148, 163, 184)
+  doc.text("Director General  ·  Retro Casa Productora", mL, footerY + 13)
+
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8.5)
+  doc.setTextColor(148, 163, 184)
+  doc.text("@retrocasaproductora", pageW - mR, footerY + 10, { align: "right" })
+}
+
 // ─── exportación principal ────────────────────────────────────────────────────
 
 export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
@@ -166,6 +419,15 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   const mR = 15
   const contentW = pageW - mL - mR
 
+  // Cargar logo
+  const logo = await fetchImageBase64("/logo-retro.png")
+
+  // ── Página 1: Carátula ───────────────────────────────────────────────────────
+  drawCoverPage(doc, data, logo)
+
+  // ── Página 2+: Detalle por rubro ─────────────────────────────────────────────
+  doc.addPage()
+
   const STATUS_LABEL: Record<string, string> = {
     draft: "Borrador",
     sent: "Enviada",
@@ -177,33 +439,45 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     approved: [22, 163, 74],
   }
 
-  // ── Encabezado ───────────────────────────────────────────────────────────────
+  // ── Encabezado del detalle (logo + datos básicos) ─────────────────────────────
+  const detailHeaderH = 30
   doc.setFillColor(15, 23, 42)
-  doc.rect(0, 0, pageW, 34, "F")
+  doc.rect(0, 0, pageW, detailHeaderH, "F")
 
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(18)
-  doc.setTextColor(248, 250, 252)
-  doc.text("COTIZACIÓN", mL, 13)
+  if (logo.dataUrl && logo.w > 0 && logo.h > 0) {
+    const targetH = 18
+    const targetW = Math.min((logo.w / logo.h) * targetH, contentW * 0.42)
+    doc.addImage(logo.dataUrl, "PNG", mL, (detailHeaderH - targetH) / 2, targetW, targetH)
+  }
 
+  // Nombre de la cotización centrado
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
+  doc.setFontSize(9)
   doc.setTextColor(148, 163, 184)
-  doc.text(data.quoteName, mL, 22)
+  doc.text(data.quoteName, pageW / 2, detailHeaderH / 2 + 2, { align: "center" })
 
-  doc.setFontSize(8)
+  // Fecha
+  doc.setFontSize(7.5)
   doc.setTextColor(100, 116, 139)
   doc.text(data.date, pageW - mR, 8.5, { align: "right" })
 
-  const sc = STATUS_COLOR[data.status] || [71, 85, 105]
-  doc.setFillColor(...sc)
-  doc.roundedRect(pageW - mR - 26, 14.5, 26, 8, 2, 2, "F")
+  // Badge de estado
+  const sc = STATUS_COLOR[data.status] || STATUS_COLOR.draft
+  doc.setFillColor(sc[0], sc[1], sc[2])
+  doc.roundedRect(pageW - mR - 26, detailHeaderH - 12, 26, 8, 2, 2, "F")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(7.5)
   doc.setTextColor(255, 255, 255)
-  doc.text(STATUS_LABEL[data.status] ?? data.status, pageW - mR - 13, 19.5, { align: "center" })
+  doc.text(
+    STATUS_LABEL[data.status] ?? data.status,
+    pageW - mR - 13,
+    detailHeaderH - 7.5,
+    { align: "center" }
+  )
 
-  let y = 41
+  let y = detailHeaderH + 7
+
+  // Cliente + Proyecto
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8.5)
   doc.setTextColor(100, 116, 139)
@@ -228,7 +502,9 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   // ── Rubros ───────────────────────────────────────────────────────────────────
   for (const rubro of data.rubros) {
     // Solo ítems con importe > 0
-    const visible = rubro.items.filter((item) => rawAmt(item.qty, item.days, item.cost) > 0)
+    const visible = rubro.items.filter(
+      (item) => rawAmt(item.qty, item.days, item.cost) > 0
+    )
     if (visible.length === 0) continue
 
     const minSpace = 8 + 6 + visible.length * 6
@@ -244,10 +520,14 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     doc.setFillColor(r, g, b)
     doc.rect(mL, y, 3, 7.5, "F")
 
-    // Subtotal del rubro = suma de precios cliente (con markups ocultos)
-    const rubroClientTotal = visible.reduce((sum, item) => {
-      return sum + (parseFloat(item.qty) || 0) * (parseFloat(item.days) || 0) * clientUnitPrice(item)
-    }, 0)
+    const rubroClientTotal = visible.reduce(
+      (sum, item) =>
+        sum +
+        (parseFloat(item.qty) || 0) *
+          (parseFloat(item.days) || 0) *
+          clientUnitPrice(item),
+      0
+    )
 
     doc.setFont("helvetica", "bold")
     doc.setFontSize(8.5)
@@ -258,10 +538,11 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
 
     y += 9.5
 
-    // Filas de la tabla — precios para el cliente
+    // Filas — precios para el cliente (markup oculto incluido)
     const rows = visible.map((item) => {
       const unitP = clientUnitPrice(item)
-      const lineTotal = (parseFloat(item.qty) || 0) * (parseFloat(item.days) || 0) * unitP
+      const lineTotal =
+        (parseFloat(item.qty) || 0) * (parseFloat(item.days) || 0) * unitP
       return [item.label, item.qty, item.days, fmt(unitP), fmt(lineTotal)]
     })
 
@@ -307,7 +588,6 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   doc.line(mL, y, pageW - mR, y)
   y += 7
 
-  // Subtotal al cliente = suma de todos los precios con markup incluido = venta
   const subtotal = data.globalFinancials.venta
   const markupAmt = subtotal * ((data.visibleMarkupPct || 0) / 100)
   const totalBeforeIva = subtotal + markupAmt
@@ -332,12 +612,19 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     },
     columnStyles: {
       0: { cellWidth: 120, textColor: [71, 85, 105] },
-      1: { cellWidth: "auto", halign: "right", fontStyle: "bold", textColor: [15, 23, 42] },
+      1: {
+        cellWidth: "auto",
+        halign: "right",
+        fontStyle: "bold",
+        textColor: [15, 23, 42],
+      },
     },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     didParseCell: (hookData: any) => {
-      // Última fila = total antes de IVA — destacar
-      if (hookData.section === "body" && hookData.row.index === summaryBody.length - 1) {
+      if (
+        hookData.section === "body" &&
+        hookData.row.index === summaryBody.length - 1
+      ) {
         hookData.cell.styles.fontSize = 10.5
         hookData.cell.styles.textColor = [99, 102, 241]
         hookData.cell.styles.fillColor = [245, 243, 255]
@@ -366,7 +653,7 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   doc.setTextColor(71, 85, 105)
   doc.text("Director General", mL, finalY)
 
-  // ── No incluye / Términos ────────────────────────────────────────────────────
+  // ── No incluye / Términos ─────────────────────────────────────────────────────
   finalY += 14
 
   doc.setFont("helvetica", "bold")
