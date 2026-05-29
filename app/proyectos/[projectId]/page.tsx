@@ -602,6 +602,9 @@ function QuoteModal({
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <Link href={`/cotizaciones?quoteId=${quote.id}`} style={editQuoteBtnStyle}>
+              ✏ Editar
+            </Link>
             <button onClick={openMovePanel} style={moveQuoteBtnStyle}>
               ↗ Mover
             </button>
@@ -1494,6 +1497,22 @@ const pdfExportButtonStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
   whiteSpace: "nowrap",
+}
+
+const editQuoteBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "7px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(52,211,153,0.3)",
+  background: "rgba(52,211,153,0.08)",
+  color: "#34d399",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  textDecoration: "none",
 }
 
 const moveQuoteBtnStyle: React.CSSProperties = {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
@@ -130,7 +130,7 @@ const RUBROS: RubroDef[] = [
   },
 ]
 
-const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "", markup: "0", isInternal: false }
+const DEFAULT_ITEM: ItemValues = { qty: "1", days: "1", cost: "", markup: "", isInternal: false }
 
 function initValues(): Record<string, ItemValues> {
   const vals: Record<string, ItemValues> = {}
@@ -196,6 +196,9 @@ export default function CotizacionesPage() {
   const [showNewSubfolder, setShowNewSubfolder] = useState(false)
   const [newSubfolderName, setNewSubfolderName] = useState("")
   const [creatingProject, setCreatingProject] = useState(false)
+
+  const [editQuoteId, setEditQuoteId] = useState<string | null>(null)
+  const suppressClientReset = useRef(false)
 
   const isAdmin = profile?.role === "admin"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
@@ -293,11 +296,94 @@ export default function CotizacionesPage() {
       setClients(c || [])
       setProjects(p || [])
       setSubfolders(sf || [])
+
+      // ── Modo edición: cargar cotización existente desde URL ───────────────
+      const params = new URLSearchParams(window.location.search)
+      const qid = params.get("quoteId")
+      if (!qid) return
+
+      setEditQuoteId(qid)
+
+      const { data: quote, error: qErr } = await supabase
+        .from("quotes")
+        .select("id, name, status, project_id")
+        .eq("id", qid)
+        .single()
+      if (qErr || !quote) { alert("Cotización no encontrada"); return }
+
+      const loadedProj = (p || []).find((pr: Project) => pr.id === quote.project_id)
+      setQuoteName(quote.name)
+      setStatus(quote.status)
+      if (loadedProj) {
+        suppressClientReset.current = true
+        setClientId(loadedProj.client_id)
+        setProjectId(loadedProj.id)
+      }
+
+      const { data: secs } = await supabase
+        .from("quote_sections")
+        .select("id, name, order_index")
+        .eq("quote_id", qid)
+        .order("order_index")
+      if (!secs || secs.length === 0) return
+
+      const { data: dbItems } = await supabase
+        .from("quote_items")
+        .select("*")
+        .in("section_id", secs.map((s: any) => s.id))
+
+      const newValues = { ...initValues() }
+      const newExtras: Record<string, ExtraItem[]> = {}
+      let newCommPct = "30"
+      let newCommMarkup = "0"
+
+      for (const rubro of RUBROS) {
+        const sec = (secs as any[]).find((s: any) => s.name === rubro.label)
+        if (!sec) continue
+        const secItems = (dbItems as any[] || []).filter((i: any) => i.section_id === sec.id)
+        for (const dbItem of secItems) {
+          if ((dbItem.description as string).startsWith("Comisión de agencia")) {
+            newCommPct = dbItem.supplier || "30"
+            newCommMarkup = String(dbItem.released_expense)
+            continue
+          }
+          const predefined = rubro.items.find((ri) => ri.label === dbItem.description)
+          if (predefined && !predefined.special) {
+            newValues[predefined.id] = {
+              qty: String(dbItem.qty),
+              days: String(dbItem.days),
+              cost: String(dbItem.unit_price),
+              markup: String(dbItem.released_expense),
+              isInternal: dbItem.real_expense === 1,
+            }
+          } else if (!predefined) {
+            if (!newExtras[rubro.id]) newExtras[rubro.id] = []
+            newExtras[rubro.id].push({
+              tempId: crypto.randomUUID(),
+              description: dbItem.description,
+              qty: String(dbItem.qty),
+              days: String(dbItem.days),
+              cost: String(dbItem.unit_price),
+              markup: String(dbItem.released_expense),
+              isInternal: dbItem.real_expense === 1,
+            })
+          }
+        }
+      }
+
+      setValues(newValues)
+      setExtras(newExtras)
+      setCommissionPct(newCommPct)
+      setCommissionMarkup(newCommMarkup)
     }
     load()
   }, [])
 
   useEffect(() => {
+    if (suppressClientReset.current) {
+      suppressClientReset.current = false
+      return
+    }
     setProjectId("")
     setShowNewProject(false)
     setNewProjectName("")
@@ -367,25 +453,48 @@ export default function CotizacionesPage() {
 
     setSaving(true)
     try {
-      const { data: quoteData, error: quoteErr } = await supabase
-        .from("quotes")
-        .insert({
-          project_id: projectId,
-          name: quoteName.trim(),
-          status,
-          markup_percentage: 0,
-          created_by: profile.id,
-        })
-        .select("id")
-        .single()
+      let quoteId: string
 
-      if (quoteErr) throw quoteErr
+      if (editQuoteId) {
+        // ── Modo edición ───────────────────────────────────────────────────
+        const { error: updErr } = await supabase
+          .from("quotes")
+          .update({ project_id: projectId, name: quoteName.trim(), status })
+          .eq("id", editQuoteId)
+        if (updErr) throw updErr
+
+        // Borrar secciones + ítems anteriores
+        const { data: oldSecs } = await supabase
+          .from("quote_sections")
+          .select("id")
+          .eq("quote_id", editQuoteId)
+        if (oldSecs && oldSecs.length > 0) {
+          await supabase.from("quote_items").delete().in("section_id", oldSecs.map((s: any) => s.id))
+          await supabase.from("quote_sections").delete().eq("quote_id", editQuoteId)
+        }
+        quoteId = editQuoteId
+      } else {
+        // ── Modo creación ──────────────────────────────────────────────────
+        const { data: quoteData, error: quoteErr } = await supabase
+          .from("quotes")
+          .insert({
+            project_id: projectId,
+            name: quoteName.trim(),
+            status,
+            markup_percentage: 0,
+            created_by: profile.id,
+          })
+          .select("id")
+          .single()
+        if (quoteErr) throw quoteErr
+        quoteId = quoteData.id
+      }
 
       for (let ri = 0; ri < RUBROS.length; ri++) {
         const rubro = RUBROS[ri]
         const { data: secData, error: secErr } = await supabase
           .from("quote_sections")
-          .insert({ quote_id: quoteData.id, name: rubro.label, order_index: ri })
+          .insert({ quote_id: quoteId, name: rubro.label, order_index: ri })
           .select("id")
           .single()
 
@@ -435,15 +544,19 @@ export default function CotizacionesPage() {
         if (itemsErr) throw itemsErr
       }
 
-      setValues(initValues())
-      setExtras({})
-      setClientId("")
-      setProjectId("")
-      setQuoteName("")
-      setCommissionPct("30")
-      setCommissionMarkup("0")
-      setStatus("draft")
-      alert("Cotización guardada. Revísala desde la sección de Proyectos.")
+      if (editQuoteId) {
+        window.location.href = `/proyectos/${projectId}`
+      } else {
+        setValues(initValues())
+        setExtras({})
+        setClientId("")
+        setProjectId("")
+        setQuoteName("")
+        setCommissionPct("30")
+        setCommissionMarkup("0")
+        setStatus("draft")
+        alert("Cotización guardada. Revísala desde la sección de Proyectos.")
+      }
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -530,7 +643,7 @@ export default function CotizacionesPage() {
         <div style={pageContainerStyle}>
           <header style={pageHeaderStyle}>
             <p style={eyebrowStyle}>Finanzas</p>
-            <h1 style={pageTitleStyle}>Nueva cotización</h1>
+            <h1 style={pageTitleStyle}>{editQuoteId ? "Editar cotización" : "Nueva cotización"}</h1>
             <p style={pageSubtitleStyle}>Presupuesto estructurado por rubros con análisis de utilidad</p>
           </header>
 
@@ -640,13 +753,12 @@ export default function CotizacionesPage() {
             {/* R1 */}
             <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[0])} extras={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[0].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[0].id, t)} isMobile={isMobile} />
 
-            {/* R2 ancho completo */}
+            {/* R2 */}
             <RubroCard
               rubro={RUBROS[1]}
               values={values}
               onUpdate={updateItem}
               financials={getRubroFinancials(RUBROS[1])}
-              twoColItems={!isMobile}
               extras={extras[RUBROS[1].id] || []}
               onAddExtra={() => addExtra(RUBROS[1].id)}
               onUpdateExtra={(t, p) => updateExtra(RUBROS[1].id, t, p)}
@@ -654,17 +766,17 @@ export default function CotizacionesPage() {
               isMobile={isMobile}
             />
 
-            {/* R3 + R4 */}
-            <div style={twoCol}>
-              <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[2])} extras={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[2].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[2].id, t)} isMobile={isMobile} />
-              <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[3])} extras={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[3].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[3].id, t)} isMobile={isMobile} />
-            </div>
+            {/* R3 */}
+            <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[2])} extras={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[2].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[2].id, t)} isMobile={isMobile} />
 
-            {/* R5 + R6 */}
-            <div style={twoCol}>
-              <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[4])} extras={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[4].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[4].id, t)} isMobile={isMobile} />
-              <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[5])} extras={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[5].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[5].id, t)} isMobile={isMobile} />
-            </div>
+            {/* R4 */}
+            <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[3])} extras={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[3].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[3].id, t)} isMobile={isMobile} />
+
+            {/* R5 */}
+            <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[4])} extras={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[4].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[4].id, t)} isMobile={isMobile} />
+
+            {/* R6 */}
+            <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[5])} extras={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[5].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[5].id, t)} isMobile={isMobile} />
 
             {/* R7 solo (comisión de agencia) */}
             <RubroCard
@@ -684,11 +796,11 @@ export default function CotizacionesPage() {
               isMobile={isMobile}
             />
 
-            {/* R8 + R9 */}
-            <div style={twoCol}>
-              <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
-              <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[8])} extras={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[8].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[8].id, t)} isMobile={isMobile} />
-            </div>
+            {/* R8 */}
+            <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
+
+            {/* R9 */}
+            <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[8])} extras={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[8].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[8].id, t)} isMobile={isMobile} />
           </div>
 
           {/* Resumen financiero global */}
@@ -749,7 +861,7 @@ export default function CotizacionesPage() {
 
                 <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
                   <button onClick={handleSave} disabled={saving} style={primaryButtonStyle}>
-                    {saving ? "Guardando..." : "Guardar cotización"}
+                    {saving ? "Guardando..." : editQuoteId ? "Actualizar cotización" : "Guardar cotización"}
                   </button>
                   <button onClick={handleExportPdf} style={pdfButtonStyle}>
                     ↓ Exportar PDF
@@ -774,7 +886,7 @@ function TotalBlock({ label, value, color, large }: { label: string; value: stri
 }
 
 function RubroCard({
-  rubro, values, onUpdate, financials, twoColItems, isMobile,
+  rubro, values, onUpdate, financials, isMobile,
   commissionPct, commissionMarkup, commissionGasto,
   onCommissionPctChange, onCommissionMarkupChange,
   extras, onAddExtra, onUpdateExtra, onRemoveExtra,
@@ -783,7 +895,6 @@ function RubroCard({
   values: Record<string, ItemValues>
   onUpdate: (id: string, patch: Partial<ItemValues>) => void
   financials: RubroFinancials
-  twoColItems?: boolean
   isMobile: boolean
   commissionPct?: string
   commissionMarkup?: string
@@ -796,9 +907,8 @@ function RubroCard({
   onRemoveExtra: (tempId: string) => void
 }) {
   const items = rubro.items
-  const mid = twoColItems ? Math.ceil(items.length / 2) : items.length
-  const col1 = twoColItems ? items.slice(0, mid) : items
-  const col2 = twoColItems ? items.slice(mid) : []
+  const col1 = items
+  const col2: typeof items = []
 
   const hasValue = financials.venta > 0
 
@@ -843,7 +953,7 @@ function RubroCard({
       )}
 
       {/* Columnas predefinidas */}
-      <div style={{ display: "grid", gridTemplateColumns: twoColItems ? "1fr 1fr" : "1fr", gap: "2px 16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2px 16px" }}>
         {[col1, col2].map((col, ci) => (
           <div key={ci} style={{ display: "grid", gap: 0 }}>
             {col.map((item, idx) => {
@@ -884,7 +994,7 @@ function RubroCard({
                       <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
                       <span style={sepStyle}>×</span>
                       <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
-                      <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: v.isInternal ? 0.25 : 1 }} disabled={v.isInternal} placeholder="%" />
+                      <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: v.isInternal ? 0.25 : 1 }} disabled={v.isInternal} placeholder="0" />
                       <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
                       <span style={{ color: v.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
                     </div>
@@ -901,7 +1011,7 @@ function RubroCard({
                     <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
-                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} />
+                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} placeholder="0" />
                     <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
                     <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
                     <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
@@ -934,7 +1044,7 @@ function RubroCard({
                     <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
-                    <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: item.isInternal ? 0.25 : 1 }} disabled={item.isInternal} placeholder="%" />
+                    <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: item.isInternal ? 0.25 : 1 }} disabled={item.isInternal} placeholder="0" />
                     <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
                     <span style={{ color: item.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
                   </div>
@@ -951,7 +1061,7 @@ function RubroCard({
                   <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                   <span style={sepStyle}>×</span>
                   <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
-                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} />
+                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} placeholder="0" />
                   <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
                   <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
                   <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
