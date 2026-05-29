@@ -133,6 +133,7 @@ export default function ProjectDetailPage() {
   const [quotesLoaded, setQuotesLoaded] = useState(false)
   const [selectedQuote, setSelectedQuote] = useState<QuoteDetail | null>(null)
   const [loadingQuote, setLoadingQuote] = useState(false)
+  const [showMatriz, setShowMatriz] = useState(false)
 
   const isAdmin = profile?.role === "admin"
 
@@ -149,6 +150,17 @@ export default function ProjectDetailPage() {
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowMatriz(false)
+        setSelectedQuote(null)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [])
 
   async function loadPage() {
@@ -317,7 +329,13 @@ export default function ProjectDetailPage() {
                   <button
                     key={module.id}
                     type="button"
-                    onClick={() => setActiveModule(module.id)}
+                    onClick={() => {
+                      if (module.id === "matriz") {
+                        setShowMatriz(true)
+                      } else {
+                        setActiveModule(module.id)
+                      }
+                    }}
                     style={{
                       ...moduleCardStyle,
                       ...(isActive ? moduleCardActiveStyle : {}),
@@ -347,13 +365,6 @@ export default function ProjectDetailPage() {
                   loadingQuote={loadingQuote}
                   onOpenQuote={openQuoteDetail}
                   projectId={projectId}
-                />
-              ) : activeModule === "matriz" ? (
-                <MatrizPanel
-                  projectId={projectId}
-                  isMobile={isMobile}
-                  projectName={project?.name ?? ""}
-                  clientName={clientName}
                 />
               ) : (
                 <>
@@ -398,6 +409,51 @@ export default function ProjectDetailPage() {
             setSelectedQuote(null)
           }}
         />
+      )}
+
+      {/* Modal de Matriz de proyecto */}
+      {showMatriz && (
+        <div
+          className="modal-overlay"
+          style={modalOverlayStyle}
+          onClick={() => setShowMatriz(false)}
+        >
+          <div
+            className="modal-panel"
+            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : 900 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={modalHeaderStyle}>
+              <div>
+                <p style={modalEyebrowStyle}>Proyecto · {project?.name}</p>
+                <h2 style={modalTitleStyle}>Matriz de proyecto</h2>
+              </div>
+              <button
+                onClick={() => setShowMatriz(false)}
+                style={modalCloseStyle}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            {/* Body */}
+            <div
+              style={{
+                padding: isMobile ? "16px 14px 28px" : "20px 28px 32px",
+                overflowY: "auto",
+                maxHeight: "80vh",
+              }}
+            >
+              <MatrizPanel
+                projectId={projectId}
+                isMobile={isMobile}
+                projectName={project?.name ?? ""}
+                clientName={clientName}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
