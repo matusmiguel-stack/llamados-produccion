@@ -1,15 +1,14 @@
 // lib/exportQuotePdf.ts
-// Generación de PDF de cotización con jsPDF + jspdf-autotable (cliente only)
+// PDF de cotización orientado al cliente — márgenes ocultos, precios finales
 
 export interface QuoteItemPDF {
   label: string
   qty: string
   days: string
   cost: string
-  markup: string
+  markup: string   // hidden — sólo para calcular precio final al cliente
   isInternal: boolean
   isCommission?: boolean
-  commissionPct?: string
 }
 
 export interface QuoteRubroPDF {
@@ -28,38 +27,18 @@ export interface QuotePDFData {
   date: string
   rubros: QuoteRubroPDF[]
   globalFinancials: { gasto: number; utilidad: number; venta: number }
-  marginPct: number
+  visibleMarkupPct: number  // markup global mostrado al cliente (quote.markup_percentage)
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-function rawAmt(qty: string, days: string, cost: string): number {
-  return (parseFloat(qty) || 0) * (parseFloat(days) || 0) * (parseFloat(cost) || 0)
-}
-
-function fmt(n: number): string {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [100, 100, 200]
-}
-
-// Mezcla el color con blanco para fondo claro en encabezados
-function lightBg(r: number, g: number, b: number): [number, number, number] {
-  return [Math.round(r * 0.12 + 240), Math.round(g * 0.12 + 240), Math.round(b * 0.12 + 240)]
-}
-
-// ─── Tipos para exportar desde cotización guardada en DB ─────────────────────
+// ─── Tipos para exportar desde DB ────────────────────────────────────────────
 
 export interface DBQuoteItem {
   description: string
   qty: number
   days: number
   unit_price: number       // costo real
-  released_expense: number // markup %
-  real_expense: number     // 1 = interno
+  released_expense: number // markup % (oculto)
+  real_expense: number     // 1 = recurso interno
   supplier: string | null
 }
 
@@ -70,7 +49,7 @@ export interface DBQuoteSection {
 }
 
 export interface DBQuoteDetail {
-  quote: { name: string; status: string }
+  quote: { name: string; status: string; markup_percentage: number }
   sections: DBQuoteSection[]
 }
 
@@ -106,13 +85,12 @@ export async function exportQuotePdfFromDetail(
         isInternal: item.real_expense === 1,
       }))
 
-      // Calcular financials replicando la misma lógica que el formulario
       let gasto = 0
       let utilidad = 0
       for (const item of sec.items) {
         const amount = item.qty * item.days * item.unit_price
         if (item.real_expense === 1) {
-          utilidad += amount // interno: todo a utilidad
+          utilidad += amount
         } else {
           gasto += amount
           utilidad += amount * ((item.released_expense || 0) / 100)
@@ -137,11 +115,6 @@ export async function exportQuotePdfFromDetail(
     { gasto: 0, utilidad: 0, venta: 0 }
   )
 
-  const marginPct =
-    globalFinancials.venta > 0
-      ? (globalFinancials.utilidad / globalFinancials.venta) * 100
-      : 0
-
   await exportQuotePdf({
     quoteName: detail.quote.name,
     clientName,
@@ -150,8 +123,34 @@ export async function exportQuotePdfFromDetail(
     date,
     rubros,
     globalFinancials,
-    marginPct,
+    visibleMarkupPct: detail.quote.markup_percentage,
   })
+}
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function rawAmt(qty: string, days: string, cost: string): number {
+  return (parseFloat(qty) || 0) * (parseFloat(days) || 0) * (parseFloat(cost) || 0)
+}
+
+// Precio unitario que ve el cliente (markups ocultos ya incluidos)
+function clientUnitPrice(item: QuoteItemPDF): number {
+  const cost = parseFloat(item.cost) || 0
+  if (item.isInternal) return cost
+  return cost * (1 + (parseFloat(item.markup) || 0) / 100)
+}
+
+function fmt(n: number): string {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [100, 100, 200]
+}
+
+function lightBg(r: number, g: number, b: number): [number, number, number] {
+  return [Math.round(r * 0.12 + 240), Math.round(g * 0.12 + 240), Math.round(b * 0.12 + 240)]
 }
 
 // ─── exportación principal ────────────────────────────────────────────────────
@@ -178,29 +177,24 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     approved: [22, 163, 74],
   }
 
-  // ── Encabezado de primera página ──────────────────────────────────────────
-  // Banda oscura superior
+  // ── Encabezado ───────────────────────────────────────────────────────────────
   doc.setFillColor(15, 23, 42)
   doc.rect(0, 0, pageW, 34, "F")
 
-  // Título
   doc.setFont("helvetica", "bold")
   doc.setFontSize(18)
   doc.setTextColor(248, 250, 252)
   doc.text("COTIZACIÓN", mL, 13)
 
-  // Nombre de la cotización
   doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   doc.setTextColor(148, 163, 184)
   doc.text(data.quoteName, mL, 22)
 
-  // Fecha (derecha)
   doc.setFontSize(8)
   doc.setTextColor(100, 116, 139)
   doc.text(data.date, pageW - mR, 8.5, { align: "right" })
 
-  // Badge de estado
   const sc = STATUS_COLOR[data.status] || [71, 85, 105]
   doc.setFillColor(...sc)
   doc.roundedRect(pageW - mR - 26, 14.5, 26, 8, 2, 2, "F")
@@ -209,7 +203,6 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   doc.setTextColor(255, 255, 255)
   doc.text(STATUS_LABEL[data.status] ?? data.status, pageW - mR - 13, 19.5, { align: "center" })
 
-  // Línea de cliente / proyecto
   let y = 41
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8.5)
@@ -232,66 +225,50 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   doc.line(mL, y, pageW - mR, y)
   y += 7
 
-  // ── Rubros ──────────────────────────────────────────────────────────────────
-  let hasInternalItems = false
-
+  // ── Rubros ───────────────────────────────────────────────────────────────────
   for (const rubro of data.rubros) {
-    // Filtrar items con importe > 0
-    const visible = rubro.items.filter(item => rawAmt(item.qty, item.days, item.cost) > 0)
+    // Solo ítems con importe > 0
+    const visible = rubro.items.filter((item) => rawAmt(item.qty, item.days, item.cost) > 0)
     if (visible.length === 0) continue
 
-    // Espacio estimado para encabezado + al menos 1 fila
     const minSpace = 8 + 6 + visible.length * 6
-    if (y + minSpace > pageH - mR - 45) {
+    if (y + minSpace > pageH - mR - 50) {
       doc.addPage()
       y = mL
     }
 
-    // ── Cabecera del rubro ──────────────────────────────────────────────────
+    // Cabecera del rubro
     const [r, g, b] = hexToRgb(rubro.hexColor)
     doc.setFillColor(...lightBg(r, g, b))
     doc.rect(mL, y, contentW, 7.5, "F")
     doc.setFillColor(r, g, b)
     doc.rect(mL, y, 3, 7.5, "F")
 
+    // Subtotal del rubro = suma de precios cliente (con markups ocultos)
+    const rubroClientTotal = visible.reduce((sum, item) => {
+      return sum + (parseFloat(item.qty) || 0) * (parseFloat(item.days) || 0) * clientUnitPrice(item)
+    }, 0)
+
     doc.setFont("helvetica", "bold")
     doc.setFontSize(8.5)
     doc.setTextColor(30, 41, 59)
     doc.text(`${rubro.num}. ${rubro.label.toUpperCase()}`, mL + 5.5, y + 5)
-
-    // Subtotal rubro (derecha)
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(8.5)
     doc.setTextColor(r, g, b)
-    doc.text(fmt(rubro.financials.venta), pageW - mR, y + 5, { align: "right" })
+    doc.text(fmt(rubroClientTotal), pageW - mR, y + 5, { align: "right" })
 
     y += 9.5
 
-    // ── Tabla de ítems del rubro ─────────────────────────────────────────────
-    const internalFlags: boolean[] = []
-
-    const rows = visible.map(item => {
-      const amount = rawAmt(item.qty, item.days, item.cost)
-      internalFlags.push(item.isInternal)
-
-      if (item.isCommission) {
-        const u = amount * ((parseFloat(item.markup) || 0) / 100)
-        return [`Comisión de agencia (${item.commissionPct}%)`, "—", "—", fmt(amount), `${item.markup}%`, fmt(amount + u)]
-      }
-
-      if (item.isInternal) {
-        hasInternalItems = true
-        return [`${item.label} (*)`, item.qty, item.days, fmt(parseFloat(item.cost) || 0), "INT", fmt(amount)]
-      }
-
-      const u = amount * ((parseFloat(item.markup) || 0) / 100)
-      return [item.label, item.qty, item.days, fmt(parseFloat(item.cost) || 0), `${item.markup}%`, fmt(amount + u)]
+    // Filas de la tabla — precios para el cliente
+    const rows = visible.map((item) => {
+      const unitP = clientUnitPrice(item)
+      const lineTotal = (parseFloat(item.qty) || 0) * (parseFloat(item.days) || 0) * unitP
+      return [item.label, item.qty, item.days, fmt(unitP), fmt(lineTotal)]
     })
 
     autoTable(doc, {
       startY: y,
       margin: { left: mL, right: mR },
-      head: [["Concepto", "Cant.", "Días", "Costo unit.", "Mkp%", "Precio venta"]],
+      head: [["Concepto", "Cantidad", "Días", "Costo unitario", "Costo total"]],
       body: rows,
       styles: {
         fontSize: 7.8,
@@ -308,57 +285,48 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
       },
       columnStyles: {
         0: { cellWidth: "auto" },
-        1: { cellWidth: 13, halign: "right" },
-        2: { cellWidth: 13, halign: "right" },
-        3: { cellWidth: 32, halign: "right" },
-        4: { cellWidth: 16, halign: "right" },
-        5: { cellWidth: 35, halign: "right", fontStyle: "bold" },
+        1: { cellWidth: 18, halign: "right" },
+        2: { cellWidth: 14, halign: "right" },
+        3: { cellWidth: 38, halign: "right" },
+        4: { cellWidth: 38, halign: "right", fontStyle: "bold" },
       },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      didParseCell: (hookData: any) => {
-        if (hookData.section === "body" && internalFlags[hookData.row.index]) {
-          hookData.cell.styles.textColor = [22, 163, 74]
-          hookData.cell.styles.fontStyle = "italic"
-        }
-      },
     })
 
     y = (doc as any).lastAutoTable.finalY + 7
   }
 
-  // ── Resumen financiero ───────────────────────────────────────────────────────
+  // ── Resumen financiero ────────────────────────────────────────────────────────
   if (y + 55 > pageH - mR) {
     doc.addPage()
     y = mL
   }
 
-  // Separador
   doc.setDrawColor(100, 116, 139)
   doc.setLineWidth(0.4)
   doc.line(mL, y, pageW - mR, y)
   y += 7
 
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(9.5)
-  doc.setTextColor(15, 23, 42)
-  doc.text("RESUMEN FINANCIERO", mL, y)
-  y += 6
+  // Subtotal al cliente = suma de todos los precios con markup incluido = venta
+  const subtotal = data.globalFinancials.venta
+  const markupAmt = subtotal * ((data.visibleMarkupPct || 0) / 100)
+  const totalBeforeIva = subtotal + markupAmt
 
-  const marginColor: [number, number, number] =
-    data.marginPct >= 20 ? [22, 163, 74] : data.marginPct >= 10 ? [217, 119, 6] : [220, 38, 38]
+  const summaryBody: (string | number)[][] = [
+    ["Subtotal", fmt(subtotal)],
+    ...(data.visibleMarkupPct > 0
+      ? [[`Markup (${data.visibleMarkupPct}%)`, fmt(markupAmt)]]
+      : []),
+    ["Total antes de IVA", fmt(totalBeforeIva)],
+  ]
 
   autoTable(doc, {
     startY: y,
     margin: { left: mL, right: mR },
-    body: [
-      ["Total Gasto", fmt(data.globalFinancials.gasto)],
-      ["Total Utilidad", fmt(data.globalFinancials.utilidad)],
-      ["Precio de Venta Total", fmt(data.globalFinancials.venta)],
-      ["Margen de Utilidad", `${data.marginPct.toFixed(1)}%`],
-    ],
+    body: summaryBody,
     styles: {
       fontSize: 9,
-      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+      cellPadding: { top: 2.8, bottom: 2.8, left: 4, right: 4 },
       lineColor: [226, 232, 240],
       lineWidth: 0.2,
     },
@@ -368,30 +336,63 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     didParseCell: (hookData: any) => {
-      if (hookData.section === "body") {
-        // Precio de venta — morado
-        if (hookData.row.index === 2) {
-          hookData.cell.styles.textColor = [99, 102, 241]
-          hookData.cell.styles.fontSize = 10
-        }
-        // Margen — color semáforo
-        if (hookData.row.index === 3 && hookData.column.index === 1) {
-          hookData.cell.styles.textColor = marginColor
-        }
+      // Última fila = total antes de IVA — destacar
+      if (hookData.section === "body" && hookData.row.index === summaryBody.length - 1) {
+        hookData.cell.styles.fontSize = 10.5
+        hookData.cell.styles.textColor = [99, 102, 241]
+        hookData.cell.styles.fillColor = [245, 243, 255]
       }
     },
   })
 
-  // Nota items internos
-  if (hasInternalItems) {
-    const lastY = (doc as any).lastAutoTable.finalY
-    doc.setFont("helvetica", "italic")
-    doc.setFontSize(7)
-    doc.setTextColor(100, 116, 139)
-    doc.text("(*) Recursos internos: el monto se contabiliza íntegramente como utilidad (gasto real = $0).", mL, lastY + 7)
+  // ── Firma ────────────────────────────────────────────────────────────────────
+  let finalY = (doc as any).lastAutoTable.finalY
+
+  if (finalY + 38 > pageH - mR) {
+    doc.addPage()
+    finalY = mL
   }
 
+  finalY += 18
+
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(11)
+  doc.setTextColor(15, 23, 42)
+  doc.text("Miguel Matus", mL, finalY)
+
+  finalY += 5.5
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  doc.setTextColor(71, 85, 105)
+  doc.text("Director General", mL, finalY)
+
+  // ── No incluye / Términos ────────────────────────────────────────────────────
+  finalY += 14
+
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8)
+  doc.setTextColor(30, 41, 59)
+  doc.text("No incluye:", mL, finalY)
+  finalY += 4.5
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(71, 85, 105)
+  doc.text("· IVA", mL + 2, finalY)
+
+  finalY += 8
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8)
+  doc.setTextColor(30, 41, 59)
+  doc.text("Términos:", mL, finalY)
+  finalY += 4.5
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(71, 85, 105)
+  doc.text("Esta cotización no contempla IVA.", mL + 2, finalY)
+  finalY += 4.5
+  doc.text("Vigencia de la cotización: 15 días a partir de su expedición.", mL + 2, finalY)
+
   // ── Guardar ──────────────────────────────────────────────────────────────────
-  const safeName = (data.quoteName || "cotizacion").replace(/[^a-z0-9áéíóúñ\s_-]/gi, "").replace(/\s+/g, "_")
+  const safeName = (data.quoteName || "cotizacion")
+    .replace(/[^a-z0-9áéíóúñ\s_-]/gi, "")
+    .replace(/\s+/g, "_")
   doc.save(`${safeName}.pdf`)
 }

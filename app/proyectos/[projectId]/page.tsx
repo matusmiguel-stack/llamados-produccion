@@ -502,7 +502,7 @@ function QuoteModal({
       const { exportQuotePdfFromDetail } = await import("../../../lib/exportQuotePdf")
       await exportQuotePdfFromDetail(
         {
-          quote: { name: quote.name, status: quote.status },
+          quote: { name: quote.name, status: quote.status, markup_percentage: quote.markup_percentage },
           sections: sections.map((s) => ({
             name: s.name,
             order_index: s.order_index,

@@ -423,7 +423,7 @@ export default function CotizacionesPage() {
       date,
       rubros,
       globalFinancials,
-      marginPct,
+      visibleMarkupPct: 0,
     }
 
     await exportQuotePdf(pdfData)
