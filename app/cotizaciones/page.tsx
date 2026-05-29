@@ -179,6 +179,7 @@ export default function CotizacionesPage() {
   const [clientId, setClientId] = useState("")
   const [projectId, setProjectId] = useState("")
   const [quoteName, setQuoteName] = useState("")
+  const [atencion, setAtencion] = useState("")
   const [status, setStatus] = useState<"draft" | "sent" | "approved">("draft")
   const [values, setValues] = useState<Record<string, ItemValues>>(initValues())
   const [extras, setExtras] = useState<Record<string, ExtraItem[]>>({})
@@ -306,13 +307,14 @@ export default function CotizacionesPage() {
 
       const { data: quote, error: qErr } = await supabase
         .from("quotes")
-        .select("id, name, status, project_id")
+        .select("id, name, status, project_id, atencion")
         .eq("id", qid)
         .single()
       if (qErr || !quote) { alert("Cotización no encontrada"); return }
 
       const loadedProj = (p || []).find((pr: Project) => pr.id === quote.project_id)
       setQuoteName(quote.name)
+      setAtencion(quote.atencion || "")
       setStatus(quote.status)
       if (loadedProj) {
         suppressClientReset.current = true
@@ -459,7 +461,7 @@ export default function CotizacionesPage() {
         // ── Modo edición ───────────────────────────────────────────────────
         const { error: updErr } = await supabase
           .from("quotes")
-          .update({ project_id: projectId, name: quoteName.trim(), status })
+          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status })
           .eq("id", editQuoteId)
         if (updErr) throw updErr
 
@@ -480,6 +482,7 @@ export default function CotizacionesPage() {
           .insert({
             project_id: projectId,
             name: quoteName.trim(),
+            atencion: atencion.trim() || null,
             status,
             markup_percentage: 0,
             created_by: profile.id,
@@ -552,6 +555,7 @@ export default function CotizacionesPage() {
         setClientId("")
         setProjectId("")
         setQuoteName("")
+        setAtencion("")
         setCommissionPct("30")
         setCommissionMarkup("0")
         setStatus("draft")
@@ -607,6 +611,7 @@ export default function CotizacionesPage() {
 
     const pdfData: QuotePDFData = {
       quoteName: quoteName || "Cotización",
+      atencion,
       clientName,
       projectName,
       status,
@@ -652,7 +657,7 @@ export default function CotizacionesPage() {
             <div style={panelHeaderStyle}>
               <p style={panelTitleStyle}>Datos generales</p>
             </div>
-            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 140px" }}>
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr 140px" }}>
               <Field label="Cliente">
                 {showNewClient ? (
                   <div style={{ display: "flex", gap: 6 }}>
@@ -732,6 +737,9 @@ export default function CotizacionesPage() {
                     )}
                   </div>
                 )}
+              </Field>
+              <Field label="Atención">
+                <input value={atencion} onChange={(e) => setAtencion(e.target.value)} placeholder="A quien va dirigida" style={inputStyle} />
               </Field>
               <Field label="Nombre de la cotización">
                 <input value={quoteName} onChange={(e) => setQuoteName(e.target.value)} placeholder="Ej. Propuesta v1" style={inputStyle} />

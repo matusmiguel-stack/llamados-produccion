@@ -21,6 +21,7 @@ export interface QuoteRubroPDF {
 
 export interface QuotePDFData {
   quoteName: string
+  atencion: string
   clientName: string
   projectName: string
   status: string
@@ -49,7 +50,7 @@ export interface DBQuoteSection {
 }
 
 export interface DBQuoteDetail {
-  quote: { name: string; status: string; markup_percentage: number }
+  quote: { name: string; status: string; markup_percentage: number; atencion?: string }
   sections: DBQuoteSection[]
 }
 
@@ -117,6 +118,7 @@ export async function exportQuotePdfFromDetail(
 
   await exportQuotePdf({
     quoteName: detail.quote.name,
+    atencion: detail.quote.atencion || "",
     clientName,
     projectName,
     status: detail.quote.status,
@@ -200,24 +202,26 @@ function drawCoverPage(
     doc.rect(0, 0, pageW, headerH, "F")
   }
 
-  let y = headerH + 15
+  let y = headerH + 14
 
   // ── Info sección ─────────────────────────────────────────────────────────────
+  // ATENCIÓN (grande)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(7)
   doc.setTextColor(100, 116, 139)
   doc.text("ATENCIÓN:", mL, y)
 
-  y += 6
+  y += 5.5
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(20)
+  doc.setFontSize(18)
   doc.setTextColor(15, 23, 42)
-  doc.text(data.clientName, mL, y)
+  doc.text(data.atencion || data.clientName, mL, y)
 
-  y += 11
-  // Grid: Campaña | Marca | Fecha
-  const colW = contentW / 3
+  y += 10
+  // Grid de 4 columnas: Cliente | Campaña | Marca | Fecha
+  const colW = contentW / 4
   const infoGrid = [
+    { label: "CLIENTE", value: data.clientName },
     { label: "CAMPAÑA", value: data.projectName },
     { label: "MARCA", value: data.clientName },
     { label: "FECHA", value: data.date },
@@ -229,9 +233,9 @@ function drawCoverPage(
     doc.setTextColor(100, 116, 139)
     doc.text(col.label, cx, y)
     doc.setFont("helvetica", "bold")
-    doc.setFontSize(9)
+    doc.setFontSize(8.5)
     doc.setTextColor(30, 41, 59)
-    doc.text(col.value, cx, y + 5.5, { maxWidth: colW - 4 })
+    doc.text(col.value, cx, y + 5, { maxWidth: colW - 3 })
   })
 
   y += 16

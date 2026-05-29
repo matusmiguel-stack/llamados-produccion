@@ -21,6 +21,7 @@ type Quote = {
   name: string
   status: "draft" | "sent" | "approved"
   markup_percentage: number
+  atencion: string | null
   created_at: string
 }
 
@@ -517,7 +518,7 @@ function QuoteModal({
       const { exportQuotePdfFromDetail } = await import("../../../lib/exportQuotePdf")
       await exportQuotePdfFromDetail(
         {
-          quote: { name: quote.name, status: quote.status, markup_percentage: quote.markup_percentage },
+          quote: { name: quote.name, status: quote.status, markup_percentage: quote.markup_percentage, atencion: quote.atencion ?? "" },
           sections: sections.map((s) => ({
             name: s.name,
             order_index: s.order_index,
