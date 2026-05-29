@@ -175,6 +175,7 @@ export default function CotizacionesPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const [clientId, setClientId] = useState("")
   const [projectId, setProjectId] = useState("")
@@ -186,6 +187,7 @@ export default function CotizacionesPage() {
   const [commissionPct, setCommissionPct] = useState("30")
   const [commissionMarkup, setCommissionMarkup] = useState("0")
   const [markupGeneral, setMarkupGeneral] = useState("0")
+  const [entregables, setEntregables] = useState("")
 
   // Inline creation state
   const [subfolders, setSubfolders] = useState<Subfolder[]>([])
@@ -308,7 +310,7 @@ export default function CotizacionesPage() {
 
       const { data: quote, error: qErr } = await supabase
         .from("quotes")
-        .select("id, name, status, project_id, atencion, markup_percentage")
+        .select("id, name, status, project_id, atencion, markup_percentage, entregables")
         .eq("id", qid)
         .single()
       if (qErr || !quote) { alert("Cotización no encontrada"); return }
@@ -318,6 +320,7 @@ export default function CotizacionesPage() {
       setAtencion(quote.atencion || "")
       setStatus(quote.status)
       setMarkupGeneral(String(quote.markup_percentage || 0))
+      setEntregables(quote.entregables || "")
       if (loadedProj) {
         suppressClientReset.current = true
         setClientId(loadedProj.client_id)
@@ -471,7 +474,7 @@ export default function CotizacionesPage() {
         // ── Modo edición ───────────────────────────────────────────────────
         const { error: updErr } = await supabase
           .from("quotes")
-          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status, markup_percentage: parseFloat(markupGeneral) || 0 })
+          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status, markup_percentage: parseFloat(markupGeneral) || 0, entregables: entregables.trim() || null })
           .eq("id", editQuoteId)
         if (updErr) throw updErr
 
@@ -512,6 +515,7 @@ export default function CotizacionesPage() {
             atencion: atencion.trim() || null,
             status,
             markup_percentage: parseFloat(markupGeneral) || 0,
+            entregables: entregables.trim() || null,
             created_by: profile.id,
           })
           .select("id")
@@ -585,7 +589,8 @@ export default function CotizacionesPage() {
       }
 
       if (editQuoteId) {
-        window.location.href = `/proyectos/${projectId}`
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
       } else {
         setValues(initValues())
         setExtras({})
@@ -656,6 +661,7 @@ export default function CotizacionesPage() {
       rubros,
       globalFinancials,
       visibleMarkupPct: parseFloat(markupGeneral) || 0,
+      entregables: entregables.trim() || undefined,
     }
 
     await exportQuotePdf(pdfData)
@@ -805,6 +811,27 @@ export default function CotizacionesPage() {
             </div>
           </section>
 
+          {/* Entregables */}
+          <section style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <p style={panelTitleStyle}>Entregables</p>
+            </div>
+            <textarea
+              value={entregables}
+              onChange={(e) => setEntregables(e.target.value)}
+              placeholder={"Describe los entregables del proyecto...\nEj.:\n· 1 video principal 60s (Master)\n· 1 corte 30s para redes\n· Fotografías de producción (selección de 20 imágenes editadas)"}
+              rows={6}
+              style={{
+                ...inputStyle,
+                width: "100%",
+                resize: "vertical",
+                fontFamily: "inherit",
+                lineHeight: 1.6,
+                minHeight: 120,
+                boxSizing: "border-box",
+              }}
+            />
+          </section>
 
           {/* Rubros */}
           <div style={{ display: "grid", gap: 12 }}>
@@ -933,8 +960,8 @@ export default function CotizacionesPage() {
                 </div>
 
                 <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
-                  <button onClick={handleSave} disabled={saving} style={primaryButtonStyle}>
-                    {saving ? "Guardando..." : editQuoteId ? "Actualizar cotización" : "Guardar cotización"}
+                  <button onClick={handleSave} disabled={saving} style={saveSuccess ? { ...primaryButtonStyle, background: "#059669" } : primaryButtonStyle}>
+                    {saving ? "Guardando..." : saveSuccess ? "✓ Cotización actualizada" : editQuoteId ? "Actualizar cotización" : "Guardar cotización"}
                   </button>
                   <button onClick={handleExportPdf} style={pdfButtonStyle}>
                     ↓ Exportar PDF

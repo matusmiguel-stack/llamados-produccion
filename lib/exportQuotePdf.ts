@@ -29,6 +29,7 @@ export interface QuotePDFData {
   rubros: QuoteRubroPDF[]
   globalFinancials: { gasto: number; utilidad: number; venta: number }
   visibleMarkupPct: number  // markup global mostrado al cliente (quote.markup_percentage)
+  entregables?: string
 }
 
 // ─── Tipos para exportar desde DB ────────────────────────────────────────────
@@ -50,7 +51,7 @@ export interface DBQuoteSection {
 }
 
 export interface DBQuoteDetail {
-  quote: { name: string; status: string; markup_percentage: number; atencion?: string }
+  quote: { name: string; status: string; markup_percentage: number; atencion?: string; entregables?: string }
   sections: DBQuoteSection[]
 }
 
@@ -126,6 +127,7 @@ export async function exportQuotePdfFromDetail(
     rubros,
     globalFinancials,
     visibleMarkupPct: detail.quote.markup_percentage,
+    entregables: detail.quote.entregables,
   })
 }
 
@@ -351,8 +353,25 @@ function drawCoverPage(
   doc.setTextColor(99, 102, 241)
   doc.text(fmt(totalBeforeIva), pageW - mR, ry + 10.5, { align: "right" })
 
-  // Columna izquierda: No incluye / Términos
+  // Columna izquierda: Entregables / No incluye / Términos
+  // Available width for left column (stop before right totals block)
+  const leftColW = rightStartX - mL - 8
   let ly = y
+
+  if (data.entregables && data.entregables.trim()) {
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(8)
+    doc.setTextColor(30, 41, 59)
+    doc.text("ENTREGABLES:", mL, ly)
+    ly += 5.5
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7.5)
+    doc.setTextColor(71, 85, 105)
+    const entregablesLines = doc.splitTextToSize(data.entregables.trim(), leftColW)
+    doc.text(entregablesLines, mL + 2, ly)
+    ly += entregablesLines.length * 4.5 + 7
+  }
+
   doc.setFont("helvetica", "bold")
   doc.setFontSize(8)
   doc.setTextColor(30, 41, 59)
