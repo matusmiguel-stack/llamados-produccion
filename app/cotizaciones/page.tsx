@@ -457,6 +457,14 @@ export default function CotizacionesPage() {
     try {
       let quoteId: string
 
+      type ActualSnapshot = {
+        actual_qty: number | null
+        actual_days: number | null
+        actual_unit_price: number | null
+        actual_supplier_id: string | null
+      }
+      const savedActuals: Record<string, ActualSnapshot> = {}
+
       if (editQuoteId) {
         // ── Modo edición ───────────────────────────────────────────────────
         const { error: updErr } = await supabase
@@ -465,12 +473,29 @@ export default function CotizacionesPage() {
           .eq("id", editQuoteId)
         if (updErr) throw updErr
 
-        // Borrar secciones + ítems anteriores
+        // Guardar valores de liberación antes de borrar (preservar progreso)
         const { data: oldSecs } = await supabase
           .from("quote_sections")
-          .select("id")
+          .select("id, name")
           .eq("quote_id", editQuoteId)
+
         if (oldSecs && oldSecs.length > 0) {
+          for (const sec of oldSecs) {
+            const { data: oldItems } = await supabase
+              .from("quote_items")
+              .select("description, actual_qty, actual_days, actual_unit_price, actual_supplier_id")
+              .eq("section_id", sec.id)
+            for (const it of oldItems || []) {
+              const key = `${sec.name}|${it.description}`
+              savedActuals[key] = {
+                actual_qty: it.actual_qty,
+                actual_days: it.actual_days,
+                actual_unit_price: it.actual_unit_price,
+                actual_supplier_id: it.actual_supplier_id,
+              }
+            }
+          }
+          // Borrar secciones + ítems anteriores
           await supabase.from("quote_items").delete().in("section_id", oldSecs.map((s: any) => s.id))
           await supabase.from("quote_sections").delete().eq("quote_id", editQuoteId)
         }
@@ -505,19 +530,23 @@ export default function CotizacionesPage() {
 
         const predefinedRows = rubro.items.map((item, ii) => {
           if (item.special === "agency_commission") {
+            const desc = `Comisión de agencia (${commissionPct}%)`
+            const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
             return {
               section_id: secData.id,
-              description: `Comisión de agencia (${commissionPct}%)`,
+              description: desc,
               qty: 1,
               days: 1,
-              unit_price: commissionGasto,       // costo real
-              released_expense: parseFloat(commissionMarkup) || 0, // markup %
+              unit_price: commissionGasto,
+              released_expense: parseFloat(commissionMarkup) || 0,
               real_expense: 0,
               supplier: commissionPct,
               order_index: ii,
+              ...prev,
             }
           }
           const v = values[item.id] || DEFAULT_ITEM
+          const prev = savedActuals?.[`${rubro.label}|${item.label}`] ?? {}
           return {
             section_id: secData.id,
             description: item.label,
@@ -528,20 +557,26 @@ export default function CotizacionesPage() {
             real_expense: v.isInternal ? 1 : 0,
             supplier: null,
             order_index: ii,
+            ...prev,
           }
         })
 
-        const extraRows = (extras[rubro.id] || []).map((item, ei) => ({
-          section_id: secData.id,
-          description: item.description || "Concepto adicional",
-          qty: parseFloat(item.qty) || 0,
-          days: parseFloat(item.days) || 0,
-          unit_price: parseFloat(item.cost) || 0,
-          released_expense: parseFloat(item.markup) || 0,
-          real_expense: item.isInternal ? 1 : 0,
-          supplier: null,
-          order_index: rubro.items.length + ei,
-        }))
+        const extraRows = (extras[rubro.id] || []).map((item, ei) => {
+          const desc = item.description || "Concepto adicional"
+          const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
+          return {
+            section_id: secData.id,
+            description: desc,
+            qty: parseFloat(item.qty) || 0,
+            days: parseFloat(item.days) || 0,
+            unit_price: parseFloat(item.cost) || 0,
+            released_expense: parseFloat(item.markup) || 0,
+            real_expense: item.isInternal ? 1 : 0,
+            supplier: null,
+            order_index: rubro.items.length + ei,
+            ...prev,
+          }
+        })
 
         const { error: itemsErr } = await supabase.from("quote_items").insert([...predefinedRows, ...extraRows])
         if (itemsErr) throw itemsErr
