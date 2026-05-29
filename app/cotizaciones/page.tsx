@@ -8,6 +8,7 @@ import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
 type Client = { id: string; name: string }
 type Project = { id: string; name: string; client_id: string }
+type Subfolder = { id: string; client_id: string; name: string }
 
 type ItemValues = {
   qty: string
@@ -184,8 +185,21 @@ export default function CotizacionesPage() {
   const [commissionPct, setCommissionPct] = useState("30")
   const [commissionMarkup, setCommissionMarkup] = useState("0")
 
+  // Inline creation state
+  const [subfolders, setSubfolders] = useState<Subfolder[]>([])
+  const [showNewClient, setShowNewClient] = useState(false)
+  const [newClientName, setNewClientName] = useState("")
+  const [creatingClient, setCreatingClient] = useState(false)
+  const [showNewProject, setShowNewProject] = useState(false)
+  const [newProjectName, setNewProjectName] = useState("")
+  const [newProjectSubfolderId, setNewProjectSubfolderId] = useState("")
+  const [showNewSubfolder, setShowNewSubfolder] = useState(false)
+  const [newSubfolderName, setNewSubfolderName] = useState("")
+  const [creatingProject, setCreatingProject] = useState(false)
+
   const isAdmin = profile?.role === "admin"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
+  const clientSubfolders = subfolders.filter((sf) => sf.client_id === clientId)
 
   // Comisión: % del gasto base de talento
   const talentoBaseGasto =
@@ -271,17 +285,80 @@ export default function CotizacionesPage() {
       if (!auth) return
       if (auth.profile.role !== "admin") { window.location.href = "/"; return }
       setProfile(auth.profile)
-      const [{ data: c }, { data: p }] = await Promise.all([
+      const [{ data: c }, { data: p }, { data: sf }] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
         supabase.from("projects").select("id, name, client_id").order("name"),
+        supabase.from("client_subfolders").select("id, client_id, name").order("name"),
       ])
       setClients(c || [])
       setProjects(p || [])
+      setSubfolders(sf || [])
     }
     load()
   }, [])
 
-  useEffect(() => { setProjectId("") }, [clientId])
+  useEffect(() => {
+    setProjectId("")
+    setShowNewProject(false)
+    setNewProjectName("")
+    setNewProjectSubfolderId("")
+    setNewSubfolderName("")
+    setShowNewSubfolder(false)
+  }, [clientId])
+
+  async function handleCreateClient() {
+    if (!newClientName.trim()) return
+    setCreatingClient(true)
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .insert({ name: newClientName.trim() })
+        .select("id, name")
+        .single()
+      if (error) { alert(error.message); return }
+      setClients((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name, "es")))
+      setClientId(data.id)
+      setShowNewClient(false)
+      setNewClientName("")
+    } finally {
+      setCreatingClient(false)
+    }
+  }
+
+  async function handleCreateProject() {
+    if (!newProjectName.trim()) return
+    if (!clientId) return
+    setCreatingProject(true)
+    try {
+      let subfolderId = newProjectSubfolderId
+      if (showNewSubfolder || !subfolderId) {
+        if (!newSubfolderName.trim()) { alert("Escribe el nombre de la subcarpeta"); return }
+        const { data: sfData, error: sfErr } = await supabase
+          .from("client_subfolders")
+          .insert({ client_id: clientId, name: newSubfolderName.trim() })
+          .select("id, client_id, name")
+          .single()
+        if (sfErr) { alert(sfErr.message); return }
+        setSubfolders((prev) => [...prev, sfData].sort((a, b) => a.name.localeCompare(b.name, "es")))
+        subfolderId = sfData.id
+      }
+      const { data: projData, error: projErr } = await supabase
+        .from("projects")
+        .insert({ client_id: clientId, subfolder_id: subfolderId, name: newProjectName.trim() })
+        .select("id, name, client_id")
+        .single()
+      if (projErr) { alert(projErr.message); return }
+      setProjects((prev) => [...prev, projData].sort((a, b) => a.name.localeCompare(b.name, "es")))
+      setProjectId(projData.id)
+      setShowNewProject(false)
+      setNewProjectName("")
+      setNewProjectSubfolderId("")
+      setNewSubfolderName("")
+      setShowNewSubfolder(false)
+    } finally {
+      setCreatingProject(false)
+    }
+  }
 
   async function handleSave() {
     if (!clientId) return alert("Selecciona un cliente")
@@ -464,16 +541,84 @@ export default function CotizacionesPage() {
             </div>
             <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 140px" }}>
               <Field label="Cliente">
-                <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={inputStyle}>
-                  <option value="">Selecciona...</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                {showNewClient ? (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="Nombre del cliente"
+                      style={{ ...inputStyle, flex: 1 }}
+                      onKeyDown={(e) => e.key === "Enter" && handleCreateClient()}
+                      autoFocus
+                    />
+                    <button onClick={handleCreateClient} disabled={creatingClient || !newClientName.trim()} style={inlineBtnStyle("#6366f1")}>
+                      {creatingClient ? "…" : "✓"}
+                    </button>
+                    <button onClick={() => { setShowNewClient(false); setNewClientName("") }} style={inlineBtnStyle("#475569")}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
+                      <option value="">Selecciona...</option>
+                      {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <button onClick={() => setShowNewClient(true)} style={inlineBtnStyle("#6366f1")} title="Nuevo cliente">+</button>
+                  </div>
+                )}
               </Field>
               <Field label="Proyecto">
-                <select value={projectId} onChange={(e) => setProjectId(e.target.value)} style={inputStyle} disabled={!clientId}>
-                  <option value="">Selecciona...</option>
-                  {filteredProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                {showNewProject ? (
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <input
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="Nombre del proyecto"
+                      style={inputStyle}
+                      autoFocus
+                    />
+                    {(clientSubfolders.length > 0 && !showNewSubfolder) ? (
+                      <select
+                        value={newProjectSubfolderId}
+                        onChange={(e) => {
+                          if (e.target.value === "__new__") { setShowNewSubfolder(true); setNewProjectSubfolderId("") }
+                          else setNewProjectSubfolderId(e.target.value)
+                        }}
+                        style={inputStyle}
+                      >
+                        <option value="">Subcarpeta...</option>
+                        {clientSubfolders.map((sf) => <option key={sf.id} value={sf.id}>{sf.name}</option>)}
+                        <option value="__new__">+ Nueva subcarpeta</option>
+                      </select>
+                    ) : (
+                      <input
+                        value={newSubfolderName}
+                        onChange={(e) => setNewSubfolderName(e.target.value)}
+                        placeholder="Nombre de la subcarpeta"
+                        style={inputStyle}
+                      />
+                    )}
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={handleCreateProject} disabled={creatingProject || !newProjectName.trim()} style={{ ...inlineBtnStyle("#6366f1"), flex: 1, fontSize: 12 }}>
+                        {creatingProject ? "Creando..." : "✓ Crear proyecto"}
+                      </button>
+                      <button onClick={() => { setShowNewProject(false); setNewProjectName(""); setNewSubfolderName(""); setShowNewSubfolder(false); setNewProjectSubfolderId("") }} style={inlineBtnStyle("#475569")}>✕</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <select value={projectId} onChange={(e) => setProjectId(e.target.value)} style={{ ...inputStyle, flex: 1 }} disabled={!clientId}>
+                      <option value="">Selecciona...</option>
+                      {filteredProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    {clientId && (
+                      <button
+                        onClick={() => { setShowNewProject(true); setShowNewSubfolder(clientSubfolders.length === 0) }}
+                        style={inlineBtnStyle("#6366f1")}
+                        title="Nuevo proyecto"
+                      >+</button>
+                    )}
+                  </div>
+                )}
               </Field>
               <Field label="Nombre de la cotización">
                 <input value={quoteName} onChange={(e) => setQuoteName(e.target.value)} placeholder="Ej. Propuesta v1" style={inputStyle} />
@@ -1117,6 +1262,26 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   lineHeight: 1.35,
   boxSizing: "border-box",
+}
+
+function inlineBtnStyle(color: string): React.CSSProperties {
+  return {
+    height: 36,
+    minWidth: 36,
+    padding: "0 10px",
+    borderRadius: 8,
+    border: `1px solid ${color}55`,
+    background: `${color}22`,
+    color,
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    whiteSpace: "nowrap",
+  }
 }
 
 const primaryButtonStyle: React.CSSProperties = {

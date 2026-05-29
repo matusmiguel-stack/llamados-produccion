@@ -385,6 +385,10 @@ export default function ProjectDetailPage() {
           clientName={clientName}
           projectName={project?.name ?? ""}
           onClose={() => setSelectedQuote(null)}
+          onMoved={(qId) => {
+            setQuotes((prev) => prev.filter((q) => q.id !== qId))
+            setSelectedQuote(null)
+          }}
         />
       )}
     </div>
@@ -483,14 +487,23 @@ function QuoteModal({
   clientName,
   projectName,
   onClose,
+  onMoved,
 }: {
   detail: QuoteDetail
   isMobile: boolean
   clientName: string
   projectName: string
   onClose: () => void
+  onMoved: (quoteId: string) => void
 }) {
   const [exporting, setExporting] = useState(false)
+  const [showMove, setShowMove] = useState(false)
+  const [moveClients, setMoveClients] = useState<{ id: string; name: string }[]>([])
+  const [moveProjects, setMoveProjects] = useState<{ id: string; name: string; client_id: string }[]>([])
+  const [moveClientId, setMoveClientId] = useState("")
+  const [moveProjectId, setMoveProjectId] = useState("")
+  const [isMoving, setIsMoving] = useState(false)
+  const [moveListsLoaded, setMoveListsLoaded] = useState(false)
   const { quote, sections } = detail
   const subtotal = quoteSubtotal(sections)
   const markupAmt = subtotal * (quote.markup_percentage / 100)
@@ -527,6 +540,35 @@ function QuoteModal({
     }
   }
 
+  async function openMovePanel() {
+    setShowMove(true)
+    if (!moveListsLoaded) {
+      const [{ data: c }, { data: p }] = await Promise.all([
+        supabase.from("clients").select("id, name").order("name"),
+        supabase.from("projects").select("id, name, client_id").order("name"),
+      ])
+      setMoveClients(c || [])
+      setMoveProjects(p || [])
+      setMoveListsLoaded(true)
+    }
+  }
+
+  async function handleMove() {
+    if (!moveProjectId) return alert("Selecciona un proyecto destino")
+    if (moveProjectId === quote.project_id) return alert("La cotización ya está en ese proyecto")
+    setIsMoving(true)
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .update({ project_id: moveProjectId })
+        .eq("id", quote.id)
+      if (error) { alert(error.message); return }
+      onMoved(quote.id)
+    } finally {
+      setIsMoving(false)
+    }
+  }
+
   const COL = isMobile
     ? "1fr"
     : "2fr 56px 56px 100px 100px 100px 1fr 100px"
@@ -556,6 +598,9 @@ function QuoteModal({
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button onClick={openMovePanel} style={moveQuoteBtnStyle}>
+              ↗ Mover
+            </button>
             <button onClick={handleExportPdf} disabled={exporting} style={pdfExportButtonStyle}>
               {exporting ? "Generando..." : "↓ PDF"}
             </button>
@@ -564,6 +609,57 @@ function QuoteModal({
             </button>
           </div>
         </div>
+
+        {/* Panel de mover cotización */}
+        {showMove && (
+          <div style={movePanelStyle}>
+            <p style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700, margin: "0 0 10px", letterSpacing: 0.5 }}>
+              MOVER COTIZACIÓN A OTRO PROYECTO
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, marginBottom: 10 }}>
+              <div>
+                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>Cliente</p>
+                <select
+                  value={moveClientId}
+                  onChange={(e) => { setMoveClientId(e.target.value); setMoveProjectId("") }}
+                  style={moveSelectStyle}
+                >
+                  <option value="">Seleccionar cliente...</option>
+                  {moveClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>Proyecto destino</p>
+                <select
+                  value={moveProjectId}
+                  onChange={(e) => setMoveProjectId(e.target.value)}
+                  style={moveSelectStyle}
+                  disabled={!moveClientId}
+                >
+                  <option value="">Seleccionar proyecto...</option>
+                  {moveProjects
+                    .filter((p) => p.client_id === moveClientId)
+                    .map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={handleMove}
+                disabled={isMoving || !moveProjectId}
+                style={moveConfirmBtnStyle}
+              >
+                {isMoving ? "Moviendo..." : "Confirmar"}
+              </button>
+              <button
+                onClick={() => { setShowMove(false); setMoveClientId(""); setMoveProjectId("") }}
+                style={moveCancelBtnStyle}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Sections */}
         <div style={modalBodyStyle}>
@@ -1377,4 +1473,60 @@ const pdfExportButtonStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
   whiteSpace: "nowrap",
+}
+
+const moveQuoteBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "7px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(167,139,250,0.3)",
+  background: "rgba(99,102,241,0.1)",
+  color: "#a78bfa",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+}
+
+const movePanelStyle: React.CSSProperties = {
+  background: "rgba(99,102,241,0.07)",
+  border: "1px solid rgba(99,102,241,0.22)",
+  borderRadius: 12,
+  padding: "16px 20px",
+  margin: "0 20px 0",
+}
+
+const moveSelectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 10px",
+  border: "1px solid rgba(148,163,184,0.16)",
+  borderRadius: 8,
+  background: "rgba(2,6,23,0.55)",
+  color: "#f8fafc",
+  outline: "none",
+  fontSize: 13,
+  boxSizing: "border-box",
+}
+
+const moveConfirmBtnStyle: React.CSSProperties = {
+  padding: "8px 18px",
+  borderRadius: 8,
+  border: "none",
+  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+  color: "#fff",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+}
+
+const moveCancelBtnStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.2)",
+  background: "transparent",
+  color: "#64748b",
+  cursor: "pointer",
+  fontSize: 13,
 }
