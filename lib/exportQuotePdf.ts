@@ -436,7 +436,7 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     approved: [22, 163, 74],
   }
 
-  // ── Encabezado del detalle (imagen + datos de la cotización overlay) ───────────
+  // ── Encabezado del detalle (imagen limpia, sin texto encima) ─────────────────
   const detailHeaderH = 30
   if (headerDetail.dataUrl) {
     doc.addImage(headerDetail.dataUrl, "PNG", 0, 0, pageW, detailHeaderH)
@@ -445,54 +445,7 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     doc.rect(0, 0, pageW, detailHeaderH, "F")
   }
 
-  // Nombre de la cotización centrado sobre la imagen
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(9)
-  doc.setTextColor(148, 163, 184)
-  doc.text(data.quoteName, pageW / 2, detailHeaderH / 2 + 2, { align: "center" })
-
-  // Fecha
-  doc.setFontSize(7.5)
-  doc.setTextColor(100, 116, 139)
-  doc.text(data.date, pageW - mR, 8.5, { align: "right" })
-
-  // Badge de estado
-  const sc = STATUS_COLOR[data.status] || STATUS_COLOR.draft
-  doc.setFillColor(sc[0], sc[1], sc[2])
-  doc.roundedRect(pageW - mR - 26, detailHeaderH - 12, 26, 8, 2, 2, "F")
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(7.5)
-  doc.setTextColor(255, 255, 255)
-  doc.text(
-    STATUS_LABEL[data.status] ?? data.status,
-    pageW - mR - 13,
-    detailHeaderH - 7.5,
-    { align: "center" }
-  )
-
   let y = detailHeaderH + 7
-
-  // Cliente + Proyecto
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(8.5)
-  doc.setTextColor(100, 116, 139)
-  doc.text("Cliente:", mL, y)
-  doc.setFont("helvetica", "bold")
-  doc.setTextColor(30, 41, 59)
-  doc.text(data.clientName, mL + 13, y)
-
-  doc.setFont("helvetica", "normal")
-  doc.setTextColor(100, 116, 139)
-  doc.text("Proyecto:", mL + 95, y)
-  doc.setFont("helvetica", "bold")
-  doc.setTextColor(30, 41, 59)
-  doc.text(data.projectName, mL + 111, y)
-
-  y += 5
-  doc.setDrawColor(226, 232, 240)
-  doc.setLineWidth(0.25)
-  doc.line(mL, y, pageW - mR, y)
-  y += 7
 
   // ── Rubros ───────────────────────────────────────────────────────────────────
   for (const rubro of data.rubros) {
