@@ -135,6 +135,14 @@ export default function LiberarPage() {
   const [projectName, setProjectName] = useState("")
   const [clientName, setClientName] = useState("")
 
+  // ── Add-proveedor modal ──────────────────────────────────────────────────
+  const [showAddProv, setShowAddProv] = useState(false)
+  const [addProvForItem, setAddProvForItem] = useState<string | null>(null)
+  const [newProv, setNewProv] = useState({
+    nombre: "", apellido: "", empresa: "", actividad: "", email: "", telefono: "",
+  })
+  const [savingProv, setSavingProv] = useState(false)
+
   useEffect(() => {
     function checkMobile() {
       setIsMobile(window.innerWidth < 768)
@@ -238,6 +246,52 @@ export default function LiberarPage() {
       ...prev,
       [itemId]: { ...prev[itemId], [field]: value },
     }))
+  }
+
+  // Intercepts the sentinel "__NEW__" value from the supplier select
+  function handleSelectProveedor(itemId: string, value: string) {
+    if (value === "__NEW__") {
+      setAddProvForItem(itemId)
+      setNewProv({ nombre: "", apellido: "", empresa: "", actividad: "", email: "", telefono: "" })
+      setShowAddProv(true)
+    } else {
+      updateActual(itemId, "supplier_id", value)
+    }
+  }
+
+  async function handleSaveNewProv() {
+    if (!newProv.nombre.trim() || !newProv.apellido.trim() || !newProv.actividad.trim()) {
+      alert("Nombre, apellido y actividad son requeridos")
+      return
+    }
+    setSavingProv(true)
+    try {
+      const { data, error } = await supabase
+        .from("proveedores")
+        .insert({
+          nombre: newProv.nombre.trim(),
+          apellido: newProv.apellido.trim(),
+          empresa: newProv.empresa.trim() || null,
+          actividad: newProv.actividad.trim(),
+          email: newProv.email.trim() || null,
+          telefono: newProv.telefono.trim() || null,
+        })
+        .select("id, nombre, apellido, empresa, actividad")
+        .single()
+      if (error) throw error
+      // Add to local list (sorted)
+      setProveedores((prev) =>
+        [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      )
+      // Auto-select for the triggering item
+      if (addProvForItem) updateActual(addProvForItem, "supplier_id", data.id)
+      setShowAddProv(false)
+      setAddProvForItem(null)
+    } catch (err: any) {
+      alert("Error al guardar proveedor: " + err.message)
+    } finally {
+      setSavingProv(false)
+    }
   }
 
   const totals = useMemo(() => {
@@ -668,13 +722,7 @@ export default function LiberarPage() {
                             <p style={inputLabelStyle}>Proveedor</p>
                             <select
                               value={a.supplier_id}
-                              onChange={(e) =>
-                                updateActual(
-                                  item.id,
-                                  "supplier_id",
-                                  e.target.value
-                                )
-                              }
+                              onChange={(e) => handleSelectProveedor(item.id, e.target.value)}
                               style={selectStyle}
                             >
                               <option value="">Sin proveedor</option>
@@ -683,6 +731,7 @@ export default function LiberarPage() {
                                   {proveedorLabel(p)}
                                 </option>
                               ))}
+                              <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
                             </select>
                           </div>
                         </div>
@@ -775,13 +824,7 @@ export default function LiberarPage() {
                         {/* Proveedor select */}
                         <select
                           value={a.supplier_id}
-                          onChange={(e) =>
-                            updateActual(
-                              item.id,
-                              "supplier_id",
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => handleSelectProveedor(item.id, e.target.value)}
                           style={selectStyle}
                         >
                           <option value="">—</option>
@@ -790,6 +833,7 @@ export default function LiberarPage() {
                               {proveedorLabel(p)}
                             </option>
                           ))}
+                          <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
                         </select>
                       </div>
                     )
@@ -966,6 +1010,121 @@ export default function LiberarPage() {
           </div>
         </div>
       </main>
+
+      {/* ── Agregar nuevo proveedor modal ───────────────────────────────── */}
+      {showAddProv && (
+        <div
+          className="modal-overlay"
+          style={addProvOverlayStyle}
+          onClick={() => setShowAddProv(false)}
+        >
+          <div
+            className="modal-panel"
+            style={addProvPanelStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={addProvHeaderStyle}>
+              <div>
+                <p style={{ margin: 0, color: "#a78bfa", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700 }}>
+                  Proveedores
+                </p>
+                <h2 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>
+                  Nuevo proveedor
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowAddProv(false)}
+                style={addProvCloseStyle}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <div style={addProvBodyStyle}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                <div>
+                  <label style={addProvLabelStyle}>Nombre *</label>
+                  <input
+                    type="text"
+                    value={newProv.nombre}
+                    onChange={(e) => setNewProv((p) => ({ ...p, nombre: e.target.value }))}
+                    style={addProvInputStyle}
+                    placeholder="Nombre"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label style={addProvLabelStyle}>Apellido *</label>
+                  <input
+                    type="text"
+                    value={newProv.apellido}
+                    onChange={(e) => setNewProv((p) => ({ ...p, apellido: e.target.value }))}
+                    style={addProvInputStyle}
+                    placeholder="Apellido"
+                  />
+                </div>
+                <div style={{ gridColumn: isMobile ? "auto" : "1 / -1" }}>
+                  <label style={addProvLabelStyle}>Empresa</label>
+                  <input
+                    type="text"
+                    value={newProv.empresa}
+                    onChange={(e) => setNewProv((p) => ({ ...p, empresa: e.target.value }))}
+                    style={addProvInputStyle}
+                    placeholder="Nombre de la empresa (opcional)"
+                  />
+                </div>
+                <div style={{ gridColumn: isMobile ? "auto" : "1 / -1" }}>
+                  <label style={addProvLabelStyle}>Actividad *</label>
+                  <input
+                    type="text"
+                    value={newProv.actividad}
+                    onChange={(e) => setNewProv((p) => ({ ...p, actividad: e.target.value }))}
+                    style={addProvInputStyle}
+                    placeholder="Ej. Director de fotografía, Gaffer..."
+                  />
+                </div>
+                <div>
+                  <label style={addProvLabelStyle}>Email</label>
+                  <input
+                    type="email"
+                    value={newProv.email}
+                    onChange={(e) => setNewProv((p) => ({ ...p, email: e.target.value }))}
+                    style={addProvInputStyle}
+                    placeholder="email@ejemplo.com"
+                  />
+                </div>
+                <div>
+                  <label style={addProvLabelStyle}>Teléfono</label>
+                  <input
+                    type="tel"
+                    value={newProv.telefono}
+                    onChange={(e) => setNewProv((p) => ({ ...p, telefono: e.target.value }))}
+                    style={addProvInputStyle}
+                    placeholder="+52 55 0000 0000"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={addProvFooterStyle}>
+              <button onClick={() => setShowAddProv(false)} style={addProvCancelStyle}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveNewProv}
+                disabled={savingProv}
+                style={addProvSaveStyle}
+              >
+                {savingProv ? "Guardando..." : "Agregar proveedor"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1246,4 +1405,106 @@ const comparisonValueStyle: React.CSSProperties = {
   color: "#e2e8f0",
   fontSize: 13,
   fontWeight: 600,
+}
+
+// ─── Add-proveedor modal styles ───────────────────────────────────────────────
+
+const addProvOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.65)",
+  backdropFilter: "blur(4px)",
+  zIndex: 20000,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "24px 16px",
+}
+
+const addProvPanelStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 520,
+  background: "linear-gradient(180deg, rgba(10,14,26,0.99) 0%, rgba(6,9,18,0.99) 100%)",
+  border: "1px solid rgba(148,163,184,0.18)",
+  borderRadius: 18,
+  boxShadow: "0 40px 120px rgba(0,0,0,0.65)",
+  overflow: "hidden",
+}
+
+const addProvHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 16,
+  padding: "20px 24px",
+  borderBottom: "1px solid rgba(148,163,184,0.10)",
+}
+
+const addProvCloseStyle: React.CSSProperties = {
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.16)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#94a3b8",
+  cursor: "pointer",
+  fontSize: 13,
+  flexShrink: 0,
+}
+
+const addProvBodyStyle: React.CSSProperties = {
+  padding: "20px 24px",
+}
+
+const addProvLabelStyle: React.CSSProperties = {
+  display: "block",
+  marginBottom: 5,
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
+}
+
+const addProvInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "9px 12px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.20)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#f8fafc",
+  fontSize: 14,
+  outline: "none",
+  boxSizing: "border-box",
+}
+
+const addProvFooterStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: 10,
+  padding: "16px 24px",
+  borderTop: "1px solid rgba(148,163,184,0.10)",
+}
+
+const addProvCancelStyle: React.CSSProperties = {
+  padding: "9px 16px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.20)",
+  background: "transparent",
+  color: "#64748b",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 500,
+}
+
+const addProvSaveStyle: React.CSSProperties = {
+  padding: "9px 20px",
+  borderRadius: 8,
+  border: "none",
+  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+  color: "#fff",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+  boxShadow: "0 6px 20px rgba(124,58,237,0.25)",
 }
