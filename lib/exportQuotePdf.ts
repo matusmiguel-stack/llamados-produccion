@@ -51,6 +51,109 @@ function lightBg(r: number, g: number, b: number): [number, number, number] {
   return [Math.round(r * 0.12 + 240), Math.round(g * 0.12 + 240), Math.round(b * 0.12 + 240)]
 }
 
+// ─── Tipos para exportar desde cotización guardada en DB ─────────────────────
+
+export interface DBQuoteItem {
+  description: string
+  qty: number
+  days: number
+  unit_price: number       // costo real
+  released_expense: number // markup %
+  real_expense: number     // 1 = interno
+  supplier: string | null
+}
+
+export interface DBQuoteSection {
+  name: string
+  order_index: number
+  items: DBQuoteItem[]
+}
+
+export interface DBQuoteDetail {
+  quote: { name: string; status: string }
+  sections: DBQuoteSection[]
+}
+
+const RUBRO_COLOR_MAP: Record<string, string> = {
+  "Preproducción": "#6366f1",
+  "Personal Técnico": "#a78bfa",
+  "Gastos de Producción": "#38bdf8",
+  "Utilería y Vestuario": "#34d399",
+  "Foro y Escenografía": "#fbbf24",
+  "Renta de Equipo": "#fb923c",
+  "Talento": "#f472b6",
+  "Edición y Audio": "#818cf8",
+  "Postproducción": "#c084fc",
+}
+
+export async function exportQuotePdfFromDetail(
+  detail: DBQuoteDetail,
+  clientName: string,
+  projectName: string
+): Promise<void> {
+  const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" }).format(new Date())
+
+  const rubros: QuoteRubroPDF[] = detail.sections
+    .slice()
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((sec, idx) => {
+      const items: QuoteItemPDF[] = sec.items.map((item) => ({
+        label: item.description,
+        qty: String(item.qty),
+        days: String(item.days),
+        cost: String(item.unit_price),
+        markup: String(item.released_expense),
+        isInternal: item.real_expense === 1,
+      }))
+
+      // Calcular financials replicando la misma lógica que el formulario
+      let gasto = 0
+      let utilidad = 0
+      for (const item of sec.items) {
+        const amount = item.qty * item.days * item.unit_price
+        if (item.real_expense === 1) {
+          utilidad += amount // interno: todo a utilidad
+        } else {
+          gasto += amount
+          utilidad += amount * ((item.released_expense || 0) / 100)
+        }
+      }
+
+      return {
+        num: idx + 1,
+        label: sec.name,
+        hexColor: RUBRO_COLOR_MAP[sec.name] ?? "#6366f1",
+        items,
+        financials: { gasto, utilidad, venta: gasto + utilidad },
+      }
+    })
+
+  const globalFinancials = rubros.reduce(
+    (acc, r) => ({
+      gasto: acc.gasto + r.financials.gasto,
+      utilidad: acc.utilidad + r.financials.utilidad,
+      venta: acc.venta + r.financials.venta,
+    }),
+    { gasto: 0, utilidad: 0, venta: 0 }
+  )
+
+  const marginPct =
+    globalFinancials.venta > 0
+      ? (globalFinancials.utilidad / globalFinancials.venta) * 100
+      : 0
+
+  await exportQuotePdf({
+    quoteName: detail.quote.name,
+    clientName,
+    projectName,
+    status: detail.quote.status,
+    date,
+    rubros,
+    globalFinancials,
+    marginPct,
+  })
+}
+
 // ─── exportación principal ────────────────────────────────────────────────────
 
 export async function exportQuotePdf(data: QuotePDFData): Promise<void> {

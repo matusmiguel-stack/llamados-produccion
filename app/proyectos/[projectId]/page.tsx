@@ -382,6 +382,8 @@ export default function ProjectDetailPage() {
         <QuoteModal
           detail={selectedQuote}
           isMobile={isMobile}
+          clientName={clientName}
+          projectName={project?.name ?? ""}
           onClose={() => setSelectedQuote(null)}
         />
       )}
@@ -478,16 +480,52 @@ function QuotesPanel({
 function QuoteModal({
   detail,
   isMobile,
+  clientName,
+  projectName,
   onClose,
 }: {
   detail: QuoteDetail
   isMobile: boolean
+  clientName: string
+  projectName: string
   onClose: () => void
 }) {
+  const [exporting, setExporting] = useState(false)
   const { quote, sections } = detail
   const subtotal = quoteSubtotal(sections)
   const markupAmt = subtotal * (quote.markup_percentage / 100)
   const total = subtotal + markupAmt
+
+  async function handleExportPdf() {
+    setExporting(true)
+    try {
+      const { exportQuotePdfFromDetail } = await import("../../../lib/exportQuotePdf")
+      await exportQuotePdfFromDetail(
+        {
+          quote: { name: quote.name, status: quote.status },
+          sections: sections.map((s) => ({
+            name: s.name,
+            order_index: s.order_index,
+            items: s.items.map((i) => ({
+              description: i.description,
+              qty: i.qty,
+              days: i.days,
+              unit_price: i.unit_price,
+              released_expense: i.released_expense,
+              real_expense: i.real_expense,
+              supplier: i.supplier,
+            })),
+          })),
+        },
+        clientName,
+        projectName
+      )
+    } catch (err: any) {
+      alert("Error al generar PDF: " + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const COL = isMobile
     ? "1fr"
@@ -517,9 +555,14 @@ function QuoteModal({
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={modalCloseStyle} aria-label="Cerrar">
-            ✕
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button onClick={handleExportPdf} disabled={exporting} style={pdfExportButtonStyle}>
+              {exporting ? "Generando..." : "↓ PDF"}
+            </button>
+            <button onClick={onClose} style={modalCloseStyle} aria-label="Cerrar">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Sections */}
@@ -1319,4 +1362,19 @@ const modalTotalRowStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   gap: 16,
+}
+
+const pdfExportButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "7px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#94a3b8",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
 }
