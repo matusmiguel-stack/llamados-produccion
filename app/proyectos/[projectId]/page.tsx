@@ -499,8 +499,10 @@ function QuoteModal({
   const [exporting, setExporting] = useState(false)
   const [showMove, setShowMove] = useState(false)
   const [moveClients, setMoveClients] = useState<{ id: string; name: string }[]>([])
-  const [moveProjects, setMoveProjects] = useState<{ id: string; name: string; client_id: string }[]>([])
+  const [moveSubfolders, setMoveSubfolders] = useState<{ id: string; client_id: string; name: string }[]>([])
+  const [moveProjects, setMoveProjects] = useState<{ id: string; name: string; client_id: string; subfolder_id: string }[]>([])
   const [moveClientId, setMoveClientId] = useState("")
+  const [moveSubfolderId, setMoveSubfolderId] = useState("")
   const [moveProjectId, setMoveProjectId] = useState("")
   const [isMoving, setIsMoving] = useState(false)
   const [moveListsLoaded, setMoveListsLoaded] = useState(false)
@@ -543,11 +545,13 @@ function QuoteModal({
   async function openMovePanel() {
     setShowMove(true)
     if (!moveListsLoaded) {
-      const [{ data: c }, { data: p }] = await Promise.all([
+      const [{ data: c }, { data: sf }, { data: p }] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
-        supabase.from("projects").select("id, name, client_id").order("name"),
+        supabase.from("client_subfolders").select("id, client_id, name").order("name"),
+        supabase.from("projects").select("id, name, client_id, subfolder_id").order("name"),
       ])
       setMoveClients(c || [])
+      setMoveSubfolders(sf || [])
       setMoveProjects(p || [])
       setMoveListsLoaded(true)
     }
@@ -613,32 +617,49 @@ function QuoteModal({
         {/* Panel de mover cotización */}
         {showMove && (
           <div style={movePanelStyle}>
-            <p style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700, margin: "0 0 10px", letterSpacing: 0.5 }}>
+            <p style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700, margin: "0 0 12px", letterSpacing: 0.5 }}>
               MOVER COTIZACIÓN A OTRO PROYECTO
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, marginBottom: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+              {/* Paso 1: Cliente */}
               <div>
-                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>Cliente</p>
+                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>1. Cliente</p>
                 <select
                   value={moveClientId}
-                  onChange={(e) => { setMoveClientId(e.target.value); setMoveProjectId("") }}
+                  onChange={(e) => { setMoveClientId(e.target.value); setMoveSubfolderId(""); setMoveProjectId("") }}
                   style={moveSelectStyle}
                 >
-                  <option value="">Seleccionar cliente...</option>
+                  <option value="">Seleccionar...</option>
                   {moveClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
+              {/* Paso 2: Subcarpeta */}
               <div>
-                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>Proyecto destino</p>
+                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>2. Subcarpeta</p>
+                <select
+                  value={moveSubfolderId}
+                  onChange={(e) => { setMoveSubfolderId(e.target.value); setMoveProjectId("") }}
+                  style={moveSelectStyle}
+                  disabled={!moveClientId}
+                >
+                  <option value="">Seleccionar...</option>
+                  {moveSubfolders
+                    .filter((sf) => sf.client_id === moveClientId)
+                    .map((sf) => <option key={sf.id} value={sf.id}>{sf.name}</option>)}
+                </select>
+              </div>
+              {/* Paso 3: Proyecto */}
+              <div>
+                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>3. Proyecto</p>
                 <select
                   value={moveProjectId}
                   onChange={(e) => setMoveProjectId(e.target.value)}
                   style={moveSelectStyle}
-                  disabled={!moveClientId}
+                  disabled={!moveSubfolderId}
                 >
-                  <option value="">Seleccionar proyecto...</option>
+                  <option value="">Seleccionar...</option>
                   {moveProjects
-                    .filter((p) => p.client_id === moveClientId)
+                    .filter((p) => p.subfolder_id === moveSubfolderId)
                     .map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
@@ -652,7 +673,7 @@ function QuoteModal({
                 {isMoving ? "Moviendo..." : "Confirmar"}
               </button>
               <button
-                onClick={() => { setShowMove(false); setMoveClientId(""); setMoveProjectId("") }}
+                onClick={() => { setShowMove(false); setMoveClientId(""); setMoveSubfolderId(""); setMoveProjectId("") }}
                 style={moveCancelBtnStyle}
               >
                 Cancelar
