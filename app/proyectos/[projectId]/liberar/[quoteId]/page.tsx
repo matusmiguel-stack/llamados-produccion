@@ -48,6 +48,7 @@ type Quote = {
   markup_percentage: number
   atencion: string | null
   released: boolean | null
+  actual_extra_expenses: number | null
 }
 
 type ItemActual = {
@@ -140,6 +141,7 @@ export default function LiberarPage() {
   const [saved, setSaved] = useState(false)
   const [projectName, setProjectName] = useState("")
   const [clientName, setClientName] = useState("")
+  const [extraExpenses, setExtraExpenses] = useState("")
 
   // ── Add-proveedor modal ──────────────────────────────────────────────────
   const [showAddProv, setShowAddProv] = useState(false)
@@ -180,6 +182,7 @@ export default function LiberarPage() {
         return
       }
       setQuote(quoteData)
+      setExtraExpenses(quoteData.actual_extra_expenses ? String(quoteData.actual_extra_expenses) : "")
 
       const { data: project } = await supabase
         .from("projects")
@@ -319,12 +322,14 @@ export default function LiberarPage() {
     }
 
     // Sale price to client is fixed at lib_venta; real utility = fixed_venta - real_gasto
-    const realUtilidad = libVenta - realGasto
+    const extraAmt = parseFloat(extraExpenses) || 0
+    const realGastoTotal = realGasto + extraAmt
+    const realUtilidad = libVenta - realGastoTotal
     const libPct = libVenta > 0 ? (libUtilidad / libVenta) * 100 : 0
     const realPct = libVenta > 0 ? (realUtilidad / libVenta) * 100 : 0
 
-    return { libGasto, libUtilidad, libVenta, realGasto, realUtilidad, libPct, realPct }
-  }, [sections, actuals])
+    return { libGasto, libUtilidad, libVenta, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
+  }, [sections, actuals, extraExpenses])
 
   async function handleSave() {
     setSaving(true)
@@ -351,7 +356,7 @@ export default function LiberarPage() {
 
       await supabase
         .from("quotes")
-        .update({ released: true })
+        .update({ released: true, actual_extra_expenses: parseFloat(extraExpenses) || 0 })
         .eq("id", quoteId)
 
       setSaved(true)
@@ -931,7 +936,7 @@ export default function LiberarPage() {
                   Real — Gasto actual
                 </p>
                 <div style={comparisonRowStyle}>
-                  <span style={comparisonLabelStyle}>Gasto real</span>
+                  <span style={comparisonLabelStyle}>Gasto real (ítems)</span>
                   <span
                     style={{
                       ...comparisonValueStyle,
@@ -943,9 +948,42 @@ export default function LiberarPage() {
                             : "#94a3b8",
                     }}
                   >
-                    {fmt(totals.realGasto)}
+                    {fmt(totals.realGasto - totals.extraAmt)}
                   </span>
                 </div>
+                {/* Gastos no contemplados */}
+                <div style={{ ...comparisonRowStyle, alignItems: "center", gap: 8 }}>
+                  <span style={{ ...comparisonLabelStyle, flex: 1 }}>Gastos adicionales</span>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 11, pointerEvents: "none" }}>$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={extraExpenses}
+                      onChange={(e) => { setExtraExpenses(e.target.value); setSaved(false) }}
+                      placeholder="0"
+                      style={{
+                        background: "rgba(248,113,113,0.08)",
+                        border: "1px solid rgba(248,113,113,0.25)",
+                        borderRadius: 6,
+                        color: "#fca5a5",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        padding: "4px 8px 4px 20px",
+                        width: 100,
+                        outline: "none",
+                        textAlign: "right",
+                      }}
+                    />
+                  </div>
+                </div>
+                {totals.extraAmt > 0 && (
+                  <div style={comparisonRowStyle}>
+                    <span style={{ ...comparisonLabelStyle, color: "#f87171" }}>Gasto real total</span>
+                    <span style={{ ...comparisonValueStyle, color: "#f87171" }}>{fmt(totals.realGasto)}</span>
+                  </div>
+                )}
                 <div style={comparisonRowStyle}>
                   <span style={comparisonLabelStyle}>Venta al cliente</span>
                   <span style={comparisonValueStyle}>{fmt(totals.libVenta)}</span>

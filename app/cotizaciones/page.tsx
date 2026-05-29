@@ -903,7 +903,21 @@ export default function CotizacionesPage() {
                 <TotalBlock label="Total gasto" value={fmt(globalFinancials.gasto)} color="#94a3b8" />
                 <TotalBlock label="Total utilidad" value={fmt(globalFinancials.utilidad)} color="#34d399" />
                 <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
-                <TotalBlock label="Total precio de venta" value={fmt(globalFinancials.venta)} color="#a78bfa" large />
+                <TotalBlock label="Subtotal (precio de venta)" value={fmt(globalFinancials.venta)} color="#a78bfa" large />
+                {(parseFloat(markupGeneral) || 0) > 0 && (
+                  <TotalBlock
+                    label={`Markup general (${markupGeneral}%)`}
+                    value={fmt(globalFinancials.venta * ((parseFloat(markupGeneral) || 0) / 100))}
+                    color="#fbbf24"
+                  />
+                )}
+                <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
+                <TotalBlock
+                  label="Total al cliente"
+                  value={fmt(globalFinancials.venta * (1 + (parseFloat(markupGeneral) || 0) / 100))}
+                  color="#f0abfc"
+                  large
+                />
 
                 {/* Margen */}
                 <div style={marginBarContainerStyle}>
