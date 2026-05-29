@@ -64,16 +64,51 @@ function fmt(n: number): string {
   }).format(n)
 }
 
-function libTotal(item: QuoteItemRow): number {
+// Raw amount for an item (qty × days × unit_price)
+function itemAmount(item: QuoteItemRow): number {
   return item.qty * item.days * item.unit_price
 }
 
-function realTotal(item: QuoteItemRow, actual: ItemActual): number {
+// Actual raw amount: use filled-in values; fall back to liberado
+function itemActualAmount(item: QuoteItemRow, actual: ItemActual): number {
   const q = actual.qty !== "" ? parseFloat(actual.qty) : item.qty
   const d = actual.days !== "" ? parseFloat(actual.days) : item.days
   const p = actual.unit_price !== "" ? parseFloat(actual.unit_price) : item.unit_price
-  if (isNaN(q) || isNaN(d) || isNaN(p)) return libTotal(item)
+  if (isNaN(q) || isNaN(d) || isNaN(p)) return itemAmount(item)
   return q * d * p
+}
+
+// Liberado financials per item — mirrors calcItem() in cotizaciones/page.tsx
+// real_expense === 1 → item is internal: gasto=0, all amount goes to utilidad
+// released_expense → per-item markup %
+function libItemFinancials(item: QuoteItemRow): { gasto: number; utilidad: number; venta: number } {
+  const amount = itemAmount(item)
+  if (item.real_expense === 1) {
+    return { gasto: 0, utilidad: amount, venta: amount }
+  }
+  const u = amount * ((item.released_expense || 0) / 100)
+  return { gasto: amount, utilidad: u, venta: amount + u }
+}
+
+// Real financials per item: same markup rate, but on actual amounts
+// The venta to the client is FIXED (lib_venta); real_utilidad = lib_venta - real_gasto
+function realItemGasto(item: QuoteItemRow, actual: ItemActual): number {
+  // Internal items have gasto=0 regardless
+  if (item.real_expense === 1) return 0
+  return itemActualAmount(item, actual)
+}
+
+// Convenience: lib display total per item row (what appears in the "Total Lib." column)
+function libTotal(item: QuoteItemRow): number {
+  return libItemFinancials(item).venta
+}
+
+// Real display total per item row (what appears in the "Total Real" column)
+function realTotal(item: QuoteItemRow, actual: ItemActual): number {
+  if (item.real_expense === 1) return itemAmount(item) // internal stays fixed
+  const actualAmt = itemActualAmount(item, actual)
+  const u = actualAmt * ((item.released_expense || 0) / 100)
+  return actualAmt + u
 }
 
 function proveedorLabel(p: Proveedor): string {
@@ -206,44 +241,30 @@ export default function LiberarPage() {
   }
 
   const totals = useMemo(() => {
+    // Sum per-item financials using the same logic as the cotizaciones form
     let libGasto = 0
+    let libUtilidad = 0
+    let libVenta = 0
     let realGasto = 0
 
     for (const sec of sections) {
       for (const item of sec.items) {
-        libGasto += libTotal(item)
-        realGasto += realTotal(
-          item,
-          actuals[item.id] || {
-            qty: "",
-            days: "",
-            unit_price: "",
-            supplier_id: "",
-          }
-        )
+        const a = actuals[item.id] || { qty: "", days: "", unit_price: "", supplier_id: "" }
+        const lf = libItemFinancials(item)
+        libGasto += lf.gasto
+        libUtilidad += lf.utilidad
+        libVenta += lf.venta
+        realGasto += realItemGasto(item, a)
       }
     }
 
-    if (!quote) {
-      return {
-        libGasto,
-        realGasto,
-        venta: 0,
-        libUtilidad: 0,
-        realUtilidad: 0,
-        libPct: 0,
-        realPct: 0,
-      }
-    }
+    // Sale price to client is fixed at lib_venta; real utility = fixed_venta - real_gasto
+    const realUtilidad = libVenta - realGasto
+    const libPct = libVenta > 0 ? (libUtilidad / libVenta) * 100 : 0
+    const realPct = libVenta > 0 ? (realUtilidad / libVenta) * 100 : 0
 
-    const venta = libGasto * (1 + quote.markup_percentage / 100)
-    const libUtilidad = venta - libGasto
-    const realUtilidad = venta - realGasto
-    const libPct = venta > 0 ? (libUtilidad / venta) * 100 : 0
-    const realPct = venta > 0 ? (realUtilidad / venta) * 100 : 0
-
-    return { libGasto, realGasto, venta, libUtilidad, realUtilidad, libPct, realPct }
-  }, [sections, actuals, quote])
+    return { libGasto, libUtilidad, libVenta, realGasto, realUtilidad, libPct, realPct }
+  }, [sections, actuals])
 
   async function handleSave() {
     setSaving(true)
@@ -799,7 +820,7 @@ export default function LiberarPage() {
                 </div>
                 <div style={comparisonRowStyle}>
                   <span style={comparisonLabelStyle}>Venta al cliente</span>
-                  <span style={comparisonValueStyle}>{fmt(totals.venta)}</span>
+                  <span style={comparisonValueStyle}>{fmt(totals.libVenta)}</span>
                 </div>
                 <div
                   style={{
@@ -877,7 +898,7 @@ export default function LiberarPage() {
                 </div>
                 <div style={comparisonRowStyle}>
                   <span style={comparisonLabelStyle}>Venta al cliente</span>
-                  <span style={comparisonValueStyle}>{fmt(totals.venta)}</span>
+                  <span style={comparisonValueStyle}>{fmt(totals.libVenta)}</span>
                 </div>
                 <div
                   style={{
