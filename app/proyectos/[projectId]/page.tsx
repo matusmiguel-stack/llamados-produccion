@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
+import { MatrizPanel } from "./MatrizPanel"
 
 type Project = {
   id: string
@@ -83,9 +84,8 @@ const projectModules: ProjectModule[] = [
   {
     id: "matriz",
     label: "Matriz",
-    description: "Planeación de recursos, roles y disponibilidad",
+    description: "Generales, recursos, entregas y minuta del proyecto",
     icon: "matrix",
-    comingSoon: true,
   },
   {
     id: "hoja-llamado",
@@ -347,6 +347,13 @@ export default function ProjectDetailPage() {
                   loadingQuote={loadingQuote}
                   onOpenQuote={openQuoteDetail}
                   projectId={projectId}
+                />
+              ) : activeModule === "matriz" ? (
+                <MatrizPanel
+                  projectId={projectId}
+                  isMobile={isMobile}
+                  projectName={project?.name ?? ""}
+                  clientName={clientName}
                 />
               ) : (
                 <>

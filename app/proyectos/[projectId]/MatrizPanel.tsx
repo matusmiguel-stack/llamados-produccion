@@ -1,0 +1,713 @@
+"use client"
+
+import React, { useEffect, useState } from "react"
+import { supabase } from "../../../lib/supabase"
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type MatrizData = {
+  id?: string
+  project_id: string
+  // Generales
+  nombre_proyecto: string
+  cliente: string
+  director: string
+  productor: string
+  lider_post: string
+  nomenclatura: string
+  // Entregas
+  time_table: string
+  // Recursos
+  material: string
+  calificacion: string
+  entregables: string
+  asignacion_capsulas: string
+  guion_ppm: string
+  legales: string
+  referencia_musica: string
+  paqueteria_grafica: string
+  assets: string
+  liga_masters: string
+  backup_produccion: string
+  backup_post: string
+  // Minuta
+  minuta: string
+  // Indicaciones extra
+  indicaciones_extra: string
+}
+
+function emptyMatriz(projectId: string): MatrizData {
+  return {
+    project_id: projectId,
+    nombre_proyecto: "",
+    cliente: "",
+    director: "",
+    productor: "",
+    lider_post: "",
+    nomenclatura: "",
+    time_table: "",
+    material: "",
+    calificacion: "",
+    entregables: "",
+    asignacion_capsulas: "",
+    guion_ppm: "",
+    legales: "",
+    referencia_musica: "",
+    paqueteria_grafica: "",
+    assets: "",
+    liga_masters: "",
+    backup_produccion: "",
+    backup_post: "",
+    minuta: "",
+    indicaciones_extra: "",
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isUrl(s: string): boolean {
+  return s.startsWith("http://") || s.startsWith("https://")
+}
+
+function ValueView({
+  val,
+  center,
+  bold,
+}: {
+  val: string
+  center?: boolean
+  bold?: boolean
+}) {
+  if (!val) return <span style={{ color: "#2d3748" }}>—</span>
+  if (isUrl(val)) {
+    return (
+      <a
+        href={val}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          color: "#60a5fa",
+          textDecoration: "underline",
+          fontSize: 13,
+          wordBreak: "break-all",
+          lineHeight: 1.5,
+        }}
+      >
+        {val}
+      </a>
+    )
+  }
+  return (
+    <span
+      style={{
+        color: "#e2e8f0",
+        fontSize: 13,
+        lineHeight: 1.5,
+        whiteSpace: "pre-wrap",
+        fontWeight: bold ? 700 : 400,
+        textAlign: center ? "center" : "left",
+        display: "block",
+      }}
+    >
+      {val}
+    </span>
+  )
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionHeader({
+  title,
+  note,
+}: {
+  title: string
+  note?: string
+}) {
+  return (
+    <div style={sectionHeaderStyle}>
+      <span>{title}</span>
+      {note && (
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 400,
+            opacity: 0.65,
+            marginLeft: 8,
+            textTransform: "none",
+            letterSpacing: 0,
+          }}
+        >
+          {note}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// Renders [label cell][value cell] — used inside the 4-col GENERALES grid
+function GenCell({
+  label,
+  fieldKey,
+  draft,
+  editing,
+  onChange,
+  multiline,
+  bold,
+  rightSide,
+}: {
+  label: string
+  fieldKey: keyof MatrizData
+  draft: MatrizData
+  editing: boolean
+  onChange: (k: keyof MatrizData, v: string) => void
+  multiline?: boolean
+  bold?: boolean
+  rightSide?: boolean
+}) {
+  const value = draft[fieldKey] as string
+  const labelCell: React.CSSProperties = {
+    ...genLabelCellStyle,
+    ...(rightSide
+      ? { borderLeft: "1px solid rgba(148,163,184,0.12)" }
+      : {}),
+  }
+  return (
+    <>
+      <div style={labelCell}>{label}</div>
+      <div style={{ ...genValueCellStyle, fontWeight: bold ? 700 : 400 }}>
+        {editing ? (
+          multiline ? (
+            <textarea
+              value={value}
+              onChange={(e) => onChange(fieldKey, e.target.value)}
+              style={textareaStyle}
+              rows={2}
+              placeholder={label}
+            />
+          ) : (
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(fieldKey, e.target.value)}
+              style={inputStyle}
+              placeholder={label}
+            />
+          )
+        ) : (
+          <ValueView val={value} bold={bold} />
+        )}
+      </div>
+    </>
+  )
+}
+
+// Single-column label + value row for ENTREGAS / RECURSOS
+function FieldRow({
+  label,
+  fieldKey,
+  draft,
+  editing,
+  onChange,
+  multiline,
+  isMobile,
+}: {
+  label: string
+  fieldKey: keyof MatrizData
+  draft: MatrizData
+  editing: boolean
+  onChange: (k: keyof MatrizData, v: string) => void
+  multiline?: boolean
+  isMobile: boolean
+}) {
+  const value = draft[fieldKey] as string
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
+        borderBottom: "1px solid rgba(148,163,184,0.08)",
+      }}
+    >
+      <div style={singleLabelCellStyle(isMobile)}>{label}</div>
+      <div style={singleValueCellStyle}>
+        {editing ? (
+          multiline ? (
+            <textarea
+              value={value}
+              onChange={(e) => onChange(fieldKey, e.target.value)}
+              style={textareaStyle}
+              rows={3}
+              placeholder={label + "..."}
+            />
+          ) : (
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(fieldKey, e.target.value)}
+              style={inputStyle}
+              placeholder={label}
+            />
+          )
+        ) : (
+          <ValueView val={value} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Special backup row: two sub-rows within one logical field
+function BackupRow({
+  draft,
+  editing,
+  onChange,
+  isMobile,
+}: {
+  draft: MatrizData
+  editing: boolean
+  onChange: (k: keyof MatrizData, v: string) => void
+  isMobile: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
+        borderBottom: "1px solid rgba(148,163,184,0.08)",
+      }}
+    >
+      <div style={singleLabelCellStyle(isMobile)}>Backup</div>
+      <div style={{ ...singleValueCellStyle, display: "grid", gap: 10 }}>
+        {editing ? (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "160px 1fr",
+                gap: 6,
+                alignItems: "center",
+              }}
+            >
+              <span style={{ color: "#64748b", fontSize: 12 }}>Backup de producción:</span>
+              <input
+                type="text"
+                value={draft.backup_produccion}
+                onChange={(e) => onChange("backup_produccion", e.target.value)}
+                style={inputStyle}
+                placeholder="Discos, ubicación..."
+              />
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "160px 1fr",
+                gap: 6,
+                alignItems: "center",
+              }}
+            >
+              <span style={{ color: "#64748b", fontSize: 12 }}>Backup de post:</span>
+              <input
+                type="text"
+                value={draft.backup_post}
+                onChange={(e) => onChange("backup_post", e.target.value)}
+                style={inputStyle}
+                placeholder="Discos, ubicación..."
+              />
+            </div>
+          </>
+        ) : (
+          <div style={{ display: "grid", gap: 6 }}>
+            <span style={{ fontSize: 13, color: "#94a3b8" }}>
+              Backup de producción:{" "}
+              {draft.backup_produccion ? (
+                <span style={{ color: "#e2e8f0" }}>{draft.backup_produccion}</span>
+              ) : (
+                <span style={{ color: "#2d3748" }}>—</span>
+              )}
+            </span>
+            <span style={{ fontSize: 13, color: "#94a3b8" }}>
+              Backup de post:{" "}
+              {draft.backup_post ? (
+                <span style={{ color: "#e2e8f0" }}>{draft.backup_post}</span>
+              ) : (
+                <span style={{ color: "#2d3748" }}>—</span>
+              )}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function MatrizPanel({
+  projectId,
+  isMobile,
+  projectName,
+  clientName,
+}: {
+  projectId: string
+  isMobile: boolean
+  projectName: string
+  clientName: string
+}) {
+  const [draft, setDraft] = useState<MatrizData>(emptyMatriz(projectId))
+  const [saved, setSaved] = useState<MatrizData>(emptyMatriz(projectId))
+  const [editing, setEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [exists, setExists] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from("project_matrices")
+        .select("*")
+        .eq("project_id", projectId)
+        .maybeSingle()
+
+      if (data) {
+        setDraft(data)
+        setSaved(data)
+        setExists(true)
+        setEditing(false)
+      } else {
+        const prefilled = emptyMatriz(projectId)
+        prefilled.nombre_proyecto = projectName
+        prefilled.cliente = clientName
+        setDraft(prefilled)
+        setSaved(prefilled)
+        setEditing(true)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [projectId, projectName, clientName])
+
+  function onChange(key: keyof MatrizData, value: string) {
+    setDraft((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const payload = {
+        ...draft,
+        project_id: projectId,
+        updated_at: new Date().toISOString(),
+      }
+      if (exists) {
+        const { error } = await supabase
+          .from("project_matrices")
+          .update(payload)
+          .eq("project_id", projectId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from("project_matrices")
+          .insert(payload)
+        if (error) throw error
+        setExists(true)
+      }
+      setSaved({ ...draft })
+      setEditing(false)
+    } catch (err: any) {
+      alert("Error al guardar: " + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleCancel() {
+    setDraft(saved)
+    setEditing(false)
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: "32px 16px", textAlign: "center" }}>
+        <p style={{ color: "#64748b", fontSize: 13 }}>Cargando matriz...</p>
+      </div>
+    )
+  }
+
+  // GENERALES: 4-col desktop (label | value | label | value), 2-col mobile
+  const genCols = isMobile ? "100px 1fr" : "130px 1fr 130px 1fr"
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      {/* ── Panel header ───────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 16,
+          paddingBottom: 14,
+          borderBottom: "1px solid rgba(148,163,184,0.10)",
+        }}
+      >
+        <div>
+          <p style={{ margin: 0, color: "#f8fafc", fontSize: 15, fontWeight: 600 }}>
+            Matriz de proyecto
+          </p>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+            {exists
+              ? "Información general, recursos y entregables del proyecto"
+              : "Sin datos aún — llena el formulario y guarda"}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          {editing ? (
+            <>
+              {exists && (
+                <button onClick={handleCancel} style={cancelBtnStyle}>
+                  Cancelar
+                </button>
+              )}
+              <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setEditing(true)} style={editBtnStyle}>
+              ✏ Editar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Matrix document ─────────────────── */}
+      <div style={matrixDocStyle}>
+
+        {/* ─ GENERALES ─────────────────────── */}
+        <SectionHeader title="GENERALES" />
+        {isMobile ? (
+          // Mobile: single 2-col grid for all 6 fields stacked
+          <div style={{ display: "grid", gridTemplateColumns: genCols }}>
+            <GenCell label="Nombre del proyecto" fieldKey="nombre_proyecto" draft={draft} editing={editing} onChange={onChange} multiline bold />
+            <GenCell label="Cliente" fieldKey="cliente" draft={draft} editing={editing} onChange={onChange} bold />
+            <GenCell label="Director" fieldKey="director" draft={draft} editing={editing} onChange={onChange} multiline />
+            <GenCell label="Productor" fieldKey="productor" draft={draft} editing={editing} onChange={onChange} />
+            <GenCell label="Líder de post" fieldKey="lider_post" draft={draft} editing={editing} onChange={onChange} />
+            <GenCell label="Nomenclatura" fieldKey="nomenclatura" draft={draft} editing={editing} onChange={onChange} />
+          </div>
+        ) : (
+          // Desktop: 4-col grid — pairs: [nombre | cliente], [director | productor], [lider_post | nomenclatura]
+          <div style={{ display: "grid", gridTemplateColumns: genCols }}>
+            <GenCell label="Nombre del proyecto" fieldKey="nombre_proyecto" draft={draft} editing={editing} onChange={onChange} multiline bold />
+            <GenCell label="Cliente" fieldKey="cliente" draft={draft} editing={editing} onChange={onChange} bold rightSide />
+            <GenCell label="Director" fieldKey="director" draft={draft} editing={editing} onChange={onChange} multiline />
+            <GenCell label="Productor" fieldKey="productor" draft={draft} editing={editing} onChange={onChange} rightSide />
+            <GenCell label="Líder de post" fieldKey="lider_post" draft={draft} editing={editing} onChange={onChange} />
+            <GenCell label="Nomenclatura" fieldKey="nomenclatura" draft={draft} editing={editing} onChange={onChange} rightSide />
+          </div>
+        )}
+
+        {/* ─ ENTREGAS ──────────────────────── */}
+        <SectionHeader title="ENTREGAS" />
+        <FieldRow label="Time Table" fieldKey="time_table" draft={draft} editing={editing} onChange={onChange} multiline isMobile={isMobile} />
+
+        {/* ─ RECURSOS ──────────────────────── */}
+        <SectionHeader title="RECURSOS" />
+        <FieldRow label="Material" fieldKey="material" draft={draft} editing={editing} onChange={onChange} multiline isMobile={isMobile} />
+        <FieldRow label="Calificación" fieldKey="calificacion" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Entregables" fieldKey="entregables" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Asignación de cápsulas" fieldKey="asignacion_capsulas" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Guión / PPM" fieldKey="guion_ppm" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Legales" fieldKey="legales" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Referencia de música" fieldKey="referencia_musica" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Paquetería gráfica" fieldKey="paqueteria_grafica" draft={draft} editing={editing} onChange={onChange} multiline isMobile={isMobile} />
+        <FieldRow label="Assets" fieldKey="assets" draft={draft} editing={editing} onChange={onChange} multiline isMobile={isMobile} />
+        <FieldRow label="Liga de masters" fieldKey="liga_masters" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <BackupRow draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+
+        {/* ─ MINUTA ────────────────────────── */}
+        <SectionHeader title="MINUTA" />
+        <div
+          style={{
+            padding: "18px 20px",
+            minHeight: 72,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderBottom: "1px solid rgba(148,163,184,0.08)",
+          }}
+        >
+          {editing ? (
+            <textarea
+              value={draft.minuta}
+              onChange={(e) => onChange("minuta", e.target.value)}
+              style={{ ...textareaStyle, width: "100%", textAlign: "left" }}
+              rows={3}
+              placeholder="URL de la minuta o notas..."
+            />
+          ) : (
+            <ValueView val={draft.minuta} center />
+          )}
+        </div>
+
+        {/* ─ INDICACIONES EXTRA ────────────── */}
+        <SectionHeader
+          title="INDICACIONES EXTRA"
+          note="(nombres y cargos en caso de aplicar, etc.)"
+        />
+        <div style={{ padding: "16px 20px", minHeight: 80 }}>
+          {editing ? (
+            <textarea
+              value={draft.indicaciones_extra}
+              onChange={(e) => onChange("indicaciones_extra", e.target.value)}
+              style={{ ...textareaStyle, width: "100%" }}
+              rows={5}
+              placeholder="Indicaciones adicionales, nombres, cargos..."
+            />
+          ) : (
+            <ValueView val={draft.indicaciones_extra} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const sectionHeaderStyle: React.CSSProperties = {
+  background: "linear-gradient(90deg, rgba(29,78,216,0.28), rgba(30,58,138,0.18))",
+  borderTop: "1px solid rgba(59,130,246,0.20)",
+  borderBottom: "1px solid rgba(59,130,246,0.20)",
+  padding: "8px 16px",
+  color: "#bfdbfe",
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: 1.4,
+  textAlign: "center",
+}
+
+// GENERALES label cell
+const genLabelCellStyle: React.CSSProperties = {
+  padding: "10px 12px",
+  background: "rgba(255,255,255,0.022)",
+  color: "#64748b",
+  fontSize: 11,
+  textAlign: "right",
+  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderRight: "1px solid rgba(148,163,184,0.10)",
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "flex-end",
+  lineHeight: 1.4,
+}
+
+// GENERALES value cell
+const genValueCellStyle: React.CSSProperties = {
+  padding: "10px 14px",
+  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  color: "#e2e8f0",
+  fontSize: 13,
+  lineHeight: 1.45,
+  minHeight: 44,
+}
+
+// Single-column label cell
+function singleLabelCellStyle(isMobile: boolean): React.CSSProperties {
+  return {
+    padding: isMobile ? "10px 12px 4px" : "12px 14px",
+    background: "rgba(255,255,255,0.022)",
+    color: "#64748b",
+    fontSize: 11,
+    textAlign: isMobile ? "left" : "right",
+    borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: isMobile ? "flex-start" : "flex-end",
+    lineHeight: 1.4,
+  }
+}
+
+// Single-column value cell
+const singleValueCellStyle: React.CSSProperties = {
+  padding: "12px 16px",
+  color: "#e2e8f0",
+  fontSize: 13,
+  lineHeight: 1.5,
+}
+
+const matrixDocStyle: React.CSSProperties = {
+  border: "1px solid rgba(148,163,184,0.14)",
+  borderRadius: 14,
+  overflow: "hidden",
+  background: "rgba(8,12,28,0.82)",
+  backdropFilter: "blur(14px)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+}
+
+const saveBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 20px",
+  borderRadius: 8,
+  border: "none",
+  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+  color: "#fff",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+  boxShadow: "0 6px 20px rgba(124,58,237,0.22)",
+}
+
+const cancelBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.20)",
+  background: "transparent",
+  color: "#64748b",
+  cursor: "pointer",
+  fontSize: 13,
+}
+
+const editBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "8px 16px",
+  borderRadius: 8,
+  border: "1px solid rgba(52,211,153,0.30)",
+  background: "rgba(52,211,153,0.08)",
+  color: "#34d399",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "6px 10px",
+  borderRadius: 6,
+  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(2,6,23,0.60)",
+  color: "#f8fafc",
+  fontSize: 13,
+  outline: "none",
+  boxSizing: "border-box",
+}
+
+const textareaStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "6px 10px",
+  borderRadius: 6,
+  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(2,6,23,0.60)",
+  color: "#f8fafc",
+  fontSize: 13,
+  outline: "none",
+  resize: "vertical",
+  lineHeight: 1.5,
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+}
