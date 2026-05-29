@@ -182,7 +182,8 @@ async function fetchImageBase64(
 function drawCoverPage(
   doc: any,
   data: QuotePDFData,
-  logo: { dataUrl: string; w: number; h: number }
+  headerImg: string,
+  footerImg: string
 ): void {
   const pageW = 215.9
   const pageH = 279.4
@@ -190,22 +191,14 @@ function drawCoverPage(
   const mR = 15
   const contentW = pageW - mL - mR
 
-  // ── Header bar ───────────────────────────────────────────────────────────────
+  // ── Header image ─────────────────────────────────────────────────────────────
   const headerH = 52
-  doc.setFillColor(15, 23, 42)
-  doc.rect(0, 0, pageW, headerH, "F")
-
-  if (logo.dataUrl && logo.w > 0 && logo.h > 0) {
-    const targetH = 30
-    const targetW = Math.min((logo.w / logo.h) * targetH, contentW * 0.5)
-    doc.addImage(logo.dataUrl, "PNG", mL, (headerH - targetH) / 2, targetW, targetH)
+  if (headerImg) {
+    doc.addImage(headerImg, "PNG", 0, 0, pageW, headerH)
+  } else {
+    doc.setFillColor(15, 23, 42)
+    doc.rect(0, 0, pageW, headerH, "F")
   }
-
-  // Tagline derecha
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(9.5)
-  doc.setTextColor(99, 102, 241)
-  doc.text("#TODO ES POSIBLE", pageW - mR, headerH / 2 + 3, { align: "right" })
 
   let y = headerH + 15
 
@@ -379,31 +372,27 @@ function drawCoverPage(
   ly += 5
   doc.text("Vigencia: 15 días a partir de su expedición.", mL + 2, ly)
 
-  // ── Footer bar ───────────────────────────────────────────────────────────────
-  const footerH = 18
-  const footerY = pageH - footerH
-
-  // Línea de acento índigo encima del footer
-  doc.setFillColor(99, 102, 241)
-  doc.rect(0, footerY - 1.5, pageW, 1.5, "F")
-
-  doc.setFillColor(5, 8, 22)
-  doc.rect(0, footerY, pageW, footerH, "F")
-
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(9.5)
-  doc.setTextColor(255, 255, 255)
-  doc.text("Miguel Matus", mL, footerY + 7)
-
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(7.5)
-  doc.setTextColor(148, 163, 184)
-  doc.text("Director General  ·  Retro Casa Productora", mL, footerY + 13)
-
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(8.5)
-  doc.setTextColor(148, 163, 184)
-  doc.text("@retrocasaproductora", pageW - mR, footerY + 10, { align: "right" })
+  // ── Footer image ─────────────────────────────────────────────────────────────
+  const footerTotalH = 19.5   // 1.5mm accent line + 18mm bar
+  const footerY = pageH - footerTotalH
+  if (footerImg) {
+    doc.addImage(footerImg, "PNG", 0, footerY, pageW, footerTotalH)
+  } else {
+    doc.setFillColor(99, 102, 241)
+    doc.rect(0, footerY, pageW, 1.5, "F")
+    doc.setFillColor(5, 8, 22)
+    doc.rect(0, footerY + 1.5, pageW, 18, "F")
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(9.5)
+    doc.setTextColor(255, 255, 255)
+    doc.text("Miguel Matus", mL, footerY + 8.5)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7.5)
+    doc.setTextColor(148, 163, 184)
+    doc.text("Director General  ·  Retro Casa Productora", mL, footerY + 14.5)
+    doc.setFontSize(8.5)
+    doc.text("@retrocasaproductora", pageW - mR, footerY + 11.5, { align: "right" })
+  }
 }
 
 // ─── exportación principal ────────────────────────────────────────────────────
@@ -419,11 +408,15 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   const mR = 15
   const contentW = pageW - mL - mR
 
-  // Cargar logo
-  const logo = await fetchImageBase64("/logo-retro.png")
+  // Cargar imágenes
+  const [headerCover, headerDetail, footer] = await Promise.all([
+    fetchImageBase64("/pdf-header-cover.png"),
+    fetchImageBase64("/pdf-header-detail.png"),
+    fetchImageBase64("/pdf-footer.png"),
+  ])
 
   // ── Página 1: Carátula ───────────────────────────────────────────────────────
-  drawCoverPage(doc, data, logo)
+  drawCoverPage(doc, data, headerCover.dataUrl, footer.dataUrl)
 
   // ── Página 2+: Detalle por rubro ─────────────────────────────────────────────
   doc.addPage()
@@ -439,18 +432,16 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
     approved: [22, 163, 74],
   }
 
-  // ── Encabezado del detalle (logo + datos básicos) ─────────────────────────────
+  // ── Encabezado del detalle (imagen + datos de la cotización overlay) ───────────
   const detailHeaderH = 30
-  doc.setFillColor(15, 23, 42)
-  doc.rect(0, 0, pageW, detailHeaderH, "F")
-
-  if (logo.dataUrl && logo.w > 0 && logo.h > 0) {
-    const targetH = 18
-    const targetW = Math.min((logo.w / logo.h) * targetH, contentW * 0.42)
-    doc.addImage(logo.dataUrl, "PNG", mL, (detailHeaderH - targetH) / 2, targetW, targetH)
+  if (headerDetail.dataUrl) {
+    doc.addImage(headerDetail.dataUrl, "PNG", 0, 0, pageW, detailHeaderH)
+  } else {
+    doc.setFillColor(15, 23, 42)
+    doc.rect(0, 0, pageW, detailHeaderH, "F")
   }
 
-  // Nombre de la cotización centrado
+  // Nombre de la cotización centrado sobre la imagen
   doc.setFont("helvetica", "normal")
   doc.setFontSize(9)
   doc.setTextColor(148, 163, 184)
