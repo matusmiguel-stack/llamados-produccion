@@ -602,9 +602,15 @@ function QuoteModal({
               </span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
             <Link href={`/cotizaciones?quoteId=${quote.id}`} style={editQuoteBtnStyle}>
               ✏ Editar
+            </Link>
+            <Link
+              href={`/proyectos/${quote.project_id}/liberar/${quote.id}`}
+              style={liberarBtnStyle}
+            >
+              ▶ Liberar
             </Link>
             <button onClick={openMovePanel} style={moveQuoteBtnStyle}>
               ↗ Mover
@@ -1509,6 +1515,22 @@ const editQuoteBtnStyle: React.CSSProperties = {
   border: "1px solid rgba(52,211,153,0.3)",
   background: "rgba(52,211,153,0.08)",
   color: "#34d399",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  textDecoration: "none",
+}
+
+const liberarBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "7px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(251,191,36,0.3)",
+  background: "rgba(251,191,36,0.08)",
+  color: "#fbbf24",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
