@@ -141,6 +141,7 @@ export default function Home() {
   const [showDupePicker, setShowDupePicker] = useState(false)
   const [dupeDate, setDupeDate] = useState("")
   const [duplicating, setDuplicating] = useState(false)
+  const [liveConnected, setLiveConnected] = useState(false)
 
   const [entryMode, setEntryMode] = useState<"shoot" | "vacation">("shoot")
   const [vacationStartDate, setVacationStartDate] = useState("")
@@ -298,6 +299,33 @@ export default function Home() {
 
     init()
   }, [])
+
+  // ── Realtime: sincronización en vivo con todos los usuarios ────────────────
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    function scheduleReload() {
+      if (timer) clearTimeout(timer)
+      // Debounce 400ms: agrupa múltiples eventos del mismo guardado
+      timer = setTimeout(() => { loadAll() }, 400)
+    }
+
+    const channel = supabase
+      .channel("calendar-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoots" },           scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_employees" },  scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_resources" },  scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vacations" },        scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vacation_employees" }, scheduleReload)
+      .subscribe((status) => {
+        setLiveConnected(status === "SUBSCRIBED")
+      })
+
+    return () => {
+      if (timer) clearTimeout(timer)
+      supabase.removeChannel(channel)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const filtered = allShoots.filter((shoot) => {
@@ -1247,7 +1275,36 @@ function openEditVacation() {
               </p>
             </div>
 
-            <span style={roleBadgeStyle(profile?.role)}>{profile?.role || "..."}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Indicador de sincronización en vivo */}
+              <div
+                title={liveConnected ? "Sincronización en vivo activa" : "Conectando..."}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "4px 9px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: 0.3,
+                  background: liveConnected ? "rgba(52,211,153,0.10)" : "rgba(148,163,184,0.08)",
+                  border: `1px solid ${liveConnected ? "rgba(52,211,153,0.25)" : "rgba(148,163,184,0.15)"}`,
+                  color: liveConnected ? "#34d399" : "#64748b",
+                  transition: "all 0.4s ease",
+                }}
+              >
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: liveConnected ? "#34d399" : "#475569",
+                  boxShadow: liveConnected ? "0 0 6px #34d399" : "none",
+                  animation: liveConnected ? "pulse-live 2s infinite" : "none",
+                  flexShrink: 0,
+                }} />
+                {liveConnected ? "EN VIVO" : "Conectando"}
+              </div>
+              <span style={roleBadgeStyle(profile?.role)}>{profile?.role || "..."}</span>
+            </div>
           </header>
 
           <section

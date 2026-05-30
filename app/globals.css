@@ -345,3 +345,8 @@ input[type="number"] {
     animation: none;
   }
 }
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px #34d399; }
+  50%       { opacity: 0.5; box-shadow: 0 0 2px #34d399; }
+}
