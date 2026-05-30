@@ -8,6 +8,7 @@ import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { MatrizPanel } from "./MatrizPanel"
 import { HojaLlamadoPanel } from "./HojaLlamadoPanel"
+import { InformacionGeneralPanel } from "./InformacionGeneralPanel"
 
 type Project = {
   id: string
@@ -15,6 +16,7 @@ type Project = {
   subfolder_id: string
   name: string
   description: string | null
+  responsable: string | null
 }
 
 type Quote = {
@@ -72,7 +74,6 @@ const projectModules: ProjectModule[] = [
     label: "Información general",
     description: "Datos base, contactos y contexto del proyecto",
     icon: "info",
-    comingSoon: true,
   },
   {
     id: "cotizaciones",
@@ -158,6 +159,7 @@ export default function ProjectDetailPage() {
   const [loadingQuote, setLoadingQuote] = useState(false)
   const [showMatriz, setShowMatriz] = useState(false)
   const [showHoja, setShowHoja] = useState(false)
+  const [showGeneral, setShowGeneral] = useState(false)
 
   const isAdmin = profile?.role === "admin"
 
@@ -181,6 +183,7 @@ export default function ProjectDetailPage() {
       if (e.key === "Escape") {
         setShowMatriz(false)
         setShowHoja(false)
+        setShowGeneral(false)
         setSelectedQuote(null)
       }
     }
@@ -355,7 +358,9 @@ export default function ProjectDetailPage() {
                     key={module.id}
                     type="button"
                     onClick={() => {
-                      if (module.id === "matriz") {
+                      if (module.id === "general") {
+                        setShowGeneral(true)
+                      } else if (module.id === "matriz") {
                         setShowMatriz(true)
                       } else if (module.id === "hoja-llamado") {
                         setShowHoja(true)
@@ -443,6 +448,53 @@ export default function ProjectDetailPage() {
             setSelectedQuote(null)
           }}
         />
+      )}
+
+      {/* Modal de Información General */}
+      {showGeneral && (
+        <div
+          className="modal-overlay"
+          style={modalOverlayStyle}
+          onClick={() => setShowGeneral(false)}
+        >
+          <div
+            className="modal-panel"
+            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : 860 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={modalHeaderStyle}>
+              <div>
+                <p style={modalEyebrowStyle}>Proyecto · {clientName}</p>
+                <h2 style={modalTitleStyle}>{project?.name}</h2>
+              </div>
+              <button
+                onClick={() => setShowGeneral(false)}
+                style={modalCloseStyle}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              style={{
+                padding: isMobile ? "16px 14px 28px" : "20px 28px 32px",
+                overflowY: "auto",
+                maxHeight: "82vh",
+              }}
+            >
+              <InformacionGeneralPanel
+                projectId={projectId}
+                projectName={project?.name ?? ""}
+                projectDescription={project?.description ?? null}
+                projectResponsable={project?.responsable ?? null}
+                clientName={clientName}
+                subfolderName={subfolderName}
+                isMobile={isMobile}
+                isAdmin={isAdmin}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Hoja de Llamado */}

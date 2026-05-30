@@ -19,12 +19,21 @@ type Subfolder = {
   created_at: string
 }
 
+type Employee = {
+  id: string
+  nombre: string
+  apellido_paterno: string | null
+  apellido_materno: string | null
+  puesto: string | null
+}
+
 type Project = {
   id: string
   client_id: string
   subfolder_id: string
   name: string
   description: string | null
+  responsable: string | null
   created_at: string
   updated_at: string
 }
@@ -45,6 +54,7 @@ export default function ProyectosPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [subfolders, setSubfolders] = useState<Subfolder[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [profile, setProfile] = useState<any>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -57,6 +67,7 @@ export default function ProyectosPage() {
 
   const [createName, setCreateName] = useState("")
   const [createDescription, setCreateDescription] = useState("")
+  const [createResponsable, setCreateResponsable] = useState("")
   const [renameName, setRenameName] = useState("")
   const [renameDescription, setRenameDescription] = useState("")
   const [moveTargetSubfolderId, setMoveTargetSubfolderId] = useState("")
@@ -137,10 +148,16 @@ export default function ProyectosPage() {
       { data: clientsData, error: clientsError },
       { data: subfoldersData, error: subfoldersError },
       { data: projectsData, error: projectsError },
+      { data: employeesData },
     ] = await Promise.all([
       supabase.from("clients").select("*").order("name", { ascending: true }),
       supabase.from("client_subfolders").select("*").order("name", { ascending: true }),
       supabase.from("projects").select("*").order("name", { ascending: true }),
+      supabase
+        .from("employees")
+        .select("id,nombre,apellido_paterno,apellido_materno,puesto")
+        .eq("puesto", "Productor")
+        .order("nombre", { ascending: true }),
     ])
 
     if (clientsError) return alert(clientsError.message)
@@ -150,6 +167,7 @@ export default function ProyectosPage() {
     setClients(clientsData || [])
     setSubfolders(subfoldersData || [])
     setProjects(projectsData || [])
+    setEmployees((employeesData || []) as Employee[])
   }
 
   useEffect(() => {
@@ -274,6 +292,7 @@ export default function ProyectosPage() {
   function resetCreateForm() {
     setCreateName("")
     setCreateDescription("")
+    setCreateResponsable("")
   }
 
   function resetRenameForm() {
@@ -414,11 +433,17 @@ export default function ProyectosPage() {
       return
     }
 
+    if (!createResponsable) {
+      alert("Selecciona un responsable del proyecto")
+      return
+    }
+
     const { error } = await supabase.from("projects").insert({
       client_id: view.clientId,
       subfolder_id: view.subfolderId,
       name,
       description: description || null,
+      responsable: createResponsable,
       updated_at: new Date().toISOString(),
     })
 
@@ -696,7 +721,7 @@ export default function ProyectosPage() {
                   style={{
                     ...inlineFormGridStyle,
                     gridTemplateColumns:
-                      view.level === "subfolder" && !isMobile ? "1fr 1fr auto" : "1fr auto",
+                      view.level === "subfolder" && !isMobile ? "1fr 1fr 1fr auto" : "1fr auto",
                   }}
                 >
                   <Field label="Nombre">
@@ -726,6 +751,32 @@ export default function ProyectosPage() {
                         placeholder="Notas iniciales"
                         style={inputStyle}
                       />
+                    </Field>
+                  )}
+
+                  {view.level === "subfolder" && (
+                    <Field label="Responsable *">
+                      <select
+                        value={createResponsable}
+                        onChange={(event) => setCreateResponsable(event.target.value)}
+                        style={selectStyle}
+                      >
+                        <option value="">Seleccionar...</option>
+                        <optgroup label="── Dirección ──">
+                          <option value="Director General">Director General</option>
+                          <option value="Directora de Operaciones">Directora de Operaciones</option>
+                        </optgroup>
+                        {employees.length > 0 && (
+                          <optgroup label="── Productores ──">
+                            {employees.map((e) => {
+                              const full = [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+                              return (
+                                <option key={e.id} value={full}>{full}</option>
+                              )
+                            })}
+                          </optgroup>
+                        )}
+                      </select>
                     </Field>
                   )}
 
