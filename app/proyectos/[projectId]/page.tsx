@@ -157,6 +157,7 @@ export default function ProjectDetailPage() {
   const [selectedQuote, setSelectedQuote] = useState<QuoteDetail | null>(null)
   const [loadingQuote, setLoadingQuote] = useState(false)
   const [showMatriz, setShowMatriz] = useState(false)
+  const [showHoja, setShowHoja] = useState(false)
 
   const isAdmin = profile?.role === "admin"
 
@@ -179,6 +180,7 @@ export default function ProjectDetailPage() {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setShowMatriz(false)
+        setShowHoja(false)
         setSelectedQuote(null)
       }
     }
@@ -355,6 +357,8 @@ export default function ProjectDetailPage() {
                     onClick={() => {
                       if (module.id === "matriz") {
                         setShowMatriz(true)
+                      } else if (module.id === "hoja-llamado") {
+                        setShowHoja(true)
                       } else {
                         setActiveModule(module.id)
                       }
@@ -393,11 +397,6 @@ export default function ProjectDetailPage() {
                 <PresupuestoPanel
                   quotes={quotes}
                   quotesLoaded={quotesLoaded}
-                  projectId={projectId}
-                  isMobile={isMobile}
-                />
-              ) : activeModule === "hoja-llamado" ? (
-                <HojaLlamadoPanel
                   projectId={projectId}
                   isMobile={isMobile}
                 />
@@ -444,6 +443,47 @@ export default function ProjectDetailPage() {
             setSelectedQuote(null)
           }}
         />
+      )}
+
+      {/* Modal de Hoja de Llamado */}
+      {showHoja && (
+        <div
+          className="modal-overlay"
+          style={modalOverlayStyle}
+          onClick={() => setShowHoja(false)}
+        >
+          <div
+            className="modal-panel"
+            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : 1100 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={modalHeaderStyle}>
+              <div>
+                <p style={modalEyebrowStyle}>Proyecto · {project?.name}</p>
+                <h2 style={modalTitleStyle}>Hoja de llamado</h2>
+              </div>
+              <button
+                onClick={() => setShowHoja(false)}
+                style={modalCloseStyle}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              style={{
+                padding: isMobile ? "16px 14px 28px" : "20px 28px 32px",
+                overflowY: "auto",
+                maxHeight: "82vh",
+              }}
+            >
+              <HojaLlamadoPanel
+                projectId={projectId}
+                isMobile={isMobile}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Matriz de proyecto */}
