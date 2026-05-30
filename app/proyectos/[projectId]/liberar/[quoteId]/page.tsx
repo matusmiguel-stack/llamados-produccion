@@ -15,6 +15,14 @@ type Proveedor = {
   actividad: string
 }
 
+type Employee = {
+  id: string
+  nombre: string
+  apellido_paterno: string
+  apellido_materno: string | null
+  puesto: string
+}
+
 type QuoteItemRow = {
   id: string
   section_id: string
@@ -30,6 +38,7 @@ type QuoteItemRow = {
   actual_days: number | null
   actual_unit_price: number | null
   actual_supplier_id: string | null
+  actual_employee_id: string | null
 }
 
 type QuoteSection = {
@@ -121,6 +130,11 @@ function proveedorLabel(p: Proveedor): string {
   return `${p.nombre} ${p.apellido} · ${p.actividad}`
 }
 
+function employeeLabel(e: Employee): string {
+  const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+  return `${e.nombre} ${ap} · ${e.puesto}`
+}
+
 export default function LiberarPage() {
   const params = useParams()
   const projectId = String(params.projectId || "")
@@ -133,6 +147,7 @@ export default function LiberarPage() {
   const [quote, setQuote] = useState<Quote | null>(null)
   const [sections, setSections] = useState<QuoteSection[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [actuals, setActuals] = useState<Record<string, ItemActual>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -216,6 +231,10 @@ export default function LiberarPage() {
 
         const items = (itemsData || []) as QuoteItemRow[]
         for (const item of items) {
+          // Build a tagged contact value so the select can show the right option
+          let contactId = ""
+          if (item.actual_supplier_id) contactId = `prov:${item.actual_supplier_id}`
+          else if (item.actual_employee_id) contactId = `emp:${item.actual_employee_id}`
           initialActuals[item.id] = {
             qty: item.actual_qty != null ? String(item.actual_qty) : "",
             days: item.actual_days != null ? String(item.actual_days) : "",
@@ -223,7 +242,7 @@ export default function LiberarPage() {
               item.actual_unit_price != null
                 ? String(item.actual_unit_price)
                 : "",
-            supplier_id: item.actual_supplier_id || "",
+            supplier_id: contactId,
           }
         }
         loadedSections.push({ ...sec, items })
@@ -232,11 +251,12 @@ export default function LiberarPage() {
       setSections(loadedSections)
       setActuals(initialActuals)
 
-      const { data: provsData } = await supabase
-        .from("proveedores")
-        .select("id, nombre, apellido, empresa, actividad")
-        .order("nombre")
+      const [{ data: provsData }, { data: empsData }] = await Promise.all([
+        supabase.from("proveedores").select("id, nombre, apellido, empresa, actividad").order("nombre"),
+        supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, puesto").order("nombre"),
+      ])
       setProveedores(provsData || [])
+      setEmployees(empsData || [])
 
       setLoading(false)
     }
@@ -262,6 +282,7 @@ export default function LiberarPage() {
       setNewProv({ nombre: "", apellido: "", empresa: "", actividad: "", email: "", telefono: "" })
       setShowAddProv(true)
     } else {
+      // value is either "", "prov:<uuid>", or "emp:<uuid>"
       updateActual(itemId, "supplier_id", value)
     }
   }
@@ -290,8 +311,8 @@ export default function LiberarPage() {
       setProveedores((prev) =>
         [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre))
       )
-      // Auto-select for the triggering item
-      if (addProvForItem) updateActual(addProvForItem, "supplier_id", data.id)
+      // Auto-select for the triggering item (with prov: prefix)
+      if (addProvForItem) updateActual(addProvForItem, "supplier_id", `prov:${data.id}`)
       setShowAddProv(false)
       setAddProvForItem(null)
     } catch (err: any) {
@@ -341,11 +362,18 @@ export default function LiberarPage() {
           const actual_days = a.days !== "" ? parseFloat(a.days) : null
           const actual_unit_price =
             a.unit_price !== "" ? parseFloat(a.unit_price) : null
-          const actual_supplier_id = a.supplier_id || null
+          // Decode tagged contact value
+          let actual_supplier_id: string | null = null
+          let actual_employee_id: string | null = null
+          if (a.supplier_id.startsWith("prov:")) {
+            actual_supplier_id = a.supplier_id.slice(5)
+          } else if (a.supplier_id.startsWith("emp:")) {
+            actual_employee_id = a.supplier_id.slice(4)
+          }
 
           const { error } = await supabase
             .from("quote_items")
-            .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id })
+            .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id })
             .eq("id", item.id)
 
           if (error) throw error
@@ -726,21 +754,32 @@ export default function LiberarPage() {
                             </div>
                           </div>
 
-                          {/* Proveedor mobile */}
+                          {/* Proveedor / Empleado mobile */}
                           <div style={{ marginTop: 10 }}>
-                            <p style={inputLabelStyle}>Proveedor</p>
+                            <p style={inputLabelStyle}>Proveedor / Empleado</p>
                             <select
                               value={a.supplier_id}
                               onChange={(e) => handleSelectProveedor(item.id, e.target.value)}
                               style={selectStyle}
                             >
-                              <option value="">Sin proveedor</option>
-                              {proveedores.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {proveedorLabel(p)}
-                                </option>
-                              ))}
-                              <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
+                              <option value="">Sin asignar</option>
+                              {employees.length > 0 && (
+                                <optgroup label="── Empleados RETRO ──">
+                                  {employees.map((e) => (
+                                    <option key={e.id} value={`emp:${e.id}`}>
+                                      {employeeLabel(e)}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              <optgroup label="── Proveedores externos ──">
+                                {proveedores.map((p) => (
+                                  <option key={p.id} value={`prov:${p.id}`}>
+                                    {proveedorLabel(p)}
+                                  </option>
+                                ))}
+                                <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
+                              </optgroup>
                             </select>
                           </div>
                         </div>
@@ -830,19 +869,30 @@ export default function LiberarPage() {
                           {fmt(realTot)}
                         </span>
 
-                        {/* Proveedor select */}
+                        {/* Proveedor / Empleado select */}
                         <select
                           value={a.supplier_id}
                           onChange={(e) => handleSelectProveedor(item.id, e.target.value)}
                           style={selectStyle}
                         >
                           <option value="">—</option>
-                          {proveedores.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {proveedorLabel(p)}
-                            </option>
-                          ))}
-                          <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
+                          {employees.length > 0 && (
+                            <optgroup label="── Empleados RETRO ──">
+                              {employees.map((e) => (
+                                <option key={e.id} value={`emp:${e.id}`}>
+                                  {employeeLabel(e)}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="── Proveedores externos ──">
+                            {proveedores.map((p) => (
+                              <option key={p.id} value={`prov:${p.id}`}>
+                                {proveedorLabel(p)}
+                              </option>
+                            ))}
+                            <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
+                          </optgroup>
                         </select>
                       </div>
                     )

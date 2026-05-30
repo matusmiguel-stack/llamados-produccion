@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
+import type { HojaPDFData } from "../../../lib/exportHojaPdf"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,118 @@ export function HojaLlamadoPanel({
   const [saveOk, setSaveOk] = useState(false)
   const [loadingCrew, setLoadingCrew] = useState(false)
 
+  // ── Sync crew from liberación (defined first; called inside loadHoja) ────────
+  const syncCrewFromLiberacion = useCallback(async (
+    currentCrew: CrewRow[],
+    silent = false,
+  ) => {
+    setLoadingCrew(true)
+    try {
+      // 1. Released quote
+      const { data: quotes } = await supabase
+        .from("quotes")
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("released", true)
+        .limit(1)
+
+      if (!quotes || quotes.length === 0) {
+        if (!silent) alert("No hay ninguna cotización liberada.\nLibera una cotización primero desde Cotizaciones → ▶ Liberar.")
+        return
+      }
+
+      const releasedQuoteId = quotes[0].id
+
+      // 2. Items con proveedor O empleado asignado
+      const { data: sections } = await supabase
+        .from("quote_sections")
+        .select("id, order_index")
+        .eq("quote_id", releasedQuoteId)
+        .order("order_index")
+
+      if (!sections || sections.length === 0) return
+
+      type RawItem = {
+        description: string
+        order_index: number
+        actual_supplier_id: string | null
+        actual_employee_id: string | null
+      }
+      const allItems: RawItem[] = []
+      for (const sec of sections) {
+        const { data: items } = await supabase
+          .from("quote_items")
+          .select("description, order_index, actual_supplier_id, actual_employee_id")
+          .eq("section_id", sec.id)
+          .order("order_index")
+
+        for (const item of (items || []) as RawItem[]) {
+          if (item.actual_supplier_id || item.actual_employee_id) {
+            allItems.push(item)
+          }
+        }
+      }
+
+      if (allItems.length === 0) {
+        if (!silent) alert("No se encontraron proveedores/empleados asignados.\nAsígnalos desde ▶ Liberar.")
+        return
+      }
+
+      // 3. Fetch proveedores y empleados en paralelo
+      const supplierIds = [...new Set(allItems.map((i) => i.actual_supplier_id).filter(Boolean))] as string[]
+      const employeeIds = [...new Set(allItems.map((i) => i.actual_employee_id).filter(Boolean))] as string[]
+
+      const [provRes, empRes] = await Promise.all([
+        supplierIds.length > 0
+          ? supabase.from("proveedores").select("id, nombre, apellido").in("id", supplierIds)
+          : Promise.resolve({ data: [] }),
+        employeeIds.length > 0
+          ? supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno").in("id", employeeIds)
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const provMap = new Map((provRes.data || []).map((p: any) => [p.id, `${p.nombre} ${p.apellido}`.trim()]))
+      const empMap  = new Map((empRes.data  || []).map((e: any) => {
+        const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+        return [e.id, `${e.nombre} ${ap}`.trim()]
+      }))
+
+      // 4. Build/merge crew rows preserving existing times
+      const newCrew: CrewRow[] = allItems.map((item) => {
+        const nombre = item.actual_supplier_id
+          ? (provMap.get(item.actual_supplier_id) ?? "")
+          : (empMap.get(item.actual_employee_id!) ?? "")
+        const existing = currentCrew.find(
+          (c) => c.puesto === item.description && c.nombre === nombre,
+        )
+        return {
+          id: existing?.id ?? newId(),
+          puesto: item.description,
+          nombre,
+          retro:    existing?.retro    ?? "",
+          locacion: existing?.locacion ?? "",
+          pickup:   existing?.pickup   ?? "",
+          notas:    existing?.notas    ?? "",
+        }
+      })
+
+      // Append manually-added rows not from liberación
+      const libKeys = new Set(newCrew.map((r) => `${r.puesto}||${r.nombre}`))
+      const manualExtra = currentCrew.filter(
+        (r) => r.nombre && !libKeys.has(`${r.puesto}||${r.nombre}`),
+      )
+      const merged = [...newCrew, ...manualExtra]
+
+      setHoja((prev) =>
+        prev ? { ...prev, crew: merged.length > 0 ? merged : [emptyCrewRow()] } : prev,
+      )
+    } catch (err: any) {
+      if (!silent) alert("Error al cargar crew: " + err.message)
+    } finally {
+      setLoadingCrew(false)
+    }
+  }, [projectId])
+
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadHoja = useCallback(async () => {
     setLoading(true)
@@ -129,8 +242,11 @@ export function HojaLlamadoPanel({
       console.error("Error loading hoja:", error)
     }
 
+    let currentCrew: CrewRow[] = [emptyCrewRow()]
+
     if (data) {
       setHojaId(data.id)
+      currentCrew = (data.crew as CrewRow[]) || [emptyCrewRow()]
       setHoja({
         id: data.id,
         project_id: data.project_id,
@@ -151,7 +267,7 @@ export function HojaLlamadoPanel({
         lluvia: data.lluvia ?? "",
         locaciones: (data.locaciones as LocacionRow[]) || [emptyLocacion()],
         cast_list: (data.cast_list as CastRow[]) || [emptyCast()],
-        crew: (data.crew as CrewRow[]) || [emptyCrewRow()],
+        crew: currentCrew,
         arte_needs: data.arte_needs ?? "",
         makeup_needs: data.makeup_needs ?? "",
         vestuario_needs: data.vestuario_needs ?? "",
@@ -161,12 +277,13 @@ export function HojaLlamadoPanel({
         notas_produccion: data.notas_produccion ?? "",
       })
     } else {
-      // New hoja
       setHojaId(null)
       setHoja({ id: "", ...defaultHoja(projectId) })
     }
     setLoading(false)
-  }, [projectId])
+    // Auto-sync crew silently on mount
+    syncCrewFromLiberacion(currentCrew, true)
+  }, [projectId, syncCrewFromLiberacion])
 
   useEffect(() => {
     loadHoja()
@@ -233,91 +350,41 @@ export function HojaLlamadoPanel({
     }
   }
 
-  // ── Load crew from liberación ─────────────────────────────────────────────
-  async function loadCrewFromLiberacion() {
-    setLoadingCrew(true)
+  // ── PDF export ────────────────────────────────────────────────────────────
+  async function handleExportPdf() {
+    if (!hoja) return
     try {
-      // 1. Find released quote for this project
-      const { data: quotes } = await supabase
-        .from("quotes")
-        .select("id, name")
-        .eq("project_id", projectId)
-        .eq("released", true)
-        .limit(1)
-
-      if (!quotes || quotes.length === 0) {
-        alert("No hay ninguna cotización liberada para este proyecto.\nLibera una cotización primero desde el módulo de Cotizaciones → ▶ Liberar.")
-        return
+      const { exportHojaPdf } = await import("../../../lib/exportHojaPdf")
+      const pdfData: HojaPDFData = {
+        fecha_rodaje: hoja.fecha_rodaje,
+        titulo: hoja.titulo,
+        dia_num: hoja.dia_num,
+        dia_total: hoja.dia_total,
+        avanzada: hoja.avanzada,
+        client_on_loc: hoja.client_on_loc,
+        director: hoja.director,
+        productor: hoja.productor,
+        ready_to_shoot: hoja.ready_to_shoot,
+        locacion_nombre: hoja.locacion_nombre,
+        locacion_url: hoja.locacion_url,
+        amanecer: hoja.amanecer,
+        atardecer: hoja.atardecer,
+        clima: hoja.clima,
+        lluvia: hoja.lluvia,
+        locaciones: hoja.locaciones,
+        cast_list: hoja.cast_list,
+        crew: hoja.crew,
+        arte_needs: hoja.arte_needs,
+        makeup_needs: hoja.makeup_needs,
+        vestuario_needs: hoja.vestuario_needs,
+        efectos_needs: hoja.efectos_needs,
+        vehiculos: hoja.vehiculos,
+        equipo_especial: hoja.equipo_especial,
+        notas_produccion: hoja.notas_produccion,
       }
-
-      const releasedQuoteId = quotes[0].id
-
-      // 2. Get sections and items with actual_supplier_id
-      const { data: sections } = await supabase
-        .from("quote_sections")
-        .select("id, name, order_index")
-        .eq("quote_id", releasedQuoteId)
-        .order("order_index")
-
-      if (!sections || sections.length === 0) {
-        alert("La cotización liberada no tiene secciones.")
-        return
-      }
-
-      const allItems: { description: string; order_index: number; actual_supplier_id: string | null }[] = []
-      for (const sec of sections) {
-        const { data: items } = await supabase
-          .from("quote_items")
-          .select("description, order_index, actual_supplier_id")
-          .eq("section_id", sec.id)
-          .not("actual_supplier_id", "is", null)
-          .order("order_index")
-
-        for (const item of items || []) {
-          allItems.push(item)
-        }
-      }
-
-      if (allItems.length === 0) {
-        alert("No se encontraron proveedores asignados en la liberación.\nAsigna proveedores a los ítems desde ▶ Liberar para que aparezcan aquí.")
-        return
-      }
-
-      // 3. Fetch proveedores in bulk
-      const supplierIds = [...new Set(allItems.map((i) => i.actual_supplier_id!).filter(Boolean))]
-      const { data: proveedores } = await supabase
-        .from("proveedores")
-        .select("id, nombre, apellido, actividad, empresa")
-        .in("id", supplierIds)
-
-      const provMap = new Map((proveedores || []).map((p) => [p.id, p]))
-
-      // 4. Build crew rows — one per item that has a supplier
-      const newCrew: CrewRow[] = allItems.map((item) => {
-        const prov = provMap.get(item.actual_supplier_id!)
-        const nombre = prov ? `${prov.nombre} ${prov.apellido}`.trim() : ""
-        // Check if a crew row for this person + role already exists (to preserve times)
-        const existing = hoja?.crew.find(
-          (c) => c.puesto === item.description && c.nombre === nombre
-        )
-        return {
-          id: existing?.id ?? newId(),
-          puesto: item.description,
-          nombre,
-          retro: existing?.retro ?? "",
-          locacion: existing?.locacion ?? "",
-          pickup: existing?.pickup ?? "",
-          notas: existing?.notas ?? "",
-        }
-      })
-
-      setHoja((prev) =>
-        prev ? { ...prev, crew: newCrew.length > 0 ? newCrew : [emptyCrewRow()] } : prev
-      )
+      await exportHojaPdf(pdfData, hoja.titulo || undefined)
     } catch (err: any) {
-      alert("Error al cargar crew: " + err.message)
-    } finally {
-      setLoadingCrew(false)
+      alert("Error al generar PDF: " + err.message)
     }
   }
 
@@ -403,12 +470,19 @@ export function HojaLlamadoPanel({
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button
-            onClick={loadCrewFromLiberacion}
+            onClick={() => hoja && syncCrewFromLiberacion(hoja.crew, false)}
             disabled={loadingCrew}
             style={loadCrewBtnStyle}
-            title="Carga automáticamente el crew desde los proveedores asignados en la liberación"
+            title="Actualiza el crew con los últimos proveedores/empleados asignados en la liberación"
           >
-            {loadingCrew ? "Cargando..." : "⟳ Cargar crew de liberación"}
+            {loadingCrew ? "Actualizando..." : "⟳ Actualizar crew"}
+          </button>
+          <button
+            onClick={handleExportPdf}
+            style={pdfBtnStyle}
+            title="Exportar hoja de llamado en PDF tamaño carta"
+          >
+            ↓ PDF
           </button>
           <button
             onClick={saveHoja}
@@ -903,6 +977,20 @@ const loadCrewBtnStyle: React.CSSProperties = {
   border: "1px solid rgba(14,165,233,0.30)",
   background: "rgba(14,165,233,0.08)",
   color: "#7dd3fc",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+}
+
+const pdfBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#94a3b8",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
