@@ -2235,7 +2235,7 @@ function openEditVacation() {
       {showDupePicker && selectedShoot && (
         <div
           style={{
-            position: "fixed", inset: 0, zIndex: 9000,
+            position: "fixed", inset: 0, zIndex: 1000001,
             background: "rgba(2,6,23,0.72)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
