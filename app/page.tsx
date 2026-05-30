@@ -176,6 +176,11 @@ export default function Home() {
   const [selectedResources, setSelectedResources] = useState<string[]>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
 
+  // ── Crear cliente inline ──────────────────────────────────────────────────
+  const [showAddClient, setShowAddClient] = useState(false)
+  const [newClientName, setNewClientName] = useState("")
+  const [savingClient, setSavingClient] = useState(false)
+
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
   const canManageVacations = isAdmin
@@ -412,6 +417,33 @@ export default function Home() {
     allSubfolders,
     allProjects,
   ])
+
+  async function handleSaveNewClient() {
+    if (!newClientName.trim()) return
+    setSavingClient(true)
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .insert({ name: newClientName.trim() })
+        .select("id, name")
+        .single()
+      if (error) throw error
+      // Add to local list sorted alphabetically
+      setAllClients((prev) =>
+        [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
+      )
+      // Auto-select the new client
+      setClientId(data.id)
+      setSubfolderId("")
+      setProjectId("")
+      setShowAddClient(false)
+      setNewClientName("")
+    } catch (err: any) {
+      alert("Error al crear cliente: " + err.message)
+    } finally {
+      setSavingClient(false)
+    }
+  }
 
   function resetForm() {
     setSelectedShoot(null)
@@ -1627,10 +1659,15 @@ function openEditVacation() {
                         <select
                           value={clientId}
                           onChange={(event) => {
-                            const nextClientId = event.target.value
-                            setClientId(nextClientId)
-                            setSubfolderId("")
-                            setProjectId("")
+                            const val = event.target.value
+                            if (val === "__NEW_CLIENT__") {
+                              setNewClientName("")
+                              setShowAddClient(true)
+                            } else {
+                              setClientId(val)
+                              setSubfolderId("")
+                              setProjectId("")
+                            }
                           }}
                           style={formModalSelectStyle}
                         >
@@ -1640,6 +1677,7 @@ function openEditVacation() {
                               {client.name}
                             </option>
                           ))}
+                          <option value="__NEW_CLIENT__">＋ Crear cliente nuevo...</option>
                         </select>
                       </div>
                       <div style={formModalFieldStyle}>
@@ -2381,6 +2419,101 @@ function openEditVacation() {
                 }}
               >
                 {duplicating ? "Duplicando..." : "✓ Duplicar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mini-modal: crear cliente nuevo */}
+      {showAddClient && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000002,
+            background: "rgba(2,6,23,0.80)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => setShowAddClient(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
+              border: "1px solid rgba(148,163,184,0.15)",
+              borderRadius: 16,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              width: 340,
+              overflow: "hidden",
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              padding: "16px 18px 12px",
+              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div>
+                <p style={{ color: "#a78bfa", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                  Nuevo cliente
+                </p>
+                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                  Agregar al catálogo
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddClient(false)}
+                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+              >×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "20px 18px 16px" }}>
+              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                Nombre del cliente
+              </p>
+              <input
+                type="text"
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && newClientName.trim()) handleSaveNewClient() }}
+                placeholder="Ej. Coca-Cola, Nike, Volkswagen..."
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "rgba(15,23,42,0.6)",
+                  border: "1px solid rgba(148,163,184,0.20)",
+                  borderRadius: 10,
+                  color: "#e2e8f0",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: "12px 18px",
+              borderTop: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", gap: 8, justifyContent: "flex-end",
+            }}>
+              <button
+                onClick={() => setShowAddClient(false)}
+                style={formModalSecondaryButtonStyle}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveNewClient}
+                disabled={!newClientName.trim() || savingClient}
+                style={{
+                  ...formModalPrimaryButtonStyle,
+                  opacity: !newClientName.trim() || savingClient ? 0.5 : 1,
+                  cursor: !newClientName.trim() || savingClient ? "not-allowed" : "pointer",
+                }}
+              >
+                {savingClient ? "Guardando..." : "✓ Crear cliente"}
               </button>
             </div>
           </div>

@@ -4,6 +4,96 @@ import { useCallback, useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import type { HojaPDFData } from "../../../lib/exportHojaPdf"
 
+// ─── CDMX Weather helpers ─────────────────────────────────────────────────────
+
+const CDMX_LAT = 19.4326
+const CDMX_LNG = -99.1332
+
+const WMO_LABELS: Record<number, string> = {
+  0: "Despejado",
+  1: "Principalmente despejado",
+  2: "Parcialmente nublado",
+  3: "Nublado",
+  45: "Neblina",
+  48: "Neblina con escarcha",
+  51: "Llovizna ligera",
+  53: "Llovizna moderada",
+  55: "Llovizna intensa",
+  61: "Lluvia ligera",
+  63: "Lluvia moderada",
+  65: "Lluvia intensa",
+  71: "Nevada ligera",
+  73: "Nevada moderada",
+  75: "Nevada intensa",
+  80: "Chubascos ligeros",
+  81: "Chubascos moderados",
+  82: "Chubascos intensos",
+  95: "Tormenta",
+  96: "Tormenta con granizo",
+  99: "Tormenta intensa con granizo",
+}
+
+function wmoLabel(code: number): string {
+  return WMO_LABELS[code] ?? "Desconocido"
+}
+
+function fmtTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString("es-MX", {
+      timeZone: "America/Mexico_City",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  } catch {
+    return ""
+  }
+}
+
+async function fetchCdmxWeather(date: string): Promise<{
+  amanecer: string
+  atardecer: string
+  clima: string
+  lluvia: string
+} | null> {
+  if (!date) return null
+  try {
+    // Sunrise/sunset — works for any date, returns UTC ISO strings
+    const sunUrl =
+      `https://api.sunrise-sunset.org/json?lat=${CDMX_LAT}&lng=${CDMX_LNG}` +
+      `&date=${date}&tzid=America/Mexico_City&formatted=0`
+
+    // Weather forecast — works up to 16 days ahead; try archive for past dates
+    const today = new Date().toISOString().slice(0, 10)
+    const isPast = date < today
+    const weatherUrl = isPast
+      ? `https://archive-api.open-meteo.com/v1/archive?latitude=${CDMX_LAT}&longitude=${CDMX_LNG}` +
+        `&start_date=${date}&end_date=${date}&daily=weathercode,precipitation_probability_max` +
+        `&timezone=America%2FMexico_City`
+      : `https://api.open-meteo.com/v1/forecast?latitude=${CDMX_LAT}&longitude=${CDMX_LNG}` +
+        `&start_date=${date}&end_date=${date}&daily=weathercode,precipitation_probability_max` +
+        `&timezone=America%2FMexico_City`
+
+    const [sunRes, wxRes] = await Promise.all([
+      fetch(sunUrl).then((r) => r.json()),
+      fetch(weatherUrl).then((r) => r.json()).catch(() => null),
+    ])
+
+    const amanecer = sunRes?.results?.sunrise ? fmtTime(sunRes.results.sunrise) : ""
+    const atardecer = sunRes?.results?.sunset ? fmtTime(sunRes.results.sunset) : ""
+
+    const wCode: number | undefined = wxRes?.daily?.weathercode?.[0]
+    const precip: number | undefined = wxRes?.daily?.precipitation_probability_max?.[0]
+
+    const clima = wCode !== undefined ? wmoLabel(wCode) : ""
+    const lluvia = precip !== undefined ? `${precip}%` : ""
+
+    return { amanecer, atardecer, clima, lluvia }
+  } catch {
+    return null
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CrewRow = {
@@ -219,9 +309,30 @@ export function HojaLlamadoPanel({
       )
       const merged = [...newCrew, ...manualExtra]
 
-      setHoja((prev) =>
-        prev ? { ...prev, crew: merged.length > 0 ? merged : [emptyCrewRow()] } : prev,
-      )
+      // Auto-fill director and productor from liberación items
+      function resolvePersonName(item: RawItem): string {
+        if (item.actual_supplier_id) return provMap.get(item.actual_supplier_id) ?? ""
+        if (item.actual_employee_id) return empMap.get(item.actual_employee_id) ?? ""
+        return ""
+      }
+      const directorItem = allItems.find((i) => /director/i.test(i.description))
+      const productorItem = allItems.find((i) => /productor/i.test(i.description))
+
+      setHoja((prev) => {
+        if (!prev) return prev
+        const updates: Partial<HojaData> = {
+          crew: merged.length > 0 ? merged : [emptyCrewRow()],
+        }
+        if (directorItem) {
+          const name = resolvePersonName(directorItem)
+          if (name) updates.director = name
+        }
+        if (productorItem) {
+          const name = resolvePersonName(productorItem)
+          if (name) updates.productor = name
+        }
+        return { ...prev, ...updates }
+      })
     } catch (err: any) {
       if (!silent) alert("Error al cargar crew: " + err.message)
     } finally {
@@ -288,6 +399,28 @@ export function HojaLlamadoPanel({
   useEffect(() => {
     loadHoja()
   }, [loadHoja])
+
+  // ── Auto-fill clima when fecha_rodaje changes ─────────────────────────────
+  const [fetchingWeather, setFetchingWeather] = useState(false)
+  useEffect(() => {
+    const date = hoja?.fecha_rodaje
+    if (!date || date.length < 10) return
+    let cancelled = false
+    setFetchingWeather(true)
+    fetchCdmxWeather(date).then((wx) => {
+      if (cancelled || !wx) return
+      setHoja((prev) => prev ? {
+        ...prev,
+        amanecer: wx.amanecer  || prev.amanecer,
+        atardecer: wx.atardecer || prev.atardecer,
+        clima: wx.clima        || prev.clima,
+        lluvia: wx.lluvia      || prev.lluvia,
+      } : prev)
+    }).finally(() => {
+      if (!cancelled) setFetchingWeather(false)
+    })
+    return () => { cancelled = true }
+  }, [hoja?.fecha_rodaje])
 
   // ── Save ──────────────────────────────────────────────────────────────────
   async function saveHoja() {
@@ -506,6 +639,9 @@ export function HojaLlamadoPanel({
               onChange={(e) => setField("fecha_rodaje", e.target.value)}
               style={inputStyle}
             />
+            <span style={{ color: "#475569", fontSize: 10 }}>
+              El clima y amanecer/atardecer se cargan automáticamente para CDMX
+            </span>
           </Field>
           <Field label="Título / Campaña">
             <input
@@ -605,37 +741,39 @@ export function HojaLlamadoPanel({
           </Field>
         </div>
 
-        {/* Row 5: Clima */}
+        {/* Row 5: Clima — se auto-llena al poner la fecha de rodaje */}
         <div style={isMobile ? grid2Style : grid4Style}>
-          <Field label="Amanecer">
+          <Field label={fetchingWeather ? "Amanecer · actualizando..." : "Amanecer (CDMX)"}>
             <input
               type="time"
               value={hoja.amanecer}
               onChange={(e) => setField("amanecer", e.target.value)}
               style={inputStyle}
+              placeholder="--:--"
             />
           </Field>
-          <Field label="Atardecer">
+          <Field label={fetchingWeather ? "Atardecer · actualizando..." : "Atardecer (CDMX)"}>
             <input
               type="time"
               value={hoja.atardecer}
               onChange={(e) => setField("atardecer", e.target.value)}
               style={inputStyle}
+              placeholder="--:--"
             />
           </Field>
-          <Field label="Clima">
+          <Field label={fetchingWeather ? "Clima · actualizando..." : "Clima (CDMX)"}>
             <input
               value={hoja.clima}
               onChange={(e) => setField("clima", e.target.value)}
-              placeholder="Ej. Soleado, Nublado..."
+              placeholder={fetchingWeather ? "Cargando..." : "Ej. Soleado, Nublado..."}
               style={inputStyle}
             />
           </Field>
-          <Field label="Prob. lluvia">
+          <Field label={fetchingWeather ? "Lluvia · actualizando..." : "Prob. lluvia (CDMX)"}>
             <input
               value={hoja.lluvia}
               onChange={(e) => setField("lluvia", e.target.value)}
-              placeholder="Ej. 10%"
+              placeholder={fetchingWeather ? "Cargando..." : "Ej. 10%"}
               style={inputStyle}
             />
           </Field>
