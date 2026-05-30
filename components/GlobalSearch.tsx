@@ -75,26 +75,28 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
       try {
         const pattern = `%${q}%`
 
+        // Clients first so we can use their IDs in the project-count query
+        const { data: clients } = await supabase
+          .from("clients")
+          .select("id, name")
+          .ilike("name", pattern)
+          .limit(5)
+
+        const clientIds = (clients || []).map((c: any) => c.id)
+
         const [
-          { data: clients },
           { data: projects },
           { data: allProjects },
         ] = await Promise.all([
-          supabase
-            .from("clients")
-            .select("id, name")
-            .ilike("name", pattern)
-            .limit(5),
           supabase
             .from("projects")
             .select("id, name, responsable, client_id, subfolder_id, clients(name), client_subfolders(name)")
             .ilike("name", pattern)
             .limit(8),
-          // For client project counts we need the full list — only when clients match
-          supabase
-            .from("projects")
-            .select("id, client_id")
-            .in("client_id", (clients || []).map((c: any) => c.id)),
+          // Project counts per matched client
+          clientIds.length > 0
+            ? supabase.from("projects").select("id, client_id").in("client_id", clientIds)
+            : Promise.resolve({ data: [] }),
         ])
 
         const clientResults: ClientResult[] = (clients || []).map((c: any) => ({
