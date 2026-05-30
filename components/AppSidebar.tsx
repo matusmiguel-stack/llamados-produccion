@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { GlobalSearch } from "./GlobalSearch"
 
 type AppSidebarProps = {
   profile: any
@@ -94,6 +95,12 @@ export function AppSidebar({
               priority
             />
           </div>
+
+          {!mustChangePassword && (
+            <div style={searchWrapStyle}>
+              <GlobalSearch onNavigate={() => isMobile && onMenuClose()} />
+            </div>
+          )}
 
           <nav style={navStyle}>
             {visibleNavItems.map((item) => {
@@ -320,6 +327,10 @@ const brandZoneStyle: React.CSSProperties = {
   justifyContent: "center",
   padding: "8px 6px 12px",
   borderBottom: "1px solid rgba(148,163,184,0.08)",
+}
+
+const searchWrapStyle: React.CSSProperties = {
+  padding: "0 2px",
 }
 
 const navStyle: React.CSSProperties = {
