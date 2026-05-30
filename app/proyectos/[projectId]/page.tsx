@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { MatrizPanel } from "./MatrizPanel"
+import { HojaLlamadoPanel } from "./HojaLlamadoPanel"
 
 type Project = {
   id: string
@@ -96,7 +97,6 @@ const projectModules: ProjectModule[] = [
     label: "Hoja de llamado",
     description: "Detalle operativo de cada jornada de shoot",
     icon: "callsheet",
-    comingSoon: true,
   },
 ]
 
@@ -393,6 +393,11 @@ export default function ProjectDetailPage() {
                 <PresupuestoPanel
                   quotes={quotes}
                   quotesLoaded={quotesLoaded}
+                  projectId={projectId}
+                  isMobile={isMobile}
+                />
+              ) : activeModule === "hoja-llamado" ? (
+                <HojaLlamadoPanel
                   projectId={projectId}
                   isMobile={isMobile}
                 />
