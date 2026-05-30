@@ -138,6 +138,9 @@ export default function Home() {
   const [vacationDetailsOpen, setVacationDetailsOpen] = useState(false)
   const [selectedShoot, setSelectedShoot] = useState<any>(null)
   const [selectedVacation, setSelectedVacation] = useState<any>(null)
+  const [showDupePicker, setShowDupePicker] = useState(false)
+  const [dupeDate, setDupeDate] = useState("")
+  const [duplicating, setDuplicating] = useState(false)
 
   const [entryMode, setEntryMode] = useState<"shoot" | "vacation">("shoot")
   const [vacationStartDate, setVacationStartDate] = useState("")
@@ -914,6 +917,72 @@ function openEditVacation() {
     setDetailsOpen(false)
     setSelectedShoot(null)
     await loadAll()
+  }
+
+  async function duplicateShoot() {
+    if (!selectedShoot || !dupeDate) return
+    setDuplicating(true)
+    try {
+      // Shift all timestamps by the day difference
+      const origDateStr = selectedShoot.start_time.slice(0, 10)
+      const origMs = new Date(origDateStr + "T12:00:00Z").getTime()
+      const newMs  = new Date(dupeDate    + "T12:00:00Z").getTime()
+      const dayDiffMs = newMs - origMs
+
+      function shiftTs(iso: string): string {
+        const [datePart, timePart] = iso.split("T")
+        const shifted = new Date(new Date(datePart + "T12:00:00Z").getTime() + dayDiffMs)
+        const newDate = shifted.toISOString().slice(0, 10)
+        return `${newDate}T${timePart || "00:00:00"}`
+      }
+
+      const { data: newShootData, error } = await supabase
+        .from("shoots")
+        .insert({
+          title:            selectedShoot.title,
+          client_id:        selectedShoot.client_id        || null,
+          project_id:       selectedShoot.project_id       || null,
+          client:           selectedShoot.client           || null,
+          project:          selectedShoot.project          || null,
+          location:         selectedShoot.location         || null,
+          address:          selectedShoot.address          || null,
+          contact:          selectedShoot.contact          || null,
+          director:         selectedShoot.director         || null,
+          dop:              selectedShoot.dop              || null,
+          public_notes:     selectedShoot.public_notes     || null,
+          private_notes:    selectedShoot.private_notes    || null,
+          production_notes: selectedShoot.production_notes || null,
+          status:           selectedShoot.status,
+          color:            selectedShoot.color,
+          start_time:       shiftTs(selectedShoot.start_time),
+          end_time:         shiftTs(selectedShoot.end_time),
+          all_day:          selectedShoot.all_day,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Copy employees
+      const empRows = shootEmployees
+        .filter((a) => a.shoot_id === selectedShoot.id)
+        .map((a) => ({ shoot_id: newShootData.id, employee_id: a.employee_id }))
+      if (empRows.length > 0) await supabase.from("shoot_employees").insert(empRows)
+
+      // Copy resources
+      const resRows = shootResources
+        .filter((a) => a.shoot_id === selectedShoot.id)
+        .map((a) => ({ shoot_id: newShootData.id, resource_id: a.resource_id }))
+      if (resRows.length > 0) await supabase.from("shoot_resources").insert(resRows)
+
+      setShowDupePicker(false)
+      setDupeDate("")
+      await loadAll()
+    } catch (err: any) {
+      alert("Error al duplicar: " + err.message)
+    } finally {
+      setDuplicating(false)
+    }
   }
 
   function shareSelectedShoot() {
@@ -2136,6 +2205,18 @@ function openEditVacation() {
                 </button>
 
                 {canEdit && (
+                  <button
+                    onClick={() => {
+                      setDupeDate(selectedShoot.start_time.slice(0, 10))
+                      setShowDupePicker(true)
+                    }}
+                    style={formModalDuplicateButtonStyle}
+                  >
+                    Duplicar
+                  </button>
+                )}
+
+                {canEdit && (
                   <button onClick={openEditShoot} style={formModalPrimaryButtonStyle}>
                     Editar
                   </button>
@@ -2150,6 +2231,105 @@ function openEditVacation() {
             </DraggableModalPanel>
           </div>
         )}
+      {/* Mini-modal: selecciona fecha para duplicar */}
+      {showDupePicker && selectedShoot && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9000,
+            background: "rgba(2,6,23,0.72)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => { setShowDupePicker(false); setDupeDate("") }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
+              border: "1px solid rgba(148,163,184,0.15)",
+              borderRadius: 16,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              width: 320,
+              overflow: "hidden",
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              padding: "16px 18px 12px",
+              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div>
+                <p style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>
+                  Duplicar llamado
+                </p>
+                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>
+                  {selectedShoot.title}
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowDupePicker(false); setDupeDate("") }}
+                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+              >×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "20px 18px 16px" }}>
+              <p style={{ color: "#94a3b8", fontSize: 12, marginBottom: 10 }}>
+                ¿En qué fecha quieres colocar el duplicado?
+              </p>
+              <input
+                type="date"
+                value={dupeDate}
+                onChange={(e) => setDupeDate(e.target.value)}
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "rgba(15,23,42,0.6)",
+                  border: "1px solid rgba(148,163,184,0.20)",
+                  borderRadius: 10,
+                  color: "#e2e8f0",
+                  fontSize: 15,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  boxSizing: "border-box",
+                  colorScheme: "dark",
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter" && dupeDate) duplicateShoot() }}
+              />
+              <p style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>
+                Se copiará el llamado completo: equipo, recursos y todas las notas.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: "12px 18px",
+              borderTop: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", gap: 8, justifyContent: "flex-end",
+            }}>
+              <button
+                onClick={() => { setShowDupePicker(false); setDupeDate("") }}
+                style={formModalSecondaryButtonStyle}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={duplicateShoot}
+                disabled={!dupeDate || duplicating}
+                style={{
+                  ...formModalPrimaryButtonStyle,
+                  opacity: !dupeDate || duplicating ? 0.5 : 1,
+                  cursor: !dupeDate || duplicating ? "not-allowed" : "pointer",
+                }}
+              >
+                {duplicating ? "Duplicando..." : "✓ Duplicar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </main>
     </div>
   )
@@ -3040,6 +3220,17 @@ const formModalWhatsAppButtonStyle: React.CSSProperties = {
   background: "rgba(37, 211, 102, 0.14)",
   color: "#bbf7d0",
   border: "1px solid rgba(37, 211, 102, 0.28)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
+}
+
+const formModalDuplicateButtonStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  background: "rgba(56,189,248,0.10)",
+  color: "#7dd3fc",
+  border: "1px solid rgba(56,189,248,0.25)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
