@@ -119,14 +119,13 @@ function libItemFin(item: QuoteItem): { gasto: number; utilidad: number; venta: 
   return { gasto: amount, utilidad: u, venta: amount + u }
 }
 
-// Gasto real por ítem — usa max(libVal,1) como fallback si hay algún actual cargado
+// Gasto real por ítem — 0 hasta que se llene al menos un campo real
 function realItemGastoForBudget(item: QuoteItem): number {
   if (item.real_expense === 1) return 0
   const anyFilled = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
-  const fallbackQty  = anyFilled ? Math.max(item.qty, 1)  : item.qty
-  const fallbackDays = anyFilled ? Math.max(item.days, 1) : item.days
-  const q = item.actual_qty   != null ? item.actual_qty   : fallbackQty
-  const d = item.actual_days  != null ? item.actual_days  : fallbackDays
+  if (!anyFilled) return 0   // sin datos → gasto real = 0
+  const q = item.actual_qty        != null ? item.actual_qty        : Math.max(item.qty, 1)
+  const d = item.actual_days       != null ? item.actual_days       : Math.max(item.days, 1)
   const p = item.actual_unit_price != null ? item.actual_unit_price : item.unit_price
   return q * d * p
 }

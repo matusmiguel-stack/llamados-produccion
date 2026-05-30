@@ -70,18 +70,16 @@ function itemAmount(item: QuoteItemRow): number {
   return item.qty * item.days * item.unit_price
 }
 
-// Actual raw amount: use filled-in values; fall back to liberado.
-// If ANY actual value is filled, use Math.max(libValue, 1) as fallback for
-// qty/days so that items saved with 0 (unfilled in cotizaciones) still
-// produce a meaningful real gasto when the user types a unit_price.
+// Actual raw amount. Starts at 0 until the user fills in at least one field.
+// Once ANY field is touched, use max(libVal, 1) as fallback for qty/days so
+// items saved with 0 in the cotización still produce a meaningful result.
 function itemActualAmount(item: QuoteItemRow, actual: ItemActual): number {
   const anyFilled = actual.qty !== "" || actual.days !== "" || actual.unit_price !== ""
-  const fallbackQty = anyFilled ? Math.max(item.qty, 1) : item.qty
-  const fallbackDays = anyFilled ? Math.max(item.days, 1) : item.days
-  const q = actual.qty !== "" ? parseFloat(actual.qty) : fallbackQty
-  const d = actual.days !== "" ? parseFloat(actual.days) : fallbackDays
+  if (!anyFilled) return 0   // no data entered → gasto real = 0
+  const q = actual.qty       !== "" ? parseFloat(actual.qty)       : Math.max(item.qty, 1)
+  const d = actual.days      !== "" ? parseFloat(actual.days)      : Math.max(item.days, 1)
   const p = actual.unit_price !== "" ? parseFloat(actual.unit_price) : item.unit_price
-  if (isNaN(q) || isNaN(d) || isNaN(p)) return itemAmount(item)
+  if (isNaN(q) || isNaN(d) || isNaN(p)) return 0
   return q * d * p
 }
 
@@ -676,7 +674,7 @@ export default function LiberarPage() {
                                   <input
                                     type="number"
                                     value={a.qty}
-                                    placeholder={String(item.qty)}
+                                    placeholder="0"
                                     onChange={(e) =>
                                       updateActual(item.id, "qty", e.target.value)
                                     }
@@ -688,7 +686,7 @@ export default function LiberarPage() {
                                   <input
                                     type="number"
                                     value={a.days}
-                                    placeholder={String(item.days)}
+                                    placeholder="0"
                                     onChange={(e) =>
                                       updateActual(item.id, "days", e.target.value)
                                     }
@@ -700,7 +698,7 @@ export default function LiberarPage() {
                               <input
                                 type="number"
                                 value={a.unit_price}
-                                placeholder={String(item.unit_price)}
+                                placeholder="0"
                                 onChange={(e) =>
                                   updateActual(
                                     item.id,
@@ -793,7 +791,7 @@ export default function LiberarPage() {
                         <input
                           type="number"
                           value={a.qty}
-                          placeholder={String(item.qty)}
+                          placeholder="0"
                           onChange={(e) =>
                             updateActual(item.id, "qty", e.target.value)
                           }
@@ -802,7 +800,7 @@ export default function LiberarPage() {
                         <input
                           type="number"
                           value={a.days}
-                          placeholder={String(item.days)}
+                          placeholder="0"
                           onChange={(e) =>
                             updateActual(item.id, "days", e.target.value)
                           }
@@ -811,7 +809,7 @@ export default function LiberarPage() {
                         <input
                           type="number"
                           value={a.unit_price}
-                          placeholder={String(item.unit_price)}
+                          placeholder="0"
                           onChange={(e) =>
                             updateActual(item.id, "unit_price", e.target.value)
                           }
