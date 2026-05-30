@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "../../../lib/supabase"
+import { ShootFormModal } from "../../../components/ShootFormModal"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,17 +126,8 @@ export function InformacionGeneralPanel({
   const [sections, setSections] = useState<QuoteSection[]>([])
   const [finLoaded, setFinLoaded] = useState(false)
 
-  // ── Inline create shoot form ───────────────────────────────────────────────
+  // ── Create shoot modal ────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false)
-  const [fTitle, setFTitle] = useState("")
-  const [fDate, setFDate] = useState("")
-  const [fStart, setFStart] = useState("09:00")
-  const [fEnd, setFEnd] = useState("18:00")
-  const [fLocation, setFLocation] = useState("")
-  const [fAddress, setFAddress] = useState("")
-  const [fContact, setFContact] = useState("")
-  const [fNotes, setFNotes] = useState("")
-  const [saving, setSaving] = useState(false)
 
   // ── Load shoots ───────────────────────────────────────────────────────────
   const loadShoots = useCallback(async () => {
@@ -182,46 +174,6 @@ export function InformacionGeneralPanel({
     loadFinancials()
   }, [loadShoots, loadFinancials])
 
-  // ── Create shoot ──────────────────────────────────────────────────────────
-  async function handleCreateShoot() {
-    if (!fTitle.trim() || !fDate) return
-    setSaving(true)
-    try {
-      const start = new Date(`${fDate}T${fStart}:00`)
-      const end = new Date(`${fDate}T${fEnd}:00`)
-      const { data: clientData } = await supabase
-        .from("projects")
-        .select("client_id, name, clients(name)")
-        .eq("id", projectId)
-        .single()
-
-      await supabase.from("shoots").insert({
-        title: fTitle.trim(),
-        project_id: projectId,
-        client_id: (clientData as any)?.client_id || null,
-        client: (clientData?.clients as any)?.name || null,
-        project: projectName,
-        location: fLocation.trim() || null,
-        address: fAddress.trim() || null,
-        contact: fContact.trim() || null,
-        production_notes: fNotes.trim() || null,
-        status: "tentative",
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        all_day: false,
-        color: "#fbbf24",
-      })
-
-      setFTitle(""); setFDate(""); setFStart("09:00"); setFEnd("18:00")
-      setFLocation(""); setFAddress(""); setFContact(""); setFNotes("")
-      setShowForm(false)
-      await loadShoots()
-    } catch (err: any) {
-      alert("Error al crear llamado: " + err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // ── Financials calc ───────────────────────────────────────────────────────
   const releasedQuote = quotes.find((q) => q.released === true) ?? null
@@ -285,80 +237,13 @@ export function InformacionGeneralPanel({
           )}
         </div>
 
-        {/* Inline create shoot form */}
         {showForm && (
-          <div style={formBoxStyle}>
-            <p style={{ margin: "0 0 12px", color: "#a78bfa", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>
-              Nuevo llamado
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-              <FormField label="Nombre del llamado" style={{ gridColumn: isMobile ? "1" : "1 / 3" }}>
-                <input
-                  value={fTitle}
-                  onChange={(e) => setFTitle(e.target.value)}
-                  placeholder="Ej. Día 1 de rodaje"
-                  style={fInputStyle}
-                  autoFocus
-                />
-              </FormField>
-              <FormField label="Fecha">
-                <input
-                  type="date"
-                  value={fDate}
-                  onChange={(e) => setFDate(e.target.value)}
-                  style={fInputStyle}
-                />
-              </FormField>
-              <FormField label="Hora inicio">
-                <input type="time" value={fStart} onChange={(e) => setFStart(e.target.value)} style={fInputStyle} />
-              </FormField>
-              <FormField label="Hora fin">
-                <input type="time" value={fEnd} onChange={(e) => setFEnd(e.target.value)} style={fInputStyle} />
-              </FormField>
-              <FormField label="Locación" style={{ gridColumn: isMobile ? "1" : "1 / 3" }}>
-                <input
-                  value={fLocation}
-                  onChange={(e) => setFLocation(e.target.value)}
-                  placeholder="Nombre de la locación"
-                  style={fInputStyle}
-                />
-              </FormField>
-              <FormField label="Dirección">
-                <input
-                  value={fAddress}
-                  onChange={(e) => setFAddress(e.target.value)}
-                  placeholder="Dirección completa"
-                  style={fInputStyle}
-                />
-              </FormField>
-              <FormField label="Contacto en locación">
-                <input
-                  value={fContact}
-                  onChange={(e) => setFContact(e.target.value)}
-                  placeholder="Nombre y teléfono"
-                  style={fInputStyle}
-                />
-              </FormField>
-              <FormField label="Notas de producción" style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
-                <input
-                  value={fNotes}
-                  onChange={(e) => setFNotes(e.target.value)}
-                  placeholder="Información adicional..."
-                  style={fInputStyle}
-                />
-              </FormField>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => { setShowForm(false) }} style={cancelBtnStyle}>Cancelar</button>
-              <button
-                onClick={handleCreateShoot}
-                disabled={saving || !fTitle.trim() || !fDate}
-                style={{ ...saveBtnStyle, opacity: saving || !fTitle.trim() || !fDate ? 0.5 : 1 }}
-              >
-                {saving ? "Guardando..." : "✓ Publicar en calendario"}
-              </button>
-            </div>
-          </div>
+          <ShootFormModal
+            initialProjectId={projectId}
+            isMobile={isMobile}
+            onClose={() => setShowForm(false)}
+            onSaved={loadShoots}
+          />
         )}
 
         {!shootsLoaded ? (
@@ -532,16 +417,6 @@ function Detail({ label, value }: { label: string; value: string }) {
   )
 }
 
-function FormField({ label, children, style }: { label: string; children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={style}>
-      <label style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 4 }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
 
 function FinRow({ label, value, valueColor, bold }: { label: string; value: string; valueColor?: string; bold?: boolean }) {
   return (
@@ -652,49 +527,6 @@ const addShootBtnStyle: React.CSSProperties = {
   fontWeight: 600,
 }
 
-const formBoxStyle: React.CSSProperties = {
-  marginTop: 14,
-  padding: "14px 16px",
-  borderRadius: 10,
-  border: "1px solid rgba(167,139,250,0.16)",
-  background: "rgba(124,58,237,0.05)",
-}
-
-const fInputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "7px 10px",
-  borderRadius: 7,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
-  outline: "none",
-  fontSize: 13,
-  boxSizing: "border-box",
-}
-
-const saveBtnStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "8px 16px",
-  borderRadius: 8,
-  border: "none",
-  background: "linear-gradient(135deg,#7c3aed,#6366f1)",
-  color: "#fff",
-  cursor: "pointer",
-  fontSize: 13,
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-}
-
-const cancelBtnStyle: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.20)",
-  background: "transparent",
-  color: "#64748b",
-  cursor: "pointer",
-  fontSize: 13,
-}
 
 const quoteChipStyle: React.CSSProperties = {
   display: "flex",
