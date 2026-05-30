@@ -20,7 +20,22 @@ type ProjectResult = {
   responsable: string | null
 }
 
-type SearchResult = ClientResult | ProjectResult
+type EmpleadoResult = {
+  kind: "empleado"
+  id: string
+  name: string
+  puesto: string
+}
+
+type ProveedorResult = {
+  kind: "proveedor"
+  id: string
+  name: string
+  empresa: string | null
+  actividad: string
+}
+
+type SearchResult = ClientResult | ProjectResult | EmpleadoResult | ProveedorResult
 
 export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter()
@@ -87,6 +102,8 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
         const [
           { data: projects },
           { data: allProjects },
+          { data: empleados },
+          { data: proveedores },
         ] = await Promise.all([
           supabase
             .from("projects")
@@ -97,6 +114,16 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
           clientIds.length > 0
             ? supabase.from("projects").select("id, client_id").in("client_id", clientIds)
             : Promise.resolve({ data: [] }),
+          supabase
+            .from("employees")
+            .select("id, nombre, apellido_paterno, apellido_materno, puesto, nickname")
+            .or(`nombre.ilike.${pattern},apellido_paterno.ilike.${pattern},apellido_materno.ilike.${pattern},nickname.ilike.${pattern}`)
+            .limit(5),
+          supabase
+            .from("proveedores")
+            .select("id, nombre, apellido, empresa, actividad")
+            .or(`nombre.ilike.${pattern},apellido.ilike.${pattern},empresa.ilike.${pattern}`)
+            .limit(5),
         ])
 
         const clientResults: ClientResult[] = (clients || []).map((c: any) => ({
@@ -115,7 +142,22 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
           responsable: p.responsable || null,
         }))
 
-        setResults([...clientResults, ...projectResults])
+        const empleadoResults: EmpleadoResult[] = (empleados || []).map((e: any) => ({
+          kind: "empleado" as const,
+          id: e.id,
+          name: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "),
+          puesto: e.puesto || "—",
+        }))
+
+        const proveedorResults: ProveedorResult[] = (proveedores || []).map((p: any) => ({
+          kind: "proveedor" as const,
+          id: p.id,
+          name: `${p.nombre} ${p.apellido}`.trim(),
+          empresa: p.empresa || null,
+          actividad: p.actividad || "—",
+        }))
+
+        setResults([...clientResults, ...projectResults, ...empleadoResults, ...proveedorResults])
         setFocused(0)
       } finally {
         setLoading(false)
@@ -145,8 +187,12 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   function navigate(result: SearchResult) {
     if (result.kind === "client") {
       router.push(`/proyectos?client=${result.id}`)
-    } else {
+    } else if (result.kind === "project") {
       router.push(`/proyectos/${result.id}`)
+    } else if (result.kind === "empleado") {
+      router.push(`/empleados`)
+    } else {
+      router.push(`/proveedores`)
     }
     setOpen(false)
     setQuery("")
@@ -156,6 +202,8 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
 
   const clients = results.filter((r): r is ClientResult => r.kind === "client")
   const projects = results.filter((r): r is ProjectResult => r.kind === "project")
+  const empleados = results.filter((r): r is EmpleadoResult => r.kind === "empleado")
+  const proveedores = results.filter((r): r is ProveedorResult => r.kind === "proveedor")
   const hasResults = results.length > 0
 
   // Global index for keyboard nav
@@ -264,6 +312,60 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
               })}
             </div>
           )}
+
+          {empleados.length > 0 && (
+            <div style={(clients.length > 0 || projects.length > 0) ? { marginTop: 4 } : {}}>
+              <p style={groupLabelStyle}>Empleados</p>
+              {empleados.map((r) => {
+                const idx = globalIndex(r)
+                return (
+                  <button
+                    key={r.id}
+                    style={{ ...resultRowStyle, ...(focused === idx ? resultRowFocusStyle : {}) }}
+                    onMouseEnter={() => setFocused(idx)}
+                    onClick={() => navigate(r)}
+                  >
+                    <span style={resultIconStyle("empleado")}>
+                      <EmpleadoIcon />
+                    </span>
+                    <div style={resultBodyStyle}>
+                      <span style={resultNameStyle}>{r.name}</span>
+                      <span style={resultMetaStyle}>{r.puesto}</span>
+                    </div>
+                    <span style={resultArrowStyle}>→</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {proveedores.length > 0 && (
+            <div style={(clients.length > 0 || projects.length > 0 || empleados.length > 0) ? { marginTop: 4 } : {}}>
+              <p style={groupLabelStyle}>Proveedores</p>
+              {proveedores.map((r) => {
+                const idx = globalIndex(r)
+                return (
+                  <button
+                    key={r.id}
+                    style={{ ...resultRowStyle, ...(focused === idx ? resultRowFocusStyle : {}) }}
+                    onMouseEnter={() => setFocused(idx)}
+                    onClick={() => navigate(r)}
+                  >
+                    <span style={resultIconStyle("proveedor")}>
+                      <ProveedorIcon />
+                    </span>
+                    <div style={resultBodyStyle}>
+                      <span style={resultNameStyle}>{r.name}</span>
+                      <span style={resultMetaStyle}>
+                        {r.empresa ? `${r.empresa} · ` : ""}{r.actividad}
+                      </span>
+                    </div>
+                    <span style={resultArrowStyle}>→</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -292,6 +394,27 @@ function ProjectIcon() {
         stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"
       />
       <path d="M16 4v4h4M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function EmpleadoIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ProveedorIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M3 9.5 12 4l9 5.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"
+        stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"
+      />
+      <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -391,7 +514,13 @@ const resultRowFocusStyle: React.CSSProperties = {
   background: "rgba(124,58,237,0.18)",
 }
 
-function resultIconStyle(kind: "client" | "project"): React.CSSProperties {
+function resultIconStyle(kind: "client" | "project" | "empleado" | "proveedor"): React.CSSProperties {
+  const palette = {
+    client:   { color: "#fbbf24", bg: "rgba(245,158,11,0.12)",   border: "rgba(251,191,36,0.18)" },
+    project:  { color: "#93c5fd", bg: "rgba(59,130,246,0.12)",   border: "rgba(96,165,250,0.18)" },
+    empleado: { color: "#6ee7b7", bg: "rgba(16,185,129,0.12)",   border: "rgba(52,211,153,0.18)" },
+    proveedor:{ color: "#f9a8d4", bg: "rgba(236,72,153,0.10)",   border: "rgba(249,168,212,0.18)" },
+  }[kind]
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -400,9 +529,9 @@ function resultIconStyle(kind: "client" | "project"): React.CSSProperties {
     height: 28,
     borderRadius: 7,
     flexShrink: 0,
-    color: kind === "client" ? "#fbbf24" : "#93c5fd",
-    background: kind === "client" ? "rgba(245,158,11,0.12)" : "rgba(59,130,246,0.12)",
-    border: `1px solid ${kind === "client" ? "rgba(251,191,36,0.18)" : "rgba(96,165,250,0.18)"}`,
+    color: palette.color,
+    background: palette.bg,
+    border: `1px solid ${palette.border}`,
   }
 }
 
