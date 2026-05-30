@@ -24,6 +24,8 @@ type Quote = {
   markup_percentage: number
   atencion: string | null
   created_at: string
+  released: boolean | null
+  actual_extra_expenses: number | null
 }
 
 type QuoteItem = {
@@ -37,6 +39,9 @@ type QuoteItem = {
   real_expense: number
   supplier: string | null
   order_index: number
+  actual_qty: number | null
+  actual_days: number | null
+  actual_unit_price: number | null
 }
 
 type QuoteSection = {
@@ -77,9 +82,8 @@ const projectModules: ProjectModule[] = [
   {
     id: "presupuesto",
     label: "Presupuesto",
-    description: "Costos, partidas y seguimiento financiero",
+    description: "Seguimiento financiero de la cotización liberada",
     icon: "budget",
-    comingSoon: true,
   },
   {
     id: "matriz",
@@ -105,6 +109,26 @@ function fmt(n: number): string {
 
 function itemTotal(item: QuoteItem): number {
   return item.qty * item.days * item.unit_price
+}
+
+// Financials proyectados por ítem (mirror de liberar/page.tsx)
+function libItemFin(item: QuoteItem): { gasto: number; utilidad: number; venta: number } {
+  const amount = item.qty * item.days * item.unit_price
+  if (item.real_expense === 1) return { gasto: 0, utilidad: amount, venta: amount }
+  const u = amount * ((item.released_expense || 0) / 100)
+  return { gasto: amount, utilidad: u, venta: amount + u }
+}
+
+// Gasto real por ítem — usa max(libVal,1) como fallback si hay algún actual cargado
+function realItemGastoForBudget(item: QuoteItem): number {
+  if (item.real_expense === 1) return 0
+  const anyFilled = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
+  const fallbackQty  = anyFilled ? Math.max(item.qty, 1)  : item.qty
+  const fallbackDays = anyFilled ? Math.max(item.days, 1) : item.days
+  const q = item.actual_qty   != null ? item.actual_qty   : fallbackQty
+  const d = item.actual_days  != null ? item.actual_days  : fallbackDays
+  const p = item.actual_unit_price != null ? item.actual_unit_price : item.unit_price
+  return q * d * p
 }
 
 function sectionSubtotal(section: QuoteSection): number {
@@ -249,7 +273,7 @@ export default function ProjectDetailPage() {
   }, [projectId])
 
   useEffect(() => {
-    if (activeModule === "cotizaciones" && projectId) loadQuotes()
+    if ((activeModule === "cotizaciones" || activeModule === "presupuesto") && projectId) loadQuotes()
   }, [activeModule, projectId])
 
   async function logout() {
@@ -366,6 +390,13 @@ export default function ProjectDetailPage() {
                   onOpenQuote={openQuoteDetail}
                   projectId={projectId}
                 />
+              ) : activeModule === "presupuesto" ? (
+                <PresupuestoPanel
+                  quotes={quotes}
+                  quotesLoaded={quotesLoaded}
+                  projectId={projectId}
+                  isMobile={isMobile}
+                />
               ) : (
                 <>
                   <div style={modulePanelHeaderStyle}>
@@ -457,6 +488,299 @@ export default function ProjectDetailPage() {
       )}
     </div>
   )
+}
+
+// ─── Presupuesto Panel ────────────────────────────────────────────────────────
+
+function PresupuestoPanel({
+  quotes,
+  quotesLoaded,
+  projectId,
+  isMobile,
+}: {
+  quotes: Quote[]
+  quotesLoaded: boolean
+  projectId: string
+  isMobile: boolean
+}) {
+  const [sections, setSections] = useState<QuoteSection[]>([])
+  const [secLoading, setSecLoading] = useState(false)
+  const [secLoaded, setSecLoaded] = useState(false)
+
+  const releasedQuote = quotes.find((q) => q.released === true) ?? null
+
+  useEffect(() => {
+    if (!releasedQuote || secLoaded) return
+    async function loadSections() {
+      setSecLoading(true)
+      try {
+        const { data: secsData } = await supabase
+          .from("quote_sections")
+          .select("*")
+          .eq("quote_id", releasedQuote!.id)
+          .order("order_index")
+        const loaded: QuoteSection[] = []
+        for (const sec of secsData || []) {
+          const { data: itemsData } = await supabase
+            .from("quote_items")
+            .select("*")
+            .eq("section_id", sec.id)
+            .order("order_index")
+          loaded.push({ ...sec, items: (itemsData || []) as QuoteItem[] })
+        }
+        setSections(loaded)
+        setSecLoaded(true)
+      } finally {
+        setSecLoading(false)
+      }
+    }
+    loadSections()
+  }, [releasedQuote?.id])
+
+  const totals = useMemo(() => {
+    if (!releasedQuote || !secLoaded) return null
+    let libGasto = 0, libUtilidad = 0, libVenta = 0, realGasto = 0
+    for (const sec of sections) {
+      for (const item of sec.items) {
+        const lf = libItemFin(item)
+        libGasto += lf.gasto
+        libUtilidad += lf.utilidad
+        libVenta += lf.venta
+        realGasto += realItemGastoForBudget(item)
+      }
+    }
+    const extraAmt = releasedQuote.actual_extra_expenses || 0
+    const realGastoTotal = realGasto + extraAmt
+    const realUtilidad = libVenta - realGastoTotal
+    const libPct  = libVenta > 0 ? (libUtilidad  / libVenta) * 100 : 0
+    const realPct = libVenta > 0 ? (realUtilidad / libVenta) * 100 : 0
+    return { libGasto, libUtilidad, libVenta, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
+  }, [sections, releasedQuote, secLoaded])
+
+  // ── Sin cotización liberada ────────────────────────────────────────────────
+  if (!quotesLoaded || secLoading) {
+    return <div style={emptyStyle}>Cargando presupuesto...</div>
+  }
+
+  if (!releasedQuote) {
+    return (
+      <div>
+        <div style={modulePanelHeaderStyle}>
+          <p style={modulePanelTitleStyle}>Presupuesto</p>
+          <p style={modulePanelHintStyle}>
+            Ninguna cotización ha sido liberada aún para este proyecto
+          </p>
+        </div>
+        <div style={placeholderBoxStyle}>
+          <p style={placeholderTitleStyle}>Sin presupuesto activo</p>
+          <p style={placeholderTextStyle}>
+            Para activar esta sección ve a{" "}
+            <strong style={placeholderStrongStyle}>Cotizaciones</strong>,
+            abre una cotización aprobada y presiona{" "}
+            <strong style={placeholderStrongStyle}>▶ Liberar</strong>.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Con cotización liberada ────────────────────────────────────────────────
+  const t = totals
+  const realColor = !t ? "#94a3b8"
+    : t.realUtilidad >= t.libUtilidad ? "#34d399"
+    : t.realUtilidad > 0 ? "#fbbf24"
+    : "#f87171"
+
+  const hasAnyReal = sections.some((s) =>
+    s.items.some((i) => i.actual_qty != null || i.actual_days != null || i.actual_unit_price != null)
+  )
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ ...modulePanelHeaderStyle, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%" }}>
+          <div>
+            <p style={modulePanelTitleStyle}>Presupuesto</p>
+            <p style={modulePanelHintStyle}>
+              Basado en cotización liberada:{" "}
+              <strong style={{ color: "#e2e8f0" }}>{releasedQuote.name}</strong>
+              {!hasAnyReal && (
+                <span style={{ color: "#fbbf24", marginLeft: 10 }}>
+                  · Sin costos reales registrados aún
+                </span>
+              )}
+            </p>
+          </div>
+          <Link
+            href={`/proyectos/${projectId}/liberar/${releasedQuote.id}`}
+            style={liberarBtnStyle}
+          >
+            ✎ Editar liberación
+          </Link>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      {t && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: 12,
+          marginBottom: 20,
+        }}>
+          {/* Proyectado */}
+          <div style={budgetCardStyle("rgba(167,139,250,0.06)", "rgba(167,139,250,0.20)")}>
+            <p style={{ ...budgetCardTitleStyle, color: "#a78bfa" }}>Proyectado — Liberado</p>
+            <div style={budgetRowStyle}>
+              <span style={budgetLabelStyle}>Gasto liberado</span>
+              <span style={budgetValueStyle}>{fmt(t.libGasto)}</span>
+            </div>
+            <div style={budgetRowStyle}>
+              <span style={budgetLabelStyle}>Venta al cliente</span>
+              <span style={budgetValueStyle}>{fmt(t.libVenta)}</span>
+            </div>
+            <div style={{ ...budgetRowStyle, borderTop: "1px solid rgba(148,163,184,0.12)", paddingTop: 10, marginTop: 4 }}>
+              <span style={{ ...budgetLabelStyle, color: "#e2e8f0", fontWeight: 600 }}>Utilidad proyectada</span>
+              <span style={{ ...budgetValueStyle, color: "#a78bfa", fontSize: 20, fontWeight: 700 }}>{fmt(t.libUtilidad)}</span>
+            </div>
+            <div style={budgetRowStyle}>
+              <span style={budgetLabelStyle}>% sobre venta</span>
+              <span style={{ ...budgetValueStyle, color: "#a78bfa", fontWeight: 600 }}>{t.libPct.toFixed(1)}%</span>
+            </div>
+          </div>
+
+          {/* Real */}
+          <div style={budgetCardStyle(
+            `${realColor}0f`,
+            `${realColor}33`,
+          )}>
+            <p style={{ ...budgetCardTitleStyle, color: realColor }}>
+              Real — Gasto actual{!hasAnyReal ? " (sin datos)" : ""}
+            </p>
+            <div style={budgetRowStyle}>
+              <span style={budgetLabelStyle}>Gasto real (ítems)</span>
+              <span style={{ ...budgetValueStyle, color: t.realGasto > t.libGasto ? "#f87171" : t.realGasto < t.libGasto ? "#34d399" : "#94a3b8" }}>
+                {fmt(t.realGasto - t.extraAmt)}
+              </span>
+            </div>
+            {t.extraAmt > 0 && (
+              <div style={budgetRowStyle}>
+                <span style={budgetLabelStyle}>Gastos adicionales</span>
+                <span style={{ ...budgetValueStyle, color: "#f87171" }}>{fmt(t.extraAmt)}</span>
+              </div>
+            )}
+            <div style={budgetRowStyle}>
+              <span style={budgetLabelStyle}>Venta al cliente</span>
+              <span style={budgetValueStyle}>{fmt(t.libVenta)}</span>
+            </div>
+            <div style={{ ...budgetRowStyle, borderTop: "1px solid rgba(148,163,184,0.12)", paddingTop: 10, marginTop: 4 }}>
+              <span style={{ ...budgetLabelStyle, color: "#e2e8f0", fontWeight: 600 }}>Utilidad real</span>
+              <span style={{ ...budgetValueStyle, color: realColor, fontSize: 20, fontWeight: 700 }}>{fmt(t.realUtilidad)}</span>
+            </div>
+            <div style={budgetRowStyle}>
+              <span style={budgetLabelStyle}>% sobre venta</span>
+              <span style={{ ...budgetValueStyle, color: realColor, fontWeight: 600 }}>{t.realPct.toFixed(1)}%</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desglose por sección */}
+      <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(148,163,184,0.10)" }}>
+        {/* Table header */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr 100px 100px" : "1fr 130px 130px 110px",
+          background: "rgba(15,23,42,0.6)",
+          padding: "8px 14px",
+          gap: 8,
+        }}>
+          <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Rubro</span>
+          <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Proyectado</span>
+          <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Real</span>
+          {!isMobile && <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Diferencia</span>}
+        </div>
+
+        {sections.filter((s) => s.items.some((i) => libItemFin(i).venta > 0)).map((sec, idx) => {
+          const libSecVenta = sec.items.reduce((sum, i) => sum + libItemFin(i).venta, 0)
+          const realSecGasto = sec.items.reduce((sum, i) => sum + realItemGastoForBudget(i), 0)
+          const diff = libSecVenta - realSecGasto
+          const diffColor = diff > 0 ? "#34d399" : diff < 0 ? "#f87171" : "#94a3b8"
+          const isOdd = idx % 2 === 1
+          return (
+            <div
+              key={sec.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr 100px 100px" : "1fr 130px 130px 110px",
+                padding: "10px 14px",
+                gap: 8,
+                background: isOdd ? "rgba(148,163,184,0.04)" : "transparent",
+                borderTop: "1px solid rgba(148,163,184,0.07)",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ color: "#cbd5e1", fontSize: 13 }}>{sec.name}</span>
+              <span style={{ color: "#94a3b8", fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(libSecVenta)}</span>
+              <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(realSecGasto)}</span>
+              {!isMobile && (
+                <span style={{ color: diffColor, fontSize: 13, fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                  {diff >= 0 ? "+" : ""}{fmt(diff)}
+                </span>
+              )}
+            </div>
+          )
+        })}
+
+        {/* Total row */}
+        {t && (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr 100px 100px" : "1fr 130px 130px 110px",
+            padding: "12px 14px",
+            gap: 8,
+            background: "rgba(15,23,42,0.5)",
+            borderTop: "1px solid rgba(148,163,184,0.15)",
+            alignItems: "center",
+          }}>
+            <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>TOTAL</span>
+            <span style={{ color: "#a78bfa", fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(t.libVenta)}</span>
+            <span style={{ color: realColor, fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(t.realGasto)}</span>
+            {!isMobile && (
+              <span style={{ color: t.libVenta - t.realGasto >= 0 ? "#34d399" : "#f87171", fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                {t.libVenta - t.realGasto >= 0 ? "+" : ""}{fmt(t.libVenta - t.realGasto)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Budget card styles ───────────────────────────────────────────────────────
+function budgetCardStyle(bg: string, border: string): React.CSSProperties {
+  return {
+    background: bg,
+    border: `1px solid ${border}`,
+    borderRadius: 12,
+    padding: "16px 18px",
+    display: "grid",
+    gap: 8,
+  }
+}
+const budgetCardTitleStyle: React.CSSProperties = {
+  fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4,
+}
+const budgetRowStyle: React.CSSProperties = {
+  display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8,
+}
+const budgetLabelStyle: React.CSSProperties = {
+  color: "#64748b", fontSize: 12,
+}
+const budgetValueStyle: React.CSSProperties = {
+  color: "#94a3b8", fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums",
 }
 
 function QuotesPanel({
