@@ -442,6 +442,7 @@ export default function ProjectDetailPage() {
           isMobile={isMobile}
           clientName={clientName}
           projectName={project?.name ?? ""}
+          projectResponsable={project?.responsable ?? null}
           onClose={() => setSelectedQuote(null)}
           onMoved={(qId) => {
             setQuotes((prev) => prev.filter((q) => q.id !== qId))
@@ -970,6 +971,7 @@ function QuoteModal({
   isMobile,
   clientName,
   projectName,
+  projectResponsable,
   onClose,
   onMoved,
 }: {
@@ -977,6 +979,7 @@ function QuoteModal({
   isMobile: boolean
   clientName: string
   projectName: string
+  projectResponsable: string | null
   onClose: () => void
   onMoved: (quoteId: string) => void
 }) {
@@ -995,11 +998,25 @@ function QuoteModal({
   const [showAprobar, setShowAprobar] = useState(false)
   const [aprobarEmpresa, setAprobarEmpresa] = useState<"retro_studio" | "retro_films">("retro_studio")
   const [aproving, setAproving] = useState(false)
+  const [yaAprobado, setYaAprobado] = useState(false)
 
   const { quote, sections } = detail
   const subtotal = quoteSubtotal(sections)
   const markupAmt = subtotal * (quote.markup_percentage / 100)
   const total = subtotal + markupAmt
+
+  // Verificar si este proyecto ya tiene un ingreso registrado
+  useEffect(() => {
+    if (!quote.project_id) return
+    supabase
+      .from("ingresos")
+      .select("id")
+      .eq("project_id", quote.project_id)
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setYaAprobado(true)
+      })
+  }, [quote.project_id])
 
   async function handleExportPdf() {
     setExporting(true)
@@ -1071,16 +1088,20 @@ function QuoteModal({
       empresa:         aprobarEmpresa,
       estatus:         "en_produccion",
       cliente_agencia: clientName,
-      responsable:     quote.atencion || null,
+      // Responsable del proyecto, no el campo "Atención a:" de la cotización
+      responsable:     projectResponsable || null,
       proyecto:        `${quote.name}${projectName ? ` — ${projectName}` : ""}`,
       subtotal:        total,
       iva,
       mes_cierre:      MESES_ES[new Date().getMonth()],
       notas:           `Aprobado desde cotización el ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
+      project_id:      quote.project_id || null,
+      quote_id:        quote.id || null,
     })
     if (error) { alert(error.message); setAproving(false); return }
     await supabase.from("quotes").update({ status: "approved" }).eq("id", quote.id)
     setAproving(false)
+    setYaAprobado(true)
     setShowAprobar(false)
     window.location.href = "/ingresos"
   }
@@ -1123,8 +1144,21 @@ function QuoteModal({
             >
               ▶ Liberar
             </Link>
-            <button onClick={() => setShowAprobar(true)} style={aprobarQuoteBtnStyle}>
-              ✓ Aprobar
+            <button
+              onClick={() => {
+                if (yaAprobado) {
+                  alert("Este proyecto ya fue aprobado y está registrado en el control de ingresos.")
+                  return
+                }
+                setShowAprobar(true)
+              }}
+              disabled={yaAprobado}
+              style={{
+                ...aprobarQuoteBtnStyle,
+                ...(yaAprobado ? { opacity: 0.5, cursor: "not-allowed" } : {}),
+              }}
+            >
+              {yaAprobado ? "✓ Ya aprobado" : "✓ Aprobar"}
             </button>
             <button onClick={openMovePanel} style={moveQuoteBtnStyle}>
               ↗ Mover

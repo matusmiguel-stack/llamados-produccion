@@ -7,7 +7,7 @@ import { AppSidebar } from "../../components/AppSidebar"
 import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
 type Client = { id: string; name: string }
-type Project = { id: string; name: string; client_id: string }
+type Project = { id: string; name: string; client_id: string; responsable: string | null }
 type Subfolder = { id: string; client_id: string; name: string }
 
 type ItemValues = {
@@ -179,6 +179,7 @@ export default function CotizacionesPage() {
   const [showAprobarModal, setShowAprobarModal] = useState(false)
   const [aprobarEmpresa, setAprobarEmpresa] = useState<"retro_studio" | "retro_films">("retro_studio")
   const [aproving, setAproving] = useState(false)
+  const [yaAprobado, setYaAprobado] = useState(false)
 
   const [clientId, setClientId] = useState("")
   const [projectId, setProjectId] = useState("")
@@ -297,7 +298,7 @@ export default function CotizacionesPage() {
       setProfile(auth.profile)
       const [{ data: c }, { data: p }, { data: sf }] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
-        supabase.from("projects").select("id, name, client_id").order("name"),
+        supabase.from("projects").select("id, name, client_id, responsable").order("name"),
         supabase.from("client_subfolders").select("id, client_id, name").order("name"),
       ])
       setClients(c || [])
@@ -328,6 +329,18 @@ export default function CotizacionesPage() {
         suppressClientReset.current = true
         setClientId(loadedProj.client_id)
         setProjectId(loadedProj.id)
+      }
+
+      // Verificar si el proyecto ya está aprobado en ingresos
+      if (quote.project_id) {
+        const { data: existingIngreso } = await supabase
+          .from("ingresos")
+          .select("id")
+          .eq("project_id", quote.project_id)
+          .limit(1)
+        if (existingIngreso && existingIngreso.length > 0) {
+          setYaAprobado(true)
+        }
       }
 
       const { data: secs } = await supabase
@@ -441,7 +454,7 @@ export default function CotizacionesPage() {
       const { data: projData, error: projErr } = await supabase
         .from("projects")
         .insert({ client_id: clientId, subfolder_id: subfolderId, name: newProjectName.trim() })
-        .select("id, name, client_id")
+        .select("id, name, client_id, responsable")
         .single()
       if (projErr) { alert(projErr.message); return }
       setProjects((prev) => [...prev, projData].sort((a, b) => a.name.localeCompare(b.name, "es")))
@@ -618,16 +631,22 @@ export default function CotizacionesPage() {
       alert("Guarda la cotización primero antes de aprobar el proyecto.")
       return
     }
+    if (yaAprobado) {
+      alert("Este proyecto ya fue aprobado y está registrado en el control de ingresos.")
+      return
+    }
     setShowAprobarModal(true)
   }
 
   async function confirmarAprobacion() {
     setAproving(true)
+    const selectedProject = projects.find((p) => p.id === projectId)
     const clientName  = clients.find((c) => c.id === clientId)?.name || "—"
-    const projectName = projects.find((p) => p.id === projectId)?.name || ""
+    const projectName = selectedProject?.name || ""
     const subtotal    = globalFinancials.venta
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
-    const responsable = atencion.trim() || profile?.full_name || null
+    // Usar el responsable del proyecto, no el campo "Atención a:" de la cotización
+    const responsable = selectedProject?.responsable || null
 
     const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
     const { error } = await supabase.from("ingresos").insert({
@@ -640,6 +659,8 @@ export default function CotizacionesPage() {
       iva,
       mes_cierre:      MESES_ES[new Date().getMonth()],
       notas:           `Aprobado desde cotización el ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
+      project_id:      projectId || null,
+      quote_id:        editQuoteId || null,
     })
 
     setAproving(false)
@@ -648,6 +669,7 @@ export default function CotizacionesPage() {
     // Mark the quote as approved too
     await supabase.from("quotes").update({ status: "approved" }).eq("id", editQuoteId)
     setStatus("approved")
+    setYaAprobado(true)
 
     setShowAprobarModal(false)
     window.location.href = "/ingresos"
@@ -1010,8 +1032,19 @@ export default function CotizacionesPage() {
                     ↓ Exportar PDF
                   </button>
                   {editQuoteId && (
-                    <button onClick={handleAprobar} style={aprobarBtnStyle}>
-                      ✓ Aprobar proyecto
+                    <button
+                      onClick={handleAprobar}
+                      disabled={yaAprobado}
+                      style={{
+                        ...aprobarBtnStyle,
+                        ...(yaAprobado ? {
+                          opacity: 0.55,
+                          cursor: "not-allowed",
+                          background: "rgba(52,211,153,0.08)",
+                        } : {}),
+                      }}
+                    >
+                      {yaAprobado ? "✓ Ya aprobado" : "✓ Aprobar proyecto"}
                     </button>
                   )}
                 </div>

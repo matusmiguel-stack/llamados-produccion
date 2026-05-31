@@ -32,6 +32,8 @@ type Ingreso = {
   mes_cierre: string | null
   notas: string | null
   created_at: string
+  project_id: string | null
+  quote_id: string | null
 }
 
 type IngresoForm = {
@@ -352,7 +354,7 @@ export default function IngresosPage() {
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  {["Estatus","ODC","Cliente / Agencia","Resp.","Proyecto","Factura","Subtotal","IVA","Fecha Pago","Mes Cierre",""].map(h => (
+                  {["Estatus","ODC","Cliente / Agencia","Resp.","Proyecto","Factura","Subtotal","IVA","Total c/IVA","Fecha Pago","Mes Cierre",""].map(h => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -384,6 +386,9 @@ export default function IngresosPage() {
                       <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#64748b", fontSize: 12 }}>
                         {fmt(r.iva)}
                       </td>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#a78bfa", fontWeight: 600 }}>
+                        {fmt(r.subtotal + r.iva)}
+                      </td>
                       <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : "#64748b", fontSize: 12 }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
@@ -406,6 +411,9 @@ export default function IngresosPage() {
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", paddingTop: 10, fontFamily: "monospace" }}>
                     {fmt(rows.reduce((s, r) => s + r.iva, 0))}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#a78bfa", paddingTop: 10, fontFamily: "monospace" }}>
+                    {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}
                   </td>
                   <td colSpan={3} />
                 </tr>
