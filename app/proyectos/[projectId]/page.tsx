@@ -990,6 +990,12 @@ function QuoteModal({
   const [moveProjectId, setMoveProjectId] = useState("")
   const [isMoving, setIsMoving] = useState(false)
   const [moveListsLoaded, setMoveListsLoaded] = useState(false)
+
+  // Aprobar proyecto
+  const [showAprobar, setShowAprobar] = useState(false)
+  const [aprobarEmpresa, setAprobarEmpresa] = useState<"retro_studio" | "retro_films">("retro_studio")
+  const [aproving, setAproving] = useState(false)
+
   const { quote, sections } = detail
   const subtotal = quoteSubtotal(sections)
   const markupAmt = subtotal * (quote.markup_percentage / 100)
@@ -1057,6 +1063,26 @@ function QuoteModal({
     }
   }
 
+  async function confirmarAprobacion() {
+    setAproving(true)
+    const iva = Math.round(total * 0.16 * 100) / 100
+    const { error } = await supabase.from("ingresos").insert({
+      empresa:         aprobarEmpresa,
+      estatus:         "en_produccion",
+      cliente_agencia: clientName,
+      responsable:     quote.atencion || null,
+      proyecto:        `${quote.name}${projectName ? ` — ${projectName}` : ""}`,
+      subtotal:        total,
+      iva,
+      notas:           `Aprobado desde cotización el ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
+    })
+    if (error) { alert(error.message); setAproving(false); return }
+    await supabase.from("quotes").update({ status: "approved" }).eq("id", quote.id)
+    setAproving(false)
+    setShowAprobar(false)
+    window.location.href = "/ingresos"
+  }
+
   const COL = isMobile
     ? "1fr"
     : "2fr 56px 56px 100px 100px 100px 1fr 100px"
@@ -1095,6 +1121,9 @@ function QuoteModal({
             >
               ▶ Liberar
             </Link>
+            <button onClick={() => setShowAprobar(true)} style={aprobarQuoteBtnStyle}>
+              ✓ Aprobar
+            </button>
             <button onClick={openMovePanel} style={moveQuoteBtnStyle}>
               ↗ Mover
             </button>
@@ -1355,6 +1384,67 @@ function QuoteModal({
           </div>
         </div>
       </div>
+
+      {/* ── Aprobar proyecto mini-modal ── */}
+      {showAprobar && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => !aproving && setShowAprobar(false)}
+        >
+          <div
+            style={{ background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 20, boxShadow: "0 32px 80px rgba(0,0,0,0.6)", padding: "28px 28px 24px", width: "100%", maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>Aprobar proyecto</h2>
+            <p style={{ margin: "0 0 18px", color: "#94a3b8", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
+              Esto creará una entrada en <strong style={{ color: "#e2e8f0" }}>Ingresos</strong> con los totales de esta cotización.
+            </p>
+
+            {/* Resumen */}
+            <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", display: "grid", gap: 6 }}>
+              {[
+                { label: "Cliente",   value: clientName },
+                { label: "Cotización",value: quote.name },
+                { label: "Subtotal",  value: fmt(total) },
+                { label: "IVA (16%)", value: fmt(Math.round(total * 0.16 * 100) / 100) },
+                { label: "Total",     value: fmt(total * 1.16), bold: true },
+              ].map(r => (
+                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
+                  <span style={{ color: "#64748b", fontSize: 13 }}>{r.label}</span>
+                  <span style={{ color: r.bold ? "#f8fafc" : "#cbd5e1", fontWeight: r.bold ? 700 : 500, fontSize: 13, fontFamily: r.bold ? "monospace" : undefined }}>{r.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Empresa */}
+            <div style={{ marginTop: 16 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Empresa</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {(["retro_studio", "retro_films"] as const).map(e => (
+                  <button
+                    key={e}
+                    onClick={() => setAprobarEmpresa(e)}
+                    style={{ flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: aprobarEmpresa === e ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(148,163,184,0.14)", background: aprobarEmpresa === e ? "rgba(16,185,129,0.15)" : "transparent", color: aprobarEmpresa === e ? "#34d399" : "#64748b" }}
+                  >
+                    {e === "retro_studio" ? "Retro Studio" : "Retro Films"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button onClick={() => setShowAprobar(false)} disabled={aproving} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                Cancelar
+              </button>
+              <button onClick={confirmarAprobacion} disabled={aproving} style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "linear-gradient(135deg, rgba(16,185,129,0.8), rgba(5,150,105,0.8))", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}>
+                {aproving ? "Aprobando…" : "✓ Confirmar aprobación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2030,6 +2120,21 @@ const moveQuoteBtnStyle: React.CSSProperties = {
   border: "1px solid rgba(167,139,250,0.3)",
   background: "rgba(99,102,241,0.1)",
   color: "#a78bfa",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+}
+
+const aprobarQuoteBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  padding: "7px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(52,211,153,0.35)",
+  background: "rgba(16,185,129,0.12)",
+  color: "#34d399",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
