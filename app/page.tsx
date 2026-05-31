@@ -27,6 +27,14 @@ const VACATION_EVENT_PREFIX = "vacation:"
 const BIRTHDAY_COLOR = "#f59e0b"
 const ANNIVERSARY_COLOR = "#14b8a6"
 
+const RESPONSABLES_PRODUCCION = [
+  "Miguel Matus",
+  "Adriana Barrera",
+  "Maricela Peña",
+  "Carlos Muños",
+  "Diana Cobian",
+]
+
 type CatalogClient = {
   id: string
   name: string
@@ -175,6 +183,7 @@ export default function Home() {
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
+  const [shootResponsable, setShootResponsable] = useState("")
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
   const [showAddClient, setShowAddClient] = useState(false)
@@ -472,6 +481,7 @@ export default function Home() {
     setEndTime("18:00")
     setSelectedResources([])
     setSelectedEmployees([])
+    setShootResponsable("")
   }
 
   function clearFilters() {
@@ -630,6 +640,7 @@ function openEditShoot() {
     setSelectedResources(
       getShootTechnicalResources(selectedShoot.id).map((resource) => resource.id)
     )
+    setShootResponsable(selectedShoot.responsable || "")
     setEntryMode("shoot")
 
     setDetailsOpen(false)
@@ -790,14 +801,17 @@ function openEditVacation() {
     const range = getShootDateTimeRange()
     if (!range) return alert("Selecciona las fechas del llamado")
 
-    const busyEmployee = selectedEmployees.find((employeeId) =>
-      isEmployeeBusy(employeeId)
-    )
-    if (busyEmployee) {
-      const employee = employees.find((item) => item.id === busyEmployee)
-      return alert(
-        `${employee ? employeeSelectLabel(employee) : "Un empleado"} no está disponible en esas fechas`
+    // Sólo validar disponibilidad al CREAR un nuevo llamado, no al editar uno existente
+    if (!selectedShoot) {
+      const busyEmployee = selectedEmployees.find((employeeId) =>
+        isEmployeeBusy(employeeId)
       )
+      if (busyEmployee) {
+        const employee = employees.find((item) => item.id === busyEmployee)
+        return alert(
+          `${employee ? employeeSelectLabel(employee) : "Un empleado"} no está disponible en esas fechas`
+        )
+      }
     }
 
     const selectedClient = allClients.find((item) => item.id === clientId)
@@ -831,6 +845,7 @@ function openEditVacation() {
       contact,
       director,
       dop,
+      responsable: shootResponsable || null,
       public_notes: publicNotes,
       private_notes: privateNotes,
       production_notes: productionNotes,
@@ -1896,6 +1911,20 @@ function openEditVacation() {
                       </div>
                     </div>
 
+                    <div style={formModalFieldStyle}>
+                      <label style={formModalLabelStyle}>Responsable</label>
+                      <select
+                        value={shootResponsable}
+                        onChange={(e) => setShootResponsable(e.target.value)}
+                        style={formModalSelectStyle}
+                      >
+                        <option value="">— Sin asignar —</option>
+                        {RESPONSABLES_PRODUCCION.map((name) => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     <p style={{ ...formModalSectionLabelStyle, marginTop: 14 }}>
                       Recursos
                     </p>
@@ -2211,12 +2240,8 @@ function openEditVacation() {
                         </span>
                       </div>
                       <FormModalPreviewField
-                        label="Productor"
-                        value={
-                          getProducer(selectedShoot.id)
-                            ? employeeDisplayName(getProducer(selectedShoot.id))
-                            : undefined
-                        }
+                        label="Responsable"
+                        value={selectedShoot.responsable || undefined}
                       />
                     </div>
 

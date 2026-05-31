@@ -136,24 +136,17 @@ export function InformacionGeneralPanel({
   const [editSaving, setEditSaving]       = useState(false)
   const [localResponsable, setLocalResponsable] = useState(projectResponsable)
   const [localDescription, setLocalDescription] = useState(projectDescription)
-  const [editEmployees, setEditEmployees] = useState<Array<{ id: string; nombre: string; apellido_paterno: string; apellido_materno: string | null }>>([])
-
-  const DIRECCION_OPTIONS = ["Director General", "Directora de Operaciones"]
-
-  async function loadEditEmployees() {
-    if (editEmployees.length > 0) return
-    const { data } = await supabase
-      .from("employees")
-      .select("id,nombre,apellido_paterno,apellido_materno,puesto")
-      .or("puesto.ilike.%Productor%,puesto.ilike.%Productora%")
-      .order("nombre")
-    setEditEmployees((data || []) as typeof editEmployees)
-  }
+  const RESPONSABLES_PRODUCCION = [
+    "Miguel Matus",
+    "Adriana Barrera",
+    "Maricela Peña",
+    "Carlos Muños",
+    "Diana Cobian",
+  ]
 
   function openEdit() {
     setEditResponsable(localResponsable || "")
     setEditDescription(localDescription || "")
-    loadEditEmployees()
     setShowEdit(true)
   }
 
@@ -287,17 +280,9 @@ export function InformacionGeneralPanel({
                   style={editInputStyle}
                 >
                   <option value="">— Sin asignar —</option>
-                  <optgroup label="── Dirección ──">
-                    {DIRECCION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                  </optgroup>
-                  {editEmployees.length > 0 && (
-                    <optgroup label="── Productoras ──">
-                      {editEmployees.map(e => {
-                        const full = [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
-                        return <option key={e.id} value={full}>{full}</option>
-                      })}
-                    </optgroup>
-                  )}
+                  {RESPONSABLES_PRODUCCION.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
                 </select>
               </div>
 
