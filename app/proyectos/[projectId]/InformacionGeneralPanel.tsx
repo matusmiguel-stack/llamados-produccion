@@ -129,6 +129,47 @@ export function InformacionGeneralPanel({
   // ── Create shoot modal ────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false)
 
+  // ── Edit project info ─────────────────────────────────────────────────────
+  const [showEdit, setShowEdit]           = useState(false)
+  const [editResponsable, setEditResponsable] = useState(projectResponsable || "")
+  const [editDescription, setEditDescription] = useState(projectDescription || "")
+  const [editSaving, setEditSaving]       = useState(false)
+  const [localResponsable, setLocalResponsable] = useState(projectResponsable)
+  const [localDescription, setLocalDescription] = useState(projectDescription)
+  const [editEmployees, setEditEmployees] = useState<Array<{ id: string; nombre: string; apellido_paterno: string; apellido_materno: string | null }>>([])
+
+  const DIRECCION_OPTIONS = ["Director General", "Directora de Operaciones"]
+
+  async function loadEditEmployees() {
+    if (editEmployees.length > 0) return
+    const { data } = await supabase
+      .from("employees")
+      .select("id,nombre,apellido_paterno,apellido_materno,puesto")
+      .or("puesto.ilike.%Productor%,puesto.ilike.%Productora%")
+      .order("nombre")
+    setEditEmployees((data || []) as typeof editEmployees)
+  }
+
+  function openEdit() {
+    setEditResponsable(localResponsable || "")
+    setEditDescription(localDescription || "")
+    loadEditEmployees()
+    setShowEdit(true)
+  }
+
+  async function handleSaveEdit() {
+    setEditSaving(true)
+    const { error } = await supabase
+      .from("projects")
+      .update({ responsable: editResponsable || null, description: editDescription || null })
+      .eq("id", projectId)
+    setEditSaving(false)
+    if (error) { alert(error.message); return }
+    setLocalResponsable(editResponsable || null)
+    setLocalDescription(editDescription || null)
+    setShowEdit(false)
+  }
+
   // ── Load shoots ───────────────────────────────────────────────────────────
   const loadShoots = useCallback(async () => {
     const { data } = await supabase
@@ -208,23 +249,78 @@ export function InformacionGeneralPanel({
 
       {/* ══ 1. DATOS DEL PROYECTO ══════════════════════════════════════════ */}
       <div style={cardStyle}>
-        <p style={cardEyebrowStyle}>Información general</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <p style={cardEyebrowStyle}>Información general</p>
+          {isAdmin && (
+            <button onClick={openEdit} style={editInfoBtnStyle}>✎ Editar</button>
+          )}
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
           <KV label="Cliente" value={clientName} accent />
           <KV label="Proyecto" value={projectName} accent />
           <KV label="Carpeta" value={subfolderName} />
-          {projectDescription && (
+          {localDescription && (
             <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
-              <KV label="Descripción" value={projectDescription} />
+              <KV label="Descripción" value={localDescription} />
             </div>
           )}
           <KV
             label="Responsable"
-            value={projectResponsable || "—"}
-            accent={!!projectResponsable}
+            value={localResponsable || "—"}
+            accent={!!localResponsable}
           />
         </div>
       </div>
+
+      {/* ── Edit modal ── */}
+      {showEdit && (
+        <div style={editOverlayStyle} onClick={() => !editSaving && setShowEdit(false)}>
+          <div style={editModalStyle} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>Editar información del proyecto</h3>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ display: "grid", gap: 5 }}>
+                <label style={editLabelStyle}>Responsable</label>
+                <select
+                  value={editResponsable}
+                  onChange={e => setEditResponsable(e.target.value)}
+                  style={editInputStyle}
+                >
+                  <option value="">— Sin asignar —</option>
+                  <optgroup label="── Dirección ──">
+                    {DIRECCION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </optgroup>
+                  {editEmployees.length > 0 && (
+                    <optgroup label="── Productoras ──">
+                      {editEmployees.map(e => {
+                        const full = [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+                        return <option key={e.id} value={full}>{full}</option>
+                      })}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gap: 5 }}>
+                <label style={editLabelStyle}>Descripción / Notas</label>
+                <textarea
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  style={{ ...editInputStyle, minHeight: 80, resize: "vertical" }}
+                  placeholder="Notas del proyecto…"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 18, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowEdit(false)} disabled={editSaving} style={editCancelBtnStyle}>Cancelar</button>
+              <button onClick={handleSaveEdit} disabled={editSaving} style={editSaveBtnStyle}>
+                {editSaving ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ 2. LLAMADOS ═══════════════════════════════════════════════════ */}
       <div style={cardStyle}>
@@ -528,6 +624,78 @@ const addShootBtnStyle: React.CSSProperties = {
 }
 
 
+const editInfoBtnStyle: React.CSSProperties = {
+  padding: "4px 12px",
+  borderRadius: 7,
+  border: "1px solid rgba(148,163,184,0.18)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#94a3b8",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+}
+
+const editOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.65)",
+  backdropFilter: "blur(6px)",
+  zIndex: 999999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+}
+
+const editModalStyle: React.CSSProperties = {
+  background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))",
+  border: "1px solid rgba(148,163,184,0.14)",
+  borderRadius: 16,
+  boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+  padding: "24px 24px 20px",
+  width: "100%",
+  maxWidth: 420,
+}
+
+const editLabelStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  color: "#64748b",
+}
+
+const editInputStyle: React.CSSProperties = {
+  padding: "9px 12px",
+  borderRadius: 9,
+  border: "1px solid rgba(148,163,184,0.14)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#f8fafc",
+  fontSize: 13,
+  outline: "none",
+  width: "100%",
+  boxSizing: "border-box" as const,
+}
+
+const editSaveBtnStyle: React.CSSProperties = {
+  padding: "9px 20px",
+  borderRadius: 9,
+  background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))",
+  border: "1px solid rgba(167,139,250,0.25)",
+  color: "#f8fafc",
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: "pointer",
+}
+
+const editCancelBtnStyle: React.CSSProperties = {
+  padding: "9px 16px",
+  borderRadius: 9,
+  background: "transparent",
+  border: "1px solid rgba(148,163,184,0.14)",
+  color: "#94a3b8",
+  fontSize: 13,
+  cursor: "pointer",
+}
+
 const quoteChipStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
@@ -563,3 +731,4 @@ const finDividerStyle: React.CSSProperties = {
   paddingTop: 6,
   marginTop: 2,
 }
+

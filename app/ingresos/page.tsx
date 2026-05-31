@@ -86,8 +86,23 @@ const RESPONSABLES = [
   "Miguel","Charlie","Diana","Fer","Chelita","Karla","Pau",
 ]
 
+type ProjectOption = {
+  id: string
+  name: string
+  responsable: string | null
+  clientName: string
+}
+
 function fmt(n: number) {
   return n.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 })
+}
+
+function fmtDateField(s: string | null): string {
+  if (!s) return "—"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return new Date(s + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
+  }
+  return s
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -102,6 +117,8 @@ export default function IngresosPage() {
 
   const [activeEmpresa, setActiveEmpresa] = useState<Empresa>("retro_studio")
   const [filtroEstatus, setFiltroEstatus] = useState<Estatus | "todos">("todos")
+
+  const [projects, setProjects]     = useState<ProjectOption[]>([])
 
   const [showModal, setShowModal]   = useState(false)
   const [editingId, setEditingId]   = useState<string | null>(null)
@@ -124,11 +141,17 @@ export default function IngresosPage() {
     setProfile(auth.profile)
     setUser(auth.session.user)
 
-    const { data } = await supabase
-      .from("ingresos")
-      .select("*")
-      .order("created_at", { ascending: false })
+    const [{ data }, { data: projs }] = await Promise.all([
+      supabase.from("ingresos").select("*").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, responsable, clients(name)").order("name"),
+    ])
     setIngresos((data || []) as Ingreso[])
+    setProjects((projs || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      responsable: p.responsable || null,
+      clientName: (p.clients as any)?.name || "",
+    })))
     setLoading(false)
   }, [])
 
@@ -362,7 +385,7 @@ export default function IngresosPage() {
                         {fmt(r.iva)}
                       </td>
                       <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : "#64748b", fontSize: 12 }}>
-                        {r.fecha_pago || r.fecha_aprox_pago || "—"}
+                        {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{r.mes_cierre || "—"}</td>
                       <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
@@ -435,7 +458,30 @@ export default function IngresosPage() {
                 </FormField>
               </div>
 
-              {/* Row 3: Proyecto */}
+              {/* Row 3: Proyecto vinculado (auto-fill responsable) */}
+              <FormField label="Vincular a proyecto (opcional — auto-rellena responsable)">
+                <select
+                  style={inputStyle}
+                  value=""
+                  onChange={e => {
+                    const proj = projects.find(p => p.id === e.target.value)
+                    if (!proj) return
+                    setForm(f => ({
+                      ...f,
+                      proyecto:        f.proyecto || proj.name,
+                      cliente_agencia: f.cliente_agencia || proj.clientName,
+                      responsable:     proj.responsable || f.responsable,
+                    }))
+                  }}
+                >
+                  <option value="">— Seleccionar proyecto —</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.clientName ? `${p.clientName} · ` : ""}{p.name}</option>
+                  ))}
+                </select>
+              </FormField>
+
+              {/* Row 3b: Nombre del proyecto (texto libre) */}
               <FormField label="Proyecto *">
                 <input value={form.proyecto} onChange={e => setForm(f => ({ ...f, proyecto: e.target.value }))} style={inputStyle} placeholder="ej. RS1126 - Hazle Caso a tu Negocio" />
               </FormField>
@@ -477,10 +523,20 @@ export default function IngresosPage() {
               {/* Row 6: Fechas */}
               <div style={rowStyle}>
                 <FormField label="Fecha aprox. de pago">
-                  <input value={form.fecha_aprox_pago} onChange={e => setForm(f => ({ ...f, fecha_aprox_pago: e.target.value }))} style={inputStyle} placeholder="ej. 25 de marzo" />
+                  <input
+                    type="date"
+                    value={form.fecha_aprox_pago}
+                    onChange={e => setForm(f => ({ ...f, fecha_aprox_pago: e.target.value }))}
+                    style={{ ...inputStyle, colorScheme: "dark" }}
+                  />
                 </FormField>
                 <FormField label="Fecha de pago real">
-                  <input value={form.fecha_pago} onChange={e => setForm(f => ({ ...f, fecha_pago: e.target.value }))} style={inputStyle} placeholder="ej. Pagada 26 marzo 2026" />
+                  <input
+                    type="date"
+                    value={form.fecha_pago}
+                    onChange={e => setForm(f => ({ ...f, fecha_pago: e.target.value }))}
+                    style={{ ...inputStyle, colorScheme: "dark" }}
+                  />
                 </FormField>
               </div>
 

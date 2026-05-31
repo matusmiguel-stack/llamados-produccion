@@ -629,6 +629,7 @@ export default function CotizacionesPage() {
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
     const responsable = atencion.trim() || profile?.full_name || null
 
+    const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
     const { error } = await supabase.from("ingresos").insert({
       empresa:         aprobarEmpresa,
       estatus:         "en_produccion",
@@ -637,6 +638,7 @@ export default function CotizacionesPage() {
       proyecto:        `${quoteName.trim()}${projectName ? ` — ${projectName}` : ""}`,
       subtotal,
       iva,
+      mes_cierre:      MESES_ES[new Date().getMonth()],
       notas:           `Aprobado desde cotización el ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
     })
 

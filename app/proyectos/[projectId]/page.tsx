@@ -1066,6 +1066,7 @@ function QuoteModal({
   async function confirmarAprobacion() {
     setAproving(true)
     const iva = Math.round(total * 0.16 * 100) / 100
+    const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
     const { error } = await supabase.from("ingresos").insert({
       empresa:         aprobarEmpresa,
       estatus:         "en_produccion",
@@ -1074,6 +1075,7 @@ function QuoteModal({
       proyecto:        `${quote.name}${projectName ? ` — ${projectName}` : ""}`,
       subtotal:        total,
       iva,
+      mes_cierre:      MESES_ES[new Date().getMonth()],
       notas:           `Aprobado desde cotización el ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
     })
     if (error) { alert(error.message); setAproving(false); return }

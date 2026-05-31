@@ -156,7 +156,7 @@ export default function ProyectosPage() {
       supabase
         .from("employees")
         .select("id,nombre,apellido_paterno,apellido_materno,puesto")
-        .eq("puesto", "Productor")
+        .or("puesto.ilike.%Productor%,puesto.ilike.%Productora%")
         .order("nombre", { ascending: true }),
     ])
 
