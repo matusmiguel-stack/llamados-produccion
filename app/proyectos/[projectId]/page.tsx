@@ -15,6 +15,7 @@ type Project = {
   client_id: string
   subfolder_id: string
   name: string
+  code: string | null
   description: string | null
   responsable: string | null
 }
@@ -309,7 +310,11 @@ export default function ProjectDetailPage() {
           <header style={pageHeaderStyle}>
             <div>
               <p style={eyebrowStyle}>Proyecto</p>
-              <h1 style={pageTitleStyle}>{project?.name || "Cargando..."}</h1>
+              <h1 style={pageTitleStyle}>
+                {project
+                  ? (project.code ? `${project.code} ${project.name}` : project.name)
+                  : "Cargando..."}
+              </h1>
               <p style={pageSubtitleStyle}>
                 {clientName} · {subfolderName}
               </p>
@@ -333,7 +338,7 @@ export default function ProjectDetailPage() {
                   <span style={breadcrumbMutedStyle}>{subfolderName}</span>
                   <span style={breadcrumbDividerStyle}>/</span>
                   <span style={breadcrumbCurrentStyle}>
-                    {project?.name || "..."}
+                    {project ? (project.code ? `${project.code} ${project.name}` : project.name) : "..."}
                   </span>
                 </nav>
               </div>
@@ -442,6 +447,7 @@ export default function ProjectDetailPage() {
           isMobile={isMobile}
           clientName={clientName}
           projectName={project?.name ?? ""}
+          projectCode={project?.code ?? null}
           projectResponsable={project?.responsable ?? null}
           onClose={() => setSelectedQuote(null)}
           onMoved={(qId) => {
@@ -971,6 +977,7 @@ function QuoteModal({
   isMobile,
   clientName,
   projectName,
+  projectCode,
   projectResponsable,
   onClose,
   onMoved,
@@ -979,6 +986,7 @@ function QuoteModal({
   isMobile: boolean
   clientName: string
   projectName: string
+  projectCode: string | null
   projectResponsable: string | null
   onClose: () => void
   onMoved: (quoteId: string) => void
@@ -1090,7 +1098,8 @@ function QuoteModal({
       cliente_agencia: clientName,
       // Responsable del proyecto, no el campo "Atención a:" de la cotización
       responsable:     projectResponsable || null,
-      proyecto:        `${quote.name}${projectName ? ` — ${projectName}` : ""}`,
+      // Solo el nombre del proyecto (con código si existe), sin el nombre de la cotización
+      proyecto:        projectCode ? `${projectCode} ${projectName}` : projectName,
       subtotal:        total,
       iva,
       mes_cierre:      MESES_ES[new Date().getMonth()],

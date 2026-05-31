@@ -91,6 +91,7 @@ const RESPONSABLES = [
 type ProjectOption = {
   id: string
   name: string
+  code: string | null
   responsable: string | null
   clientName: string
 }
@@ -145,12 +146,13 @@ export default function IngresosPage() {
 
     const [{ data }, { data: projs }] = await Promise.all([
       supabase.from("ingresos").select("*").order("created_at", { ascending: false }),
-      supabase.from("projects").select("id, name, responsable, clients(name)").order("name"),
+      supabase.from("projects").select("id, name, code, responsable, clients(name)").order("name"),
     ])
     setIngresos((data || []) as Ingreso[])
     setProjects((projs || []).map((p: any) => ({
       id: p.id,
       name: p.name,
+      code: p.code || null,
       responsable: p.responsable || null,
       clientName: (p.clients as any)?.name || "",
     })))
@@ -474,9 +476,10 @@ export default function IngresosPage() {
                   onChange={e => {
                     const proj = projects.find(p => p.id === e.target.value)
                     if (!proj) return
+                    const projLabel = proj.code ? `${proj.code} ${proj.name}` : proj.name
                     setForm(f => ({
                       ...f,
-                      proyecto:        f.proyecto || proj.name,
+                      proyecto:        f.proyecto || projLabel,
                       cliente_agencia: f.cliente_agencia || proj.clientName,
                       responsable:     proj.responsable || f.responsable,
                     }))
@@ -484,7 +487,9 @@ export default function IngresosPage() {
                 >
                   <option value="">— Seleccionar proyecto —</option>
                   {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.clientName ? `${p.clientName} · ` : ""}{p.name}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.code ? `${p.code} ` : ""}{p.name}{p.clientName ? ` · ${p.clientName}` : ""}
+                    </option>
                   ))}
                 </select>
               </FormField>

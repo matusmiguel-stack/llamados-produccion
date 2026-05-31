@@ -32,10 +32,15 @@ type Project = {
   client_id: string
   subfolder_id: string
   name: string
+  code: string | null
   description: string | null
   responsable: string | null
   created_at: string
   updated_at: string
+}
+
+function projectDisplayName(p: { code: string | null; name: string }) {
+  return p.code ? `${p.code} ${p.name}` : p.name
 }
 
 type DriveView =
@@ -605,7 +610,7 @@ export default function ProyectosPage() {
         : visibleProjects.map((project) => ({
             type: "project" as const,
             id: project.id,
-            name: project.name,
+            name: projectDisplayName(project),
             meta:
               project.description?.trim() ||
               "Abrir módulos del proyecto",
@@ -855,7 +860,7 @@ export default function ProyectosPage() {
                 <p style={inlinePanelTitleStyle}>Mover proyecto</p>
                 <p style={moveHintStyle}>
                   Moviendo{" "}
-                  <strong style={moveHintStrongStyle}>{selectedProject.name}</strong>{" "}
+                  <strong style={moveHintStrongStyle}>{projectDisplayName(selectedProject)}</strong>{" "}
                   desde{" "}
                   <strong style={moveHintStrongStyle}>
                     {subfolders.find(
