@@ -176,6 +176,9 @@ export default function CotizacionesPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showAprobarModal, setShowAprobarModal] = useState(false)
+  const [aprobarEmpresa, setAprobarEmpresa] = useState<"retro_studio" | "retro_films">("retro_studio")
+  const [aproving, setAproving] = useState(false)
 
   const [clientId, setClientId] = useState("")
   const [projectId, setProjectId] = useState("")
@@ -610,6 +613,44 @@ export default function CotizacionesPage() {
     }
   }
 
+  async function handleAprobar() {
+    if (!editQuoteId) {
+      alert("Guarda la cotización primero antes de aprobar el proyecto.")
+      return
+    }
+    setShowAprobarModal(true)
+  }
+
+  async function confirmarAprobacion() {
+    setAproving(true)
+    const clientName  = clients.find((c) => c.id === clientId)?.name || "—"
+    const projectName = projects.find((p) => p.id === projectId)?.name || ""
+    const subtotal    = globalFinancials.venta
+    const iva         = Math.round(subtotal * 0.16 * 100) / 100
+    const responsable = atencion.trim() || profile?.full_name || null
+
+    const { error } = await supabase.from("ingresos").insert({
+      empresa:         aprobarEmpresa,
+      estatus:         "en_produccion",
+      cliente_agencia: clientName,
+      responsable,
+      proyecto:        `${quoteName.trim()}${projectName ? ` — ${projectName}` : ""}`,
+      subtotal,
+      iva,
+      notas:           `Aprobado desde cotización el ${new Date().toLocaleDateString("es-MX", { dateStyle: "long" })}`,
+    })
+
+    setAproving(false)
+    if (error) { alert(error.message); return }
+
+    // Mark the quote as approved too
+    await supabase.from("quotes").update({ status: "approved" }).eq("id", editQuoteId)
+    setStatus("approved")
+
+    setShowAprobarModal(false)
+    window.location.href = "/ingresos"
+  }
+
   async function handleExportPdf() {
     const { exportQuotePdf } = await import("../../lib/exportQuotePdf")
 
@@ -966,12 +1007,89 @@ export default function CotizacionesPage() {
                   <button onClick={handleExportPdf} style={pdfButtonStyle}>
                     ↓ Exportar PDF
                   </button>
+                  {editQuoteId && (
+                    <button onClick={handleAprobar} style={aprobarBtnStyle}>
+                      ✓ Aprobar proyecto
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </section>
         </div>
       </main>
+
+      {/* ── Aprobar proyecto modal ── */}
+      {showAprobarModal && (
+        <div style={aprobarOverlayStyle} onClick={() => !aproving && setShowAprobarModal(false)}>
+          <div style={aprobarModalStyle} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>
+              Aprobar proyecto
+            </h2>
+            <p style={{ margin: "0 0 20px", color: "#94a3b8", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
+              Esto creará una entrada en <strong style={{ color: "#e2e8f0" }}>Ingresos</strong> con los totales de esta cotización.
+            </p>
+
+            {/* Resumen */}
+            <div style={aprobarSummaryStyle}>
+              <Row label="Cliente"    value={clients.find(c => c.id === clientId)?.name || "—"} />
+              <Row label="Proyecto"   value={quoteName || "—"} />
+              <Row label="Subtotal"   value={fmt(globalFinancials.venta)} />
+              <Row label="IVA (16%)"  value={fmt(Math.round(globalFinancials.venta * 0.16 * 100) / 100)} />
+              <Row label="Total"      value={fmt(globalFinancials.venta * 1.16)} bold />
+            </div>
+
+            {/* Empresa selector */}
+            <div style={{ marginTop: 16 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Empresa</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {(["retro_studio", "retro_films"] as const).map(e => (
+                  <button
+                    key={e}
+                    onClick={() => setAprobarEmpresa(e)}
+                    style={{
+                      flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      border: aprobarEmpresa === e ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(148,163,184,0.14)",
+                      background: aprobarEmpresa === e ? "rgba(16,185,129,0.15)" : "transparent",
+                      color: aprobarEmpresa === e ? "#34d399" : "#64748b",
+                    }}
+                  >
+                    {e === "retro_studio" ? "Retro Studio" : "Retro Films"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => setShowAprobarModal(false)}
+                disabled={aproving}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarAprobacion}
+                disabled={aproving}
+                style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "linear-gradient(135deg, rgba(16,185,129,0.8), rgba(5,150,105,0.8))", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}
+              >
+                {aproving ? "Aprobando…" : "✓ Confirmar aprobación"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
+      <span style={{ color: "#64748b", fontSize: 13 }}>{label}</span>
+      <span style={{ color: bold ? "#f8fafc" : "#cbd5e1", fontWeight: bold ? 700 : 500, fontSize: 13, fontFamily: bold ? "monospace" : undefined }}>{value}</span>
     </div>
   )
 }
@@ -1517,4 +1635,46 @@ const pdfButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
+}
+
+const aprobarBtnStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 20px",
+  background: "linear-gradient(135deg, rgba(16,185,129,0.75), rgba(5,150,105,0.75))",
+  color: "#fff",
+  border: "1px solid rgba(52,211,153,0.3)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: 13,
+  boxShadow: "0 8px 24px rgba(16,185,129,0.18)",
+}
+
+const aprobarOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.65)",
+  backdropFilter: "blur(6px)",
+  zIndex: 99999,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+}
+
+const aprobarModalStyle: React.CSSProperties = {
+  background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))",
+  border: "1px solid rgba(148,163,184,0.14)",
+  borderRadius: 20,
+  boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+  padding: "28px 28px 24px",
+  width: "100%",
+  maxWidth: 400,
+}
+
+const aprobarSummaryStyle: React.CSSProperties = {
+  padding: "12px 16px",
+  borderRadius: 12,
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(148,163,184,0.10)",
 }
