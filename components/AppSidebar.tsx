@@ -16,15 +16,17 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
+const roleLevel = (r: string) => ({ admin: 2, editor: 1, viewer: 0 }[r] ?? 0)
+
 const navItems = [
   { href: "/", label: "Calendario", icon: "calendar" as const },
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
   { href: "/resources", label: "Inventario", icon: "inventory" as const },
-  { href: "/cotizaciones", label: "Cotizaciones", icon: "quotes" as const, adminOnly: true },
-  { href: "/proyectos", label: "Proyectos", icon: "projects" as const, adminOnly: true },
-  { href: "/empleados", label: "Empleados", icon: "employees" as const, adminOnly: true },
-  { href: "/proveedores", label: "Proveedores", icon: "suppliers" as const, adminOnly: true },
-  { href: "/users", label: "Usuarios", icon: "users" as const, adminOnly: true },
+  { href: "/cotizaciones", label: "Cotizaciones", icon: "quotes" as const, minRole: "editor" },
+  { href: "/proyectos", label: "Proyectos", icon: "projects" as const, minRole: "editor" },
+  { href: "/proveedores", label: "Proveedores", icon: "suppliers" as const, minRole: "editor" },
+  { href: "/empleados", label: "Empleados", icon: "employees" as const, minRole: "admin" },
+  { href: "/users", label: "Usuarios", icon: "users" as const, minRole: "admin" },
 ]
 
 export function AppSidebar({
@@ -45,7 +47,7 @@ export function AppSidebar({
   const mustChangePassword = !!profile?.must_change_password
   const visibleNavItems = mustChangePassword
     ? []
-    : navItems.filter((item) => !item.adminOnly || isAdmin)
+    : navItems.filter((item) => !item.minRole || roleLevel(role) >= roleLevel(item.minRole))
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/"

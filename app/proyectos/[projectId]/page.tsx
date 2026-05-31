@@ -161,7 +161,7 @@ export default function ProjectDetailPage() {
   const [showHoja, setShowHoja] = useState(false)
   const [showGeneral, setShowGeneral] = useState(false)
 
-  const isAdmin = profile?.role === "admin"
+  const isAdmin = profile?.role === "admin" || profile?.role === "editor"
 
   const activeModuleData = useMemo(
     () =>
@@ -195,7 +195,7 @@ export default function ProjectDetailPage() {
     const auth = await requireSessionProfile()
     if (!auth) return
 
-    if (auth.profile.role !== "admin") {
+    if (auth.profile.role !== "admin" && auth.profile.role !== "editor") {
       window.location.href = "/"
       return
     }

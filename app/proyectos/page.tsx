@@ -72,7 +72,7 @@ export default function ProyectosPage() {
   const [renameDescription, setRenameDescription] = useState("")
   const [moveTargetSubfolderId, setMoveTargetSubfolderId] = useState("")
 
-  const isAdmin = profile?.role === "admin"
+  const isAdmin = profile?.role === "admin" || profile?.role === "editor"
 
   const currentClient = useMemo(
     () =>
@@ -137,7 +137,7 @@ export default function ProyectosPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin") {
+    if (myProfile.role !== "admin" && myProfile.role !== "editor") {
       window.location.href = "/"
       return
     }
