@@ -104,11 +104,9 @@ function libItemFinancials(item: QuoteItemRow): { gasto: number; utilidad: numbe
   return { gasto: amount, utilidad: u, venta: amount + u }
 }
 
-// Real financials per item: same markup rate, but on actual amounts
-// The venta to the client is FIXED (lib_venta); real_utilidad = lib_venta - real_gasto
+// Real gasto por ítem — todos los ítems pueden tener gasto real capturado,
+// incluyendo los internos (real_expense === 1).
 function realItemGasto(item: QuoteItemRow, actual: ItemActual): number {
-  // Internal items have gasto=0 regardless
-  if (item.real_expense === 1) return 0
   return itemActualAmount(item, actual)
 }
 
@@ -118,9 +116,14 @@ function libTotal(item: QuoteItemRow): number {
 }
 
 // Real display total per item row (what appears in the "Total Real" column)
+// Para ítems internos (real_expense===1) no se aplica markup — el costo es lo que es.
+// Si no hay datos reales, se muestra el valor liberado como referencia.
 function realTotal(item: QuoteItemRow, actual: ItemActual): number {
-  if (item.real_expense === 1) return itemAmount(item) // internal stays fixed
   const actualAmt = itemActualAmount(item, actual)
+  if (item.real_expense === 1) {
+    // Interno: sin markup. Si no hay datos reales, muestra lib como placeholder.
+    return actualAmt > 0 ? actualAmt : itemAmount(item)
+  }
   const u = actualAmt * ((item.released_expense || 0) / 100)
   return actualAmt + u
 }
@@ -639,9 +642,16 @@ export default function LiberarPage() {
                               color: "#f8fafc",
                               fontSize: 13,
                               fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              flexWrap: "wrap",
                             }}
                           >
                             {item.description || "—"}
+                            {item.real_expense === 1 && (
+                              <span style={internoBadgeStyle}>Interno</span>
+                            )}
                           </p>
 
                           <div
@@ -806,10 +816,16 @@ export default function LiberarPage() {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
                           }}
                           title={item.description}
                         >
                           {item.description || "—"}
+                          {item.real_expense === 1 && (
+                            <span style={internoBadgeStyle}>Interno</span>
+                          )}
                         </span>
 
                         {/* Liberado cells */}
@@ -1599,4 +1615,19 @@ const addProvSaveStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
   boxShadow: "0 6px 20px rgba(124,58,237,0.25)",
+}
+
+const internoBadgeStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "2px 7px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 700,
+  color: "#34d399",
+  background: "rgba(52,211,153,0.10)",
+  border: "1px solid rgba(52,211,153,0.22)",
+  flexShrink: 0,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
 }
