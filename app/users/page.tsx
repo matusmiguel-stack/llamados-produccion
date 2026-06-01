@@ -274,6 +274,7 @@ export default function UsersPage() {
                   style={inputStyle}
                 >
                   <option value="viewer">Viewer</option>
+                  <option value="productor">Productor</option>
                   <option value="editor">Editor</option>
                   <option value="admin">Admin</option>
                 </select>
@@ -427,6 +428,11 @@ function roleBadgeStyle(role?: string): React.CSSProperties {
       bg: "rgba(14,165,233,0.14)",
       border: "rgba(56,189,248,0.24)",
       text: "#bae6fd",
+    },
+    productor: {
+      bg: "rgba(52,211,153,0.12)",
+      border: "rgba(52,211,153,0.22)",
+      text: "#6ee7b7",
     },
     viewer: {
       bg: "rgba(148,163,184,0.12)",

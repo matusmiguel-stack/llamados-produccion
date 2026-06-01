@@ -170,7 +170,13 @@ export default function ProjectDetailPage() {
   const [showGeneral, setShowGeneral] = useState(false)
   const [showEgresos, setShowEgresos] = useState(false)
 
-  const isAdmin = profile?.role === "admin" || profile?.role === "editor"
+  const isAdmin     = profile?.role === "admin" || profile?.role === "editor"
+  const isProductor = profile?.role === "productor"
+
+  // Productor solo puede ver y editar la Matriz
+  const visibleModules = isProductor
+    ? projectModules.filter((m) => m.id === "matriz")
+    : projectModules
 
   const activeModuleData = useMemo(
     () =>
@@ -205,7 +211,7 @@ export default function ProjectDetailPage() {
     const auth = await requireSessionProfile()
     if (!auth) return
 
-    if (auth.profile.role !== "admin" && auth.profile.role !== "editor") {
+    if (!["admin", "editor", "productor"].includes(auth.profile.role)) {
       window.location.href = "/"
       return
     }
@@ -362,10 +368,10 @@ export default function ProjectDetailPage() {
                 ...moduleGridStyle,
                 gridTemplateColumns: isMobile
                   ? "1fr"
-                  : "repeat(3, 1fr)",
+                  : isProductor ? "1fr" : "repeat(3, 1fr)",
               }}
             >
-              {projectModules.map((module) => {
+              {visibleModules.map((module) => {
                 const isActive = activeModule === module.id
                 return (
                   <button

@@ -16,18 +16,19 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-const roleLevel = (r: string) => ({ admin: 2, editor: 1, viewer: 0 }[r] ?? 0)
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users"
 
-const navItems = [
-  { href: "/", label: "Calendario", icon: "calendar" as const },
-  { href: "/dashboard", label: "Dashboard", icon: "dashboard" as const },
-  { href: "/resources", label: "Inventario", icon: "inventory" as const },
-  { href: "/cotizaciones", label: "Cotizaciones", icon: "quotes" as const, minRole: "editor" },
-  { href: "/proyectos", label: "Proyectos", icon: "projects" as const, minRole: "editor" },
-  { href: "/proveedores", label: "Proveedores", icon: "suppliers" as const, minRole: "editor" },
-  { href: "/ingresos", label: "Ingresos", icon: "ingresos" as const, minRole: "admin" },
-  { href: "/empleados", label: "Empleados", icon: "employees" as const, minRole: "admin" },
-  { href: "/users", label: "Usuarios", icon: "users" as const, minRole: "admin" },
+// roles: null/undefined = visible para todos; array = visible solo para esos roles
+const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
+  { href: "/",            label: "Calendario",   icon: "calendar"   },
+  { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "viewer"] },
+  { href: "/resources",   label: "Inventario",   icon: "inventory",  roles: ["admin", "editor", "viewer"] },
+  { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor"] },
+  { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "productor"] },
+  { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor"] },
+  { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin"] },
+  { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin"] },
+  { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin"] },
 ]
 
 export function AppSidebar({
@@ -48,7 +49,7 @@ export function AppSidebar({
   const mustChangePassword = !!profile?.must_change_password
   const visibleNavItems = mustChangePassword
     ? []
-    : navItems.filter((item) => !item.minRole || roleLevel(role) >= roleLevel(item.minRole))
+    : navItems.filter((item) => !item.roles || item.roles.includes(role))
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/"
@@ -290,6 +291,11 @@ function roleBadgeStyle(role: string): React.CSSProperties {
       bg: "rgba(14,165,233,0.12)",
       border: "rgba(56,189,248,0.22)",
       text: "#bae6fd",
+    },
+    productor: {
+      bg: "rgba(52,211,153,0.12)",
+      border: "rgba(52,211,153,0.22)",
+      text: "#6ee7b7",
     },
     viewer: {
       bg: "rgba(148,163,184,0.10)",

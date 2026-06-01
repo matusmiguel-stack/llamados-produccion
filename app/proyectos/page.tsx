@@ -142,7 +142,7 @@ export default function ProyectosPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin" && myProfile.role !== "editor") {
+    if (!["admin", "editor", "productor"].includes(myProfile.role)) {
       window.location.href = "/"
       return
     }
