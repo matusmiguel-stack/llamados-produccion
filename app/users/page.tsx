@@ -69,18 +69,21 @@ export default function UsersPage() {
   }
 
   async function saveUser(userId: string) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: editingName,
-        role: editingRole,
-      })
-      .eq("id", userId)
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) { alert("Sesión expirada"); return }
 
-    if (error) {
-      alert(error.message)
-      return
-    }
+    const res = await fetch("/api/admin/update-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, role: editingRole, full_name: editingName }),
+    })
+
+    const json = await res.json()
+    if (!res.ok) { alert(json.error || "Error al guardar"); return }
 
     cancelEdit()
     await loadPage()
