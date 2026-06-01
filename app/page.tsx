@@ -606,6 +606,8 @@ export default function Home() {
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
+      // Show first 800 chars of the ICS for diagnosis
+      alert("ICS CONTENT (primeros 800 chars):\n" + text.slice(0, 800))
       const parsed = parseICS(text)
       if (!parsed) {
         alert("No se pudo leer el archivo .ics. Asegúrate de que es un invite de calendario válido.")
