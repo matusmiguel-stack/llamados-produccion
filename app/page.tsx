@@ -1221,16 +1221,26 @@ function openEditVacation() {
       )
     }
 
-    // Enviar emails con ICS adjunto (fire-and-forget)
+    // Enviar emails con ICS adjunto
     if (juntaAttendees.length > 0 || juntaExternalEmails.length > 0) {
-      fetch("/api/juntas/send-invites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          junta: { ...payload, id: juntaId },
-          attendeeEmployeeIds: juntaAttendees,
-        }),
-      }).catch(() => {})
+      try {
+        const res = await fetch("/api/juntas/send-invites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            junta: { ...payload, id: juntaId },
+            attendeeEmployeeIds: juntaAttendees,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || data.error) {
+          alert(`Error al enviar invitaciones: ${data.error || res.statusText}`)
+        } else {
+          alert(`Invitaciones enviadas: ${data.sent} correo(s)`)
+        }
+      } catch (e: any) {
+        alert(`Error al enviar invitaciones: ${e.message}`)
+      }
     }
 
     setModalOpen(false)
