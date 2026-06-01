@@ -171,10 +171,11 @@ export async function sendJuntaInvites(params: {
   // 1. Collect employee emails
   const employeeEmails: string[] = []
   if (attendeeEmployeeIds.length > 0) {
-    const { data: emps } = await admin
+    const { data: emps, error: empsError } = await admin
       .from("employees")
       .select("email")
       .in("id", attendeeEmployeeIds)
+    console.log("[junta-email] employees query:", { emps, empsError })
     for (const e of emps || []) {
       if (e.email) employeeEmails.push(e.email)
     }
@@ -184,6 +185,7 @@ export async function sendJuntaInvites(params: {
   const externalEmails = (junta.external_emails || []).filter((e) => e.includes("@"))
 
   const allRecipients = [...new Set([...employeeEmails, ...externalEmails])]
+  console.log("[junta-email] recipients:", allRecipients)
   if (!allRecipients.length) return { sent: 0 }
 
   // 3. Build ICS + HTML
