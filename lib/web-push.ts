@@ -1,11 +1,17 @@
 import webpush from "web-push"
 import { createAdminClient } from "./supabase-admin"
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
+// Inicialización lazy — solo cuando las vars estén disponibles en runtime
+let vapidReady = false
+function initVapid() {
+  if (vapidReady) return
+  const subject = process.env.VAPID_SUBJECT
+  const pub     = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const priv    = process.env.VAPID_PRIVATE_KEY
+  if (!subject || !pub || !priv) return  // no-op si faltan vars
+  webpush.setVapidDetails(subject, pub, priv)
+  vapidReady = true
+}
 
 export type PushPayload = {
   title: string
@@ -18,6 +24,7 @@ export type PushPayload = {
  * Elimina automáticamente las suscripciones inválidas (expired/gone).
  */
 export async function sendPushToUser(userId: string, payload: PushPayload) {
+  initVapid()
   const admin = createAdminClient()
   const { data: subs } = await admin
     .from("push_subscriptions")
