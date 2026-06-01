@@ -262,6 +262,11 @@ export default function IngresosPage() {
     return !!ref && ref < today
   })
   const totalVencido = overdueRows.reduce((s, r) => s + r.subtotal + r.iva, 0)
+  const globalOverdue = ingresos.filter(r => {
+    if (r.estatus === "pagado") return false
+    const ref = r.fecha_pago || r.fecha_aprox_pago
+    return !!ref && ref < today
+  }).reduce((s, r) => s + r.subtotal + r.iva, 0)
 
   if (!profile) return null
 
@@ -290,9 +295,12 @@ export default function IngresosPage() {
 
         {/* ── Global summary ── */}
         <div style={summaryRowStyle}>
-          <SummaryCard label="Total vendido" value={globalVendido} color="#a78bfa" />
-          <SummaryCard label="Cobrado"        value={globalCobrado}   color="#4ade80" />
-          <SummaryCard label="Por cobrar"     value={globalPendiente} color="#fb923c" />
+          <SummaryCard label="Total vendido"  value={globalVendido}   color="#a78bfa" />
+          <SummaryCard label="Cobrado"         value={globalCobrado}   color="#4ade80" />
+          <SummaryCard label="Por cobrar"      value={globalPendiente} color="#fb923c" />
+          {globalOverdue > 0 && (
+            <SummaryCard label="⚠ Pagos vencidos" value={globalOverdue} color="#f87171" />
+          )}
         </div>
 
         {/* ── Empresa tabs ── */}
@@ -323,17 +331,6 @@ export default function IngresosPage() {
             <span style={{ color: "#fb923c", fontWeight: 600 }}>{fmt(totalPendiente)}</span>
           </span>
         </div>
-
-        {/* ── Overdue warning ── */}
-        {overdueRows.length > 0 && (
-          <div style={{ marginBottom: 14, maxWidth: 280 }}>
-            <SummaryCard
-              label={`⚠ Pagos vencidos (${overdueRows.length})`}
-              value={totalVencido}
-              color="#f87171"
-            />
-          </div>
-        )}
 
         {/* ── Status filter ── */}
         <div style={statusFilterStyle}>
@@ -697,7 +694,7 @@ const newBtnStyle: React.CSSProperties = {
 
 const summaryRowStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   gap: 14,
   marginBottom: 24,
 }
