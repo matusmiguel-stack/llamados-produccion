@@ -254,13 +254,13 @@ export default function IngresosPage() {
   const globalCobrado   = ingresos.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal, 0)
   const globalPendiente = globalVendido - globalCobrado
 
-  // Overdue: fecha_aprox_pago set + not paid + date is in the past
+  // Overdue: any date field set + not paid + date is in the past
   const today = new Date().toISOString().split("T")[0]
-  const overdueRows = empresaRows.filter(r =>
-    r.estatus !== "pagado" &&
-    !!r.fecha_aprox_pago &&
-    r.fecha_aprox_pago < today
-  )
+  const overdueRows = empresaRows.filter(r => {
+    if (r.estatus === "pagado") return false
+    const ref = r.fecha_pago || r.fecha_aprox_pago
+    return !!ref && ref < today
+  })
   const totalVencido = overdueRows.reduce((s, r) => s + r.subtotal + r.iva, 0)
 
   if (!profile) return null
@@ -398,7 +398,8 @@ export default function IngresosPage() {
               <tbody>
                 {rows.map((r, i) => {
                   const cfg = ESTATUS[r.estatus]
-                  const isOverdue = r.estatus !== "pagado" && !!r.fecha_aprox_pago && r.fecha_aprox_pago < today
+                  const fechaRef = r.fecha_pago || r.fecha_aprox_pago
+                  const isOverdue = r.estatus !== "pagado" && !!fechaRef && fechaRef < today
                   return (
                     <tr
                       key={r.id}
