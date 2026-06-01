@@ -9,6 +9,7 @@ import { AppSidebar } from "../../../components/AppSidebar"
 import { MatrizPanel } from "./MatrizPanel"
 import { HojaLlamadoPanel } from "./HojaLlamadoPanel"
 import { InformacionGeneralPanel } from "./InformacionGeneralPanel"
+import { EgresosPanel } from "./EgresosPanel"
 
 type Project = {
   id: string
@@ -62,7 +63,7 @@ type QuoteDetail = {
 }
 
 type ProjectModule = {
-  id: "general" | "cotizaciones" | "presupuesto" | "matriz" | "hoja-llamado"
+  id: "general" | "cotizaciones" | "presupuesto" | "matriz" | "hoja-llamado" | "egresos"
   label: string
   description: string
   icon: string
@@ -99,6 +100,12 @@ const projectModules: ProjectModule[] = [
     label: "Hoja de llamado",
     description: "Detalle operativo de cada jornada de shoot",
     icon: "callsheet",
+  },
+  {
+    id: "egresos",
+    label: "Control de egresos",
+    description: "Proveedores y montos liberados por cotización",
+    icon: "expenses",
   },
 ]
 
@@ -161,6 +168,7 @@ export default function ProjectDetailPage() {
   const [showMatriz, setShowMatriz] = useState(false)
   const [showHoja, setShowHoja] = useState(false)
   const [showGeneral, setShowGeneral] = useState(false)
+  const [showEgresos, setShowEgresos] = useState(false)
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor"
 
@@ -185,6 +193,7 @@ export default function ProjectDetailPage() {
         setShowMatriz(false)
         setShowHoja(false)
         setShowGeneral(false)
+        setShowEgresos(false)
         setSelectedQuote(null)
       }
     }
@@ -369,6 +378,8 @@ export default function ProjectDetailPage() {
                         setShowMatriz(true)
                       } else if (module.id === "hoja-llamado") {
                         setShowHoja(true)
+                      } else if (module.id === "egresos") {
+                        setShowEgresos(true)
                       } else {
                         setActiveModule(module.id)
                       }
@@ -537,6 +548,47 @@ export default function ProjectDetailPage() {
               }}
             >
               <HojaLlamadoPanel
+                projectId={projectId}
+                isMobile={isMobile}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Control de Egresos */}
+      {showEgresos && (
+        <div
+          className="modal-overlay"
+          style={modalOverlayStyle}
+          onClick={() => setShowEgresos(false)}
+        >
+          <div
+            className="modal-panel"
+            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : 1000 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={modalHeaderStyle}>
+              <div>
+                <p style={modalEyebrowStyle}>Proyecto · {project?.name}</p>
+                <h2 style={modalTitleStyle}>Control de egresos</h2>
+              </div>
+              <button
+                onClick={() => setShowEgresos(false)}
+                style={modalCloseStyle}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              style={{
+                padding: isMobile ? "16px 14px 28px" : "20px 28px 32px",
+                overflowY: "auto",
+                maxHeight: "82vh",
+              }}
+            >
+              <EgresosPanel
                 projectId={projectId}
                 isMobile={isMobile}
               />
@@ -1597,6 +1649,34 @@ function ModuleIcon({ type }: { type: string }) {
         />
         <path
           d="M16 4v4h4M8 13h8M8 17h5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+
+  if (type === "expenses") {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M3 7h18M3 12h18M3 17h18"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        <rect
+          x="3"
+          y="4"
+          width="18"
+          height="16"
+          rx="2"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <path
+          d="M7 12v3M12 10v5M17 9v6"
           stroke="currentColor"
           strokeWidth="1.6"
           strokeLinecap="round"
