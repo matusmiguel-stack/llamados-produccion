@@ -410,8 +410,8 @@ export default function ProjectDetailPage() {
               })}
             </div>
 
-            {/* Panel del módulo activo */}
-            <section style={modulePanelStyle}>
+            {/* Panel del módulo activo — oculto para productor (solo usa modal de Matriz) */}
+            <section style={modulePanelStyle} hidden={isProductor}>
               {activeModule === "cotizaciones" ? (
                 <QuotesPanel
                   quotes={quotes}
