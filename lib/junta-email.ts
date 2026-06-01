@@ -1,7 +1,11 @@
 import { Resend } from "resend"
 import { createAdminClient } from "./supabase-admin"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 const FROM = process.env.RESEND_FROM || "Retro Casa <noreply@retrocasa.com>"
 
@@ -196,7 +200,7 @@ export async function sendJuntaInvites(params: {
   let sent = 0
   for (const email of allRecipients) {
     try {
-      await resend.emails.send({
+      await getResend().emails.send({
         from: FROM,
         to: email,
         subject,
