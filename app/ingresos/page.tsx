@@ -254,6 +254,15 @@ export default function IngresosPage() {
   const globalCobrado   = ingresos.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal, 0)
   const globalPendiente = globalVendido - globalCobrado
 
+  // Overdue: fecha_aprox_pago set + not paid + date is in the past
+  const today = new Date().toISOString().split("T")[0]
+  const overdueRows = empresaRows.filter(r =>
+    r.estatus !== "pagado" &&
+    !!r.fecha_aprox_pago &&
+    r.fecha_aprox_pago < today
+  )
+  const totalVencido = overdueRows.reduce((s, r) => s + r.subtotal + r.iva, 0)
+
   if (!profile) return null
 
   return (
@@ -315,6 +324,31 @@ export default function IngresosPage() {
           </span>
         </div>
 
+        {/* ── Overdue warning ── */}
+        {overdueRows.length > 0 && (
+          <div style={overdueBoxStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 22, lineHeight: 1 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#fca5a5" }}>
+                  {overdueRows.length} pago{overdueRows.length !== 1 ? "s" : ""} vencido{overdueRows.length !== 1 ? "s" : ""}
+                </div>
+                <div style={{ fontSize: 12, color: "#f87171", marginTop: 2 }}>
+                  Con fecha de pago vencida y sin marcar como pagados — requieren atención de finanzas
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 16 }}>
+              <div style={{ fontSize: 10, color: "#f87171", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 2 }}>
+                Total vencido (c/IVA)
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#fca5a5", fontFamily: "monospace" }}>
+                {fmt(totalVencido)}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Status filter ── */}
         <div style={statusFilterStyle}>
           <button
@@ -364,16 +398,27 @@ export default function IngresosPage() {
               <tbody>
                 {rows.map((r, i) => {
                   const cfg = ESTATUS[r.estatus]
+                  const isOverdue = r.estatus !== "pagado" && !!r.fecha_aprox_pago && r.fecha_aprox_pago < today
                   return (
                     <tr
                       key={r.id}
-                      style={{ ...trStyle, background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)" }}
+                      style={{
+                        ...trStyle,
+                        background: isOverdue
+                          ? "rgba(239,68,68,0.07)"
+                          : i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
+                      }}
                     >
                       <td style={tdStyle}>
-                        <span style={estatusBadgeStyle(cfg)}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block", marginRight: 5, flexShrink: 0 }} />
-                          {cfg.label}
-                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={estatusBadgeStyle(cfg)}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block", marginRight: 5, flexShrink: 0 }} />
+                            {cfg.label}
+                          </span>
+                          {isOverdue && (
+                            <span style={overdueBadgeStyle}>⚠ Vencido</span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
                       <td style={{ ...tdStyle, fontWeight: 600, color: "#e2e8f0" }}>{r.cliente_agencia}</td>
@@ -391,7 +436,7 @@ export default function IngresosPage() {
                       <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#a78bfa", fontWeight: 600 }}>
                         {fmt(r.subtotal + r.iva)}
                       </td>
-                      <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : "#64748b", fontSize: 12 }}>
+                      <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", fontSize: 12, fontWeight: isOverdue ? 600 : undefined }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{r.mes_cierre || "—"}</td>
@@ -919,4 +964,30 @@ const closeBtnStyle: React.CSSProperties = {
   fontSize: 16,
   cursor: "pointer",
   padding: "2px 6px",
+}
+
+const overdueBoxStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "14px 20px",
+  borderRadius: 12,
+  background: "rgba(239,68,68,0.09)",
+  border: "1px solid rgba(239,68,68,0.32)",
+  marginBottom: 14,
+  flexWrap: "wrap",
+  gap: 12,
+}
+
+const overdueBadgeStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "2px 8px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 700,
+  color: "#fca5a5",
+  background: "rgba(239,68,68,0.20)",
+  border: "1px solid rgba(239,68,68,0.38)",
+  whiteSpace: "nowrap",
 }
