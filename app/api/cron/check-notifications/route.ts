@@ -51,20 +51,16 @@ export async function GET(req: Request) {
     }
   }
 
-  // ── 2. Juntas próximas (siguiente 30 min) ─────────────────────────────────
+  // ── 2. Juntas de hoy (recordatorio matutino) ──────────────────────────────
+  // El cron corre a las 8am — notifica todas las juntas del día a sus asistentes
   const now = new Date()
-  const in30 = new Date(now.getTime() + 30 * 60 * 1000)
-
-  const todayDate = now.toISOString().split("T")[0]
-  const nowTime   = now.toTimeString().slice(0, 5)   // "HH:MM"
-  const in30Time  = in30.toTimeString().slice(0, 5)
+  const todayDate = new Date(now.toLocaleString("sv", { timeZone: "America/Mexico_City" }))
+    .toISOString().split("T")[0]
 
   const { data: juntas } = await admin
     .from("juntas")
     .select("id, tipo, hora_inicio")
     .eq("fecha", todayDate)
-    .gte("hora_inicio", nowTime)
-    .lte("hora_inicio", in30Time)
 
   for (const junta of juntas || []) {
     const { data: attendees } = await admin
@@ -81,8 +77,8 @@ export async function GET(req: Request) {
       if (!isNew) continue
 
       await sendPushToUser(profileId, {
-        title: `📋 Junta en ~30 min`,
-        body: `${junta.tipo} · ${junta.hora_inicio} — ¡prepárate!`,
+        title: `📋 Junta hoy`,
+        body: `${junta.tipo} · ${junta.hora_inicio} — tienes una junta programada hoy`,
         url: "/",
       })
       results.push(`junta_proxima: ${junta.tipo} ${junta.hora_inicio} → ${profileId}`)
