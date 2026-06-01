@@ -601,11 +601,14 @@ export default function Home() {
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
+      // Debug: find raw DTSTART line
+      const dtLine = text.split(/\r?\n/).find(l => l.toUpperCase().startsWith("DTSTART")) || "no encontrado"
       const parsed = parseICS(text)
       if (!parsed) {
-        alert("No se pudo leer el archivo .ics. Asegúrate de que es un invite de calendario válido.")
+        alert(`No se pudo leer el archivo .ics.\n\nLínea DTSTART encontrada:\n${dtLine}`)
         return
       }
+      alert(`DEBUG (temporal)\nDTSTART raw: ${dtLine}\n→ Fecha: ${parsed.fecha}\n→ Hora: ${parsed.horaInicio}`)
       resetForm()
       setEntryMode("junta")
       setJuntaDate(parsed.fecha)
