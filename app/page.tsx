@@ -9,6 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 import { requireSessionProfile } from "../lib/session-profile"
 import { AppSidebar } from "../components/AppSidebar"
+import { PushNotificationManager } from "../components/PushNotificationManager"
 import { DatePickerField } from "../components/DatePickerField"
 import {
   DraggableModalPanel,
@@ -1093,6 +1094,20 @@ function openEditVacation() {
           employee_id: employeeId,
         }))
       )
+      // Notificar a los empleados asignados
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        fetch("/api/push/shoot-assigned", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shootId,
+            shootTitle: title,
+            shootDate: selectedDate,
+            employeeIds: selectedEmployees,
+          }),
+        }).catch(() => {}) // fire-and-forget
+      }
     }
 
     if (selectedResources.length > 0) {
@@ -1575,6 +1590,8 @@ function openEditVacation() {
             ...(isMobile ? pageContainerMobileStyle : {}),
           }}
         >
+          {user && <PushNotificationManager userId={user.id} />}
+
           <header style={pageHeaderStyle}>
             <div>
               <h1 style={pageTitleStyle}>Calendario</h1>
