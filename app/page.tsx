@@ -128,6 +128,7 @@ export default function Home() {
   const calendarShellRef = useRef<HTMLDivElement>(null)
   const calendarRef = useRef<FullCalendar>(null)
   const dayNumberNavRef = useRef(false)
+  const icsInputRef = useRef<HTMLInputElement>(null)
 
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
@@ -501,6 +502,72 @@ export default function Home() {
     } finally {
       setSavingClient(false)
     }
+  }
+
+  // ── Importar invite .ics ───────────────────────────────────────────────────
+  function parseICS(text: string): { fecha: string; horaInicio: string; horaFin: string; titulo: string } | null {
+    // Unfold multi-line values (RFC 5545: continuation lines start with space/tab)
+    const unfolded = text.replace(/\r?\n[ \t]/g, "")
+    const lines = unfolded.split(/\r?\n/)
+
+    // Get property value, ignoring parameters (e.g. DTSTART;TZID=America/Mexico_City:...)
+    function getProp(name: string): string | null {
+      for (const line of lines) {
+        const col = line.indexOf(":")
+        if (col < 0) continue
+        const key = line.slice(0, col).split(";")[0].toUpperCase()
+        if (key === name.toUpperCase()) return line.slice(col + 1).trim()
+      }
+      return null
+    }
+
+    // Parse DTSTART/DTEND: YYYYMMDD or YYYYMMDDTHHmmSS[Z]
+    function parseDateTime(dt: string | null): { fecha: string; hora: string } | null {
+      if (!dt) return null
+      const d = dt.replace("Z", "")
+      if (d.length === 8) {
+        // All-day: YYYYMMDD
+        return { fecha: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`, hora: "" }
+      }
+      const datePart = d.slice(0, 8)
+      const timePart = d.slice(9, 13) // HHMM
+      return {
+        fecha: `${datePart.slice(0,4)}-${datePart.slice(4,6)}-${datePart.slice(6,8)}`,
+        hora:  `${timePart.slice(0,2)}:${timePart.slice(2,4)}`,
+      }
+    }
+
+    const start = parseDateTime(getProp("DTSTART"))
+    if (!start) return null
+    const end = parseDateTime(getProp("DTEND"))
+    const summary = getProp("SUMMARY") || ""
+
+    return {
+      fecha:       start.fecha,
+      horaInicio:  start.hora || "09:00",
+      horaFin:     end?.hora  || "",
+      titulo:      summary.replace(/\\,/g, ",").replace(/\\n/g, " ").replace(/\\/g, ""),
+    }
+  }
+
+  function handleICSImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const parsed = parseICS(text)
+      if (!parsed) { alert("No se pudo leer el archivo .ics. Asegúrate de que es un invite de calendario válido."); return }
+      resetForm()
+      setEntryMode("junta")
+      setJuntaDate(parsed.fecha)
+      setJuntaStartTime(parsed.horaInicio)
+      setJuntaEndTime(parsed.horaFin)
+      setJuntaNotas(parsed.titulo)
+      setModalOpen(true)
+    }
+    reader.readAsText(file)
+    e.target.value = "" // allow re-selecting the same file
   }
 
   function resetForm() {
@@ -1454,6 +1521,24 @@ function openEditVacation() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Input oculto para importar .ics */}
+              <input
+                ref={icsInputRef}
+                type="file"
+                accept=".ics,text/calendar"
+                style={{ display: "none" }}
+                onChange={handleICSImport}
+              />
+              {/* Botón importar invite */}
+              {canEdit && (
+                <button
+                  onClick={() => icsInputRef.current?.click()}
+                  title="Importar invite de cliente (.ics)"
+                  style={importIcsBtnStyle}
+                >
+                  📅 Importar invite
+                </button>
+              )}
               {/* Indicador de sincronización en vivo */}
               <div
                 title={liveConnected ? "Sincronización en vivo activa" : "Conectando..."}
@@ -4167,4 +4252,19 @@ const compactNoteStyle: React.CSSProperties = {
   padding: 12,
   background: "rgba(255,255,255,0.045)",
   border: "1px solid rgba(255,255,255,0.08)",
+}
+
+const importIcsBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "6px 13px",
+  borderRadius: 9,
+  border: "1px solid rgba(8,145,178,0.35)",
+  background: "rgba(8,145,178,0.10)",
+  color: "#67e8f9",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 }
