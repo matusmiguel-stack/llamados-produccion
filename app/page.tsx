@@ -535,32 +535,26 @@ export default function Home() {
       return false
     }
 
-    // Parse YYYYMMDD or YYYYMMDDTHHmmSS[Z] → {fecha, hora}
-    // If isUTC=true, convert to America/Mexico_City using Intl API
-    function parseDateTime(dt: string | null, isUTC: boolean): { fecha: string; hora: string } | null {
+    // Parse YYYYMMDD[THHmmSS[Z]] — handles both compact (20260601T140000) and
+    // extended (2026-06-01T14:00:00) ISO formats.
+    // We intentionally do NOT convert UTC to local: showing the raw client time
+    // is more useful — the user adjusts if needed.
+    function parseDateTime(dt: string | null): { fecha: string; hora: string } | null {
       if (!dt) return null
-      const raw = dt.replace("Z", "")
-      if (raw.length === 8) {
-        // All-day: YYYYMMDD
-        return { fecha: `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`, hora: "" }
+      const raw = dt.replace("Z", "").trim()
+      const hasT = raw.toUpperCase().includes("T")
+
+      if (raw.includes("-")) {
+        // Extended format: 2026-06-01[T14:00:00]
+        const fecha = raw.slice(0, 10)
+        const hora  = hasT ? raw.slice(11, 16) : "" // "HH:MM"
+        return { fecha, hora }
       }
-      if (isUTC) {
-        // Build ISO string and convert to Mexico City local time
-        const iso = `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}T${raw.slice(9,11)}:${raw.slice(11,13)}:${raw.slice(13,15)}Z`
-        try {
-          const d = new Date(iso)
-          const fecha = d.toLocaleDateString("sv", { timeZone: "America/Mexico_City" })   // "YYYY-MM-DD"
-          const hora  = d.toLocaleTimeString("sv", { timeZone: "America/Mexico_City",
-                                                     hour: "2-digit", minute: "2-digit",
-                                                     hour12: false }).slice(0, 5)           // "HH:MM"
-          return { fecha, hora }
-        } catch { /* fallback below */ }
-      }
-      // Floating / already local / TZID (use raw value as-is)
-      return {
-        fecha: `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`,
-        hora:  `${raw.slice(9,11)}:${raw.slice(11,13)}`,
-      }
+
+      // Compact format: 20260601[T140000]
+      const fecha = `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`
+      const hora  = hasT ? `${raw.slice(9,11)}:${raw.slice(11,13)}` : ""
+      return { fecha, hora }
     }
 
     // Extract first Zoom / Meet / Teams / Webex URL from any field
@@ -584,11 +578,10 @@ export default function Home() {
 
     const startRaw = getProp("DTSTART")
     if (!startRaw) return null
-    const isUTC = dtHasZ("DTSTART")
 
-    const start = parseDateTime(startRaw, isUTC)
+    const start = parseDateTime(startRaw)
     if (!start) return null
-    const end = parseDateTime(getProp("DTEND"), dtHasZ("DTEND"))
+    const end = parseDateTime(getProp("DTEND"))
 
     const cleanText = (s: string) =>
       s.replace(/\\,/g, ",").replace(/\\n/gi, " ").replace(/\\/g, "").trim()
@@ -1927,7 +1920,12 @@ function openEditVacation() {
                     </div>
                     <div style={formModalRowStyle}>
                       <div style={{ flex: 1 }}>
-                        <label style={formModalLabelStyle}>Hora inicio</label>
+                        <label style={formModalLabelStyle}>
+                          Hora inicio
+                          <span style={{ marginLeft: 6, fontSize: 10, color: "#64748b", fontWeight: 400 }}>
+                            (hora del invite — ajusta si es necesario)
+                          </span>
+                        </label>
                         <input
                           type="time"
                           value={juntaStartTime}
