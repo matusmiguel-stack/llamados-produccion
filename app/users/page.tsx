@@ -336,6 +336,7 @@ export default function UsersPage() {
                           style={inputStyle}
                         >
                           <option value="viewer">Viewer</option>
+                          <option value="productor">Productor</option>
                           <option value="editor">Editor</option>
                           <option value="admin">Admin</option>
                         </select>
