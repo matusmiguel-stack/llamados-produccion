@@ -199,9 +199,12 @@ export default function Home() {
   const [juntaDate, setJuntaDate] = useState("")
   const [juntaStartTime, setJuntaStartTime] = useState("09:00")
   const [juntaEndTime, setJuntaEndTime] = useState("")
+  const [juntaTitulo, setJuntaTitulo] = useState("")
   const [juntaNotas, setJuntaNotas] = useState("")
   const [juntaLink, setJuntaLink] = useState("")
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
+  const [juntaExternalEmails, setJuntaExternalEmails] = useState<string[]>([])
+  const [juntaEmailInput, setJuntaEmailInput] = useState("")
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
   const [showAddClient, setShowAddClient] = useState(false)
@@ -450,7 +453,7 @@ export default function Home() {
       const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : "🤝"
       return {
         id: `${JUNTA_EVENT_PREFIX}${j.id}`,
-        title: `${emoji} ${j.tipo}`,
+        title: j.titulo ? `${emoji} ${j.titulo}` : `${emoji} ${j.tipo}`,
         start: j.hora_inicio ? `${j.fecha}T${j.hora_inicio}` : j.fecha,
         end:   j.hora_fin    ? `${j.fecha}T${j.hora_fin}`    : undefined,
         allDay: !j.hora_inicio,
@@ -664,9 +667,12 @@ export default function Home() {
     setJuntaDate("")
     setJuntaStartTime("09:00")
     setJuntaEndTime("")
+    setJuntaTitulo("")
     setJuntaNotas("")
     setJuntaLink("")
     setJuntaAttendees([])
+    setJuntaExternalEmails([])
+    setJuntaEmailInput("")
     setSelectedJunta(null)
     setJuntaDetailsOpen(false)
   }
@@ -1185,11 +1191,13 @@ function openEditVacation() {
 
     const payload = {
       tipo:        juntaTipo,
+      titulo:      juntaTitulo.trim() || null,
       fecha:       juntaDate,
       hora_inicio: juntaStartTime || "09:00",
       hora_fin:    juntaEndTime   || null,
       notas:       juntaNotas.trim() || null,
       link:        juntaLink.trim()  || null,
+      external_emails: juntaExternalEmails.length > 0 ? juntaExternalEmails : null,
       created_by:  user?.id || null,
       updated_at:  new Date().toISOString(),
     }
@@ -1211,6 +1219,18 @@ function openEditVacation() {
       await supabase.from("junta_attendees").insert(
         juntaAttendees.map((emp_id) => ({ junta_id: juntaId, employee_id: emp_id }))
       )
+    }
+
+    // Enviar emails con ICS adjunto (fire-and-forget)
+    if (juntaAttendees.length > 0 || juntaExternalEmails.length > 0) {
+      fetch("/api/juntas/send-invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          junta: { ...payload, id: juntaId },
+          attendeeEmployeeIds: juntaAttendees,
+        }),
+      }).catch(() => {})
     }
 
     setModalOpen(false)
@@ -1946,6 +1966,18 @@ function openEditVacation() {
                       </div>
                     </div>
 
+                    {/* Título */}
+                    <div>
+                      <label style={formModalLabelStyle}>Título</label>
+                      <input
+                        type="text"
+                        value={juntaTitulo}
+                        onChange={(e) => setJuntaTitulo(e.target.value)}
+                        style={formModalInputStyle}
+                        placeholder="Ej. Kick-off campaña verano"
+                      />
+                    </div>
+
                     {/* Fecha y horas */}
                     <div style={formModalRowStyle}>
                       <DatePickerField
@@ -2039,6 +2071,73 @@ function openEditVacation() {
                             </button>
                           )
                         })}
+                      </div>
+                    </div>
+
+                    {/* Invitar personas externas */}
+                    <div>
+                      <label style={formModalLabelStyle}>
+                        Invitar personas externas
+                        <span style={{ marginLeft: 6, fontSize: 10, color: "#64748b", fontWeight: 400 }}>
+                          (recibirán email con .ics)
+                        </span>
+                      </label>
+                      {/* Chips de emails externos */}
+                      {juntaExternalEmails.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, marginTop: 6 }}>
+                          {juntaExternalEmails.map((email) => (
+                            <span key={email} style={{
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              padding: "3px 10px", borderRadius: 999,
+                              background: "rgba(14,165,233,0.12)",
+                              border: "1px solid rgba(56,189,248,0.25)",
+                              color: "#7dd3fc", fontSize: 12,
+                            }}>
+                              {email}
+                              <button
+                                type="button"
+                                onClick={() => setJuntaExternalEmails(prev => prev.filter(e => e !== email))}
+                                style={{ background: "none", border: "none", color: "#7dd3fc", cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}
+                              >×</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          type="email"
+                          value={juntaEmailInput}
+                          onChange={(e) => setJuntaEmailInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === ",") {
+                              e.preventDefault()
+                              const email = juntaEmailInput.trim().replace(/,$/, "")
+                              if (email.includes("@") && !juntaExternalEmails.includes(email)) {
+                                setJuntaExternalEmails(prev => [...prev, email])
+                              }
+                              setJuntaEmailInput("")
+                            }
+                          }}
+                          style={formModalInputStyle}
+                          placeholder="nombre@empresa.com — Enter para agregar"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const email = juntaEmailInput.trim()
+                            if (email.includes("@") && !juntaExternalEmails.includes(email)) {
+                              setJuntaExternalEmails(prev => [...prev, email])
+                            }
+                            setJuntaEmailInput("")
+                          }}
+                          style={{
+                            padding: "0 14px", borderRadius: 8, border: "1px solid rgba(56,189,248,0.25)",
+                            background: "rgba(14,165,233,0.10)", color: "#7dd3fc",
+                            fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                          }}
+                        >
+                          + Agregar
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2605,7 +2704,7 @@ function openEditVacation() {
                 <div>
                   <h2 style={formModalTitleStyle}>
                     {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : "🤝"}{" "}
-                    {selectedJunta.tipo}
+                    {selectedJunta.titulo || selectedJunta.tipo}
                   </h2>
                   <p style={formModalMetaStyle}>
                     {formatVacationDate(selectedJunta.fecha)}
@@ -2625,6 +2724,9 @@ function openEditVacation() {
 
               <div style={formModalBodyStyle}>
                 <div style={formModalColumnStyle}>
+                  {selectedJunta.titulo && (
+                    <FormModalPreviewField label="Título" value={selectedJunta.titulo} />
+                  )}
                   <div style={formModalRowStyle}>
                     <FormModalPreviewField label="Tipo" value={selectedJunta.tipo} />
                     <FormModalPreviewField label="Fecha" value={formatVacationDate(selectedJunta.fecha)} />
@@ -2718,6 +2820,7 @@ function openEditVacation() {
                     onClick={() => {
                       // Pre-fill form for editing
                       setJuntaTipo(selectedJunta.tipo as "Brief" | "PPM" | "Junta Cliente")
+                      setJuntaTitulo(selectedJunta.titulo || "")
                       setJuntaDate(selectedJunta.fecha)
                       setJuntaStartTime(selectedJunta.hora_inicio || "09:00")
                       setJuntaEndTime(selectedJunta.hora_fin || "")
