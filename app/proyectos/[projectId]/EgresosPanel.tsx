@@ -8,10 +8,18 @@ import { supabase } from "../../../lib/supabase"
 type EgresoItem = {
   id: string
   description: string
+  // liberado
   qty: number
   days: number
   unit_price: number
-  supplier: string | null
+  // real (pueden estar vacíos)
+  actual_qty: number | null
+  actual_days: number | null
+  actual_unit_price: number | null
+  // proveedor resuelto
+  supplierLabel: string
+  supplierType: "proveedor" | "empleado"
+  // agrupación
   section_name: string
   quote_id: string
   quote_name: string
@@ -21,6 +29,17 @@ type EgresoItem = {
 
 function fmt(n: number): string {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+}
+
+/** Monto efectivo a pagar: usa valores reales si alguno fue capturado,
+ *  si no usa los valores liberados originales. */
+function montoEgreso(item: EgresoItem): number {
+  const hasActual = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
+  if (!hasActual) return item.qty * item.days * item.unit_price
+  const q = item.actual_qty        ?? Math.max(item.qty, 1)
+  const d = item.actual_days       ?? Math.max(item.days, 1)
+  const p = item.actual_unit_price ?? item.unit_price
+  return q * d * p
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -39,22 +58,19 @@ export function EgresosPanel({
     async function load() {
       setLoading(true)
 
-      // 1. Load all quotes for this project
+      // 1. Quotes del proyecto
       const { data: quotes } = await supabase
         .from("quotes")
         .select("id, name")
         .eq("project_id", projectId)
         .order("created_at", { ascending: true })
 
-      if (!quotes || quotes.length === 0) {
-        setLoading(false)
-        return
-      }
+      if (!quotes || quotes.length === 0) { setLoading(false); return }
 
       const allItems: EgresoItem[] = []
 
       for (const quote of quotes) {
-        // 2. Load sections for this quote
+        // 2. Secciones de la cotización
         const { data: sections } = await supabase
           .from("quote_sections")
           .select("id, name")
@@ -64,23 +80,61 @@ export function EgresosPanel({
         if (!sections) continue
 
         for (const section of sections) {
-          // 3. Load items that have a supplier assigned
-          const { data: sectionItems } = await supabase
+          // 3. Items con proveedor o empleado asignado en la liberación
+          //    actual_supplier_id → proveedor externo del catálogo
+          //    actual_employee_id → empleado interno RETRO
+          const { data: raw } = await supabase
             .from("quote_items")
-            .select("id, description, qty, days, unit_price, supplier")
+            .select(`
+              id, description,
+              qty, days, unit_price,
+              actual_qty, actual_days, actual_unit_price,
+              actual_supplier_id, actual_employee_id,
+              proveedores:actual_supplier_id ( nombre, apellido, empresa ),
+              employees:actual_employee_id   ( nombre, apellido_paterno, apellido_materno )
+            `)
             .eq("section_id", section.id)
-            .not("supplier", "is", null)
             .order("order_index", { ascending: true })
 
-          if (!sectionItems) continue
+          if (!raw) continue
 
-          for (const item of sectionItems) {
-            if (!item.supplier) continue
+          for (const row of raw as any[]) {
+            const hasProv = !!row.actual_supplier_id
+            const hasEmp  = !!row.actual_employee_id
+            if (!hasProv && !hasEmp) continue   // sin proveedor/empleado → ignorar
+
+            let supplierLabel = "—"
+            let supplierType: "proveedor" | "empleado" = "proveedor"
+
+            if (hasProv && row.proveedores) {
+              const p = row.proveedores
+              supplierLabel = p.empresa
+                ? `${p.empresa} — ${p.nombre} ${p.apellido}`
+                : `${p.nombre} ${p.apellido}`
+              supplierType = "proveedor"
+            } else if (hasEmp && row.employees) {
+              const e = row.employees
+              const ap = e.apellido_materno
+                ? `${e.apellido_paterno} ${e.apellido_materno}`
+                : e.apellido_paterno
+              supplierLabel = `${e.nombre} ${ap}`
+              supplierType = "empleado"
+            }
+
             allItems.push({
-              ...item,
-              section_name: section.name,
-              quote_id: quote.id,
-              quote_name: quote.name,
+              id:               row.id,
+              description:      row.description,
+              qty:              row.qty,
+              days:             row.days,
+              unit_price:       row.unit_price,
+              actual_qty:       row.actual_qty,
+              actual_days:      row.actual_days,
+              actual_unit_price:row.actual_unit_price,
+              supplierLabel,
+              supplierType,
+              section_name:     section.name,
+              quote_id:         quote.id,
+              quote_name:       quote.name,
             })
           }
         }
@@ -93,19 +147,18 @@ export function EgresosPanel({
     load()
   }, [projectId])
 
-  // ── Group by quote ─────────────────────────────────────────────────────────
+  // ── Agrupar por cotización ─────────────────────────────────────────────────
   const byQuote: Record<string, { quote_name: string; items: EgresoItem[] }> = {}
   for (const item of items) {
-    if (!byQuote[item.quote_id]) {
+    if (!byQuote[item.quote_id])
       byQuote[item.quote_id] = { quote_name: item.quote_name, items: [] }
-    }
     byQuote[item.quote_id].items.push(item)
   }
 
-  const totalGlobal = items.reduce((s, i) => s + i.qty * i.days * i.unit_price, 0)
+  const totalGlobal = items.reduce((s, i) => s + montoEgreso(i), 0)
   const quoteCount  = Object.keys(byQuote).length
 
-  // ── Empty / loading states ─────────────────────────────────────────────────
+  // ── Loading / empty ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <p style={{ color: "#64748b", textAlign: "center", padding: "40px 0" }}>
@@ -121,7 +174,7 @@ export function EgresosPanel({
           No hay rubros con proveedor asignado en este proyecto.
         </p>
         <p style={{ fontSize: 12, color: "#334155" }}>
-          Asigna proveedores a los rubros de las cotizaciones para verlos aquí.
+          Asigna proveedores en la página de liberación de cada cotización.
         </p>
       </div>
     )
@@ -132,13 +185,11 @@ export function EgresosPanel({
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
       {/* Summary cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)",
-          gap: 12,
-        }}
-      >
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)",
+        gap: 12,
+      }}>
         <SummaryCard label="Total egresos"        value={fmt(totalGlobal)} color="#f87171" />
         <SummaryCard label="Rubros con proveedor" value={String(items.length)} color="#94a3b8" />
         <SummaryCard label="Cotizaciones"          value={String(quoteCount)}  color="#94a3b8" />
@@ -146,14 +197,12 @@ export function EgresosPanel({
 
       {/* Per-quote tables */}
       {Object.entries(byQuote).map(([quoteId, { quote_name, items: qItems }]) => {
-        const quoteTotal = qItems.reduce((s, i) => s + i.qty * i.days * i.unit_price, 0)
+        const quoteTotal = qItems.reduce((s, i) => s + montoEgreso(i), 0)
         return (
           <div key={quoteId}>
             {/* Quote header */}
             <div style={quoteHeaderStyle}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={quoteLabelStyle}>📋 {quote_name}</span>
-              </div>
+              <span style={quoteLabelStyle}>📋 {quote_name}</span>
               <span style={quoteTotalStyle}>{fmt(quoteTotal)}</span>
             </div>
 
@@ -162,22 +211,24 @@ export function EgresosPanel({
               <table style={tableStyle}>
                 <thead>
                   <tr>
-                    {["Sección", "Rubro / Concepto", "Proveedor", "Qty", "Días", "P. Unitario", "Monto"].map(h => (
+                    {["Sección", "Rubro / Concepto", "Proveedor / Empleado", "Qty", "Días", "P. Unitario", "Monto"].map(h => (
                       <th key={h} style={thStyle}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {qItems.map((item, i) => {
-                    const monto = item.qty * item.days * item.unit_price
+                    const monto = montoEgreso(item)
+                    const hasActual = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
+                    const qty   = hasActual ? (item.actual_qty   ?? Math.max(item.qty, 1))   : item.qty
+                    const days  = hasActual ? (item.actual_days  ?? Math.max(item.days, 1))  : item.days
+                    const price = hasActual ? (item.actual_unit_price ?? item.unit_price) : item.unit_price
+
                     return (
-                      <tr
-                        key={item.id}
-                        style={{
-                          background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
-                          borderBottom: "1px solid rgba(148,163,184,0.07)",
-                        }}
-                      >
+                      <tr key={item.id} style={{
+                        background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
+                        borderBottom: "1px solid rgba(148,163,184,0.07)",
+                      }}>
                         <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>
                           {item.section_name}
                         </td>
@@ -185,16 +236,19 @@ export function EgresosPanel({
                           {item.description}
                         </td>
                         <td style={tdStyle}>
-                          <span style={supplierBadgeStyle}>{item.supplier}</span>
+                          <span style={supplierBadgeStyle(item.supplierType)}>
+                            {item.supplierType === "empleado" ? "👤 " : "🏢 "}
+                            {item.supplierLabel}
+                          </span>
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>
-                          {item.qty}
+                          {qty}
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>
-                          {item.days}
+                          {days}
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>
-                          {fmt(item.unit_price)}
+                          {fmt(price)}
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>
                           {fmt(monto)}
@@ -205,22 +259,10 @@ export function EgresosPanel({
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                    <td
-                      colSpan={6}
-                      style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}
-                    >
+                    <td colSpan={6} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
                       {qItems.length} rubro{qItems.length !== 1 ? "s" : ""}
                     </td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: "right",
-                        fontWeight: 700,
-                        color: "#f87171",
-                        fontFamily: "monospace",
-                        paddingTop: 10,
-                      }}
-                    >
+                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace", paddingTop: 10 }}>
                       {fmt(quoteTotal)}
                     </td>
                   </tr>
@@ -236,46 +278,19 @@ export function EgresosPanel({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SummaryCard({
-  label,
-  value,
-  color,
-}: {
-  label: string
-  value: string
-  color: string
-}) {
+function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div
-      style={{
-        padding: "14px 18px",
-        borderRadius: 12,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(148,163,184,0.10)",
-        boxShadow: `0 0 0 1px ${color}22`,
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          color: "#64748b",
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-        }}
-      >
+    <div style={{
+      padding: "14px 18px",
+      borderRadius: 12,
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(148,163,184,0.10)",
+      boxShadow: `0 0 0 1px ${color}22`,
+    }}>
+      <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>
         {label}
       </p>
-      <p
-        style={{
-          margin: "6px 0 0",
-          color,
-          fontSize: 20,
-          fontWeight: 700,
-          fontFamily: "monospace",
-        }}
-      >
+      <p style={{ margin: "6px 0 0", color, fontSize: 20, fontWeight: 700, fontFamily: "monospace" }}>
         {value}
       </p>
     </div>
@@ -293,7 +308,6 @@ const quoteHeaderStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.04)",
   border: "1px solid rgba(148,163,184,0.12)",
   borderBottom: "none",
-  marginBottom: 0,
 }
 
 const quoteLabelStyle: React.CSSProperties = {
@@ -342,15 +356,21 @@ const tdStyle: React.CSSProperties = {
   verticalAlign: "middle",
 }
 
-const supplierBadgeStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "3px 9px",
-  borderRadius: 999,
-  fontSize: 11,
-  fontWeight: 600,
-  color: "#a78bfa",
-  background: "rgba(124,58,237,0.12)",
-  border: "1px solid rgba(167,139,250,0.22)",
-  whiteSpace: "nowrap",
+function supplierBadgeStyle(type: "proveedor" | "empleado"): React.CSSProperties {
+  const isEmp = type === "empleado"
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "3px 9px",
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 600,
+    color:       isEmp ? "#34d399" : "#a78bfa",
+    background:  isEmp ? "rgba(52,211,153,0.10)"  : "rgba(124,58,237,0.12)",
+    border:      isEmp ? "1px solid rgba(52,211,153,0.22)" : "1px solid rgba(167,139,250,0.22)",
+    whiteSpace: "nowrap",
+    maxWidth: 240,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  }
 }
