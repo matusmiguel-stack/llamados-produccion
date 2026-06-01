@@ -26,6 +26,8 @@ const VACATION_COLOR = "#9333ea"
 const VACATION_EVENT_PREFIX = "vacation:"
 const BIRTHDAY_COLOR = "#f59e0b"
 const ANNIVERSARY_COLOR = "#14b8a6"
+const JUNTA_EVENT_PREFIX = "junta:"
+const JUNTA_COLOR = "#0891b2"
 
 const RESPONSABLES_PRODUCCION = [
   "Miguel Matus",
@@ -151,7 +153,7 @@ export default function Home() {
   const [duplicating, setDuplicating] = useState(false)
   const [liveConnected, setLiveConnected] = useState(false)
 
-  const [entryMode, setEntryMode] = useState<"shoot" | "vacation">("shoot")
+  const [entryMode, setEntryMode] = useState<"shoot" | "vacation" | "junta">("shoot")
   const [vacationStartDate, setVacationStartDate] = useState("")
   const [vacationEndDate, setVacationEndDate] = useState("")
 
@@ -184,6 +186,19 @@ export default function Home() {
   const [selectedResources, setSelectedResources] = useState<string[]>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [shootResponsable, setShootResponsable] = useState("")
+
+  // ── Juntas ─────────────────────────────────────────────────────────────────
+  const [allJuntas, setAllJuntas] = useState<any[]>([])
+  const [juntaAttendeeMap, setJuntaAttendeeMap] = useState<Record<string, string[]>>({})
+  const [selectedJunta, setSelectedJunta] = useState<any>(null)
+  const [juntaDetailsOpen, setJuntaDetailsOpen] = useState(false)
+  // junta form state
+  const [juntaTipo, setJuntaTipo] = useState<"Brief" | "PPM" | "Junta Cliente">("Brief")
+  const [juntaDate, setJuntaDate] = useState("")
+  const [juntaStartTime, setJuntaStartTime] = useState("09:00")
+  const [juntaEndTime, setJuntaEndTime] = useState("")
+  const [juntaNotas, setJuntaNotas] = useState("")
+  const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
   const [showAddClient, setShowAddClient] = useState(false)
@@ -299,6 +314,23 @@ export default function Home() {
     setAllClients(clients || [])
     setAllSubfolders(subfolders || [])
     setAllProjects(projects || [])
+
+    const { data: juntasData } = await supabase
+      .from("juntas")
+      .select("*")
+      .order("fecha", { ascending: true })
+
+    const { data: juntaAttendeesData } = await supabase
+      .from("junta_attendees")
+      .select("junta_id, employee_id")
+
+    const attMap: Record<string, string[]> = {}
+    for (const ja of juntaAttendeesData || []) {
+      if (!attMap[ja.junta_id]) attMap[ja.junta_id] = []
+      attMap[ja.junta_id].push(ja.employee_id)
+    }
+    setAllJuntas(juntasData || [])
+    setJuntaAttendeeMap(attMap)
   }
 
   useEffect(() => {
@@ -409,10 +441,27 @@ export default function Home() {
       color: ANNIVERSARY_COLOR,
     })
 
-    setEvents([...shootEvents, ...vacationEvents, ...birthdayEvents, ...anniversaryEvents])
+    const juntaEvents = allJuntas.map((j) => {
+      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : "🤝"
+      return {
+        id: `${JUNTA_EVENT_PREFIX}${j.id}`,
+        title: `${emoji} ${j.tipo}`,
+        start: j.hora_inicio ? `${j.fecha}T${j.hora_inicio}` : j.fecha,
+        end:   j.hora_fin    ? `${j.fecha}T${j.hora_fin}`    : undefined,
+        allDay: !j.hora_inicio,
+        backgroundColor: JUNTA_COLOR,
+        borderColor:     JUNTA_COLOR,
+        textColor: "#ffffff",
+        editable: false,
+      }
+    })
+
+    setEvents([...shootEvents, ...vacationEvents, ...birthdayEvents, ...anniversaryEvents, ...juntaEvents])
   }, [
     allShoots,
     allVacations,
+    allJuntas,
+    juntaAttendeeMap,
     employees,
     shootResources,
     shootEmployees,
@@ -482,6 +531,14 @@ export default function Home() {
     setSelectedResources([])
     setSelectedEmployees([])
     setShootResponsable("")
+    setJuntaTipo("Brief")
+    setJuntaDate("")
+    setJuntaStartTime("09:00")
+    setJuntaEndTime("")
+    setJuntaNotas("")
+    setJuntaAttendees([])
+    setSelectedJunta(null)
+    setJuntaDetailsOpen(false)
   }
 
   function clearFilters() {
@@ -519,14 +576,17 @@ export default function Home() {
     setSelectedEndDate(endDate)
     setVacationStartDate(startDate)
     setVacationEndDate(endDate)
+    setJuntaDate(startDate)
 
     const isMultiDay = endDate > startDate
 
     if (isMultiDay || info.allDay) {
       setAllDay(true)
     } else {
-      setStartTime(info.start.toTimeString().slice(0, 5))
+      const st = info.start.toTimeString().slice(0, 5)
+      setStartTime(st)
       setEndTime(info.end.toTimeString().slice(0, 5))
+      setJuntaStartTime(st)
     }
 
     setModalOpen(true)
@@ -541,6 +601,16 @@ export default function Home() {
     }
 
     const eventId = String(info.event.id)
+
+    if (eventId.startsWith(JUNTA_EVENT_PREFIX)) {
+      const juntaId = eventId.slice(JUNTA_EVENT_PREFIX.length)
+      const junta = allJuntas.find((j) => j.id === juntaId)
+      if (junta) {
+        setSelectedJunta(junta)
+        setJuntaDetailsOpen(true)
+      }
+      return
+    }
 
     if (
       eventId.startsWith(VACATION_EVENT_PREFIX) ||
@@ -965,7 +1035,68 @@ function openEditVacation() {
     await loadAll()
   }
 
+  async function saveJunta() {
+    if (!juntaDate) { alert("Selecciona una fecha para la junta"); return }
+
+    const payload = {
+      tipo:        juntaTipo,
+      fecha:       juntaDate,
+      hora_inicio: juntaStartTime || "09:00",
+      hora_fin:    juntaEndTime   || null,
+      notas:       juntaNotas.trim() || null,
+      created_by:  user?.id || null,
+      updated_at:  new Date().toISOString(),
+    }
+
+    let juntaId: string
+
+    if (selectedJunta) {
+      const { error } = await supabase.from("juntas").update(payload).eq("id", selectedJunta.id)
+      if (error) { alert(error.message); return }
+      juntaId = selectedJunta.id
+      await supabase.from("junta_attendees").delete().eq("junta_id", juntaId)
+    } else {
+      const { data, error } = await supabase.from("juntas").insert(payload).select("id").single()
+      if (error) { alert(error.message); return }
+      juntaId = data.id
+    }
+
+    if (juntaAttendees.length > 0) {
+      await supabase.from("junta_attendees").insert(
+        juntaAttendees.map((emp_id) => ({ junta_id: juntaId, employee_id: emp_id }))
+      )
+    }
+
+    setModalOpen(false)
+    setJuntaDetailsOpen(false)
+    resetForm()
+
+    const { data: juntasData } = await supabase.from("juntas").select("*").order("fecha")
+    const { data: juntaAttendeesData } = await supabase.from("junta_attendees").select("junta_id, employee_id")
+    const attMap: Record<string, string[]> = {}
+    for (const ja of juntaAttendeesData || []) {
+      if (!attMap[ja.junta_id]) attMap[ja.junta_id] = []
+      attMap[ja.junta_id].push(ja.employee_id)
+    }
+    setAllJuntas(juntasData || [])
+    setJuntaAttendeeMap(attMap)
+  }
+
+  async function deleteJunta(id: string) {
+    if (!confirm("¿Eliminar esta junta?")) return
+    await supabase.from("juntas").delete().eq("id", id)
+    setJuntaDetailsOpen(false)
+    setSelectedJunta(null)
+    const { data } = await supabase.from("juntas").select("*").order("fecha")
+    setAllJuntas(data || [])
+  }
+
   async function saveEntry() {
+    if (entryMode === "junta") {
+      await saveJunta()
+      return
+    }
+
     if (entryMode === "vacation" || selectedVacation) {
       if (!canManageVacations) {
         return alert("Solo admin puede gestionar vacaciones.")
@@ -1159,7 +1290,7 @@ function openEditVacation() {
   }
 
   const isVacationForm =
-    canManageVacations && (entryMode === "vacation" || !!selectedVacation)
+    canManageVacations && entryMode !== "junta" && (entryMode === "vacation" || !!selectedVacation)
 
   const technicalResources = resources.filter((r) => r.type === "technical")
 
@@ -1527,13 +1658,17 @@ function openEditVacation() {
               >
                 <div>
                   <h2 style={formModalTitleStyle}>
-                    {selectedVacation
-                      ? "Editar vacaciones"
-                      : selectedShoot
-                        ? "Editar llamado"
-                        : isVacationForm
-                          ? "Nuevas vacaciones"
-                          : "Nuevo llamado"}
+                    {selectedJunta
+                      ? "Editar junta"
+                      : selectedVacation
+                        ? "Editar vacaciones"
+                        : selectedShoot
+                          ? "Editar llamado"
+                          : entryMode === "junta"
+                            ? "Nueva junta"
+                            : isVacationForm
+                              ? "Nuevas vacaciones"
+                              : "Nuevo llamado"}
                   </h2>
                   {!isVacationForm && selectedDate && (
                     <p style={formModalMetaStyle}>
@@ -1558,8 +1693,8 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
-                {!selectedShoot && !selectedVacation && canManageVacations && (
-                  <div style={entryModeSwitchWrapStyle}>
+                {!selectedShoot && !selectedVacation && !selectedJunta && canManageVacations && (
+                  <div style={{ ...entryModeSwitchWrapStyle, gridTemplateColumns: "1fr 1fr 1fr" }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1592,10 +1727,125 @@ function openEditVacation() {
                     >
                       Vacaciones
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (selectedDate) setJuntaDate(selectedDate)
+                        setEntryMode("junta")
+                      }}
+                      style={{
+                        ...entryModeSwitchButtonStyle,
+                        ...(entryMode === "junta" ? entryModeSwitchActiveStyle : {}),
+                      }}
+                    >
+                      Junta
+                    </button>
                   </div>
                 )}
 
-                {isVacationForm ? (
+                {entryMode === "junta" && !selectedShoot && !selectedVacation ? (
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>Nueva Junta</p>
+
+                    {/* Tipo */}
+                    <div>
+                      <label style={formModalLabelStyle}>Tipo de Junta</label>
+                      <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                        {(["Brief", "PPM", "Junta Cliente"] as const).map((tipo) => (
+                          <button
+                            key={tipo}
+                            type="button"
+                            onClick={() => setJuntaTipo(tipo)}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 8,
+                              border: juntaTipo === tipo ? "1px solid #0891b2" : "1px solid rgba(148,163,184,0.2)",
+                              background: juntaTipo === tipo ? "rgba(8,145,178,0.15)" : "transparent",
+                              color: juntaTipo === tipo ? "#67e8f9" : "#94a3b8",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {tipo}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Fecha y horas */}
+                    <div style={formModalRowStyle}>
+                      <DatePickerField
+                        label="Fecha"
+                        value={juntaDate}
+                        labelStyle={formModalLabelStyle}
+                        onChange={setJuntaDate}
+                      />
+                    </div>
+                    <div style={formModalRowStyle}>
+                      <div style={{ flex: 1 }}>
+                        <label style={formModalLabelStyle}>Hora inicio</label>
+                        <input
+                          type="time"
+                          value={juntaStartTime}
+                          onChange={(e) => setJuntaStartTime(e.target.value)}
+                          style={{ ...formModalInputStyle, colorScheme: "dark" }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={formModalLabelStyle}>Hora fin (opcional)</label>
+                        <input
+                          type="time"
+                          value={juntaEndTime}
+                          onChange={(e) => setJuntaEndTime(e.target.value)}
+                          style={{ ...formModalInputStyle, colorScheme: "dark" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Notas */}
+                    <div>
+                      <label style={formModalLabelStyle}>Notas (opcional)</label>
+                      <textarea
+                        value={juntaNotas}
+                        onChange={(e) => setJuntaNotas(e.target.value)}
+                        rows={3}
+                        style={{ ...formModalInputStyle, resize: "vertical", minHeight: 72 }}
+                        placeholder="Tema, agenda, etc."
+                      />
+                    </div>
+
+                    {/* Personal asistente */}
+                    <div>
+                      <label style={formModalLabelStyle}>Personal asistente</label>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                        {employees.map((emp: any) => {
+                          const selected = juntaAttendees.includes(emp.id)
+                          return (
+                            <button
+                              key={emp.id}
+                              type="button"
+                              onClick={() => setJuntaAttendees(prev =>
+                                selected ? prev.filter(id => id !== emp.id) : [...prev, emp.id]
+                              )}
+                              style={{
+                                padding: "4px 12px",
+                                borderRadius: 999,
+                                border: selected ? "1px solid #0891b2" : "1px solid rgba(148,163,184,0.2)",
+                                background: selected ? "rgba(8,145,178,0.15)" : "transparent",
+                                color: selected ? "#67e8f9" : "#94a3b8",
+                                fontSize: 12,
+                                cursor: "pointer",
+                              }}
+                            >
+                              {emp.nombre} {emp.apellido_paterno}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : isVacationForm ? (
                   <div style={formModalColumnStyle}>
                     <p style={formModalSectionLabelStyle}>Vacaciones</p>
 
@@ -2037,13 +2287,17 @@ function openEditVacation() {
                   Cancelar
                 </button>
                 <button onClick={saveEntry} style={formModalPrimaryButtonStyle}>
-                  {isVacationForm
-                    ? selectedVacation
-                      ? "Guardar"
-                      : "Crear vacaciones"
-                    : selectedShoot
-                      ? "Guardar"
-                      : "Crear llamado"}
+                  {entryMode === "junta"
+                    ? selectedJunta
+                      ? "Guardar junta"
+                      : "Crear junta"
+                    : isVacationForm
+                      ? selectedVacation
+                        ? "Guardar"
+                        : "Crear vacaciones"
+                      : selectedShoot
+                        ? "Guardar"
+                        : "Crear llamado"}
                 </button>
               </div>
             </DraggableModalPanel>
@@ -2130,6 +2384,135 @@ function openEditVacation() {
 
                 {isAdmin && (
                   <button onClick={deleteVacation} style={formModalDangerButtonStyle}>
+                    Borrar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {juntaDetailsOpen && selectedJunta && (
+          <div style={overlayStyle} className="modal-overlay">
+            <div
+              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
+              style={{
+                ...formModalStyle,
+                width: isMobile ? "100%" : 520,
+                height: isMobile ? "100%" : "auto",
+                maxHeight: isMobile ? "100%" : "88vh",
+                borderRadius: isMobile ? 0 : 16,
+              }}
+            >
+              <div style={formModalHeaderStyle}>
+                <div>
+                  <h2 style={formModalTitleStyle}>
+                    {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : "🤝"}{" "}
+                    {selectedJunta.tipo}
+                  </h2>
+                  <p style={formModalMetaStyle}>
+                    {formatVacationDate(selectedJunta.fecha)}
+                    {selectedJunta.hora_inicio ? ` · ${selectedJunta.hora_inicio}` : ""}
+                    {selectedJunta.hora_fin ? ` – ${selectedJunta.hora_fin}` : ""}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => { setJuntaDetailsOpen(false); setSelectedJunta(null) }}
+                  style={formModalCloseStyle}
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={formModalBodyStyle}>
+                <div style={formModalColumnStyle}>
+                  <div style={formModalRowStyle}>
+                    <FormModalPreviewField label="Tipo" value={selectedJunta.tipo} />
+                    <FormModalPreviewField label="Fecha" value={formatVacationDate(selectedJunta.fecha)} />
+                  </div>
+
+                  <div style={formModalRowStyle}>
+                    <FormModalPreviewField label="Hora inicio" value={selectedJunta.hora_inicio || "—"} />
+                    <FormModalPreviewField label="Hora fin" value={selectedJunta.hora_fin || "—"} />
+                  </div>
+
+                  {selectedJunta.notas && (
+                    <FormModalPreviewField label="Notas" value={selectedJunta.notas} multiline />
+                  )}
+
+                  <div>
+                    <span style={formModalLabelStyle}>
+                      Asistentes ({(juntaAttendeeMap[selectedJunta.id] || []).length})
+                    </span>
+                    {(juntaAttendeeMap[selectedJunta.id] || []).length > 0 ? (
+                      <div style={{ ...formModalPillGridStyle, marginTop: 6 }}>
+                        {(juntaAttendeeMap[selectedJunta.id] || []).map((empId) => {
+                          const emp = employees.find((e: any) => e.id === empId)
+                          if (!emp) return null
+                          return (
+                            <span
+                              key={empId}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "4px 8px",
+                                borderRadius: 6,
+                                background: "rgba(8,145,178,0.14)",
+                                border: "1px solid rgba(8,145,178,0.28)",
+                                color: "#f8fafc",
+                                fontSize: 12,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {emp.nombre} {emp.apellido_paterno}
+                              <span style={{ color: "#67e8f9", fontWeight: 500 }}>{emp.puesto}</span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div style={formModalValueStyle}>—</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={formModalFooterStyle}>
+                <button
+                  onClick={() => { setJuntaDetailsOpen(false); setSelectedJunta(null) }}
+                  style={formModalSecondaryButtonStyle}
+                >
+                  Cerrar
+                </button>
+
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      // Pre-fill form for editing
+                      setJuntaTipo(selectedJunta.tipo as "Brief" | "PPM" | "Junta Cliente")
+                      setJuntaDate(selectedJunta.fecha)
+                      setJuntaStartTime(selectedJunta.hora_inicio || "09:00")
+                      setJuntaEndTime(selectedJunta.hora_fin || "")
+                      setJuntaNotas(selectedJunta.notas || "")
+                      setJuntaAttendees(juntaAttendeeMap[selectedJunta.id] || [])
+                      setEntryMode("junta")
+                      setJuntaDetailsOpen(false)
+                      setModalOpen(true)
+                    }}
+                    style={formModalPrimaryButtonStyle}
+                  >
+                    Editar
+                  </button>
+                )}
+
+                {canEdit && (
+                  <button
+                    onClick={() => deleteJunta(selectedJunta.id)}
+                    style={formModalDangerButtonStyle}
+                  >
                     Borrar
                   </button>
                 )}
