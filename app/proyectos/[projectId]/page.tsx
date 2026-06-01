@@ -426,6 +426,9 @@ export default function ProjectDetailPage() {
                   quotesLoaded={quotesLoaded}
                   projectId={projectId}
                   isMobile={isMobile}
+                  onEditarLiberacion={(quoteId) =>
+                    router.push(`/proyectos/${projectId}/liberar/${quoteId}`)
+                  }
                 />
               ) : (
                 <>
@@ -658,11 +661,13 @@ function PresupuestoPanel({
   quotesLoaded,
   projectId,
   isMobile,
+  onEditarLiberacion,
 }: {
   quotes: Quote[]
   quotesLoaded: boolean
   projectId: string
   isMobile: boolean
+  onEditarLiberacion: (quoteId: string) => void
 }) {
   const [sections, setSections] = useState<QuoteSection[]>([])
   const [secLoading, setSecLoading] = useState(false)
@@ -773,12 +778,12 @@ function PresupuestoPanel({
               )}
             </p>
           </div>
-          <Link
-            href={`/proyectos/${projectId}/liberar/${releasedQuote.id}`}
+          <button
+            onClick={() => onEditarLiberacion(releasedQuote.id)}
             style={liberarBtnStyle}
           >
             ✎ Editar liberación
-          </Link>
+          </button>
         </div>
       </div>
 
