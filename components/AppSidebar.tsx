@@ -18,6 +18,14 @@ type AppSidebarProps = {
 
 type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users"
 
+const ROLE_LABELS: Record<string, string> = {
+  admin:     "Admin",
+  editor:    "Editor",
+  productor: "Editor Post",
+  viewer:    "Viewer",
+}
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
+
 // roles: null/undefined = visible para todos; array = visible solo para esos roles
 const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
   { href: "/",            label: "Calendario",   icon: "calendar"   },
@@ -149,7 +157,7 @@ export function AppSidebar({
               </div>
             </div>
             <div style={profileFooterRowStyle}>
-              <span style={roleBadgeStyle(role)}>{role}</span>
+              <span style={roleBadgeStyle(role)}>{roleLabel(role)}</span>
               <span style={profileLinkHintStyle}>Mi perfil</span>
             </div>
           </Link>
@@ -313,7 +321,7 @@ function roleBadgeStyle(role: string): React.CSSProperties {
     borderRadius: 999,
     fontSize: 10,
     fontWeight: 600,
-    textTransform: "capitalize",
+    textTransform: "none",
     background: palette.bg,
     border: `1px solid ${palette.border}`,
     color: palette.text,

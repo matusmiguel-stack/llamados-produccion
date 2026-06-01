@@ -5,6 +5,14 @@ import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 
+const ROLE_LABELS: Record<string, string> = {
+  admin:     "Admin",
+  editor:    "Editor",
+  productor: "Editor Post",
+  viewer:    "Viewer",
+}
+const roleLabel = (r?: string) => (r ? (ROLE_LABELS[r] ?? r) : "—")
+
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
   const [profile, setProfile] = useState<any>(null)
@@ -277,7 +285,7 @@ export default function UsersPage() {
                   style={inputStyle}
                 >
                   <option value="viewer">Viewer</option>
-                  <option value="productor">Productor</option>
+                  <option value="productor">Editor Post</option>
                   <option value="editor">Editor</option>
                   <option value="admin">Admin</option>
                 </select>
@@ -336,7 +344,7 @@ export default function UsersPage() {
                           style={inputStyle}
                         >
                           <option value="viewer">Viewer</option>
-                          <option value="productor">Productor</option>
+                          <option value="productor">Editor Post</option>
                           <option value="editor">Editor</option>
                           <option value="admin">Admin</option>
                         </select>
@@ -370,7 +378,7 @@ export default function UsersPage() {
                         </div>
 
                         <div style={roleCellStyle}>
-                          <span style={roleBadgeStyle(user.role)}>{user.role}</span>
+                          <span style={roleBadgeStyle(user.role)}>{roleLabel(user.role)}</span>
                         </div>
 
                         <div style={rowActionsStyle}>
@@ -455,7 +463,7 @@ function roleBadgeStyle(role?: string): React.CSSProperties {
     borderRadius: 999,
     fontSize: 11,
     fontWeight: 600,
-    textTransform: "capitalize",
+    textTransform: "none",
     background: palette.bg,
     border: `1px solid ${palette.border}`,
     color: palette.text,
