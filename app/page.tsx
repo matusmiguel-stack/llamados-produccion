@@ -1236,7 +1236,7 @@ function openEditVacation() {
         if (!res.ok || data.error) {
           alert(`Error al enviar invitaciones: ${data.error || res.statusText}`)
         } else {
-          alert(`Invitaciones enviadas: ${data.sent} correo(s)`)
+          alert(`Invitaciones enviadas: ${data.sent} correo(s)${data.debug ? `\nDebug: ${data.debug}` : ""}`)
         }
       } catch (e: any) {
         alert(`Error al enviar invitaciones: ${e.message}`)

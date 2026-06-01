@@ -175,18 +175,19 @@ export async function sendJuntaInvites(params: {
       .from("employees")
       .select("email")
       .in("id", attendeeEmployeeIds)
-    console.log("[junta-email] employees query:", { emps, empsError })
     for (const e of emps || []) {
       if (e.email) employeeEmails.push(e.email)
     }
+    if (empsError) return { sent: 0, debug: `DB error: ${empsError.message}` }
+    if (!emps?.length) return { sent: 0, debug: `No employees found for ids: ${attendeeEmployeeIds.join(",")}` }
+    if (!employeeEmails.length) return { sent: 0, debug: `Employees found but all have empty email. Data: ${JSON.stringify(emps)}` }
   }
 
   // 2. External emails
   const externalEmails = (junta.external_emails || []).filter((e) => e.includes("@"))
 
   const allRecipients = [...new Set([...employeeEmails, ...externalEmails])]
-  console.log("[junta-email] recipients:", allRecipients)
-  if (!allRecipients.length) return { sent: 0 }
+  if (!allRecipients.length) return { sent: 0, debug: "No recipients" }
 
   // 3. Build ICS + HTML
   const icsContent = generateICS(junta)
