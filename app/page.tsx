@@ -199,6 +199,7 @@ export default function Home() {
   const [juntaStartTime, setJuntaStartTime] = useState("09:00")
   const [juntaEndTime, setJuntaEndTime] = useState("")
   const [juntaNotas, setJuntaNotas] = useState("")
+  const [juntaLink, setJuntaLink] = useState("")
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
@@ -505,12 +506,14 @@ export default function Home() {
   }
 
   // ── Importar invite .ics ───────────────────────────────────────────────────
-  function parseICS(text: string): { fecha: string; horaInicio: string; horaFin: string; titulo: string } | null {
-    // Unfold multi-line values (RFC 5545: continuation lines start with space/tab)
+  function parseICS(text: string): {
+    fecha: string; horaInicio: string; horaFin: string; titulo: string; link: string
+  } | null {
+    // RFC 5545: unfold continuation lines (lines starting with space/tab)
     const unfolded = text.replace(/\r?\n[ \t]/g, "")
     const lines = unfolded.split(/\r?\n/)
 
-    // Get property value, ignoring parameters (e.g. DTSTART;TZID=America/Mexico_City:...)
+    // Get property value ignoring params: DTSTART;TZID=...:value → value
     function getProp(name: string): string | null {
       for (const line of lines) {
         const col = line.indexOf(":")
@@ -521,32 +524,81 @@ export default function Home() {
       return null
     }
 
-    // Parse DTSTART/DTEND: YYYYMMDD or YYYYMMDDTHHmmSS[Z]
-    function parseDateTime(dt: string | null): { fecha: string; hora: string } | null {
-      if (!dt) return null
-      const d = dt.replace("Z", "")
-      if (d.length === 8) {
-        // All-day: YYYYMMDD
-        return { fecha: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`, hora: "" }
+    // Check if DTSTART has Z suffix (UTC) or no TZID param (floating/local)
+    function dtHasZ(name: string): boolean {
+      for (const line of lines) {
+        const col = line.indexOf(":")
+        if (col < 0) continue
+        const key = line.slice(0, col).split(";")[0].toUpperCase()
+        if (key === name.toUpperCase()) return line.slice(col + 1).trim().endsWith("Z")
       }
-      const datePart = d.slice(0, 8)
-      const timePart = d.slice(9, 13) // HHMM
+      return false
+    }
+
+    // Parse YYYYMMDD or YYYYMMDDTHHmmSS[Z] → {fecha, hora}
+    // If isUTC=true, convert to America/Mexico_City using Intl API
+    function parseDateTime(dt: string | null, isUTC: boolean): { fecha: string; hora: string } | null {
+      if (!dt) return null
+      const raw = dt.replace("Z", "")
+      if (raw.length === 8) {
+        // All-day: YYYYMMDD
+        return { fecha: `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`, hora: "" }
+      }
+      if (isUTC) {
+        // Build ISO string and convert to Mexico City local time
+        const iso = `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}T${raw.slice(9,11)}:${raw.slice(11,13)}:${raw.slice(13,15)}Z`
+        try {
+          const d = new Date(iso)
+          const fecha = d.toLocaleDateString("sv", { timeZone: "America/Mexico_City" })   // "YYYY-MM-DD"
+          const hora  = d.toLocaleTimeString("sv", { timeZone: "America/Mexico_City",
+                                                     hour: "2-digit", minute: "2-digit",
+                                                     hour12: false }).slice(0, 5)           // "HH:MM"
+          return { fecha, hora }
+        } catch { /* fallback below */ }
+      }
+      // Floating / already local / TZID (use raw value as-is)
       return {
-        fecha: `${datePart.slice(0,4)}-${datePart.slice(4,6)}-${datePart.slice(6,8)}`,
-        hora:  `${timePart.slice(0,2)}:${timePart.slice(2,4)}`,
+        fecha: `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`,
+        hora:  `${raw.slice(9,11)}:${raw.slice(11,13)}`,
       }
     }
 
-    const start = parseDateTime(getProp("DTSTART"))
+    // Extract first Zoom / Meet / Teams / Webex URL from any field
+    function extractMeetingLink(): string {
+      const MEETING_RE = /https?:\/\/\S*(?:zoom\.us\/j\/|meet\.google\.com\/|teams\.microsoft\.com\/l\/|webex\.com\/|whereby\.com\/|meet\.jit\.si\/)\S*/i
+      const searchIn = [
+        getProp("X-GOOGLE-CONFERENCE"),
+        getProp("LOCATION"),
+        getProp("URL"),
+        getProp("DESCRIPTION"),
+      ]
+      for (const src of searchIn) {
+        if (!src) continue
+        // Unescape ICS backslash sequences
+        const clean = src.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\/g, "")
+        const m = clean.match(MEETING_RE)
+        if (m) return m[0].replace(/[>"\s].*$/, "") // trim trailing junk
+      }
+      return ""
+    }
+
+    const startRaw = getProp("DTSTART")
+    if (!startRaw) return null
+    const isUTC = dtHasZ("DTSTART")
+
+    const start = parseDateTime(startRaw, isUTC)
     if (!start) return null
-    const end = parseDateTime(getProp("DTEND"))
-    const summary = getProp("SUMMARY") || ""
+    const end = parseDateTime(getProp("DTEND"), dtHasZ("DTEND"))
+
+    const cleanText = (s: string) =>
+      s.replace(/\\,/g, ",").replace(/\\n/gi, " ").replace(/\\/g, "").trim()
 
     return {
       fecha:       start.fecha,
       horaInicio:  start.hora || "09:00",
       horaFin:     end?.hora  || "",
-      titulo:      summary.replace(/\\,/g, ",").replace(/\\n/g, " ").replace(/\\/g, ""),
+      titulo:      cleanText(getProp("SUMMARY") || ""),
+      link:        extractMeetingLink(),
     }
   }
 
@@ -557,17 +609,21 @@ export default function Home() {
     reader.onload = (ev) => {
       const text = ev.target?.result as string
       const parsed = parseICS(text)
-      if (!parsed) { alert("No se pudo leer el archivo .ics. Asegúrate de que es un invite de calendario válido."); return }
+      if (!parsed) {
+        alert("No se pudo leer el archivo .ics. Asegúrate de que es un invite de calendario válido.")
+        return
+      }
       resetForm()
       setEntryMode("junta")
       setJuntaDate(parsed.fecha)
       setJuntaStartTime(parsed.horaInicio)
       setJuntaEndTime(parsed.horaFin)
       setJuntaNotas(parsed.titulo)
+      setJuntaLink(parsed.link)
       setModalOpen(true)
     }
     reader.readAsText(file)
-    e.target.value = "" // allow re-selecting the same file
+    e.target.value = ""
   }
 
   function resetForm() {
@@ -603,6 +659,7 @@ export default function Home() {
     setJuntaStartTime("09:00")
     setJuntaEndTime("")
     setJuntaNotas("")
+    setJuntaLink("")
     setJuntaAttendees([])
     setSelectedJunta(null)
     setJuntaDetailsOpen(false)
@@ -1111,6 +1168,7 @@ function openEditVacation() {
       hora_inicio: juntaStartTime || "09:00",
       hora_fin:    juntaEndTime   || null,
       notas:       juntaNotas.trim() || null,
+      link:        juntaLink.trim()  || null,
       created_by:  user?.id || null,
       updated_at:  new Date().toISOString(),
     }
@@ -1888,6 +1946,25 @@ function openEditVacation() {
                       </div>
                     </div>
 
+                    {/* Liga de reunión */}
+                    <div>
+                      <label style={formModalLabelStyle}>
+                        Liga de reunión
+                        {juntaLink && (
+                          <span style={{ marginLeft: 8, fontSize: 10, color: "#34d399", fontWeight: 700 }}>
+                            ✓ Detectada automáticamente
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="url"
+                        value={juntaLink}
+                        onChange={(e) => setJuntaLink(e.target.value)}
+                        style={formModalInputStyle}
+                        placeholder="https://meet.google.com/... o https://zoom.us/j/..."
+                      />
+                    </div>
+
                     {/* Notas */}
                     <div>
                       <label style={formModalLabelStyle}>Notas (opcional)</label>
@@ -2522,6 +2599,34 @@ function openEditVacation() {
                     <FormModalPreviewField label="Hora inicio" value={selectedJunta.hora_inicio || "—"} />
                     <FormModalPreviewField label="Hora fin" value={selectedJunta.hora_fin || "—"} />
                   </div>
+
+                  {selectedJunta.link && (
+                    <div>
+                      <p style={formModalLabelStyle}>Liga de reunión</p>
+                      <a
+                        href={selectedJunta.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "7px 14px",
+                          borderRadius: 8,
+                          background: "rgba(8,145,178,0.12)",
+                          border: "1px solid rgba(8,145,178,0.30)",
+                          color: "#67e8f9",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          textDecoration: "none",
+                          marginTop: 4,
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        🔗 Unirse a la reunión
+                      </a>
+                    </div>
+                  )}
 
                   {selectedJunta.notas && (
                     <FormModalPreviewField label="Notas" value={selectedJunta.notas} multiline />
