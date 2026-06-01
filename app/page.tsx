@@ -209,6 +209,8 @@ export default function Home() {
 
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
+  const isProductorRole = profile?.role === "productor"
+  const canJunta = canEdit || isProductorRole
   const canManageVacations = isAdmin
 
   useEffect(() => {
@@ -694,8 +696,9 @@ export default function Home() {
       return
     }
 
-    if (!canEdit) return
+    if (!canJunta) return
     resetForm()
+    if (isProductorRole) setEntryMode("junta")
 
     const { startDate, endDate } = selectionToDateRange(info)
 
@@ -1591,7 +1594,7 @@ function openEditVacation() {
                 onChange={handleICSImport}
               />
               {/* Botón importar invite */}
-              {canEdit && (
+              {canJunta && (
                 <button
                   onClick={() => icsInputRef.current?.click()}
                   title="Importar invite de cliente (.ics)"
@@ -1762,8 +1765,8 @@ function openEditVacation() {
                   },
                 }}
                 events={events}
-                selectable={canEdit}
-                selectMirror={canEdit}
+                selectable={canJunta}
+                selectMirror={canJunta}
                 unselectAuto
                 editable={canEdit}
                 eventResizableFromStart={canEdit}
@@ -1839,40 +1842,47 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
-                {!selectedShoot && !selectedVacation && !selectedJunta && canManageVacations && (
-                  <div style={{ ...entryModeSwitchWrapStyle, gridTemplateColumns: "1fr 1fr 1fr" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (vacationStartDate) {
-                          setSelectedDate(vacationStartDate)
-                          setSelectedEndDate(vacationEndDate || vacationStartDate)
-                        }
-                        setEntryMode("shoot")
-                      }}
-                      style={{
-                        ...entryModeSwitchButtonStyle,
-                        ...(entryMode === "shoot" ? entryModeSwitchActiveStyle : {}),
-                      }}
-                    >
-                      Llamado
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (selectedDate) {
-                          setVacationStartDate(selectedDate)
-                          setVacationEndDate(getEffectiveShootEndDate())
-                        }
-                        setEntryMode("vacation")
-                      }}
-                      style={{
-                        ...entryModeSwitchButtonStyle,
-                        ...(entryMode === "vacation" ? entryModeSwitchActiveStyle : {}),
-                      }}
-                    >
-                      Vacaciones
-                    </button>
+                {!selectedShoot && !selectedVacation && !selectedJunta && (canManageVacations || isProductorRole) && (
+                  <div style={{
+                    ...entryModeSwitchWrapStyle,
+                    gridTemplateColumns: canManageVacations ? "1fr 1fr 1fr" : "1fr",
+                  }}>
+                    {canManageVacations && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (vacationStartDate) {
+                            setSelectedDate(vacationStartDate)
+                            setSelectedEndDate(vacationEndDate || vacationStartDate)
+                          }
+                          setEntryMode("shoot")
+                        }}
+                        style={{
+                          ...entryModeSwitchButtonStyle,
+                          ...(entryMode === "shoot" ? entryModeSwitchActiveStyle : {}),
+                        }}
+                      >
+                        Llamado
+                      </button>
+                    )}
+                    {canManageVacations && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedDate) {
+                            setVacationStartDate(selectedDate)
+                            setVacationEndDate(getEffectiveShootEndDate())
+                          }
+                          setEntryMode("vacation")
+                        }}
+                        style={{
+                          ...entryModeSwitchButtonStyle,
+                          ...(entryMode === "vacation" ? entryModeSwitchActiveStyle : {}),
+                        }}
+                      >
+                        Vacaciones
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
