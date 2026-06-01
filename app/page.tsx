@@ -511,16 +511,21 @@ export default function Home() {
   } | null {
     // RFC 5545: unfold continuation lines (lines starting with space/tab)
     const unfolded = text.replace(/\r?\n[ \t]/g, "")
-    const lines = unfolded.split(/\r?\n/)
+    const allLines = unfolded.split(/\r?\n/)
 
-    // ── Robust property extraction ─────────────────────────────────────────
-    // For datetime props (DTSTART/DTEND): extract value using a regex that
-    // matches the datetime pattern at the end of the line.
-    // This is immune to TZID values that contain colons, e.g.
-    //   DTSTART;TZID=(UTC-06:00) Central Time:20260601T140000
-    //   DTSTART;TZID="GMT+05:30":20260601T090000
-    // — getProp (first-colon approach) would extract garbage in those cases.
-    const DT_PATTERN = /(\d{8}(?:T\d{6}Z?)?|\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}Z?)?)$/
+    // ── Extract only lines inside BEGIN:VEVENT ... END:VEVENT ──────────────
+    // The ICS file also has DTSTART inside BEGIN:VTIMEZONE (DST definition),
+    // which has nothing to do with the event time. We must ignore it.
+    const veventStart = allLines.findIndex(l => l.trim().toUpperCase() === "BEGIN:VEVENT")
+    const veventEnd   = allLines.findIndex((l, i) => i > veventStart && l.trim().toUpperCase() === "END:VEVENT")
+    const lines = veventStart >= 0
+      ? allLines.slice(veventStart, veventEnd >= 0 ? veventEnd + 1 : undefined)
+      : allLines  // fallback: search entire file if no VEVENT found
+
+    // ── Robust datetime extraction ─────────────────────────────────────────
+    // Matches the datetime value at the end of the line using a regex, which is
+    // immune to TZID values that contain colons (e.g. "(UTC-06:00) Central Time").
+    const DT_PATTERN = /(\d{8}(?:T\d{6}Z?)?|\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}Z?)?)\s*$/
 
     function getDT(name: string): string | null {
       for (const line of lines) {
@@ -606,8 +611,6 @@ export default function Home() {
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
-      // Show first 800 chars of the ICS for diagnosis
-      alert("ICS CONTENT (primeros 800 chars):\n" + text.slice(0, 800))
       const parsed = parseICS(text)
       if (!parsed) {
         alert("No se pudo leer el archivo .ics. Asegúrate de que es un invite de calendario válido.")
