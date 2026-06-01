@@ -21,7 +21,7 @@ type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects
 // roles: null/undefined = visible para todos; array = visible solo para esos roles
 const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
   { href: "/",            label: "Calendario",   icon: "calendar"   },
-  { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "viewer"] },
+  { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "productor", "viewer"] },
   { href: "/resources",   label: "Inventario",   icon: "inventory",  roles: ["admin", "editor", "viewer"] },
   { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor"] },
   { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "productor"] },
