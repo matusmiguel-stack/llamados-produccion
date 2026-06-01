@@ -1189,6 +1189,12 @@ function openEditVacation() {
   async function saveJunta() {
     if (!juntaDate) { alert("Selecciona una fecha para la junta"); return }
 
+    // Auto-agregar email si quedó escrito en el input sin presionar Enter
+    const pendingEmail = juntaEmailInput.trim()
+    const finalExternalEmails = pendingEmail.includes("@") && !juntaExternalEmails.includes(pendingEmail)
+      ? [...juntaExternalEmails, pendingEmail]
+      : juntaExternalEmails
+
     const payload = {
       tipo:        juntaTipo,
       titulo:      juntaTitulo.trim() || null,
@@ -1197,7 +1203,7 @@ function openEditVacation() {
       hora_fin:    juntaEndTime   || null,
       notas:       juntaNotas.trim() || null,
       link:        juntaLink.trim()  || null,
-      external_emails: juntaExternalEmails.length > 0 ? juntaExternalEmails : null,
+      external_emails: finalExternalEmails.length > 0 ? finalExternalEmails : null,
       created_by:  user?.id || null,
       updated_at:  new Date().toISOString(),
     }
@@ -1222,7 +1228,7 @@ function openEditVacation() {
     }
 
     // Enviar emails con ICS adjunto
-    if (juntaAttendees.length > 0 || juntaExternalEmails.length > 0) {
+    if (juntaAttendees.length > 0 || finalExternalEmails.length > 0) {
       try {
         const res = await fetch("/api/juntas/send-invites", {
           method: "POST",
