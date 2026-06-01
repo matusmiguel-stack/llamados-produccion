@@ -513,7 +513,26 @@ export default function Home() {
     const unfolded = text.replace(/\r?\n[ \t]/g, "")
     const lines = unfolded.split(/\r?\n/)
 
-    // Get property value ignoring params: DTSTART;TZID=...:value → value
+    // ── Robust property extraction ─────────────────────────────────────────
+    // For datetime props (DTSTART/DTEND): extract value using a regex that
+    // matches the datetime pattern at the end of the line.
+    // This is immune to TZID values that contain colons, e.g.
+    //   DTSTART;TZID=(UTC-06:00) Central Time:20260601T140000
+    //   DTSTART;TZID="GMT+05:30":20260601T090000
+    // — getProp (first-colon approach) would extract garbage in those cases.
+    const DT_PATTERN = /(\d{8}(?:T\d{6}Z?)?|\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}Z?)?)$/
+
+    function getDT(name: string): string | null {
+      for (const line of lines) {
+        if (!line.toUpperCase().startsWith(name.toUpperCase())) continue
+        const m = line.match(DT_PATTERN)
+        return m ? m[1] : null
+      }
+      return null
+    }
+
+    // For text props (SUMMARY, DESCRIPTION, etc.) the first-colon approach is fine
+    // because those values don't have a TZID parameter with colons.
     function getProp(name: string): string | null {
       for (const line of lines) {
         const col = line.indexOf(":")
@@ -524,37 +543,27 @@ export default function Home() {
       return null
     }
 
-    // Check if DTSTART has Z suffix (UTC) or no TZID param (floating/local)
-    function dtHasZ(name: string): boolean {
-      for (const line of lines) {
-        const col = line.indexOf(":")
-        if (col < 0) continue
-        const key = line.slice(0, col).split(";")[0].toUpperCase()
-        if (key === name.toUpperCase()) return line.slice(col + 1).trim().endsWith("Z")
-      }
-      return false
-    }
-
-    // Parse YYYYMMDD[THHmmSS[Z]] — handles both compact (20260601T140000) and
-    // extended (2026-06-01T14:00:00) ISO formats.
-    // We intentionally do NOT convert UTC to local: showing the raw client time
-    // is more useful — the user adjusts if needed.
+    // Parse a datetime string → { fecha: "YYYY-MM-DD", hora: "HH:MM" }
+    // Handles compact (20260601T140000[Z]) and extended (2026-06-01T14:00:00[Z]).
+    // Does NOT convert timezone — shows the time as the organiser wrote it.
     function parseDateTime(dt: string | null): { fecha: string; hora: string } | null {
       if (!dt) return null
-      const raw = dt.replace("Z", "").trim()
-      const hasT = raw.toUpperCase().includes("T")
+      const raw = dt.replace(/Z$/i, "").trim()
 
       if (raw.includes("-")) {
-        // Extended format: 2026-06-01[T14:00:00]
-        const fecha = raw.slice(0, 10)
-        const hora  = hasT ? raw.slice(11, 16) : "" // "HH:MM"
-        return { fecha, hora }
+        // Extended: 2026-06-01[T14:00:00]
+        return {
+          fecha: raw.slice(0, 10),
+          hora:  raw.length > 10 ? raw.slice(11, 16) : "",
+        }
       }
 
-      // Compact format: 20260601[T140000]
-      const fecha = `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`
-      const hora  = hasT ? `${raw.slice(9,11)}:${raw.slice(11,13)}` : ""
-      return { fecha, hora }
+      // Compact: 20260601[T140000]
+      if (raw.length < 8) return null
+      return {
+        fecha: `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`,
+        hora:  raw.length >= 13 ? `${raw.slice(9,11)}:${raw.slice(11,13)}` : "",
+      }
     }
 
     // Extract first Zoom / Meet / Teams / Webex URL from any field
@@ -568,20 +577,16 @@ export default function Home() {
       ]
       for (const src of searchIn) {
         if (!src) continue
-        // Unescape ICS backslash sequences
         const clean = src.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\/g, "")
         const m = clean.match(MEETING_RE)
-        if (m) return m[0].replace(/[>"\s].*$/, "") // trim trailing junk
+        if (m) return m[0].replace(/[>"\s].*$/, "")
       }
       return ""
     }
 
-    const startRaw = getProp("DTSTART")
-    if (!startRaw) return null
-
-    const start = parseDateTime(startRaw)
+    const start = parseDateTime(getDT("DTSTART"))
     if (!start) return null
-    const end = parseDateTime(getProp("DTEND"))
+    const end = parseDateTime(getDT("DTEND"))
 
     const cleanText = (s: string) =>
       s.replace(/\\,/g, ",").replace(/\\n/gi, " ").replace(/\\/g, "").trim()
