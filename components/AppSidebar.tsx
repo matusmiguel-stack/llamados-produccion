@@ -16,7 +16,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -33,6 +33,7 @@ const navItems: { href: string; label: string; icon: NavIconType; roles?: string
   { href: "/resources",   label: "Inventario",   icon: "inventory",  roles: ["admin", "editor", "viewer"] },
   { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor"] },
   { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "productor"] },
+  { href: "/postproduccion", label: "Post Producción", icon: "postpro", roles: ["admin", "editor", "productor"] },
   { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor"] },
   { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin"] },
@@ -173,7 +174,7 @@ export function AppSidebar({
 function NavIcon({
   type,
 }: {
-  type: "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "employees" | "suppliers" | "users" | "ingresos"
+  type: "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "employees" | "suppliers" | "users" | "ingresos" | "postpro"
 }) {
   if (type === "calendar") {
     return (
@@ -266,6 +267,17 @@ function NavIcon({
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
+  if (type === "postpro") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M2 11h20" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M7 7V3M17 7V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M7 3l2 4M12 3l2 4M17 3l2 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
       </svg>
     )
   }
