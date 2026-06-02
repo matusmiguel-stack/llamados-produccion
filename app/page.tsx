@@ -211,6 +211,47 @@ export default function Home() {
   const [newClientName, setNewClientName] = useState("")
   const [savingClient, setSavingClient] = useState(false)
 
+  // ── Recordatorio de juntas (client-side, cada minuto) ─────────────────────
+  const REMINDER_MINUTES = 1 // cambiar a 30 para producción
+  const firedJuntaReminders = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!user) return
+
+    function checkJuntaReminders() {
+      if (Notification.permission !== "granted") return
+
+      const nowMx = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }))
+      const todayStr = nowMx.toISOString().split("T")[0]
+
+      for (const junta of allJuntas) {
+        if (junta.fecha !== todayStr || !junta.hora_inicio) continue
+
+        const [h, m] = junta.hora_inicio.split(":").map(Number)
+        const juntaTime = new Date(nowMx)
+        juntaTime.setHours(h, m, 0, 0)
+
+        const diffMin = (juntaTime.getTime() - nowMx.getTime()) / 60000
+
+        if (diffMin <= REMINDER_MINUTES && diffMin > 0) {
+          const key = `${junta.id}-${REMINDER_MINUTES}`
+          if (firedJuntaReminders.current.has(key)) continue
+          firedJuntaReminders.current.add(key)
+
+          const label = junta.titulo || junta.tipo
+          new Notification(`📋 Junta en ${Math.ceil(diffMin)} min`, {
+            body: `${label} · ${junta.hora_inicio} hrs`,
+            icon: "/logo-retro.png",
+          })
+        }
+      }
+    }
+
+    checkJuntaReminders() // revisar inmediatamente al montar
+    const interval = setInterval(checkJuntaReminders, 60_000) // cada minuto
+    return () => clearInterval(interval)
+  }, [user, allJuntas, juntaAttendeeMap, employees])
+
   const canEdit = profile?.role === "admin" || profile?.role === "editor"
   const isAdmin = profile?.role === "admin"
   const isProductorRole = profile?.role === "productor"
