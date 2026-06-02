@@ -218,6 +218,8 @@ export default function Home() {
   useEffect(() => {
     if (!user) return
 
+    console.log("[junta-reminder] useEffect fired — user:", user?.id, "juntas:", allJuntas.length)
+
     function checkJuntaReminders() {
       console.log("[junta-reminder] check — permission:", Notification.permission, "juntas:", allJuntas.length)
       if (Notification.permission !== "granted") return
