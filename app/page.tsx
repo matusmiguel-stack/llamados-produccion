@@ -239,7 +239,7 @@ export default function Home() {
         const diffMin = (juntaTime.getTime() - nowMx.getTime()) / 60000
         console.log(`[junta-reminder] diffMin=${diffMin.toFixed(2)} threshold=${REMINDER_MINUTES}`)
 
-        if (diffMin <= REMINDER_MINUTES && diffMin > -1) {
+        if (diffMin <= REMINDER_MINUTES && diffMin > -2) {
           const key = `${junta.id}-${REMINDER_MINUTES}`
           if (firedJuntaReminders.current.has(key)) continue
           firedJuntaReminders.current.add(key)
@@ -255,7 +255,7 @@ export default function Home() {
     }
 
     checkJuntaReminders() // revisar inmediatamente al montar
-    const interval = setInterval(checkJuntaReminders, 60_000) // cada minuto
+    const interval = setInterval(checkJuntaReminders, 10_000) // cada 10 segundos
     return () => clearInterval(interval)
   }, [user, allJuntas, juntaAttendeeMap, employees])
 
