@@ -52,7 +52,8 @@ export default function PostproduccionPage() {
 
   const [formTitulo,     setFormTitulo]     = useState("")
   const [formTipo,       setFormTipo]       = useState<TipoEntrega>("CDT Interna")
-  const [formEditorId,   setFormEditorId]   = useState("")
+  const [formEditores,   setFormEditores]   = useState<string[]>([]) // array de IDs
+  const [editorSearch,   setEditorSearch]   = useState("")
   const [formClienteId,  setFormClienteId]  = useState("")
   const [formProyectoId, setFormProyectoId] = useState("")
   const [formProyecto,   setFormProyecto]   = useState("") // libre
@@ -113,7 +114,7 @@ export default function PostproduccionPage() {
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
-    setFormClienteId(""); setFormProyectoId(""); setFormEditorId("")
+    setFormClienteId(""); setFormProyectoId(""); setFormEditores([]); setEditorSearch("")
     setFormTipo("CDT Interna")
     setFormFecha("");  setFormHora("");     setFormNotas("")
     setModoLibre(false)
@@ -151,13 +152,16 @@ export default function PostproduccionPage() {
       proyectoLabel = prj ? (prj.code ? `${prj.code} ${prj.name}` : prj.name) : ""
     }
 
-    const editor = postproductores.find((e) => e.id === formEditorId)
-    const editorName = editor ? `${editor.nombre} ${editor.apellido_paterno}` : null
+    const editoresNames = formEditores
+      .map((id) => postproductores.find((e) => e.id === id))
+      .filter(Boolean)
+      .map((e: any) => `${e.nombre} ${e.apellido_paterno}`)
 
     const payload = {
       titulo:    formTitulo.trim(),
       tipo:      formTipo,
-      editor:    editorName,
+      editor:    editoresNames.length ? editoresNames.join(", ") : null,
+      editores:  editoresNames.length ? editoresNames : null,
       proyecto:  proyectoLabel || null,
       cliente:   clienteLabel  || null,
       fecha:     formFecha,
@@ -390,15 +394,61 @@ export default function PostproduccionPage() {
                 </div>
               </div>
 
-              {/* Editor */}
+              {/* Editores */}
               <div>
                 <label style={labelStyle}>Editor / Postproductor</label>
-                <select value={formEditorId} onChange={(e) => setFormEditorId(e.target.value)} style={inputStyle}>
-                  <option value="">— Sin asignar —</option>
-                  {postproductores.map((e) => (
-                    <option key={e.id} value={e.id}>{e.nombre} {e.apellido_paterno}</option>
-                  ))}
-                </select>
+                {/* Chips de editores seleccionados */}
+                {formEditores.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, marginTop: 6 }}>
+                    {formEditores.map((id) => {
+                      const emp = postproductores.find((e: any) => e.id === id)
+                      if (!emp) return null
+                      return (
+                        <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "3px 10px", borderRadius: 999,
+                          background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
+                          color: "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
+                          {emp.nombre} {emp.apellido_paterno}
+                          <button type="button" onClick={() => setFormEditores((prev) => prev.filter((i) => i !== id))}
+                            style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {/* Input de búsqueda */}
+                <input
+                  type="text"
+                  value={editorSearch}
+                  onChange={(e) => setEditorSearch(e.target.value)}
+                  style={inputStyle}
+                  placeholder="Buscar postproductor..."
+                />
+                {/* Sugerencias */}
+                {editorSearch.trim() && (() => {
+                  const q = editorSearch.toLowerCase()
+                  const sugerencias = postproductores.filter((e: any) =>
+                    !formEditores.includes(e.id) &&
+                    (`${e.nombre} ${e.apellido_paterno}`).toLowerCase().includes(q)
+                  )
+                  if (!sugerencias.length) return (
+                    <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>Sin resultados</p>
+                  )
+                  return (
+                    <div style={{ marginTop: 4, borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", overflow: "hidden" }}>
+                      {sugerencias.map((e: any) => (
+                        <button key={e.id} type="button"
+                          onClick={() => { setFormEditores((prev) => [...prev, e.id]); setEditorSearch("") }}
+                          style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
+                            background: "rgba(255,255,255,0.03)", border: "none", borderBottom: "1px solid rgba(148,163,184,0.1)",
+                            color: "#e2e8f0", fontSize: 13, cursor: "pointer" }}>
+                          {e.nombre} {e.apellido_paterno}
+                          <span style={{ color: "#64748b", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
                 {postproductores.length === 0 && (
                   <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 11 }}>
                     No hay empleados con puesto "Postproductor" registrados.
@@ -487,8 +537,11 @@ export default function PostproduccionPage() {
                   setFormProyecto(selectedEntrega.proyecto || "")
                   setFormCliente(selectedEntrega.cliente || "")
                   setFormClienteId(""); setFormProyectoId("")
-                  const edEmp = postproductores.find((e) => `${e.nombre} ${e.apellido_paterno}` === selectedEntrega.editor)
-                  setFormEditorId(edEmp?.id || "")
+                  const savedNames: string[] = selectedEntrega.editores || (selectedEntrega.editor ? [selectedEntrega.editor] : [])
+                  const edIds = savedNames
+                    .map((name: string) => postproductores.find((e: any) => `${e.nombre} ${e.apellido_paterno}` === name)?.id)
+                    .filter(Boolean) as string[]
+                  setFormEditores(edIds)
                   setModoLibre(true)
                   setFormFecha(selectedEntrega.fecha)
                   setFormHora(selectedEntrega.hora || "")
