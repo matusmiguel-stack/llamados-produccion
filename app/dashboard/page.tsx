@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const [shootEmployees, setShootEmployees] = useState<any[]>([])
   const [allVacations, setAllVacations] = useState<any[]>([])
   const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
+  const [allJuntas, setAllJuntas] = useState<any[]>([])
+  const [juntaAttendees, setJuntaAttendees] = useState<any[]>([])
   const [selectedDate, setSelectedDate] = useState(getLocalDateString)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -69,11 +71,22 @@ export default function DashboardPage() {
       .from("vacation_employees")
       .select("*, vacations(*), employees(*)")
 
+    const { data: juntas } = await supabase
+      .from("juntas")
+      .select("*")
+      .order("fecha")
+
+    const { data: juntaAttendeesData } = await supabase
+      .from("junta_attendees")
+      .select("junta_id, employee_id")
+
     setAllShoots(shoots || [])
     setEmployees(emps || [])
     setShootEmployees(employeeAssignments || [])
     setAllVacations(vacations || [])
     setVacationEmployees(vacationAssignments || [])
+    setAllJuntas(juntas || [])
+    setJuntaAttendees(juntaAttendeesData || [])
   }
 
   useEffect(() => {
@@ -105,6 +118,13 @@ export default function DashboardPage() {
         selectedDate
       ),
     [employees, allVacations, vacationEmployees, selectedDate]
+  )
+
+  const juntasToday = useMemo(
+    () => allJuntas.filter((j) => j.fecha === selectedDate).sort((a, b) =>
+      (a.hora_inicio || "").localeCompare(b.hora_inicio || "")
+    ),
+    [allJuntas, selectedDate]
   )
 
   const birthdaysToday = useMemo(
@@ -199,9 +219,9 @@ export default function DashboardPage() {
               <h1 style={pageTitleStyle}>Dashboard crew</h1>
               <p style={pageSubtitleStyle}>
                 {shootsOnDate.length} llamado{shootsOnDate.length === 1 ? "" : "s"} ·{" "}
+                {juntasToday.length} junta{juntasToday.length === 1 ? "" : "s"} ·{" "}
                 {participantsCount} en set · {vacationsToday.length} de vacaciones ·{" "}
-                {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios ·{" "}
-                {idleCrew.length} libre{idleCrew.length === 1 ? "" : "s"}
+                {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios
               </p>
             </div>
 
@@ -400,27 +420,43 @@ export default function DashboardPage() {
                 </section>
               )}
 
-              {idleCrew.length > 0 && (
+              {juntasToday.length > 0 && (
                 <section style={panelStyle}>
                   <div style={panelHeaderStyle}>
-                    <p style={panelTitleStyle}>Sin llamados este día</p>
-                    <p style={panelHintStyle}>
-                      {idleCrew.length} persona{idleCrew.length === 1 ? "" : "s"}{" "}
-                      disponible{idleCrew.length === 1 ? "" : "s"}
-                    </p>
+                    <p style={panelTitleStyle}>📋 Juntas del día</p>
+                    <p style={panelHintStyle}>{juntasToday.length} junta{juntasToday.length === 1 ? "" : "s"}</p>
                   </div>
-                  <div style={idleGridStyle}>
-                    {idleCrew.map((person) => (
-                      <div key={person.id} style={idleChipStyle}>
-                        <span style={avatarStyle(employeeDisplayName(person), "muted")}>
-                          {employeeDisplayName(person).charAt(0).toUpperCase()}
-                        </span>
-                        <div>
-                          <p style={idleNameStyle}>{employeeDisplayName(person)}</p>
-                          <p style={idleRoleStyle}>{person.puesto}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {juntasToday.map((j) => {
+                      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : "🤝"
+                      const attendeeIds = juntaAttendees.filter((a) => a.junta_id === j.id).map((a) => a.employee_id)
+                      const attendeeNames = attendeeIds
+                        .map((id: string) => employees.find((e) => e.id === id))
+                        .filter(Boolean)
+                        .map((e: any) => employeeDisplayName(e))
+                      return (
+                        <div key={j.id} style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(8,145,178,0.08)", border: "1px solid rgba(8,145,178,0.2)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span style={{ fontSize: 16 }}>{emoji}</span>
+                            <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: 14 }}>{j.titulo || j.tipo}</span>
+                            <span style={{ marginLeft: "auto", color: "#67e8f9", fontSize: 13 }}>
+                              {j.hora_inicio}{j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs
+                            </span>
+                          </div>
+                          {j.notas && <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: 12 }}>{j.notas}</p>}
+                          {attendeeNames.length > 0 && (
+                            <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 12 }}>
+                              {attendeeNames.join(" · ")}
+                            </p>
+                          )}
+                          {j.link && (
+                            <a href={j.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, color: "#7dd3fc", fontSize: 12 }}>
+                              🔗 Unirse
+                            </a>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </section>
               )}

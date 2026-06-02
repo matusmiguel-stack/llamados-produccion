@@ -1792,34 +1792,6 @@ function openEditVacation() {
             </select>
 
             <select
-              aria-label="Subcarpeta"
-              value={filterSubfolder}
-              onChange={(e) => setFilterSubfolder(e.target.value)}
-              style={compactFilterSelectStyle}
-            >
-              <option value="">Subcarpeta</option>
-              {filterSubfolderOptions.map((subfolder) => (
-                <option key={subfolder.id} value={subfolder.id}>
-                  {subfolder.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              aria-label="Proyecto"
-              value={filterProject}
-              onChange={(e) => setFilterProject(e.target.value)}
-              style={compactFilterSelectStyle}
-            >
-              <option value="">Proyecto</option>
-              {filterProjectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-
-            <select
               aria-label="Estado"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
