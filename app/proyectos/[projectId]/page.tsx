@@ -1153,16 +1153,25 @@ function QuoteModal({
 
   async function confirmarAprobacion() {
     setAproving(true)
+
+    // Si el proyecto aún no tiene código RS, asignarlo ahora
+    let effectiveCode = projectCode
+    if (!effectiveCode && quote.project_id) {
+      const { data: nextData } = await supabase.rpc("next_project_code")
+      if (nextData) {
+        await supabase.from("projects").update({ code: nextData }).eq("id", quote.project_id)
+        effectiveCode = nextData
+      }
+    }
+
     const iva = Math.round(total * 0.16 * 100) / 100
     const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
     const { error } = await supabase.from("ingresos").insert({
       empresa:         aprobarEmpresa,
       estatus:         "en_produccion",
       cliente_agencia: clientName,
-      // Responsable del proyecto, no el campo "Atención a:" de la cotización
       responsable:     projectResponsable || null,
-      // Solo el nombre del proyecto (con código si existe), sin el nombre de la cotización
-      proyecto:        projectCode ? `${projectCode} ${projectName}` : projectName,
+      proyecto:        effectiveCode ? `${effectiveCode} ${projectName}` : projectName,
       subtotal:        total,
       iva,
       mes_cierre:      MESES_ES[new Date().getMonth()],
