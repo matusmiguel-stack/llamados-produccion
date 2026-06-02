@@ -242,10 +242,11 @@ export default function Home() {
           firedJuntaReminders.current.add(key)
 
           const label = junta.titulo || junta.tipo
-          new Notification(`📋 Junta en ${Math.ceil(Math.max(diffMin, 0))} min`, {
-            body: `${label} · ${junta.hora_inicio} hrs`,
-            icon: "/logo-retro.png",
-          })
+          const title = `📋 Junta en ${Math.ceil(Math.max(diffMin, 0))} min`
+          const opts = { body: `${label} · ${junta.hora_inicio} hrs`, icon: "/logo-retro.png" }
+          navigator.serviceWorker.ready
+            .then((reg) => reg.showNotification(title, opts))
+            .catch(() => new Notification(title, opts))
         }
       }
     }

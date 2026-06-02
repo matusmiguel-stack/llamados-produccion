@@ -84,7 +84,17 @@ export function PushNotificationManager({ userId }: Props) {
   if (status === "granted") {
     return (
       <button
-        onClick={() => new Notification("🔔 Prueba", { body: "Las notificaciones funcionan correctamente", icon: "/logo-retro.png" })}
+        onClick={async () => {
+          try {
+            const reg = await navigator.serviceWorker.ready
+            await reg.showNotification("🔔 Prueba", {
+              body: "Las notificaciones funcionan correctamente",
+              icon: "/logo-retro.png",
+            })
+          } catch {
+            new Notification("🔔 Prueba", { body: "Las notificaciones funcionan correctamente" })
+          }
+        }}
         style={{ ...btnStyle, background: "rgba(8,145,178,0.3)", marginBottom: 12 }}
       >
         🔔 Probar notificación
