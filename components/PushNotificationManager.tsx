@@ -79,7 +79,18 @@ export function PushNotificationManager({ userId }: Props) {
     }
   }
 
-  if (status === "unsupported" || status === "granted" || status === "denied") return null
+  if (status === "unsupported" || status === "denied") return null
+
+  if (status === "granted") {
+    return (
+      <button
+        onClick={() => new Notification("🔔 Prueba", { body: "Las notificaciones funcionan correctamente", icon: "/logo-retro.png" })}
+        style={{ ...btnStyle, background: "rgba(8,145,178,0.3)", marginBottom: 12 }}
+      >
+        🔔 Probar notificación
+      </button>
+    )
+  }
 
   return (
     <div style={bannerStyle}>
