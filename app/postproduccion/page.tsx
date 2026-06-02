@@ -29,18 +29,25 @@ export default function PostproduccionPage() {
   const [entregas, setEntregas] = useState<any[]>([])
   const [events, setEvents]     = useState<any[]>([])
 
-  // form
-  const [modalOpen, setModalOpen]         = useState(false)
-  const [selectedEntrega, setSelectedEntrega] = useState<any>(null)
-  const [detailsOpen, setDetailsOpen]     = useState(false)
+  // catálogo
+  const [allClients,  setAllClients]  = useState<any[]>([])
+  const [allProjects, setAllProjects] = useState<any[]>([])
 
-  const [formTitulo,   setFormTitulo]   = useState("")
-  const [formProyecto, setFormProyecto] = useState("")
-  const [formCliente,  setFormCliente]  = useState("")
-  const [formFecha,    setFormFecha]    = useState("")
-  const [formHora,     setFormHora]     = useState("")
-  const [formNotas,    setFormNotas]    = useState("")
-  const [formColor,    setFormColor]    = useState("#6366f1")
+  // form
+  const [modalOpen, setModalOpen]             = useState(false)
+  const [selectedEntrega, setSelectedEntrega] = useState<any>(null)
+  const [detailsOpen, setDetailsOpen]         = useState(false)
+  const [modoLibre, setModoLibre]             = useState(false)
+
+  const [formTitulo,     setFormTitulo]     = useState("")
+  const [formClienteId,  setFormClienteId]  = useState("")
+  const [formProyectoId, setFormProyectoId] = useState("")
+  const [formProyecto,   setFormProyecto]   = useState("") // libre
+  const [formCliente,    setFormCliente]    = useState("") // libre
+  const [formFecha,      setFormFecha]      = useState("")
+  const [formHora,       setFormHora]       = useState("")
+  const [formNotas,      setFormNotas]      = useState("")
+  const [formColor,      setFormColor]      = useState("#6366f1")
 
   const calendarRef = useRef<any>(null)
   const canManage = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "productor"
@@ -58,8 +65,14 @@ export default function PostproduccionPage() {
     setUser(auth.session.user)
     setProfile(auth.profile)
 
-    const { data } = await supabase.from("entregas").select("*").order("fecha")
-    setEntregas(data || [])
+    const [{ data: entregasData }, { data: clients }, { data: projects }] = await Promise.all([
+      supabase.from("entregas").select("*").order("fecha"),
+      supabase.from("clients").select("id, name").order("name"),
+      supabase.from("projects").select("id, name, client_id, code").order("name"),
+    ])
+    setEntregas(entregasData || [])
+    setAllClients(clients || [])
+    setAllProjects(projects || [])
   }
 
   useEffect(() => { loadData() }, [])
@@ -79,8 +92,9 @@ export default function PostproduccionPage() {
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
+    setFormClienteId(""); setFormProyectoId("")
     setFormFecha("");  setFormHora("");     setFormNotas("")
-    setFormColor("#6366f1")
+    setFormColor("#6366f1"); setModoLibre(false)
     setSelectedEntrega(null)
   }
 
@@ -102,10 +116,23 @@ export default function PostproduccionPage() {
     if (!formTitulo.trim()) return alert("Ponle título a la entrega")
     if (!formFecha)         return alert("Selecciona una fecha")
 
+    // Resolver cliente y proyecto según modo
+    let clienteLabel = ""
+    let proyectoLabel = ""
+    if (modoLibre) {
+      clienteLabel  = formCliente.trim()
+      proyectoLabel = formProyecto.trim()
+    } else {
+      const cli = allClients.find((c) => c.id === formClienteId)
+      const prj = allProjects.find((p) => p.id === formProyectoId)
+      clienteLabel  = cli?.name || ""
+      proyectoLabel = prj ? (prj.code ? `${prj.code} ${prj.name}` : prj.name) : ""
+    }
+
     const payload = {
       titulo:    formTitulo.trim(),
-      proyecto:  formProyecto.trim() || null,
-      cliente:   formCliente.trim()  || null,
+      proyecto:  proyectoLabel || null,
+      cliente:   clienteLabel  || null,
       fecha:     formFecha,
       hora:      formHora  || null,
       notas:     formNotas.trim() || null,
@@ -224,19 +251,61 @@ export default function PostproduccionPage() {
                   style={inputStyle} placeholder="Ej. Entrega corte fino — cliente" />
               </div>
 
-              {/* Proyecto / Cliente */}
-              <div style={rowStyle}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Proyecto</label>
-                  <input type="text" value={formProyecto} onChange={(e) => setFormProyecto(e.target.value)}
-                    style={inputStyle} placeholder="Nombre del proyecto" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Cliente</label>
-                  <input type="text" value={formCliente} onChange={(e) => setFormCliente(e.target.value)}
-                    style={inputStyle} placeholder="Nombre del cliente" />
-                </div>
+              {/* Toggle modo */}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" onClick={() => setModoLibre(false)}
+                  style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    border: !modoLibre ? "1px solid #6366f1" : "1px solid rgba(148,163,184,0.2)",
+                    background: !modoLibre ? "rgba(99,102,241,0.15)" : "transparent",
+                    color: !modoLibre ? "#a5b4fc" : "#64748b" }}>
+                  📂 Desde catálogo
+                </button>
+                <button type="button" onClick={() => setModoLibre(true)}
+                  style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    border: modoLibre ? "1px solid #6366f1" : "1px solid rgba(148,163,184,0.2)",
+                    background: modoLibre ? "rgba(99,102,241,0.15)" : "transparent",
+                    color: modoLibre ? "#a5b4fc" : "#64748b" }}>
+                  ✏️ Escribir manualmente
+                </button>
               </div>
+
+              {/* Proyecto / Cliente */}
+              {!modoLibre ? (
+                <div style={rowStyle}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Cliente</label>
+                    <select value={formClienteId}
+                      onChange={(e) => { setFormClienteId(e.target.value); setFormProyectoId("") }}
+                      style={inputStyle}>
+                      <option value="">— Selecciona cliente —</option>
+                      {allClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Proyecto</label>
+                    <select value={formProyectoId} onChange={(e) => setFormProyectoId(e.target.value)}
+                      style={inputStyle}>
+                      <option value="">— Selecciona proyecto —</option>
+                      {allProjects
+                        .filter((p) => !formClienteId || p.client_id === formClienteId)
+                        .map((p) => <option key={p.id} value={p.id}>{p.code ? `${p.code} ${p.name}` : p.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div style={rowStyle}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Proyecto</label>
+                    <input type="text" value={formProyecto} onChange={(e) => setFormProyecto(e.target.value)}
+                      style={inputStyle} placeholder="Nombre del proyecto" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Cliente</label>
+                    <input type="text" value={formCliente} onChange={(e) => setFormCliente(e.target.value)}
+                      style={inputStyle} placeholder="Nombre del cliente" />
+                  </div>
+                </div>
+              )}
 
               {/* Fecha / Hora */}
               <div style={rowStyle}>
@@ -328,6 +397,8 @@ export default function PostproduccionPage() {
                   setFormTitulo(selectedEntrega.titulo)
                   setFormProyecto(selectedEntrega.proyecto || "")
                   setFormCliente(selectedEntrega.cliente || "")
+                  setFormClienteId(""); setFormProyectoId("")
+                  setModoLibre(true) // al editar usamos modo libre con los valores guardados
                   setFormFecha(selectedEntrega.fecha)
                   setFormHora(selectedEntrega.hora || "")
                   setFormNotas(selectedEntrega.notas || "")
