@@ -260,6 +260,7 @@ export default function Home() {
   const isAdmin = profile?.role === "admin"
   const isProductorRole = profile?.role === "productor"
   const canJunta = canEdit || isProductorRole
+  const canManageJuntas = canJunta // admin, editor y productor pueden crear/editar/borrar juntas
   const canManageVacations = isAdmin
 
   useEffect(() => {
@@ -2876,7 +2877,7 @@ function openEditVacation() {
                   Cerrar
                 </button>
 
-                {canEdit && (
+                {canManageJuntas && (
                   <button
                     onClick={() => {
                       // Pre-fill form for editing
@@ -2897,7 +2898,7 @@ function openEditVacation() {
                   </button>
                 )}
 
-                {canEdit && (
+                {canManageJuntas && (
                   <button
                     onClick={() => deleteJunta(selectedJunta.id)}
                     style={formModalDangerButtonStyle}
