@@ -181,22 +181,30 @@ export default function PostproduccionPage() {
         </header>
 
         {/* Calendario */}
-        <div style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 16, padding: isMobile ? "12px 8px" : "20px 24px", flex: 1 }}>
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            locale="es"
-            headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
-            height="auto"
-            events={events}
-            selectable={canManage}
-            selectMirror={canManage}
-            select={handleDateSelect}
-            eventClick={handleEventClick}
-            buttonText={{ today: "Hoy", month: "Mes", week: "Semana" }}
-          />
-        </div>
+        <section style={calendarPanelStyle}>
+          <div style={{ marginBottom: 8 }}>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 11 }}>
+              {canManage ? "Clic en la celda para crear una entrega; clic en un evento para ver detalle" : "Clic en un evento para ver detalle"}
+            </p>
+          </div>
+          <div className={isMobile ? "calendar-shell calendar-shell-mobile" : "calendar-shell"}
+            style={{ display: "flex", flexDirection: "column", overflow: "visible", minHeight: "auto" }}>
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="dayGridMonth"
+              locale="es"
+              headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
+              height="auto"
+              events={events}
+              selectable={canManage}
+              selectMirror={canManage}
+              select={handleDateSelect}
+              eventClick={handleEventClick}
+              buttonText={{ today: "Hoy", month: "Mes", week: "Semana" }}
+            />
+          </div>
+        </section>
       </main>
 
       {/* ── Modal crear/editar ── */}
@@ -343,6 +351,18 @@ export default function PostproduccionPage() {
 
 const shellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh", background: "transparent", color: "#f8fafc",
+}
+
+const calendarPanelStyle: React.CSSProperties = {
+  background: "rgba(15, 23, 42, 0.72)",
+  border: "1px solid rgba(148,163,184,0.14)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  backdropFilter: "blur(16px)",
+  borderRadius: 16,
+  padding: "10px 12px 12px",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "visible",
 }
 
 const overlayStyle: React.CSSProperties = {
