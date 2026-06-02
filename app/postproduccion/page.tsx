@@ -45,6 +45,11 @@ export default function PostproduccionPage() {
   const [detailsOpen, setDetailsOpen]         = useState(false)
   const [modoLibre, setModoLibre]             = useState(false)
 
+  // filtros visibilidad
+  const [tiposVisibles, setTiposVisibles] = useState<Set<string>>(
+    new Set(TIPOS_ENTREGA.map((t) => t.label))
+  )
+
   const [formTitulo,     setFormTitulo]     = useState("")
   const [formTipo,       setFormTipo]       = useState<TipoEntrega>("CDT Interna")
   const [formEditorId,   setFormEditorId]   = useState("")
@@ -89,20 +94,22 @@ export default function PostproduccionPage() {
   useEffect(() => { loadData() }, [])
 
   useEffect(() => {
-    const evs = entregas.map((e) => {
-      const color = colorForTipo(e.tipo) || e.color || "#6366f1"
-      return {
-        id: e.id,
-        title: e.titulo,
-        start: e.hora ? `${e.fecha}T${e.hora}` : e.fecha,
-        allDay: !e.hora,
-        backgroundColor: color,
-        borderColor:     color,
-        textColor: "#ffffff",
-      }
-    })
+    const evs = entregas
+      .filter((e) => !e.tipo || tiposVisibles.has(e.tipo))
+      .map((e) => {
+        const color = colorForTipo(e.tipo) || e.color || "#6366f1"
+        return {
+          id: e.id,
+          title: e.titulo,
+          start: e.hora ? `${e.fecha}T${e.hora}` : e.fecha,
+          allDay: !e.hora,
+          backgroundColor: color,
+          borderColor:     color,
+          textColor: "#ffffff",
+        }
+      })
     setEvents(evs)
-  }, [entregas])
+  }, [entregas, tiposVisibles])
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
@@ -226,6 +233,32 @@ export default function PostproduccionPage() {
             </button>
           )}
         </header>
+
+        {/* Chips de filtro por tipo */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {TIPOS_ENTREGA.map((t) => {
+            const active = tiposVisibles.has(t.label)
+            return (
+              <button key={t.label} onClick={() => {
+                setTiposVisibles((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(t.label)) next.delete(t.label)
+                  else next.add(t.label)
+                  return next
+                })
+              }} style={{
+                padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                border: `1px solid ${active ? t.color : "rgba(148,163,184,0.2)"}`,
+                background: active ? `${t.color}22` : "transparent",
+                color: active ? t.color : "#64748b",
+                opacity: active ? 1 : 0.5,
+                transition: "all 0.15s",
+              }}>
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
 
         {/* Calendario */}
         <section style={calendarPanelStyle}>
