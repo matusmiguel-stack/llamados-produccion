@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
   const [allJuntas, setAllJuntas] = useState<any[]>([])
   const [juntaAttendees, setJuntaAttendees] = useState<any[]>([])
+  const [allEntregas, setAllEntregas] = useState<any[]>([])
   const [selectedDate, setSelectedDate] = useState(getLocalDateString)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -87,6 +88,12 @@ export default function DashboardPage() {
     setVacationEmployees(vacationAssignments || [])
     setAllJuntas(juntas || [])
     setJuntaAttendees(juntaAttendeesData || [])
+
+    const { data: entregas } = await supabase
+      .from("entregas")
+      .select("*")
+      .order("fecha")
+    setAllEntregas(entregas || [])
   }
 
   useEffect(() => {
@@ -125,6 +132,13 @@ export default function DashboardPage() {
       (a.hora_inicio || "").localeCompare(b.hora_inicio || "")
     ),
     [allJuntas, selectedDate]
+  )
+
+  const entregasToday = useMemo(
+    () => allEntregas.filter((e) => e.fecha === selectedDate).sort((a, b) =>
+      (a.hora || "").localeCompare(b.hora || "")
+    ),
+    [allEntregas, selectedDate]
   )
 
   const birthdaysToday = useMemo(
@@ -220,6 +234,7 @@ export default function DashboardPage() {
               <p style={pageSubtitleStyle}>
                 {shootsOnDate.length} llamado{shootsOnDate.length === 1 ? "" : "s"} ·{" "}
                 {juntasToday.length} junta{juntasToday.length === 1 ? "" : "s"} ·{" "}
+                {entregasToday.length} entrega{entregasToday.length === 1 ? "" : "s"} post ·{" "}
                 {participantsCount} en set · {vacationsToday.length} de vacaciones ·{" "}
                 {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios
               </p>
@@ -454,6 +469,45 @@ export default function DashboardPage() {
                               🔗 Unirse
                             </a>
                           )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+              {entregasToday.length > 0 && (
+                <section style={panelStyle}>
+                  <div style={panelHeaderStyle}>
+                    <p style={panelTitleStyle}>🎞️ Post Producción</p>
+                    <p style={panelHintStyle}>{entregasToday.length} entrega{entregasToday.length === 1 ? "" : "s"}</p>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {entregasToday.map((e) => {
+                      const TIPO_COLORS: Record<string, string> = {
+                        "CDT Interna":       "#6366f1",
+                        "CDT Cliente":       "#0891b2",
+                        "Entrega final":     "#16a34a",
+                        "Ronda Ajustes":     "#ea580c",
+                        "Edición y Post":    "#7c3aed",
+                        "Online CC y Audio": "#db2777",
+                      }
+                      const color = TIPO_COLORS[e.tipo] || "#6366f1"
+                      return (
+                        <div key={e.id} style={{ padding: "12px 16px", borderRadius: 10, background: `${color}11`, border: `1px solid ${color}33` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            {e.tipo && (
+                              <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${color}22`, color }}>
+                                {e.tipo}
+                              </span>
+                            )}
+                            <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: 14 }}>{e.titulo}</span>
+                            {e.hora && (
+                              <span style={{ marginLeft: "auto", color: "#94a3b8", fontSize: 13 }}>{e.hora} hrs</span>
+                            )}
+                          </div>
+                          {e.proyecto && <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: 12 }}>{e.proyecto}{e.cliente ? ` · ${e.cliente}` : ""}</p>}
+                          {e.editor && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>Editor: {e.editor}</p>}
+                          {e.notas && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>{e.notas}</p>}
                         </div>
                       )
                     })}
