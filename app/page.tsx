@@ -219,19 +219,23 @@ export default function Home() {
     if (!user) return
 
     function checkJuntaReminders() {
+      console.log("[junta-reminder] check — permission:", Notification.permission, "juntas:", allJuntas.length)
       if (Notification.permission !== "granted") return
 
+      const todayStr = new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" })
       const nowMx = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }))
-      const todayStr = nowMx.toISOString().split("T")[0]
 
       for (const junta of allJuntas) {
-        if (junta.fecha !== todayStr || !junta.hora_inicio) continue
+        if (!junta.hora_inicio) continue
+        console.log(`[junta-reminder] junta ${junta.id}: fecha=${junta.fecha} today=${todayStr} hora=${junta.hora_inicio}`)
+        if (junta.fecha !== todayStr) continue
 
         const [h, m] = junta.hora_inicio.split(":").map(Number)
         const juntaTime = new Date(nowMx)
         juntaTime.setHours(h, m, 0, 0)
 
         const diffMin = (juntaTime.getTime() - nowMx.getTime()) / 60000
+        console.log(`[junta-reminder] diffMin=${diffMin.toFixed(2)} threshold=${REMINDER_MINUTES}`)
 
         if (diffMin <= REMINDER_MINUTES && diffMin > 0) {
           const key = `${junta.id}-${REMINDER_MINUTES}`
@@ -239,6 +243,7 @@ export default function Home() {
           firedJuntaReminders.current.add(key)
 
           const label = junta.titulo || junta.tipo
+          console.log(`[junta-reminder] FIRING notification for ${label}`)
           new Notification(`📋 Junta en ${Math.ceil(diffMin)} min`, {
             body: `${label} · ${junta.hora_inicio} hrs`,
             icon: "/logo-retro.png",
