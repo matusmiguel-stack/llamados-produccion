@@ -164,6 +164,11 @@ export default function Home() {
   const [filterProject, setFilterProject] = useState("")
   const [filterStatus, setFilterStatus] = useState("")
   const [filterHumanResource, setFilterHumanResource] = useState("")
+  const [showLlamados, setShowLlamados] = useState(true)
+  const [showVacaciones, setShowVacaciones] = useState(true)
+  const [showJuntas, setShowJuntas] = useState(true)
+  const [showCumpleanos, setShowCumpleanos] = useState(true)
+  const [showAniversarios, setShowAniversarios] = useState(true)
 
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedEndDate, setSelectedEndDate] = useState("")
@@ -514,7 +519,13 @@ export default function Home() {
       }
     })
 
-    setEvents([...shootEvents, ...vacationEvents, ...birthdayEvents, ...anniversaryEvents, ...juntaEvents])
+    setEvents([
+      ...(showLlamados ? shootEvents : []),
+      ...(showVacaciones ? vacationEvents : []),
+      ...(showCumpleanos ? birthdayEvents : []),
+      ...(showAniversarios ? anniversaryEvents : []),
+      ...(showJuntas ? juntaEvents : []),
+    ])
   }, [
     allShoots,
     allVacations,
@@ -532,6 +543,11 @@ export default function Home() {
     allClients,
     allSubfolders,
     allProjects,
+    showLlamados,
+    showVacaciones,
+    showJuntas,
+    showCumpleanos,
+    showAniversarios,
   ])
 
   async function handleSaveNewClient() {
@@ -1842,6 +1858,36 @@ function openEditVacation() {
               </button>
             )}
           </section>
+
+          {/* ── Chips de visibilidad ── */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+            {([
+              { key: "llamados",   label: "🎬 Llamados",   color: "#7c3aed", active: showLlamados,   set: setShowLlamados },
+              { key: "vacaciones", label: "🏖️ Vacaciones", color: "#9333ea", active: showVacaciones, set: setShowVacaciones },
+              { key: "juntas",     label: "📋 Juntas",     color: "#0891b2", active: showJuntas,     set: setShowJuntas },
+              { key: "cumple",     label: "🎂 Cumpleaños", color: "#f59e0b", active: showCumpleanos, set: setShowCumpleanos },
+              { key: "aniv",       label: "🎉 Aniversarios", color: "#14b8a6", active: showAniversarios, set: setShowAniversarios },
+            ] as const).map(({ key, label, color, active, set }) => (
+              <button
+                key={key}
+                onClick={() => set(!active)}
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  border: `1px solid ${active ? color : "rgba(148,163,184,0.2)"}`,
+                  background: active ? `${color}26` : "transparent",
+                  color: active ? color : "#64748b",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  opacity: active ? 1 : 0.5,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           <section
             style={{
