@@ -10,15 +10,20 @@ import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 
-const COLORS = [
-  { label: "Índigo",    value: "#6366f1" },
-  { label: "Cyan",      value: "#0891b2" },
-  { label: "Violeta",   value: "#7c3aed" },
-  { label: "Rosa",      value: "#db2777" },
-  { label: "Naranja",   value: "#ea580c" },
-  { label: "Verde",     value: "#16a34a" },
-  { label: "Amarillo",  value: "#ca8a04" },
-]
+const TIPOS_ENTREGA = [
+  { label: "CDT Interna",       color: "#6366f1" },
+  { label: "CDT Cliente",       color: "#0891b2" },
+  { label: "Entrega final",     color: "#16a34a" },
+  { label: "Ronda Ajustes",     color: "#ea580c" },
+  { label: "Edición y Post",    color: "#7c3aed" },
+  { label: "Online CC y Audio", color: "#db2777" },
+] as const
+
+type TipoEntrega = typeof TIPOS_ENTREGA[number]["label"]
+
+function colorForTipo(tipo: string): string {
+  return TIPOS_ENTREGA.find((t) => t.label === tipo)?.color || "#6366f1"
+}
 
 export default function PostproduccionPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -30,8 +35,9 @@ export default function PostproduccionPage() {
   const [events, setEvents]     = useState<any[]>([])
 
   // catálogo
-  const [allClients,  setAllClients]  = useState<any[]>([])
-  const [allProjects, setAllProjects] = useState<any[]>([])
+  const [allClients,       setAllClients]       = useState<any[]>([])
+  const [allProjects,      setAllProjects]       = useState<any[]>([])
+  const [postproductores,  setPostproductores]   = useState<any[]>([])
 
   // form
   const [modalOpen, setModalOpen]             = useState(false)
@@ -40,6 +46,8 @@ export default function PostproduccionPage() {
   const [modoLibre, setModoLibre]             = useState(false)
 
   const [formTitulo,     setFormTitulo]     = useState("")
+  const [formTipo,       setFormTipo]       = useState<TipoEntrega>("CDT Interna")
+  const [formEditorId,   setFormEditorId]   = useState("")
   const [formClienteId,  setFormClienteId]  = useState("")
   const [formProyectoId, setFormProyectoId] = useState("")
   const [formProyecto,   setFormProyecto]   = useState("") // libre
@@ -47,7 +55,6 @@ export default function PostproduccionPage() {
   const [formFecha,      setFormFecha]      = useState("")
   const [formHora,       setFormHora]       = useState("")
   const [formNotas,      setFormNotas]      = useState("")
-  const [formColor,      setFormColor]      = useState("#6366f1")
 
   const calendarRef = useRef<any>(null)
   const canManage = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "productor"
@@ -65,36 +72,44 @@ export default function PostproduccionPage() {
     setUser(auth.session.user)
     setProfile(auth.profile)
 
-    const [{ data: entregasData }, { data: clients }, { data: projects }] = await Promise.all([
+    const [{ data: entregasData }, { data: clients }, { data: projects }, { data: emps }] = await Promise.all([
       supabase.from("entregas").select("*").order("fecha"),
       supabase.from("clients").select("id, name").order("name"),
       supabase.from("projects").select("id, name, client_id, code").order("name"),
+      supabase.from("employees").select("id, nombre, apellido_paterno, puesto").order("nombre"),
     ])
     setEntregas(entregasData || [])
     setAllClients(clients || [])
     setAllProjects(projects || [])
+    setPostproductores((emps || []).filter((e: any) =>
+      e.puesto?.toLowerCase().includes("postproduc") || e.puesto?.toLowerCase().includes("post produc")
+    ))
   }
 
   useEffect(() => { loadData() }, [])
 
   useEffect(() => {
-    const evs = entregas.map((e) => ({
-      id: e.id,
-      title: e.titulo,
-      start: e.hora ? `${e.fecha}T${e.hora}` : e.fecha,
-      allDay: !e.hora,
-      backgroundColor: e.color || "#6366f1",
-      borderColor:     e.color || "#6366f1",
-      textColor: "#ffffff",
-    }))
+    const evs = entregas.map((e) => {
+      const color = colorForTipo(e.tipo) || e.color || "#6366f1"
+      return {
+        id: e.id,
+        title: e.titulo,
+        start: e.hora ? `${e.fecha}T${e.hora}` : e.fecha,
+        allDay: !e.hora,
+        backgroundColor: color,
+        borderColor:     color,
+        textColor: "#ffffff",
+      }
+    })
     setEvents(evs)
   }, [entregas])
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
-    setFormClienteId(""); setFormProyectoId("")
+    setFormClienteId(""); setFormProyectoId(""); setFormEditorId("")
+    setFormTipo("CDT Interna")
     setFormFecha("");  setFormHora("");     setFormNotas("")
-    setFormColor("#6366f1"); setModoLibre(false)
+    setModoLibre(false)
     setSelectedEntrega(null)
   }
 
@@ -129,14 +144,19 @@ export default function PostproduccionPage() {
       proyectoLabel = prj ? (prj.code ? `${prj.code} ${prj.name}` : prj.name) : ""
     }
 
+    const editor = postproductores.find((e) => e.id === formEditorId)
+    const editorName = editor ? `${editor.nombre} ${editor.apellido_paterno}` : null
+
     const payload = {
       titulo:    formTitulo.trim(),
+      tipo:      formTipo,
+      editor:    editorName,
       proyecto:  proyectoLabel || null,
       cliente:   clienteLabel  || null,
       fecha:     formFecha,
       hora:      formHora  || null,
       notas:     formNotas.trim() || null,
-      color:     formColor,
+      color:     colorForTipo(formTipo),
       created_by: user?.id || null,
       updated_at: new Date().toISOString(),
     }
@@ -319,20 +339,38 @@ export default function PostproduccionPage() {
                 </div>
               </div>
 
-              {/* Color */}
+              {/* Tipo de entrega */}
               <div>
-                <label style={labelStyle}>Color</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-                  {COLORS.map((c) => (
-                    <button key={c.value} type="button" onClick={() => setFormColor(c.value)}
-                      title={c.label}
+                <label style={labelStyle}>Tipo de entrega *</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  {TIPOS_ENTREGA.map((t) => (
+                    <button key={t.label} type="button" onClick={() => setFormTipo(t.label)}
                       style={{
-                        width: 28, height: 28, borderRadius: "50%",
-                        background: c.value, border: formColor === c.value ? "3px solid #f8fafc" : "3px solid transparent",
-                        cursor: "pointer",
-                      }} />
+                        padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        border: formTipo === t.label ? `1px solid ${t.color}` : "1px solid rgba(148,163,184,0.2)",
+                        background: formTipo === t.label ? `${t.color}22` : "transparent",
+                        color: formTipo === t.label ? t.color : "#64748b",
+                      }}>
+                      {t.label}
+                    </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Editor */}
+              <div>
+                <label style={labelStyle}>Editor / Postproductor</label>
+                <select value={formEditorId} onChange={(e) => setFormEditorId(e.target.value)} style={inputStyle}>
+                  <option value="">— Sin asignar —</option>
+                  {postproductores.map((e) => (
+                    <option key={e.id} value={e.id}>{e.nombre} {e.apellido_paterno}</option>
+                  ))}
+                </select>
+                {postproductores.length === 0 && (
+                  <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 11 }}>
+                    No hay empleados con puesto "Postproductor" registrados.
+                  </p>
+                )}
               </div>
 
               {/* Notas */}
@@ -358,7 +396,7 @@ export default function PostproduccionPage() {
           <div style={{ ...panelStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <div style={panelHeaderStyle}>
               <div>
-                <h2 style={{ ...panelTitleStyle, borderLeft: `4px solid ${selectedEntrega.color || "#6366f1"}`, paddingLeft: 10 }}>
+                <h2 style={{ ...panelTitleStyle, borderLeft: `4px solid ${colorForTipo(selectedEntrega.tipo) || "#6366f1"}`, paddingLeft: 10 }}>
                   {selectedEntrega.titulo}
                 </h2>
                 <p style={{ margin: "4px 0 0 14px", color: "#64748b", fontSize: 13 }}>
@@ -370,6 +408,23 @@ export default function PostproduccionPage() {
             </div>
 
             <div style={panelBodyStyle}>
+              {selectedEntrega.tipo && (() => {
+                const color = colorForTipo(selectedEntrega.tipo)
+                return (
+                  <div style={{ display: "inline-block" }}>
+                    <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+                      background: `${color}22`, border: `1px solid ${color}55`, color }}>
+                      {selectedEntrega.tipo}
+                    </span>
+                  </div>
+                )
+              })()}
+              {selectedEntrega.editor && (
+                <div style={detailRowStyle}>
+                  <span style={detailLabelStyle}>Editor</span>
+                  <span style={detailValueStyle}>{selectedEntrega.editor}</span>
+                </div>
+              )}
               {selectedEntrega.proyecto && (
                 <div style={detailRowStyle}>
                   <span style={detailLabelStyle}>Proyecto</span>
@@ -395,14 +450,16 @@ export default function PostproduccionPage() {
               {canManage && (
                 <button onClick={() => {
                   setFormTitulo(selectedEntrega.titulo)
+                  setFormTipo((selectedEntrega.tipo as TipoEntrega) || "CDT Interna")
                   setFormProyecto(selectedEntrega.proyecto || "")
                   setFormCliente(selectedEntrega.cliente || "")
                   setFormClienteId(""); setFormProyectoId("")
-                  setModoLibre(true) // al editar usamos modo libre con los valores guardados
+                  const edEmp = postproductores.find((e) => `${e.nombre} ${e.apellido_paterno}` === selectedEntrega.editor)
+                  setFormEditorId(edEmp?.id || "")
+                  setModoLibre(true)
                   setFormFecha(selectedEntrega.fecha)
                   setFormHora(selectedEntrega.hora || "")
                   setFormNotas(selectedEntrega.notas || "")
-                  setFormColor(selectedEntrega.color || "#6366f1")
                   setDetailsOpen(false)
                   setModalOpen(true)
                 }} style={primaryBtnStyle}>Editar</button>
