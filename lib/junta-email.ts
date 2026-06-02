@@ -201,9 +201,10 @@ export async function sendJuntaInvites(params: {
 
   // 4. Send one email per recipient (Resend free tier doesn't support BCC well)
   let sent = 0
+  let lastError = ""
   for (const email of allRecipients) {
     try {
-      await getResend().emails.send({
+      const result = await getResend().emails.send({
         from: FROM,
         to: email,
         subject,
@@ -215,9 +216,15 @@ export async function sendJuntaInvites(params: {
           },
         ],
       })
-      sent++
-    } catch { /* continue with next */ }
+      if ((result as any).error) {
+        lastError = JSON.stringify((result as any).error)
+      } else {
+        sent++
+      }
+    } catch (e: any) {
+      lastError = e.message
+    }
   }
 
-  return { sent }
+  return { sent, debug: lastError || undefined }
 }
