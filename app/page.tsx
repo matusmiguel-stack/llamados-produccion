@@ -239,7 +239,7 @@ export default function Home() {
         const diffMin = (juntaTime.getTime() - nowMx.getTime()) / 60000
         console.log(`[junta-reminder] diffMin=${diffMin.toFixed(2)} threshold=${REMINDER_MINUTES}`)
 
-        if (diffMin <= REMINDER_MINUTES && diffMin > 0) {
+        if (diffMin <= REMINDER_MINUTES && diffMin > -1) {
           const key = `${junta.id}-${REMINDER_MINUTES}`
           if (firedJuntaReminders.current.has(key)) continue
           firedJuntaReminders.current.add(key)
