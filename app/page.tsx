@@ -190,6 +190,10 @@ export default function Home() {
   const [shootResponsable, setShootResponsable] = useState("")
 
   // ── Juntas ─────────────────────────────────────────────────────────────────
+  // ── Birthday / Anniversary preview ────────────────────────────────────────
+  const [selectedDateEvent, setSelectedDateEvent] = useState<{ type: "birthday" | "anniversary"; employee: any; year: number } | null>(null)
+  const [dateEventDetailsOpen, setDateEventDetailsOpen] = useState(false)
+
   const [allJuntas, setAllJuntas] = useState<any[]>([])
   const [juntaAttendeeMap, setJuntaAttendeeMap] = useState<Record<string, string[]>>({})
   const [selectedJunta, setSelectedJunta] = useState<any>(null)
@@ -795,16 +799,30 @@ export default function Home() {
       return
     }
 
-    if (
-      eventId.startsWith(VACATION_EVENT_PREFIX) ||
-      eventId.startsWith(BIRTHDAY_EVENT_PREFIX) ||
-      eventId.startsWith(ANNIVERSARY_EVENT_PREFIX)
-    ) {
-      if (eventId.startsWith(VACATION_EVENT_PREFIX)) {
-        const vacationId = eventId.slice(VACATION_EVENT_PREFIX.length)
-        const vacation = allVacations.find((item) => item.id === vacationId)
-        setSelectedVacation(vacation || null)
-        setVacationDetailsOpen(true)
+    if (eventId.startsWith(VACATION_EVENT_PREFIX)) {
+      const vacationId = eventId.slice(VACATION_EVENT_PREFIX.length)
+      const vacation = allVacations.find((item) => item.id === vacationId)
+      setSelectedVacation(vacation || null)
+      setVacationDetailsOpen(true)
+      return
+    }
+
+    if (eventId.startsWith(BIRTHDAY_EVENT_PREFIX)) {
+      const [empId, yearStr] = eventId.slice(BIRTHDAY_EVENT_PREFIX.length).split(":")
+      const emp = employees.find((e: any) => e.id === empId)
+      if (emp) {
+        setSelectedDateEvent({ type: "birthday", employee: emp, year: parseInt(yearStr) })
+        setDateEventDetailsOpen(true)
+      }
+      return
+    }
+
+    if (eventId.startsWith(ANNIVERSARY_EVENT_PREFIX)) {
+      const [empId, yearStr] = eventId.slice(ANNIVERSARY_EVENT_PREFIX.length).split(":")
+      const emp = employees.find((e: any) => e.id === empId)
+      if (emp) {
+        setSelectedDateEvent({ type: "anniversary", employee: emp, year: parseInt(yearStr) })
+        setDateEventDetailsOpen(true)
       }
       return
     }
@@ -2749,6 +2767,53 @@ function openEditVacation() {
             </div>
           </div>
         )}
+
+        {/* ── Cumpleaños / Aniversario modal ── */}
+        {dateEventDetailsOpen && selectedDateEvent && (() => {
+          const { type, employee, year } = selectedDateEvent
+          const isBirthday = type === "birthday"
+          const emoji = isBirthday ? "🎂" : "🎉"
+          const color = isBirthday ? "#f59e0b" : "#14b8a6"
+          const nombre = `${employee.nombre} ${employee.apellido_paterno}`
+
+          let subtitle = ""
+          if (isBirthday && employee.cumpleanos) {
+            const [, month, day] = employee.cumpleanos.split("-")
+            const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+            subtitle = `${parseInt(day)} de ${meses[parseInt(month) - 1]}`
+          } else if (!isBirthday && employee.fecha_ingreso) {
+            const hireYear = parseInt(employee.fecha_ingreso.split("-")[0])
+            const years = year - hireYear
+            subtitle = `${years} ${years === 1 ? "año" : "años"} en Retro Casa`
+          }
+
+          return (
+            <div style={overlayStyle} className="modal-overlay" onClick={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }}>
+              <div style={{ ...formModalStyle, maxWidth: 360, borderRadius: 16 }} onClick={(e) => e.stopPropagation()}>
+                <div style={formModalHeaderStyle}>
+                  <div>
+                    <h2 style={formModalTitleStyle}>{emoji} {isBirthday ? "Cumpleaños" : "Aniversario"}</h2>
+                    <p style={formModalMetaStyle}>{year}</p>
+                  </div>
+                  <button onClick={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }} style={formModalCloseStyle} aria-label="Cerrar">×</button>
+                </div>
+                <div style={formModalBodyStyle}>
+                  <div style={formModalColumnStyle}>
+                    <div style={{ padding: "16px", borderRadius: 12, background: `rgba(${isBirthday ? "245,158,11" : "20,184,166"},0.08)`, border: `1px solid rgba(${isBirthday ? "245,158,11" : "20,184,166"},0.2)`, textAlign: "center" }}>
+                      <p style={{ margin: 0, fontSize: 32 }}>{emoji}</p>
+                      <p style={{ margin: "8px 0 4px", color: "#f8fafc", fontSize: 18, fontWeight: 700 }}>{nombre}</p>
+                      {employee.puesto && <p style={{ margin: 0, color: "#94a3b8", fontSize: 13 }}>{employee.puesto}</p>}
+                      <p style={{ margin: "12px 0 0", color, fontSize: 15, fontWeight: 600 }}>{subtitle}</p>
+                    </div>
+                  </div>
+                </div>
+                <div style={formModalFooterStyle}>
+                  <button onClick={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }} style={formModalSecondaryButtonStyle}>Cerrar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {juntaDetailsOpen && selectedJunta && (
           <div style={overlayStyle} className="modal-overlay">
