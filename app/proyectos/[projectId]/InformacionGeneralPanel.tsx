@@ -221,15 +221,21 @@ export function InformacionGeneralPanel({
         realGasto += realItemGasto(item)
       }
     }
+    // Aplicar markup general del proyecto sobre el subtotal de venta
+    const markupPct = releasedQuote.markup_percentage || 0
+    const markupAmt = libVenta * (markupPct / 100)
+    const libVentaFinal = libVenta + markupAmt
+    libUtilidad += markupAmt
+
     const extra = releasedQuote.actual_extra_expenses || 0
     const realTotal = realGasto + extra
-    const realUtilidad = libVenta - realTotal
-    const libPct = libVenta > 0 ? (libUtilidad / libVenta) * 100 : 0
-    const realPct = libVenta > 0 ? (realUtilidad / libVenta) * 100 : 0
+    const realUtilidad = libVentaFinal - realTotal
+    const libPct = libVentaFinal > 0 ? (libUtilidad / libVentaFinal) * 100 : 0
+    const realPct = libVentaFinal > 0 ? (realUtilidad / libVentaFinal) * 100 : 0
     const hasReal = sections.some((s) =>
       s.items.some((i) => i.actual_qty != null || i.actual_days != null || i.actual_unit_price != null)
     )
-    return { libGasto, libUtilidad, libVenta, realTotal, realUtilidad, libPct, realPct, extra, hasReal }
+    return { libGasto, libUtilidad, libVenta: libVentaFinal, markupAmt, markupPct, realTotal, realUtilidad, libPct, realPct, extra, hasReal }
   }, [releasedQuote, sections, finLoaded])
 
   const now = new Date()
@@ -392,6 +398,9 @@ export function InformacionGeneralPanel({
                 <div style={finCardStyle("rgba(167,139,250,0.06)", "rgba(167,139,250,0.20)")}>
                   <p style={{ ...finTitleStyle, color: "#a78bfa" }}>Proyectado</p>
                   <FinRow label="Gasto liberado" value={fmt(financials.libGasto)} />
+                  {(financials as any).markupPct > 0 && (
+                    <FinRow label={`Markup general (${(financials as any).markupPct}%)`} value={fmt((financials as any).markupAmt)} valueColor="#fbbf24" />
+                  )}
                   <FinRow label="Venta al cliente" value={fmt(financials.libVenta)} />
                   <div style={finDividerStyle} />
                   <FinRow

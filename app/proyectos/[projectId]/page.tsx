@@ -715,12 +715,18 @@ function PresupuestoPanel({
         realGasto += realItemGastoForBudget(item)
       }
     }
+    // Aplicar markup general del proyecto sobre el subtotal de venta
+    const markupPct = releasedQuote.markup_percentage || 0
+    const markupAmt = libVenta * (markupPct / 100)
+    const libVentaFinal = libVenta + markupAmt
+    libUtilidad += markupAmt
+
     const extraAmt = releasedQuote.actual_extra_expenses || 0
     const realGastoTotal = realGasto + extraAmt
-    const realUtilidad = libVenta - realGastoTotal
-    const libPct  = libVenta > 0 ? (libUtilidad  / libVenta) * 100 : 0
-    const realPct = libVenta > 0 ? (realUtilidad / libVenta) * 100 : 0
-    return { libGasto, libUtilidad, libVenta, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
+    const realUtilidad = libVentaFinal - realGastoTotal
+    const libPct  = libVentaFinal > 0 ? (libUtilidad  / libVentaFinal) * 100 : 0
+    const realPct = libVentaFinal > 0 ? (realUtilidad / libVentaFinal) * 100 : 0
+    return { libGasto, libUtilidad, libVenta: libVentaFinal, markupAmt, markupPct, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
   }, [sections, releasedQuote, secLoaded])
 
   // ── Sin cotización liberada ────────────────────────────────────────────────

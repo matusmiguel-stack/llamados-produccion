@@ -343,14 +343,20 @@ export default function LiberarPage() {
       }
     }
 
-    // Sale price to client is fixed at lib_venta; real utility = fixed_venta - real_gasto
+    // Aplicar markup general del proyecto sobre el subtotal de venta
+    const markupPct = quote?.markup_percentage || 0
+    const markupAmt = libVenta * (markupPct / 100)
+    const libVentaFinal = libVenta + markupAmt
+    libUtilidad += markupAmt
+
+    // Sale price to client is fixed at lib_venta_final; real utility = fixed_venta - real_gasto
     const extraAmt = parseFloat(extraExpenses) || 0
     const realGastoTotal = realGasto + extraAmt
-    const realUtilidad = libVenta - realGastoTotal
-    const libPct = libVenta > 0 ? (libUtilidad / libVenta) * 100 : 0
-    const realPct = libVenta > 0 ? (realUtilidad / libVenta) * 100 : 0
+    const realUtilidad = libVentaFinal - realGastoTotal
+    const libPct = libVentaFinal > 0 ? (libUtilidad / libVentaFinal) * 100 : 0
+    const realPct = libVentaFinal > 0 ? (realUtilidad / libVentaFinal) * 100 : 0
 
-    return { libGasto, libUtilidad, libVenta, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
+    return { libGasto, libUtilidad, libVenta: libVentaFinal, markupAmt, markupPct, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
   }, [sections, actuals, extraExpenses])
 
   async function handleSave() {
@@ -937,6 +943,12 @@ export default function LiberarPage() {
                   <span style={comparisonLabelStyle}>Gasto liberado</span>
                   <span style={comparisonValueStyle}>{fmt(totals.libGasto)}</span>
                 </div>
+                {(totals as any).markupPct > 0 && (
+                  <div style={comparisonRowStyle}>
+                    <span style={comparisonLabelStyle}>Markup general ({(totals as any).markupPct}%)</span>
+                    <span style={comparisonValueStyle}>{fmt((totals as any).markupAmt)}</span>
+                  </div>
+                )}
                 <div style={comparisonRowStyle}>
                   <span style={comparisonLabelStyle}>Venta al cliente</span>
                   <span style={comparisonValueStyle}>{fmt(totals.libVenta)}</span>
