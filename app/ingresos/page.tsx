@@ -245,14 +245,20 @@ export default function IngresosPage() {
 
   // ── Totals ──────────────────────────────────────────────────────────────────
   const empresaRows = ingresos.filter(r => r.empresa === activeEmpresa)
-  const totalVendido   = empresaRows.reduce((s, r) => s + r.subtotal, 0)
-  const totalCobrado   = empresaRows.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal, 0)
-  const totalPendiente = totalVendido - totalCobrado
+  const totalVendido      = empresaRows.reduce((s, r) => s + r.subtotal, 0)
+  const totalVendidoConIva= empresaRows.reduce((s, r) => s + r.subtotal + r.iva, 0)
+  const totalCobrado      = empresaRows.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal, 0)
+  const totalCobradoConIva= empresaRows.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal + r.iva, 0)
+  const totalPendiente    = totalVendido - totalCobrado
+  const totalPendienteConIva = totalVendidoConIva - totalCobradoConIva
 
   // Global totals (both empresas)
-  const globalVendido   = ingresos.reduce((s, r) => s + r.subtotal, 0)
-  const globalCobrado   = ingresos.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal, 0)
-  const globalPendiente = globalVendido - globalCobrado
+  const globalVendido      = ingresos.reduce((s, r) => s + r.subtotal, 0)
+  const globalVendidoConIva= ingresos.reduce((s, r) => s + r.subtotal + r.iva, 0)
+  const globalCobrado      = ingresos.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal, 0)
+  const globalCobradoConIva= ingresos.filter(r => r.estatus === "pagado").reduce((s, r) => s + r.subtotal + r.iva, 0)
+  const globalPendiente    = globalVendido - globalCobrado
+  const globalPendienteConIva = globalVendidoConIva - globalCobradoConIva
 
   // Overdue: any date field set + not paid + date is in the past
   const today = new Date().toISOString().split("T")[0]
@@ -295,9 +301,9 @@ export default function IngresosPage() {
 
         {/* ── Global summary ── */}
         <div style={summaryRowStyle}>
-          <SummaryCard label="Total vendido"  value={globalVendido}   color="#a78bfa" />
-          <SummaryCard label="Cobrado"         value={globalCobrado}   color="#4ade80" />
-          <SummaryCard label="Por cobrar"      value={globalPendiente} color="#fb923c" />
+          <SummaryCard label="Total vendido"  value={globalVendido}   color="#a78bfa" valueWithIva={globalVendidoConIva} />
+          <SummaryCard label="Cobrado"         value={globalCobrado}   color="#4ade80" valueWithIva={globalCobradoConIva} />
+          <SummaryCard label="Por cobrar"      value={globalPendiente} color="#fb923c" valueWithIva={globalPendienteConIva} />
           {globalOverdue > 0 && (
             <SummaryCard label="⚠ Pagos vencidos" value={globalOverdue} color="#f87171" />
           )}
@@ -321,14 +327,17 @@ export default function IngresosPage() {
           <span style={empresaSumItemStyle}>
             <span style={{ color: "#64748b" }}>Vendido:</span>{" "}
             <span style={{ color: "#f8fafc", fontWeight: 600 }}>{fmt(totalVendido)}</span>
+            <span style={{ color: "#64748b", fontSize: 11 }}>{" "}· c/IVA {fmt(totalVendidoConIva)}</span>
           </span>
           <span style={empresaSumItemStyle}>
             <span style={{ color: "#64748b" }}>Cobrado:</span>{" "}
             <span style={{ color: "#4ade80", fontWeight: 600 }}>{fmt(totalCobrado)}</span>
+            <span style={{ color: "#64748b", fontSize: 11 }}>{" "}· c/IVA {fmt(totalCobradoConIva)}</span>
           </span>
           <span style={empresaSumItemStyle}>
             <span style={{ color: "#64748b" }}>Pendiente:</span>{" "}
             <span style={{ color: "#fb923c", fontWeight: 600 }}>{fmt(totalPendiente)}</span>
+            <span style={{ color: "#64748b", fontSize: 11 }}>{" "}· c/IVA {fmt(totalPendienteConIva)}</span>
           </span>
         </div>
 
@@ -622,13 +631,18 @@ export default function IngresosPage() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
+function SummaryCard({ label, value, color, valueWithIva }: { label: string; value: number; color: string; valueWithIva?: number }) {
   return (
     <div style={summaryCardStyle(color)}>
       <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
-      <p style={{ margin: "6px 0 0", color, fontSize: 20, fontWeight: 700, fontFamily: "monospace" }}>
+      <p style={{ margin: "6px 0 2px", color, fontSize: 20, fontWeight: 700, fontFamily: "monospace" }}>
         {value.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 })}
       </p>
+      {valueWithIva !== undefined && (
+        <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>
+          c/IVA {valueWithIva.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 })}
+        </p>
+      )}
     </div>
   )
 }
