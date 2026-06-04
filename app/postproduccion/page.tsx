@@ -50,6 +50,11 @@ export default function PostproduccionPage() {
     new Set(TIPOS_ENTREGA.map((t) => t.label))
   )
 
+  // filtros calendario
+  const [filtroEditor,   setFiltroEditor]   = useState("")
+  const [filtroCliente,  setFiltroCliente]  = useState("")
+  const [filtroProyecto, setFiltroProyecto] = useState("")
+
   const [formTitulo,     setFormTitulo]     = useState("")
   const [formTipo,       setFormTipo]       = useState<TipoEntrega>("CDT Interna")
   const [formEditores,   setFormEditores]   = useState<string[]>([]) // array de IDs
@@ -59,6 +64,7 @@ export default function PostproduccionPage() {
   const [formProyecto,   setFormProyecto]   = useState("") // libre
   const [formCliente,    setFormCliente]    = useState("") // libre
   const [formFecha,      setFormFecha]      = useState("")
+  const [formFechaFin,   setFormFechaFin]   = useState("")
   const [formHora,       setFormHora]       = useState("")
   const [formNotas,      setFormNotas]      = useState("")
 
@@ -97,12 +103,23 @@ export default function PostproduccionPage() {
   useEffect(() => {
     const evs = entregas
       .filter((e) => !e.tipo || tiposVisibles.has(e.tipo))
+      .filter((e) => !filtroEditor   || (e.editores || []).some((ed: string) => ed.toLowerCase().includes(filtroEditor.toLowerCase())) || (e.editor || "").toLowerCase().includes(filtroEditor.toLowerCase()))
+      .filter((e) => !filtroCliente  || (e.cliente  || "").toLowerCase().includes(filtroCliente.toLowerCase()))
+      .filter((e) => !filtroProyecto || (e.proyecto || "").toLowerCase().includes(filtroProyecto.toLowerCase()))
       .map((e) => {
         const color = colorForTipo(e.tipo) || e.color || "#6366f1"
+        // fecha_fin es inclusiva → FullCalendar necesita +1 día como end exclusivo
+        let end: string | undefined
+        if (e.fecha_fin && e.fecha_fin >= e.fecha) {
+          const d = new Date(e.fecha_fin + "T12:00:00")
+          d.setDate(d.getDate() + 1)
+          end = d.toISOString().split("T")[0]
+        }
         return {
           id: e.id,
           title: e.titulo,
           start: e.hora ? `${e.fecha}T${e.hora}` : e.fecha,
+          end,
           allDay: !e.hora,
           backgroundColor: color,
           borderColor:     color,
@@ -110,13 +127,13 @@ export default function PostproduccionPage() {
         }
       })
     setEvents(evs)
-  }, [entregas, tiposVisibles])
+  }, [entregas, tiposVisibles, filtroEditor, filtroCliente, filtroProyecto])
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
     setFormClienteId(""); setFormProyectoId(""); setFormEditores([]); setEditorSearch("")
     setFormTipo("CDT Interna")
-    setFormFecha("");  setFormHora("");     setFormNotas("")
+    setFormFecha(""); setFormFechaFin(""); setFormHora(""); setFormNotas("")
     setModoLibre(false)
     setSelectedEntrega(null)
   }
@@ -124,7 +141,14 @@ export default function PostproduccionPage() {
   function handleDateSelect(info: any) {
     if (!canManage) return
     resetForm()
-    setFormFecha(info.startStr.split("T")[0])
+    const start = info.startStr.split("T")[0]
+    // FullCalendar end es exclusivo (día siguiente), restar 1
+    const endRaw = info.endStr?.split("T")[0]
+    const end = endRaw && endRaw > start
+      ? new Date(new Date(endRaw).getTime() - 86400000).toISOString().split("T")[0]
+      : ""
+    setFormFecha(start)
+    setFormFechaFin(end !== start ? end : "")
     setModalOpen(true)
   }
 
@@ -133,6 +157,21 @@ export default function PostproduccionPage() {
     if (!entrega) return
     setSelectedEntrega(entrega)
     setDetailsOpen(true)
+  }
+
+  async function handleEventChange(info: any) {
+    if (!canManage) { info.revert(); return }
+    const id    = info.event.id
+    const start = info.event.startStr.split("T")[0]
+    const endRaw = info.event.endStr?.split("T")[0]
+    const end = endRaw && endRaw > start
+      ? new Date(new Date(endRaw).getTime() - 86400000).toISOString().split("T")[0]
+      : null
+    const { error } = await supabase.from("entregas")
+      .update({ fecha: start, fecha_fin: end, updated_at: new Date().toISOString() })
+      .eq("id", id)
+    if (error) { info.revert(); alert(error.message); return }
+    setEntregas((prev) => prev.map((e) => e.id === id ? { ...e, fecha: start, fecha_fin: end } : e))
   }
 
   async function saveEntrega() {
@@ -165,6 +204,7 @@ export default function PostproduccionPage() {
       proyecto:  proyectoLabel || null,
       cliente:   clienteLabel  || null,
       fecha:     formFecha,
+      fecha_fin: formFechaFin || null,
       hora:      formHora  || null,
       notas:     formNotas.trim() || null,
       color:     colorForTipo(formTipo),
@@ -238,6 +278,35 @@ export default function PostproduccionPage() {
           )}
         </header>
 
+        {/* Filtros por editor / cliente / proyecto */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <select value={filtroEditor} onChange={(e) => setFiltroEditor(e.target.value)}
+            style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroEditor ? "#f8fafc" : "#64748b", fontSize: 12 }}>
+            <option value="">Editor</option>
+            {postproductores.map((e: any) => (
+              <option key={e.id} value={`${e.nombre} ${e.apellido_paterno}`}>{e.nombre} {e.apellido_paterno}</option>
+            ))}
+          </select>
+          <select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroProyecto("") }}
+            style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroCliente ? "#f8fafc" : "#64748b", fontSize: 12 }}>
+            <option value="">Cliente</option>
+            {allClients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+          </select>
+          <select value={filtroProyecto} onChange={(e) => setFiltroProyecto(e.target.value)}
+            style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroProyecto ? "#f8fafc" : "#64748b", fontSize: 12 }}>
+            <option value="">Proyecto</option>
+            {allProjects
+              .filter((p) => !filtroCliente || (p.name || "").toLowerCase().includes(filtroCliente.toLowerCase()) || allClients.find((c) => c.id === p.client_id)?.name === filtroCliente)
+              .map((p) => <option key={p.id} value={p.code ? `${p.code} ${p.name}` : p.name}>{p.code ? `${p.code} ${p.name}` : p.name}</option>)}
+          </select>
+          {(filtroEditor || filtroCliente || filtroProyecto) && (
+            <button onClick={() => { setFiltroEditor(""); setFiltroCliente(""); setFiltroProyecto("") }}
+              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
+              Limpiar
+            </button>
+          )}
+        </div>
+
         {/* Chips de filtro por tipo */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {TIPOS_ENTREGA.map((t) => {
@@ -283,8 +352,13 @@ export default function PostproduccionPage() {
               events={events}
               selectable={canManage}
               selectMirror={canManage}
+              editable={canManage}
+              eventResizableFromStart={canManage}
               select={handleDateSelect}
               eventClick={handleEventClick}
+              eventDrop={handleEventChange}
+              eventResize={handleEventChange}
+              eventDisplay="block"
               buttonText={{ today: "Hoy", month: "Mes", week: "Semana" }}
             />
           </div>
@@ -364,16 +438,26 @@ export default function PostproduccionPage() {
                 </div>
               )}
 
-              {/* Fecha / Hora */}
+              {/* Fecha inicio / fin */}
               <div style={rowStyle}>
                 <div style={{ flex: 1 }}>
-                  <DatePickerField label="Fecha *" value={formFecha} labelStyle={labelStyle} onChange={setFormFecha} />
+                  <DatePickerField label="Fecha inicio *" value={formFecha} labelStyle={labelStyle} onChange={(v) => {
+                    setFormFecha(v)
+                    if (formFechaFin && v > formFechaFin) setFormFechaFin(v)
+                  }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Hora (opcional)</label>
-                  <input type="time" value={formHora} onChange={(e) => setFormHora(e.target.value)}
-                    style={inputStyle} />
+                  <DatePickerField label="Fecha fin (opcional)" value={formFechaFin} labelStyle={labelStyle}
+                    minDate={formFecha || undefined}
+                    onChange={setFormFechaFin} />
                 </div>
+              </div>
+
+              {/* Hora */}
+              <div style={{ maxWidth: 160 }}>
+                <label style={labelStyle}>Hora (opcional)</label>
+                <input type="time" value={formHora} onChange={(e) => setFormHora(e.target.value)}
+                  style={inputStyle} />
               </div>
 
               {/* Tipo de entrega */}
@@ -544,6 +628,7 @@ export default function PostproduccionPage() {
                   setFormEditores(edIds)
                   setModoLibre(true)
                   setFormFecha(selectedEntrega.fecha)
+                  setFormFechaFin(selectedEntrega.fecha_fin || "")
                   setFormHora(selectedEntrega.hora || "")
                   setFormNotas(selectedEntrega.notas || "")
                   setDetailsOpen(false)
