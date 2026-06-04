@@ -197,12 +197,13 @@ export default function PostproduccionPage() {
       .map((e: any) => `${e.nombre} ${e.apellido_paterno}`)
 
     const payload = {
-      titulo:    formTitulo.trim(),
-      tipo:      formTipo,
-      editor:    editoresNames.length ? editoresNames.join(", ") : null,
-      editores:  editoresNames.length ? editoresNames : null,
-      proyecto:  proyectoLabel || null,
-      cliente:   clienteLabel  || null,
+      titulo:     formTitulo.trim(),
+      tipo:       formTipo,
+      editor:     editoresNames.length ? editoresNames.join(", ") : null,
+      editores:   editoresNames.length ? editoresNames : null,
+      project_id: !modoLibre && formProyectoId ? formProyectoId : null,
+      proyecto:   proyectoLabel || null,
+      cliente:    clienteLabel  || null,
       fecha:     formFecha,
       fecha_fin: formFechaFin || null,
       hora:      formHora  || null,
@@ -595,7 +596,14 @@ export default function PostproduccionPage() {
               {selectedEntrega.proyecto && (
                 <div style={detailRowStyle}>
                   <span style={detailLabelStyle}>Proyecto</span>
-                  <span style={detailValueStyle}>{selectedEntrega.proyecto}</span>
+                  {selectedEntrega.project_id ? (
+                    <a href={`/proyectos/${selectedEntrega.project_id}`}
+                      style={{ color: "#a5b4fc", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+                      {selectedEntrega.proyecto} →
+                    </a>
+                  ) : (
+                    <span style={detailValueStyle}>{selectedEntrega.proyecto}</span>
+                  )}
                 </div>
               )}
               {selectedEntrega.cliente && (
