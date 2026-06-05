@@ -227,10 +227,8 @@ export default function Home() {
   useEffect(() => {
     if (!user) return
 
-    console.log("[junta-reminder] useEffect fired — user:", user?.id, "juntas:", allJuntas.length)
-
     function checkJuntaReminders() {
-      if (Notification.permission !== "granted") return
+      if (typeof Notification === "undefined" || Notification.permission !== "granted") return
 
       const now = new Date()
       const todayStr = now.toLocaleDateString("sv") // YYYY-MM-DD en timezone local
@@ -281,10 +279,6 @@ export default function Home() {
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
-
-  useEffect(() => {
-    console.log("[modalOpen]:", modalOpen)
-  }, [modalOpen])
 
   useEffect(() => {
     const shell = calendarShellRef.current
@@ -763,20 +757,17 @@ export default function Home() {
     !!filterHumanResource
 
   function handleCalendarSelect(info: any) {
-    console.log("[select] fired canJunta:", canJunta, "modalOpen:", modalOpen, "dayNumRef:", dayNumberNavRef.current)
     if (dayNumberNavRef.current) {
-      console.log("[select] blocked by dayNumberNavRef")
       info.view.calendar.unselect()
       return
     }
 
     if (info.jsEvent?.target?.closest?.(".fc-daygrid-day-number")) {
-      console.log("[select] blocked by jsEvent dayNumber check")
       info.view.calendar.unselect()
       return
     }
 
-    if (!canJunta) { console.log("[select] blocked by canJunta"); return }
+    if (!canJunta) return
     resetForm()
     if (isProductorRole) setEntryMode("junta")
 
@@ -799,7 +790,6 @@ export default function Home() {
       setJuntaStartTime(st)
     }
 
-    console.log("[select] calling setModalOpen(true)")
     setModalOpen(true)
     info.view.calendar.unselect()
   }
@@ -1924,7 +1914,7 @@ function openEditVacation() {
         </div>
 
         {modalOpen && (
-          <div style={{ ...peekOverlayStyle, background: "rgba(255,0,0,0.4)" }} className="modal-overlay">
+          <div style={overlayStyle} className="modal-overlay">
             <DraggableModalPanel
               enabled={!isMobile}
               resetKey={modalOpen ? "form-modal" : "form-modal-closed"}
@@ -3003,7 +2993,7 @@ function openEditVacation() {
         )}
 
         {detailsOpen && selectedShoot && (
-          <div style={peekOverlayStyle} className="modal-overlay">
+          <div style={overlayStyle} className="modal-overlay">
             <DraggableModalPanel
               enabled={!isMobile}
               resetKey={selectedShoot.id}
