@@ -1904,6 +1904,17 @@ function openEditVacation() {
                 editable={canEdit}
                 eventResizableFromStart={canEdit}
                 select={handleCalendarSelect}
+                dateClick={isMobile ? (info) => {
+                  if (!canJunta) return
+                  resetForm()
+                  if (isProductorRole) setEntryMode("junta")
+                  setSelectedDate(info.dateStr)
+                  setSelectedEndDate(info.dateStr)
+                  setVacationStartDate(info.dateStr)
+                  setVacationEndDate(info.dateStr)
+                  setJuntaDate(info.dateStr)
+                  setModalOpen(true)
+                } : undefined}
                 eventClick={handleEventClick}
                 eventDrop={updateEventDate}
                 eventResize={updateEventDate}
@@ -1932,6 +1943,8 @@ function openEditVacation() {
                 height: isMobile ? "100%" : "auto",
                 maxHeight: isMobile ? "100%" : "88vh",
                 borderRadius: isMobile ? 0 : 16,
+                opacity: 1,
+                animation: "none",
               }}
             >
               <div
