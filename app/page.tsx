@@ -759,18 +759,20 @@ export default function Home() {
     !!filterHumanResource
 
   function handleCalendarSelect(info: any) {
-    console.log("[select] fired canJunta:", canJunta, "modalOpen:", modalOpen)
+    console.log("[select] fired canJunta:", canJunta, "modalOpen:", modalOpen, "dayNumRef:", dayNumberNavRef.current)
     if (dayNumberNavRef.current) {
+      console.log("[select] blocked by dayNumberNavRef")
       info.view.calendar.unselect()
       return
     }
 
     if (info.jsEvent?.target?.closest?.(".fc-daygrid-day-number")) {
+      console.log("[select] blocked by jsEvent dayNumber check")
       info.view.calendar.unselect()
       return
     }
 
-    if (!canJunta) return
+    if (!canJunta) { console.log("[select] blocked by canJunta"); return }
     resetForm()
     if (isProductorRole) setEntryMode("junta")
 
@@ -793,6 +795,7 @@ export default function Home() {
       setJuntaStartTime(st)
     }
 
+    console.log("[select] calling setModalOpen(true)")
     setModalOpen(true)
     info.view.calendar.unselect()
   }
