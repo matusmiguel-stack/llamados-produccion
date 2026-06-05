@@ -356,6 +356,12 @@ export default function PostproduccionPage() {
               editable={canManage}
               eventResizableFromStart={canManage}
               select={handleDateSelect}
+              dateClick={isMobile ? (info) => {
+                if (!canManage) return
+                resetForm()
+                setFormFecha(info.dateStr)
+                setModalOpen(true)
+              } : undefined}
               eventClick={handleEventClick}
               eventDrop={handleEventChange}
               eventResize={handleEventChange}
