@@ -1924,7 +1924,7 @@ function openEditVacation() {
         </div>
 
         {modalOpen && (
-          <div style={peekOverlayStyle} className="modal-overlay">
+          <div style={{ ...peekOverlayStyle, background: "rgba(255,0,0,0.4)" }} className="modal-overlay">
             <DraggableModalPanel
               enabled={!isMobile}
               resetKey={modalOpen ? "form-modal" : "form-modal-closed"}
