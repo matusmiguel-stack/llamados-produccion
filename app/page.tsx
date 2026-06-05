@@ -283,6 +283,10 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
+    console.log("[modalOpen]:", modalOpen)
+  }, [modalOpen])
+
+  useEffect(() => {
     const shell = calendarShellRef.current
     if (!shell) return
 
