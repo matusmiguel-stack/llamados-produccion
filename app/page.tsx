@@ -759,6 +759,7 @@ export default function Home() {
     !!filterHumanResource
 
   function handleCalendarSelect(info: any) {
+    console.log("[select] fired canJunta:", canJunta, "modalOpen:", modalOpen)
     if (dayNumberNavRef.current) {
       info.view.calendar.unselect()
       return

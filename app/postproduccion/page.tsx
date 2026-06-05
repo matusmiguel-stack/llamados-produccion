@@ -139,6 +139,7 @@ export default function PostproduccionPage() {
   }
 
   function handleDateSelect(info: any) {
+    console.log("[postpro-select] fired canManage:", canManage, "modalOpen:", modalOpen)
     if (!canManage) return
     resetForm()
     const start = info.startStr.split("T")[0]
