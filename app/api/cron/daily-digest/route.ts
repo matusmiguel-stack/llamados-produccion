@@ -32,7 +32,8 @@ function getResend() {
   return _resend
 }
 
-const FROM = process.env.RESEND_FROM || "Retro Casa <noreply@retrocasaproductora.com>"
+const FROM = process.env.RESEND_FROM || "Retro <noreply@retrocasaproductora.com>"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
 
 // ── Modo prueba: solo se manda a este mail ────────────────────────────────────
 const TEST_MODE = true
@@ -158,8 +159,8 @@ function buildDigestHtml(data: {
         <!-- Header -->
         <tr>
           <td style="background:linear-gradient(135deg,#1e1b4b 0%,#0f0c2e 50%,#050714 100%);padding:32px 32px 28px;text-align:center;border-bottom:1px solid rgba(124,58,237,0.2);">
-            <p style="margin:0;color:#7c3aed;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Retro Casa Productora</p>
-            <h1 style="margin:10px 0 6px;color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:-0.3px;">📅 Resumen del día</h1>
+            <img src="${APP_URL}/logo-retro.png" alt="Retro" width="64" height="64" style="border-radius:14px;display:block;margin:0 auto 14px;border:1px solid rgba(124,58,237,0.3);" />
+            <h1 style="margin:0 0 6px;color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:-0.3px;">📅 Resumen del día</h1>
             <p style="margin:0;color:#94a3b8;font-size:14px;font-weight:500;">${fechaLabel}</p>
             ${total > 0 ? `<div style="margin-top:12px;display:inline-block;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:999px;padding:3px 14px;"><span style="color:#a78bfa;font-size:12px;font-weight:600;">${total} evento${total !== 1 ? "s" : ""} hoy</span></div>` : ""}
           </td>
