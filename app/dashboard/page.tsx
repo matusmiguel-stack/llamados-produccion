@@ -106,6 +106,7 @@ export default function DashboardPage() {
     window.location.href = "/login"
   }
 
+  const [viewMode, setViewMode] = useState<"day" | "week">("day")
   const [sendingDigest, setSendingDigest] = useState(false)
   const [digestStatus, setDigestStatus]   = useState<"idle" | "ok" | "error">("idle")
 
@@ -135,9 +136,22 @@ export default function DashboardPage() {
 
   function shiftDate(days: number) {
     const date = new Date(selectedDate + "T12:00:00")
-    date.setDate(date.getDate() + days)
+    date.setDate(date.getDate() + (viewMode === "week" ? days * 7 : days))
     setSelectedDate(getLocalDateString(date))
   }
+
+  // Semana: lunes a domingo de la fecha seleccionada
+  const weekDays = useMemo(() => {
+    const d = new Date(selectedDate + "T12:00:00")
+    const dow = d.getDay() // 0=Dom, 1=Lun...
+    const monday = new Date(d)
+    monday.setDate(d.getDate() - ((dow + 6) % 7)) // retroceder al lunes
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(monday)
+      day.setDate(monday.getDate() + i)
+      return getLocalDateString(day)
+    })
+  }, [selectedDate])
 
   const shootsOnDate = useMemo(
     () => allShoots.filter((shoot) => shootOverlapsDate(shoot, selectedDate)),
@@ -288,30 +302,45 @@ export default function DashboardPage() {
               </button>
             )}
 
-            <div style={dateControlsStyle}>
-              <button onClick={() => shiftDate(-1)} style={ghostButtonStyle}>
-                ←
-              </button>
-              <button
-                onClick={() => setSelectedDate(getLocalDateString())}
-                style={ghostButtonStyle}
-              >
-                Hoy
-              </button>
-              <div style={datePickerWrapStyle}>
-                <DatePickerField
-                  label="Fecha"
-                  hideLabel
-                  value={selectedDate}
-                  onChange={setSelectedDate}
-                />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {/* Toggle Día / Semana */}
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.2)" }}>
+                {(["day", "week"] as const).map((mode) => (
+                  <button key={mode} onClick={() => setViewMode(mode)} style={{
+                    padding: "6px 14px", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    background: viewMode === mode ? "rgba(124,58,237,0.3)" : "transparent",
+                    color: viewMode === mode ? "#a78bfa" : "#64748b",
+                  }}>
+                    {mode === "day" ? "Día" : "Semana"}
+                  </button>
+                ))}
               </div>
-              <button onClick={() => shiftDate(1)} style={ghostButtonStyle}>
-                →
-              </button>
+
+              <div style={dateControlsStyle}>
+                <button onClick={() => shiftDate(-1)} style={ghostButtonStyle}>←</button>
+                <button onClick={() => setSelectedDate(getLocalDateString())} style={ghostButtonStyle}>Hoy</button>
+                <div style={datePickerWrapStyle}>
+                  <DatePickerField label="Fecha" hideLabel value={selectedDate} onChange={setSelectedDate} />
+                </div>
+                <button onClick={() => shiftDate(1)} style={ghostButtonStyle}>→</button>
+              </div>
             </div>
           </header>
 
+          {viewMode === "week" ? (
+            <WeekView
+              weekDays={weekDays}
+              selectedDate={selectedDate}
+              allShoots={allShoots}
+              allJuntas={allJuntas}
+              allEntregas={allEntregas}
+              shootEmployees={shootEmployees}
+              employees={employees}
+              isMobile={isMobile}
+              onDayClick={(d) => { setSelectedDate(d); setViewMode("day") }}
+            />
+          ) : (
+          <>
           <section style={dateBannerStyle}>
             <p style={dateBannerTitleStyle}>{formattedDate}</p>
             <p style={dateBannerHintStyle}>
@@ -564,8 +593,127 @@ export default function DashboardPage() {
               )}
             </>
           )}
+          </>
+          )}
         </div>
       </main>
+    </div>
+  )
+}
+
+// ── WeekView component ────────────────────────────────────────────────────────
+
+function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, shootEmployees, employees, isMobile, onDayClick }: {
+  weekDays: string[]
+  selectedDate: string
+  allShoots: any[]
+  allJuntas: any[]
+  allEntregas: any[]
+  shootEmployees: any[]
+  employees: any[]
+  isMobile: boolean
+  onDayClick: (d: string) => void
+}) {
+  const today = getLocalDateString()
+  const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
+  const TIPO_COLORS: Record<string, string> = {
+    "CDT Interna": "#6366f1", "CDT Cliente": "#0891b2",
+    "Entrega final": "#16a34a", "Ronda Ajustes": "#ea580c",
+    "Edición y Post": "#7c3aed", "Online CC y Audio": "#db2777",
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(7,1fr)" : "repeat(7,1fr)", gap: 6, marginTop: 8 }}>
+      {weekDays.map((dateStr, i) => {
+        const shoots = allShoots.filter((s) => {
+          const sd = s.start_time?.slice(0,10)
+          const ed = s.end_time?.slice(0,10)
+          return sd && dateStr >= sd && dateStr <= (ed || sd)
+        }).filter((s) => s.status !== "cancelled")
+        const juntas = allJuntas.filter((j) => j.fecha === dateStr)
+        const entregas = allEntregas.filter((e) => e.fecha === dateStr)
+        const isToday = dateStr === today
+        const isSelected = dateStr === selectedDate
+        const [, m, d] = dateStr.split("-")
+
+        return (
+          <div
+            key={dateStr}
+            onClick={() => onDayClick(dateStr)}
+            style={{
+              borderRadius: 10,
+              border: isSelected ? "1px solid rgba(124,58,237,0.6)" : isToday ? "1px solid rgba(124,58,237,0.3)" : "1px solid rgba(148,163,184,0.12)",
+              background: isSelected ? "rgba(124,58,237,0.12)" : isToday ? "rgba(124,58,237,0.06)" : "rgba(255,255,255,0.03)",
+              padding: isMobile ? "8px 4px" : "10px 10px",
+              cursor: "pointer",
+              minHeight: 100,
+              transition: "all 0.15s",
+            }}
+          >
+            {/* Header día */}
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <p style={{ margin: 0, color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>{DOW[i]}</p>
+              <p style={{
+                margin: "2px 0 0",
+                fontSize: isMobile ? 13 : 16,
+                fontWeight: 700,
+                color: isToday ? "#a78bfa" : isSelected ? "#c4b5fd" : "#f8fafc",
+                background: isToday ? "rgba(124,58,237,0.2)" : "transparent",
+                borderRadius: "50%",
+                width: isMobile ? 22 : 28, height: isMobile ? 22 : 28,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginTop: 2, marginLeft: "auto", marginRight: "auto", marginBottom: 0,
+              }}>{parseInt(d)}</p>
+              {!isMobile && <p style={{ margin: "2px 0 0", color: "#475569", fontSize: 10 }}>{parseInt(m)}月</p>}
+            </div>
+
+            {/* Eventos */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {shoots.map((s) => (
+                <div key={s.id} style={{
+                  borderRadius: 4, padding: isMobile ? "2px 3px" : "3px 6px",
+                  background: `${s.color || "#7c3aed"}33`,
+                  borderLeft: `2px solid ${s.color || "#7c3aed"}`,
+                  overflow: "hidden",
+                }}>
+                  {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    🎬 {s.title}
+                  </p>}
+                  {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color || "#7c3aed" }} />}
+                </div>
+              ))}
+              {juntas.map((j) => (
+                <div key={j.id} style={{
+                  borderRadius: 4, padding: isMobile ? "2px 3px" : "3px 6px",
+                  background: "rgba(8,145,178,0.15)", borderLeft: "2px solid #0891b2",
+                }}>
+                  {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#67e8f9", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    📋 {j.titulo || j.tipo}
+                  </p>}
+                  {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#0891b2" }} />}
+                </div>
+              ))}
+              {entregas.map((e) => {
+                const color = TIPO_COLORS[e.tipo] || "#6366f1"
+                return (
+                  <div key={e.id} style={{
+                    borderRadius: 4, padding: isMobile ? "2px 3px" : "3px 6px",
+                    background: `${color}22`, borderLeft: `2px solid ${color}`,
+                  }}>
+                    {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      🎞️ {e.titulo}
+                    </p>}
+                    {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />}
+                  </div>
+                )
+              })}
+              {shoots.length === 0 && juntas.length === 0 && entregas.length === 0 && !isMobile && (
+                <p style={{ margin: 0, color: "#334155", fontSize: 10, textAlign: "center", marginTop: 8 }}>–</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
