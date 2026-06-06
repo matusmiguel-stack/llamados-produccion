@@ -32,7 +32,7 @@ function getResend() {
   return _resend
 }
 
-const FROM = process.env.RESEND_FROM || "Retro <noreply@retrocasaproductora.com>"
+const FROM = process.env.RESEND_FROM || "Retro <news@retrocasaproductora.com>"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
 
 // ── Modo prueba: solo se manda a este mail ────────────────────────────────────

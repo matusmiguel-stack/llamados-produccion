@@ -7,7 +7,7 @@ function getResend() {
   return _resend
 }
 
-const FROM = process.env.RESEND_FROM || "Retro <noreply@retrocasaproductora.com>"
+const FROM = process.env.RESEND_FROM || "Retro <news@retrocasaproductora.com>"
 
 // ── ICS generator ─────────────────────────────────────────────────────────────
 
