@@ -9,6 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 import { requireSessionProfile } from "../lib/session-profile"
 import { AppSidebar } from "../components/AppSidebar"
+import { PageLoader } from "../components/PageLoader"
 import { PushNotificationManager } from "../components/PushNotificationManager"
 import { DatePickerField } from "../components/DatePickerField"
 import {
@@ -1672,6 +1673,8 @@ function openEditVacation() {
       height: 34,
     }),
   }
+
+  if (!profile) return <PageLoader />
 
   return (
     <div

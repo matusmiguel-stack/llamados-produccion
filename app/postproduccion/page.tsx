@@ -1,4 +1,5 @@
 "use client"
+import { PageLoader } from "../../components/PageLoader"
 
 import { useEffect, useRef, useState } from "react"
 import FullCalendar from "@fullcalendar/react"
@@ -247,6 +248,7 @@ export default function PostproduccionPage() {
     return `${parseInt(d)} de ${meses[parseInt(m) - 1]} de ${y}`
   }
 
+  if (!profile) return <PageLoader />
   return (
     <div style={shellStyle}>
       <AppSidebar

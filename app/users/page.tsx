@@ -1,4 +1,5 @@
 "use client"
+import { PageLoader } from "../../components/PageLoader"
 
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
@@ -212,6 +213,7 @@ export default function UsersPage() {
     window.location.href = "/login"
   }
 
+  if (!profile) return <PageLoader />
   return (
     <div style={appShellStyle}>
       <AppSidebar

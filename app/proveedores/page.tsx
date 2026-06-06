@@ -1,4 +1,5 @@
 "use client"
+import { PageLoader } from "../../components/PageLoader"
 
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
@@ -167,6 +168,7 @@ export default function ProveedoresPage() {
     return `${proveedor.nombre} ${proveedor.apellido}`.trim()
   }
 
+  if (!profile) return <PageLoader />
   return (
     <div style={appShellStyle}>
       <AppSidebar

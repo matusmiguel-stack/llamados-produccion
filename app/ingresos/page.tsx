@@ -1,4 +1,5 @@
 "use client"
+import { PageLoader } from "../../components/PageLoader"
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "../../lib/supabase"
@@ -276,6 +277,7 @@ export default function IngresosPage() {
 
   if (!profile) return null
 
+  if (!profile) return <PageLoader />
   return (
     <div style={layoutStyle}>
       <AppSidebar
