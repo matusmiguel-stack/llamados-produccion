@@ -36,8 +36,8 @@ const FROM = "Retro <news@retrocasaproductora.com>"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
 
 // ── Modo prueba: solo se manda a este mail ────────────────────────────────────
-const TEST_MODE = true
-const TEST_EMAIL = "miguel@retrocasaproductora.com"
+const TEST_MODE = false
+const TEST_EMAIL = "miguel@retrocasaproductora.com" // unused in production
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
