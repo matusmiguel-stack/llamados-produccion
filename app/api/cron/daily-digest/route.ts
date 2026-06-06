@@ -1,13 +1,27 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
+import { createClient } from "@supabase/supabase-js"
 import { Resend } from "resend"
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth: acepta cron de Vercel O sesión de admin ─────────────────────────────
 
-function isAuthorized(req: Request): boolean {
-  const secret = req.headers.get("authorization")
-  const expected = `Bearer ${process.env.CRON_SECRET || "retro-cron-secret"}`
-  return secret === expected
+async function isAuthorized(req: Request): Promise<boolean> {
+  // 1. Vercel cron secret
+  const authHeader = req.headers.get("authorization")
+  const cronSecret = process.env.CRON_SECRET || "retro-cron-secret"
+  if (authHeader === `Bearer ${cronSecret}`) return true
+
+  // 2. Supabase admin session desde browser
+  const userClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: authHeader ? { Authorization: authHeader } : {} } }
+  )
+  const { data: { user } } = await userClient.auth.getUser()
+  if (!user) return false
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).single()
+  return profile?.role === "admin"
 }
 
 // ── Resend lazy init ──────────────────────────────────────────────────────────
@@ -178,7 +192,7 @@ function buildDigestHtml(data: {
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!await isAuthorized(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 

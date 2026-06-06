@@ -113,8 +113,9 @@ export default function DashboardPage() {
     setSendingDigest(true)
     setDigestStatus("idle")
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch("/api/cron/daily-digest", {
-        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || "retro-cron-secret"}` },
+        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
       })
       const data = await res.json()
       if (data.ok) {
