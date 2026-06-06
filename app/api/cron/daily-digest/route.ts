@@ -6,16 +6,21 @@ import { Resend } from "resend"
 // ── Auth: acepta cron de Vercel O sesión de admin ─────────────────────────────
 
 async function isAuthorized(req: Request): Promise<boolean> {
-  // 1. Vercel cron secret
   const authHeader = req.headers.get("authorization")
-  const cronSecret = process.env.CRON_SECRET || "retro-cron-secret"
-  if (authHeader === `Bearer ${cronSecret}`) return true
 
-  // 2. Supabase admin session desde browser
+  // 1. Vercel cron — envía Bearer <CRON_SECRET> automáticamente
+  const cronSecret = process.env.CRON_SECRET
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true
+
+  // 2. Fallback legacy secret
+  if (authHeader === "Bearer retro-cron-secret") return true
+
+  // 3. Supabase admin session desde browser
+  if (!authHeader) return false
   const userClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: authHeader ? { Authorization: authHeader } : {} } }
+    { global: { headers: { Authorization: authHeader } } }
   )
   const { data: { user } } = await userClient.auth.getUser()
   if (!user) return false
