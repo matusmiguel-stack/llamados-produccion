@@ -159,7 +159,7 @@ function buildDigestHtml(data: {
         <!-- Header -->
         <tr>
           <td style="background:linear-gradient(135deg,#1e1b4b 0%,#0f0c2e 50%,#050714 100%);padding:32px 32px 28px;text-align:center;border-bottom:1px solid rgba(124,58,237,0.2);">
-            <img src="${APP_URL}/logo-retro.png" alt="Retro" width="64" height="64" style="border-radius:14px;display:block;margin:0 auto 14px;border:1px solid rgba(124,58,237,0.3);" />
+            <img src="${APP_URL}/logo-retro.png" alt="Retro" width="80" style="display:block;margin:0 auto 14px;max-width:80px;" />
             <h1 style="margin:0 0 6px;color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:-0.3px;">📅 Resumen del día</h1>
             <p style="margin:0;color:#94a3b8;font-size:14px;font-weight:500;">${fechaLabel}</p>
             ${total > 0 ? `<div style="margin-top:12px;display:inline-block;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:999px;padding:3px 14px;"><span style="color:#a78bfa;font-size:12px;font-weight:600;">${total} evento${total !== 1 ? "s" : ""} hoy</span></div>` : ""}
