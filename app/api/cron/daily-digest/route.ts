@@ -50,17 +50,17 @@ function formatFecha(dateStr: string) {
 
 function card(color: string, content: string) {
   return `
-    <div style="padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.04);border-left:3px solid ${color};margin-bottom:10px;">
+    <div style="padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.05);border-left:3px solid ${color};margin-bottom:10px;border-top:1px solid rgba(255,255,255,0.06);border-right:1px solid rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.03);">
       ${content}
     </div>`
 }
 
 function sectionHeader(emoji: string, title: string, count: number, color: string) {
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin:24px 0 10px;">
-      <span style="font-size:20px;">${emoji}</span>
-      <span style="color:${color};font-size:15px;font-weight:700;">${title}</span>
-      <span style="background:${color}22;color:${color};border:1px solid ${color}44;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">${count}</span>
+    <div style="display:flex;align-items:center;gap:8px;margin:24px 0 10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <span style="font-size:18px;">${emoji}</span>
+      <span style="color:${color};font-size:14px;font-weight:700;letter-spacing:0.3px;">${title}</span>
+      <span style="background:${color}25;color:${color};border:1px solid ${color}50;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">${count}</span>
     </div>`
 }
 
@@ -150,24 +150,24 @@ function buildDigestHtml(data: {
   return `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e2e8f0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#05070d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e2e8f0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#05070d;padding:32px 16px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#131a2e;border:1px solid rgba(148,163,184,0.15);border-radius:16px;overflow:hidden;max-width:560px;width:100%;">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0d0f1f;border:1px solid rgba(124,58,237,0.25);border-radius:16px;overflow:hidden;max-width:560px;width:100%;box-shadow:0 0 60px rgba(124,58,237,0.15);">
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#1e1b4b,#0f172a);padding:28px 32px;text-align:center;">
-            <p style="margin:0;color:#a78bfa;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Retro Casa Productora</p>
-            <h1 style="margin:8px 0 4px;color:#f8fafc;font-size:22px;font-weight:700;">📅 Resumen del día</h1>
-            <p style="margin:0;color:#64748b;font-size:13px;">${fechaLabel}</p>
-            ${total > 0 ? `<p style="margin:10px 0 0;color:#94a3b8;font-size:12px;">${total} evento${total !== 1 ? "s" : ""} hoy</p>` : ""}
+          <td style="background:linear-gradient(135deg,#1e1b4b 0%,#0f0c2e 50%,#050714 100%);padding:32px 32px 28px;text-align:center;border-bottom:1px solid rgba(124,58,237,0.2);">
+            <p style="margin:0;color:#7c3aed;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Retro Casa Productora</p>
+            <h1 style="margin:10px 0 6px;color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:-0.3px;">📅 Resumen del día</h1>
+            <p style="margin:0;color:#94a3b8;font-size:14px;font-weight:500;">${fechaLabel}</p>
+            ${total > 0 ? `<div style="margin-top:12px;display:inline-block;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:999px;padding:3px 14px;"><span style="color:#a78bfa;font-size:12px;font-weight:600;">${total} evento${total !== 1 ? "s" : ""} hoy</span></div>` : ""}
           </td>
         </tr>
 
         <!-- Body -->
         <tr>
-          <td style="padding:24px 28px;">
+          <td style="padding:24px 28px;background:#0d0f1f;">
             ${emptyMsg}
             ${llamadosHtml}
             ${juntasHtml}
@@ -177,7 +177,7 @@ function buildDigestHtml(data: {
 
         <!-- Footer -->
         <tr>
-          <td style="padding:16px 32px;border-top:1px solid rgba(148,163,184,0.10);text-align:center;">
+          <td style="padding:14px 32px;border-top:1px solid rgba(124,58,237,0.15);text-align:center;background:#080a18;">
             <p style="margin:0;color:#334155;font-size:11px;">Retro Casa Productora · Sistema de Producción · Resumen automático diario</p>
           </td>
         </tr>
