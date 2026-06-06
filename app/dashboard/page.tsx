@@ -106,6 +106,32 @@ export default function DashboardPage() {
     window.location.href = "/login"
   }
 
+  const [sendingDigest, setSendingDigest] = useState(false)
+  const [digestStatus, setDigestStatus]   = useState<"idle" | "ok" | "error">("idle")
+
+  async function sendDigest() {
+    setSendingDigest(true)
+    setDigestStatus("idle")
+    try {
+      const res = await fetch("/api/cron/daily-digest", {
+        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || "retro-cron-secret"}` },
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setDigestStatus("ok")
+        setTimeout(() => setDigestStatus("idle"), 4000)
+      } else {
+        setDigestStatus("error")
+        alert("Error: " + (data.error || JSON.stringify(data)))
+      }
+    } catch (e: any) {
+      setDigestStatus("error")
+      alert("Error: " + e.message)
+    } finally {
+      setSendingDigest(false)
+    }
+  }
+
   function shiftDate(days: number) {
     const date = new Date(selectedDate + "T12:00:00")
     date.setDate(date.getDate() + days)
@@ -241,6 +267,25 @@ export default function DashboardPage() {
                 {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios
               </p>
             </div>
+
+            {isAdmin && (
+              <button
+                onClick={sendDigest}
+                disabled={sendingDigest}
+                title="Enviar resumen del día por email (modo prueba)"
+                style={{
+                  padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  cursor: sendingDigest ? "not-allowed" : "pointer",
+                  border: digestStatus === "ok" ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(148,163,184,0.2)",
+                  background: digestStatus === "ok" ? "rgba(16,185,129,0.12)" : "rgba(167,139,250,0.1)",
+                  color: digestStatus === "ok" ? "#4ade80" : "#a78bfa",
+                  opacity: sendingDigest ? 0.6 : 1,
+                  transition: "all 0.2s",
+                }}
+              >
+                {sendingDigest ? "Enviando..." : digestStatus === "ok" ? "✓ Enviado" : "📧 Enviar resumen"}
+              </button>
+            )}
 
             <div style={dateControlsStyle}>
               <button onClick={() => shiftDate(-1)} style={ghostButtonStyle}>
