@@ -253,13 +253,53 @@ export async function GET(req: Request) {
     + (entregas || []).length
 
   const [y, m, d] = todayMx.split("-")
-  const subject = `📅 Retro Casa · ${parseInt(d)} ${MESES[parseInt(m)-1]} — ${total > 0 ? `${total} evento${total !== 1 ? "s" : ""} hoy` : "Sin actividad hoy"}`
+  const subject = `📅 Retro · ${parseInt(d)} ${MESES[parseInt(m)-1]} ${y} — ${total > 0 ? `${total} evento${total !== 1 ? "s" : ""} hoy` : "Sin actividad hoy"}`
+
+  // Versión texto plano (reduce spam score)
+  const textLines: string[] = [`RETRO · Resumen del día — ${formatFecha(todayMx)}`, ""]
+  const shootsFiltered = (shoots || []).filter((s: any) => s.status !== "cancelled")
+  if (shootsFiltered.length > 0) {
+    textLines.push("── LLAMADOS ──")
+    for (const s of shootsFiltered) {
+      const hora = s.all_day ? "Todo el día" : `${s.start_time?.slice(11,16) || ""} – ${s.end_time?.slice(11,16) || ""}`
+      textLines.push(`• ${s.title || "Sin título"} · ${hora}${s.location ? ` · ${s.location}` : ""}`)
+    }
+    textLines.push("")
+  }
+  if ((juntas || []).length > 0) {
+    textLines.push("── JUNTAS ──")
+    for (const j of (juntas || [])) {
+      textLines.push(`• ${j.titulo || j.tipo} · ${j.hora_inicio}${j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs`)
+      if (j.link) textLines.push(`  → ${j.link}`)
+    }
+    textLines.push("")
+  }
+  if ((entregas || []).length > 0) {
+    textLines.push("── POST PRODUCCIÓN ──")
+    for (const e of (entregas || [])) {
+      textLines.push(`• ${e.titulo}${e.tipo ? ` [${e.tipo}]` : ""}${e.hora ? ` · ${e.hora} hrs` : ""}`)
+    }
+    textLines.push("")
+  }
+  if (total === 0) textLines.push("Sin actividad registrada para hoy.")
+  textLines.push("--\nRetro Casa Productora · Sistema de Producción")
+  const text = textLines.join("\n")
 
   let sent = 0
   const errors: string[] = []
   for (const email of recipients) {
     try {
-      const result = await getResend().emails.send({ from: FROM, to: email, subject, html })
+      const result = await getResend().emails.send({
+        from: FROM,
+        to: email,
+        subject,
+        html,
+        text,
+        headers: {
+          "List-Unsubscribe": `<mailto:news@retrocasaproductora.com?subject=unsubscribe>`,
+          "Precedence": "bulk",
+        },
+      })
       if ((result as any).error) {
         errors.push(`${email}: ${JSON.stringify((result as any).error)}`)
       } else {
