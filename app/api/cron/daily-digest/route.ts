@@ -82,6 +82,26 @@ function buildDigestHtml(data: {
   employees: any[]
 }) {
   const { fecha, shoots, juntas, entregas, shootEmployees, juntaAttendees, employees } = data
+
+  // Cumpleaños: employees cuyo cumpleanos sea MM-DD de hoy
+  const [, mm, dd] = fecha.split("-")
+  const birthdays = employees.filter((e: any) => {
+    if (!e.cumpleanos) return false
+    const [, em, ed] = (e.cumpleanos as string).split("-")
+    return em === mm && ed === dd
+  })
+
+  // Aniversarios: employees cuya fecha_ingreso sea MM-DD de hoy (y año distinto)
+  const anniversaries = employees.filter((e: any) => {
+    if (!e.fecha_ingreso) return false
+    const [ey, em, ed] = (e.fecha_ingreso as string).split("-")
+    if (ey === fecha.split("-")[0]) return false // mismo año = no es aniversario
+    return em === mm && ed === dd
+  }).map((e: any) => {
+    const years = parseInt(fecha.split("-")[0]) - parseInt(e.fecha_ingreso.split("-")[0])
+    return { ...e, years }
+  })
+
   const total = shoots.length + juntas.length + entregas.length
   const fechaLabel = formatFecha(fecha)
 
@@ -147,7 +167,32 @@ function buildDigestHtml(data: {
     }
   }
 
-  const emptyMsg = total === 0 ? `
+  // ── Cumpleaños ──────────────────────────────────────────────────────────────
+  let cumpleHtml = ""
+  if (birthdays.length > 0) {
+    cumpleHtml = sectionHeader("🎂", "Cumpleaños", birthdays.length, "#f59e0b")
+    for (const e of birthdays) {
+      cumpleHtml += card("#f59e0b", `
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎂 ${e.nombre} ${e.apellido_paterno}</p>
+        ${e.puesto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
+      `)
+    }
+  }
+
+  // ── Aniversarios ─────────────────────────────────────────────────────────────
+  let anivHtml = ""
+  if (anniversaries.length > 0) {
+    anivHtml = sectionHeader("🎉", "Aniversarios", anniversaries.length, "#14b8a6")
+    for (const e of anniversaries) {
+      anivHtml += card("#14b8a6", `
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎉 ${e.nombre} ${e.apellido_paterno}</p>
+        <p style="margin:4px 0 0;color:#2dd4bf;font-size:12px;font-weight:600;">${e.years} año${e.years !== 1 ? "s" : ""} en Retro Casa</p>
+        ${e.puesto ? `<p style="margin:2px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
+      `)
+    }
+  }
+
+  const emptyMsg = total === 0 && birthdays.length === 0 && anniversaries.length === 0 ? `
     <div style="text-align:center;padding:32px 0;color:#475569;">
       <p style="font-size:32px;margin:0">😴</p>
       <p style="margin:8px 0 0;font-size:14px;">Sin actividad registrada para hoy.</p>
@@ -178,6 +223,8 @@ function buildDigestHtml(data: {
             ${llamadosHtml}
             ${juntasHtml}
             ${postHtml}
+            ${cumpleHtml}
+            ${anivHtml}
           </td>
         </tr>
 
@@ -221,7 +268,7 @@ export async function GET(req: Request) {
     admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores").eq("fecha", todayMx),
     admin.from("shoot_employees").select("shoot_id,employee_id"),
     admin.from("junta_attendees").select("junta_id,employee_id"),
-    admin.from("employees").select("id,nombre,apellido_paterno,email"),
+    admin.from("employees").select("id,nombre,apellido_paterno,email,puesto,cumpleanos,fecha_ingreso"),
   ])
 
   const html = buildDigestHtml({
@@ -281,7 +328,32 @@ export async function GET(req: Request) {
     }
     textLines.push("")
   }
-  if (total === 0) textLines.push("Sin actividad registrada para hoy.")
+  // Cumpleaños y aniversarios en texto plano
+  const birthdaysPlain = (employees || []).filter((e: any) => {
+    if (!e.cumpleanos) return false
+    const [, em, ed] = (e.cumpleanos as string).split("-")
+    return em === todayMx.split("-")[1] && ed === todayMx.split("-")[2]
+  })
+  const anniversariesPlain = (employees || []).filter((e: any) => {
+    if (!e.fecha_ingreso) return false
+    const [ey, em, ed] = (e.fecha_ingreso as string).split("-")
+    if (ey === todayMx.split("-")[0]) return false
+    return em === todayMx.split("-")[1] && ed === todayMx.split("-")[2]
+  })
+  if (birthdaysPlain.length > 0) {
+    textLines.push("── CUMPLEAÑOS ──")
+    for (const e of birthdaysPlain) textLines.push(`🎂 ${e.nombre} ${e.apellido_paterno}`)
+    textLines.push("")
+  }
+  if (anniversariesPlain.length > 0) {
+    textLines.push("── ANIVERSARIOS ──")
+    for (const e of anniversariesPlain) {
+      const years = parseInt(todayMx.split("-")[0]) - parseInt(e.fecha_ingreso.split("-")[0])
+      textLines.push(`🎉 ${e.nombre} ${e.apellido_paterno} · ${years} año${years !== 1 ? "s" : ""} en Retro`)
+    }
+    textLines.push("")
+  }
+  if (total === 0 && birthdaysPlain.length === 0 && anniversariesPlain.length === 0) textLines.push("Sin actividad registrada para hoy.")
   textLines.push("--\nRetro Casa Productora · Sistema de Producción")
   const text = textLines.join("\n")
 
