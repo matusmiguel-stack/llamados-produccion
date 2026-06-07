@@ -1328,6 +1328,20 @@ function openEditVacation() {
       }
     }
 
+    // Push notification a todos (fire-and-forget)
+    fetch("/api/push/junta-created", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        juntaId,
+        tipo:        payload.tipo,
+        titulo:      payload.titulo,
+        fecha:       payload.fecha,
+        horaInicio:  payload.hora_inicio,
+        attendeeEmployeeIds: juntaAttendees,
+      }),
+    }).catch(() => {})
+
     setModalOpen(false)
     setJuntaDetailsOpen(false)
     resetForm()

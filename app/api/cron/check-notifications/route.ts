@@ -85,5 +85,33 @@ export async function GET(req: Request) {
     }
   }
 
+  // ── 3. Entregas de post producción hoy ────────────────────────────────────
+  const { data: entregas } = await admin
+    .from("entregas")
+    .select("id, titulo, tipo, hora")
+    .eq("fecha", todayDate)
+
+  if ((entregas || []).length > 0) {
+    const { data: allProfiles } = await admin
+      .from("profiles")
+      .select("id")
+      .in("role", ["admin", "editor", "productor"])
+
+    for (const entrega of entregas || []) {
+      for (const profile of allProfiles || []) {
+        const refId = `entrega-hoy-${entrega.id}-${todayDate}`
+        const isNew = await markNotificationSent("entrega_hoy", refId, profile.id)
+        if (!isNew) continue
+
+        await sendPushToUser(profile.id, {
+          title: `🎞️ Entrega hoy`,
+          body: `${entrega.titulo}${entrega.tipo ? ` · ${entrega.tipo}` : ""}${entrega.hora ? ` · ${entrega.hora} hrs` : ""}`,
+          url: "/postproduccion",
+        })
+        results.push(`entrega_hoy: ${entrega.titulo} → ${profile.id}`)
+      }
+    }
+  }
+
   return NextResponse.json({ ok: true, sent: results.length, details: results })
 }
