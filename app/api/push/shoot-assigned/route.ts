@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "../../../../lib/supabase-admin"
 import { sendPushToUser, markNotificationSent } from "../../../../lib/web-push"
+import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
 
-// Llamado internamente desde saveShoot cuando se asigna a alguien al llamado
 export async function POST(req: Request) {
   try {
     const { shootId, shootTitle, shootDate, employeeIds } = await req.json()
@@ -10,17 +9,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: true })
     }
 
-    const admin = createAdminClient()
+    const profileMap = await getProfileIdsForEmployees(employeeIds)
 
-    // Obtener el profile_id de cada empleado asignado
     for (const employeeId of employeeIds) {
-      const { data: emp } = await admin
-        .from("employees")
-        .select("id, nombre, apellido_paterno, profiles(id)")
-        .eq("id", employeeId)
-        .single()
-
-      const profileId = (emp?.profiles as any)?.id
+      const profileId = profileMap[employeeId]
       if (!profileId) continue
 
       const refId = `shoot-asignado-${shootId}-${employeeId}`

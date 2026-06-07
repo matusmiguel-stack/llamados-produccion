@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { sendPushToUser, markNotificationSent } from "../../../../lib/web-push"
+import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
 
 function isAuthorized(req: Request): boolean {
   const secret = req.headers.get("authorization")
@@ -41,16 +42,17 @@ export async function GET(req: Request) {
 
     const { data: attendees } = await admin
       .from("junta_attendees")
-      .select("employee_id, employees(profiles(id))")
+      .select("employee_id")
       .eq("junta_id", junta.id)
 
+    const employeeIds = (attendees || []).map((a: any) => a.employee_id)
+    if (!employeeIds.length) continue
+
+    const profileMap = await getProfileIdsForEmployees(employeeIds)
     const label = junta.titulo || junta.tipo
     const refId = `junta-30min-${junta.id}-${todayMx}`
 
-    for (const att of attendees || []) {
-      const profileId = (att.employees as any)?.profiles?.id
-      if (!profileId) continue
-
+    for (const [empId, profileId] of Object.entries(profileMap)) {
       const isNew = await markNotificationSent("junta_30min", refId, profileId)
       if (!isNew) continue
 

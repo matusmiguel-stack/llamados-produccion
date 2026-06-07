@@ -1,28 +1,23 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "../../../../lib/supabase-admin"
 import { sendPushToUser } from "../../../../lib/web-push"
+import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
 
 export async function POST(req: Request) {
   try {
     const { juntaId, tipo, titulo, fecha, horaInicio, attendeeEmployeeIds } = await req.json()
-    if (!juntaId) return NextResponse.json({ ok: true, skipped: true })
-
-    const admin = createAdminClient()
+    if (!juntaId || !attendeeEmployeeIds?.length) {
+      return NextResponse.json({ ok: true, skipped: true })
+    }
 
     const label = titulo || tipo || "Junta"
-    const [y, m, d] = fecha.split("-")
+    const [, m, d] = fecha.split("-")
     const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
     const fechaLabel = `${parseInt(d)} ${meses[parseInt(m)-1]}`
 
-    // Solo notificar a los asistentes seleccionados
-    for (const employeeId of attendeeEmployeeIds || []) {
-      const { data: emp } = await admin
-        .from("employees")
-        .select("id, profiles(id)")
-        .eq("id", employeeId)
-        .single()
+    const profileMap = await getProfileIdsForEmployees(attendeeEmployeeIds)
 
-      const profileId = (emp?.profiles as any)?.id
+    for (const employeeId of attendeeEmployeeIds) {
+      const profileId = profileMap[employeeId]
       if (!profileId) continue
 
       try {

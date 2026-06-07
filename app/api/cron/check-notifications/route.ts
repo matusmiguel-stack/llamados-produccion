@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { sendPushToUser, markNotificationSent } from "../../../../lib/web-push"
+import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
 
 // Protección básica: solo Vercel puede llamar este endpoint
 function isAuthorized(req: Request): boolean {
@@ -65,23 +66,26 @@ export async function GET(req: Request) {
   for (const junta of juntas || []) {
     const { data: attendees } = await admin
       .from("junta_attendees")
-      .select("employee_id, employees(profiles(id))")
+      .select("employee_id")
       .eq("junta_id", junta.id)
 
-    for (const att of attendees || []) {
-      const profileId = (att.employees as any)?.profiles?.id
-      if (!profileId) continue
+    const employeeIds = (attendees || []).map((a: any) => a.employee_id)
+    if (!employeeIds.length) continue
 
+    const profileMap = await getProfileIdsForEmployees(employeeIds)
+
+    for (const profileId of Object.values(profileMap)) {
       const refId = `junta-proxima-${junta.id}`
       const isNew = await markNotificationSent("junta_proxima", refId, profileId)
       if (!isNew) continue
 
+      const label = (junta as any).titulo || junta.tipo
       await sendPushToUser(profileId, {
         title: `📋 Junta hoy`,
-        body: `${junta.tipo} · ${junta.hora_inicio} — tienes una junta programada hoy`,
+        body: `${label} · ${junta.hora_inicio} hrs`,
         url: "/",
       })
-      results.push(`junta_proxima: ${junta.tipo} ${junta.hora_inicio} → ${profileId}`)
+      results.push(`junta_proxima: ${label} → ${profileId}`)
     }
   }
 
