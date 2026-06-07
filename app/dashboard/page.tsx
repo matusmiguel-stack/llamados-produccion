@@ -109,6 +109,33 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<"day" | "week">("day")
   const [sendingDigest, setSendingDigest] = useState(false)
   const [digestStatus, setDigestStatus]   = useState<"idle" | "ok" | "error">("idle")
+  const [testingPush, setTestingPush]     = useState(false)
+  const [pushTestStatus, setPushTestStatus] = useState<"idle" | "ok" | "error">("idle")
+
+  async function testPush() {
+    setTestingPush(true)
+    setPushTestStatus("idle")
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/push/test", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setPushTestStatus("ok")
+        setTimeout(() => setPushTestStatus("idle"), 4000)
+      } else {
+        setPushTestStatus("error")
+        alert("Error push: " + (data.error || JSON.stringify(data)))
+      }
+    } catch (e: any) {
+      setPushTestStatus("error")
+      alert("Error: " + e.message)
+    } finally {
+      setTestingPush(false)
+    }
+  }
 
   async function sendDigest() {
     setSendingDigest(true)
@@ -282,6 +309,23 @@ export default function DashboardPage() {
                 {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios
               </p>
             </div>
+
+            {isAdmin && (
+              <button
+                onClick={testPush}
+                disabled={testingPush}
+                title="Enviar push de prueba a este dispositivo"
+                style={{
+                  padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  cursor: testingPush ? "not-allowed" : "pointer",
+                  border: pushTestStatus === "ok" ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(148,163,184,0.2)",
+                  background: pushTestStatus === "ok" ? "rgba(16,185,129,0.12)" : "rgba(56,189,248,0.1)",
+                  color: pushTestStatus === "ok" ? "#4ade80" : "#38bdf8",
+                  opacity: testingPush ? 0.6 : 1,
+                }}>
+                {testingPush ? "Enviando..." : pushTestStatus === "ok" ? "✓ Push enviado" : "🔔 Test push"}
+              </button>
+            )}
 
             {isAdmin && (
               <button
