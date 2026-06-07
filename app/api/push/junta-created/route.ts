@@ -9,20 +9,24 @@ export async function POST(req: Request) {
 
     const admin = createAdminClient()
 
-    // Obtener todos los profiles (para notificar a todos)
-    const { data: allProfiles } = await admin
-      .from("profiles")
-      .select("id")
-      .in("role", ["admin", "editor", "productor", "viewer"])
-
     const label = titulo || tipo || "Junta"
     const [y, m, d] = fecha.split("-")
     const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
     const fechaLabel = `${parseInt(d)} ${meses[parseInt(m)-1]}`
 
-    for (const profile of allProfiles || []) {
+    // Solo notificar a los asistentes seleccionados
+    for (const employeeId of attendeeEmployeeIds || []) {
+      const { data: emp } = await admin
+        .from("employees")
+        .select("id, profiles(id)")
+        .eq("id", employeeId)
+        .single()
+
+      const profileId = (emp?.profiles as any)?.id
+      if (!profileId) continue
+
       try {
-        await sendPushToUser(profile.id, {
+        await sendPushToUser(profileId, {
           title: `📋 Nueva junta programada`,
           body: `${label} · ${fechaLabel}${horaInicio ? ` a las ${horaInicio}` : ""}`,
           url: "/",
