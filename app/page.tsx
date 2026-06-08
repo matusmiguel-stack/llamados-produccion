@@ -1921,7 +1921,16 @@ function openEditVacation() {
                 editable={canEdit}
                 eventResizableFromStart={canEdit}
                 select={handleCalendarSelect}
-                dateClick={isMobile ? (info) => {
+                dateClick={(info) => {
+                  // Picarle al número del día siempre navega a la vista diaria
+                  if (
+                    info.view.type === "dayGridMonth" &&
+                    (info.jsEvent?.target as HTMLElement | null)?.closest(".fc-daygrid-day-number")
+                  ) {
+                    calendarRef.current?.getApi().changeView("timeGridDay", info.dateStr)
+                    return
+                  }
+                  if (!isMobile) return
                   if (!canJunta) return
                   resetForm()
                   if (isProductorRole) setEntryMode("junta")
@@ -1931,7 +1940,7 @@ function openEditVacation() {
                   setVacationEndDate(info.dateStr)
                   setJuntaDate(info.dateStr)
                   setModalOpen(true)
-                } : undefined}
+                }}
                 eventClick={handleEventClick}
                 eventDrop={updateEventDate}
                 eventResize={updateEventDate}

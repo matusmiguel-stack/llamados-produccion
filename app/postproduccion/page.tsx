@@ -358,12 +358,21 @@ export default function PostproduccionPage() {
               editable={canManage}
               eventResizableFromStart={canManage}
               select={handleDateSelect}
-              dateClick={isMobile ? (info) => {
+              dateClick={(info) => {
+                // Picarle al número del día siempre navega a la vista diaria
+                if (
+                  info.view.type === "dayGridMonth" &&
+                  (info.jsEvent?.target as HTMLElement | null)?.closest(".fc-daygrid-day-number")
+                ) {
+                  calendarRef.current?.getApi().changeView("timeGridDay", info.dateStr)
+                  return
+                }
+                if (!isMobile) return
                 if (!canManage) return
                 resetForm()
                 setFormFecha(info.dateStr)
                 setModalOpen(true)
-              } : undefined}
+              }}
               eventClick={handleEventClick}
               eventDrop={handleEventChange}
               eventResize={handleEventChange}
