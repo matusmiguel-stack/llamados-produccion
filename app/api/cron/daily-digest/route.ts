@@ -80,8 +80,12 @@ function buildDigestHtml(data: {
   shootEmployees: any[]
   juntaAttendees: any[]
   employees: any[]
+  vacationEmployeeIds: Set<string>
 }) {
-  const { fecha, shoots, juntas, entregas, shootEmployees, juntaAttendees, employees } = data
+  const { fecha, shoots, juntas, entregas, shootEmployees, juntaAttendees, employees, vacationEmployeeIds } = data
+
+  // Vacaciones: employees que están de vacaciones hoy
+  const onVacation = employees.filter((e: any) => vacationEmployeeIds.has(e.id))
 
   // Cumpleaños: employees cuyo cumpleanos sea MM-DD de hoy
   const [, mm, dd] = fecha.split("-")
@@ -167,6 +171,18 @@ function buildDigestHtml(data: {
     }
   }
 
+  // ── Vacaciones ───────────────────────────────────────────────────────────────
+  let vacacionesHtml = ""
+  if (onVacation.length > 0) {
+    vacacionesHtml = sectionHeader("🏖️", "De vacaciones", onVacation.length, "#fb923c")
+    for (const e of onVacation) {
+      vacacionesHtml += card("#fb923c", `
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🏖️ ${e.nombre} ${e.apellido_paterno}</p>
+        ${e.puesto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
+      `)
+    }
+  }
+
   // ── Cumpleaños ──────────────────────────────────────────────────────────────
   let cumpleHtml = ""
   if (birthdays.length > 0) {
@@ -192,7 +208,7 @@ function buildDigestHtml(data: {
     }
   }
 
-  const emptyMsg = total === 0 && birthdays.length === 0 && anniversaries.length === 0 ? `
+  const emptyMsg = total === 0 && birthdays.length === 0 && anniversaries.length === 0 && onVacation.length === 0 ? `
     <div style="text-align:center;padding:32px 0;color:#475569;">
       <p style="font-size:32px;margin:0">😴</p>
       <p style="margin:8px 0 0;font-size:14px;">Sin actividad registrada para hoy.</p>
@@ -223,6 +239,7 @@ function buildDigestHtml(data: {
             ${llamadosHtml}
             ${juntasHtml}
             ${postHtml}
+            ${vacacionesHtml}
             ${cumpleHtml}
             ${anivHtml}
           </td>
@@ -262,6 +279,8 @@ export async function GET(req: Request) {
     { data: shootEmployees },
     { data: juntaAttendees },
     { data: employees },
+    { data: vacations },
+    { data: vacationEmployees },
   ] = await Promise.all([
     admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").gte("start_time", todayMx + "T00:00:00").lte("start_time", todayMx + "T23:59:59"),
     admin.from("juntas").select("id,tipo,titulo,fecha,hora_inicio,hora_fin,notas,link").eq("fecha", todayMx),
@@ -269,7 +288,16 @@ export async function GET(req: Request) {
     admin.from("shoot_employees").select("shoot_id,employee_id"),
     admin.from("junta_attendees").select("junta_id,employee_id"),
     admin.from("employees").select("id,nombre,apellido_paterno,email,puesto,cumpleanos,fecha_ingreso"),
+    admin.from("vacations").select("id,start_date,end_date").lte("start_date", todayMx).gte("end_date", todayMx),
+    admin.from("vacation_employees").select("vacation_id,employee_id"),
   ])
+
+  const vacationIds = new Set((vacations || []).map((v: any) => v.id))
+  const vacationEmployeeIds = new Set(
+    (vacationEmployees || [])
+      .filter((ve: any) => vacationIds.has(ve.vacation_id))
+      .map((ve: any) => ve.employee_id)
+  )
 
   const html = buildDigestHtml({
     fecha: todayMx,
@@ -279,6 +307,7 @@ export async function GET(req: Request) {
     shootEmployees: shootEmployees || [],
     juntaAttendees: juntaAttendees || [],
     employees: employees || [],
+    vacationEmployeeIds,
   })
 
   // ── Destinatarios ─────────────────────────────────────────────────────────
@@ -328,6 +357,14 @@ export async function GET(req: Request) {
     }
     textLines.push("")
   }
+  // Vacaciones en texto plano
+  const onVacationPlain = (employees || []).filter((e: any) => vacationEmployeeIds.has(e.id))
+  if (onVacationPlain.length > 0) {
+    textLines.push("── DE VACACIONES ──")
+    for (const e of onVacationPlain) textLines.push(`🏖️ ${e.nombre} ${e.apellido_paterno}`)
+    textLines.push("")
+  }
+
   // Cumpleaños y aniversarios en texto plano
   const birthdaysPlain = (employees || []).filter((e: any) => {
     if (!e.cumpleanos) return false
@@ -353,7 +390,7 @@ export async function GET(req: Request) {
     }
     textLines.push("")
   }
-  if (total === 0 && birthdaysPlain.length === 0 && anniversariesPlain.length === 0) textLines.push("Sin actividad registrada para hoy.")
+  if (total === 0 && birthdaysPlain.length === 0 && anniversariesPlain.length === 0 && onVacationPlain.length === 0) textLines.push("Sin actividad registrada para hoy.")
   textLines.push("--\nRetro Casa Productora · Sistema de Producción")
   const text = textLines.join("\n")
 
