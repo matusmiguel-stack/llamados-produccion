@@ -289,18 +289,6 @@ export default function Home() {
       return Boolean((target as HTMLElement | null)?.closest(".fc-daygrid-day-number"))
     }
 
-    function handleDayNumberPointerDown(event: PointerEvent) {
-      if (!isDayNumberTarget(event.target)) return
-
-      const calendarApi = calendarRef.current?.getApi()
-      if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
-
-      dayNumberNavRef.current = true
-      event.preventDefault()
-      event.stopPropagation()
-      event.stopImmediatePropagation()
-    }
-
     function handleDayNumberClick(event: MouseEvent) {
       if (!isDayNumberTarget(event.target)) return
 
@@ -323,10 +311,8 @@ export default function Home() {
       }, 0)
     }
 
-    shell.addEventListener("pointerdown", handleDayNumberPointerDown, true)
     shell.addEventListener("click", handleDayNumberClick, true)
     return () => {
-      shell.removeEventListener("pointerdown", handleDayNumberPointerDown, true)
       shell.removeEventListener("click", handleDayNumberClick, true)
     }
   }, [])
