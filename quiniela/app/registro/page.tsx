@@ -28,11 +28,15 @@ export default function RegistroPage() {
       const grupo = await grupoRes.json()
 
       // 2. Crear usuario en Supabase Auth
+      // nombre y grupo_id van en metadata para usarlos en el callback de confirmación
       const supabase = createSupabaseBrowserClient()
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { nombre } },
+        options: {
+          data: { nombre: nombre.trim(), grupo_id: grupo.id },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
 
       if (authError) {
@@ -46,29 +50,22 @@ export default function RegistroPage() {
 
       if (!authData.user) { setError('Error al crear la cuenta'); return }
 
-      // 3. Crear jugador vinculado al usuario
-      const jugadorRes = await fetch('/api/auth/registro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: authData.user.id,
-          nombre: nombre.trim(),
-          grupo_id: grupo.id,
-        }),
-      })
-
-      if (!jugadorRes.ok) {
-        const jugadorErr = await jugadorRes.json()
-        setError(jugadorErr.error || 'Error al unirse al grupo')
-        return
-      }
-
-      // Si hay sesión activa (confirmación desactivada), ir directo al grupo
-      // Si no hay sesión, Supabase mandó email de confirmación
+      // Si hay sesión activa (confirmación desactivada), crear jugador ahora
       if (authData.session) {
+        const jugadorRes = await fetch('/api/auth/registro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: authData.user.id, nombre: nombre.trim(), grupo_id: grupo.id }),
+        })
+        if (!jugadorRes.ok) {
+          const jugadorErr = await jugadorRes.json()
+          setError(jugadorErr.error || 'Error al unirse al grupo')
+          return
+        }
         router.push(`/grupo/${grupo.codigo}`)
         router.refresh()
       } else {
+        // Con confirmación activa: el callback crea el jugador al confirmar
         setConfirmacionEnviada(true)
       }
     } finally {
