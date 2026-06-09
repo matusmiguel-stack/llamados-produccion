@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
-interface Jugador { id: string; nombre: string; grupo_id: string }
+interface Jugador { id: string; nombre: string }
 interface Grupo { id: string; nombre: string; codigo: string; pts_exacto: number; pts_ganador: number }
 interface Partido {
   id: string; equipo_local: string; equipo_visitante: string; bandera_local: string
@@ -25,23 +26,34 @@ export default function GrupoPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('quiniela_jugador')
-    if (!stored) { router.replace('/'); return }
-    const j: Jugador = JSON.parse(stored)
-    setJugador(j)
-
     const load = async () => {
+      const supabase = createSupabaseBrowserClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return }
+
+      const res = await fetch(`/api/auth/jugador?user_id=${user.id}`)
+      if (!res.ok) { router.replace('/login'); return }
+      const j = await res.json()
+      setJugador(j)
+
       const [grupoRes, partidosRes] = await Promise.all([
         fetch(`/api/grupo?codigo=${codigo}`),
         fetch(`/api/partidos?jugador_id=${j.id}`),
       ])
-      if (!grupoRes.ok) { router.replace('/'); return }
+      if (!grupoRes.ok) { router.replace('/login'); return }
       setGrupo(await grupoRes.json())
       setPartidos(await partidosRes.json())
       setLoading(false)
     }
     load()
   }, [codigo, router])
+
+  const handleLogout = async () => {
+    const supabase = createSupabaseBrowserClient()
+    await supabase.auth.signOut()
+    router.replace('/login')
+    router.refresh()
+  }
 
   if (loading) {
     return (
@@ -58,7 +70,6 @@ export default function GrupoPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <div className="border-b border-white/10 bg-white/3 backdrop-blur-sm px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -69,14 +80,18 @@ export default function GrupoPage() {
               <p className="text-white/40 text-xs font-mono">{codigo}</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-violet-300">{puntosTotal}</div>
-            <div className="text-white/40 text-xs">tus pts</div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-2xl font-bold text-violet-300">{puntosTotal}</div>
+              <div className="text-white/40 text-xs">tus pts</div>
+            </div>
+            <button onClick={handleLogout} className="text-white/30 hover:text-white/60 text-xs transition-colors" title="Cerrar sesión">
+              ⏏
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
       <div className="border-b border-white/10 bg-white/2">
         <div className="max-w-lg mx-auto flex">
           {[
@@ -98,7 +113,6 @@ export default function GrupoPage() {
       <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-5">
         <p className="text-white/50 text-sm">Hola, <span className="text-white font-medium">{jugador?.nombre}</span> 👋</p>
 
-        {/* Alerta */}
         {sinPrediccion > 0 && (
           <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-4 flex items-center justify-between">
             <div>
@@ -111,7 +125,6 @@ export default function GrupoPage() {
           </div>
         )}
 
-        {/* Próximos */}
         <section>
           <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Próximos partidos</h2>
           {proximos.length === 0 ? (
@@ -142,7 +155,6 @@ export default function GrupoPage() {
           )}
         </section>
 
-        {/* Puntos */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Sistema de puntos</h2>
           <div className="flex gap-5 text-sm text-white/60">
@@ -150,13 +162,6 @@ export default function GrupoPage() {
             <span><span className="text-violet-200 font-bold">{grupo?.pts_ganador} pt</span> ganador/empate</span>
           </div>
         </div>
-
-        <button
-          onClick={() => { localStorage.removeItem('quiniela_jugador'); router.replace('/') }}
-          className="text-xs text-white/20 text-center hover:text-white/40 transition-colors"
-        >
-          Salir del grupo
-        </button>
       </div>
     </div>
   )

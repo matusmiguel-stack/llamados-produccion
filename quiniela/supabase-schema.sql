@@ -11,10 +11,10 @@ create table grupos (
 
 create table jugadores (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade unique,
   nombre text not null,
   grupo_id uuid references grupos(id) on delete cascade,
-  created_at timestamptz default now(),
-  unique(nombre, grupo_id)
+  created_at timestamptz default now()
 );
 
 create table partidos (

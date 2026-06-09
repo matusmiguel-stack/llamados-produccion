@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PartidoCard from '@/components/PartidoCard'
 import { Partido, Prediccion } from '@/types'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 type PartidoConPred = Partido & { prediccion?: Prediccion | null }
 
@@ -25,11 +26,18 @@ export default function PrediccionesPage() {
   }, [])
 
   useEffect(() => {
-    const stored = localStorage.getItem('quiniela_jugador')
-    if (!stored) { router.replace('/'); return }
-    const j = JSON.parse(stored)
-    setJugadorId(j.id)
-    cargar(j.id)
+    const init = async () => {
+      const supabase = createSupabaseBrowserClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return }
+
+      const res = await fetch(`/api/auth/jugador?user_id=${user.id}`)
+      if (!res.ok) { router.replace('/login'); return }
+      const j = await res.json()
+      setJugadorId(j.id)
+      cargar(j.id)
+    }
+    init()
   }, [cargar, router])
 
   const mostrados = filtro === 'pendientes'
