@@ -14,19 +14,24 @@ interface Dia {
   partidos: Partido[]
 }
 
+const TZ = 'America/Mexico_City'
+
+function fechaLocalKey(fecha: string) {
+  return new Date(fecha).toLocaleDateString('en-CA', { timeZone: TZ }) // YYYY-MM-DD
+}
+
 function agruparPorDia(partidos: Partido[]): Dia[] {
   const map = new Map<string, Partido[]>()
   for (const p of partidos) {
-    const key = new Date(p.fecha).toISOString().slice(0, 10)
+    const key = fechaLocalKey(p.fecha)
     if (!map.has(key)) map.set(key, [])
     map.get(key)!.push(p)
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([fecha, ps]) => {
-      const d = new Date(fecha + 'T12:00:00')
-      const label = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
-      const labelCorto = d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
+      const label = new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+      const labelCorto = new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
       return {
         fecha,
         label: label.charAt(0).toUpperCase() + label.slice(1),
@@ -66,7 +71,7 @@ export default function CalendarioPage() {
       setDias(agrupados)
 
       // seleccionar el día más próximo con partidos
-      const hoy = new Date().toISOString().slice(0, 10)
+      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: TZ })
       const diaHoy = agrupados.find((d) => d.fecha >= hoy)
       setDiaSeleccionado(diaHoy?.fecha ?? agrupados[0]?.fecha ?? null)
       setLoading(false)
@@ -103,7 +108,7 @@ export default function CalendarioPage() {
           <div className="border-b border-white/8 bg-black/10">
             <div className="flex overflow-x-auto scrollbar-hide px-4 py-2 gap-2">
               {dias.map((dia) => {
-                const esHoy = dia.fecha === new Date().toISOString().slice(0, 10)
+                const esHoy = dia.fecha === new Date().toLocaleDateString('en-CA', { timeZone: TZ })
                 const activo = diaSeleccionado === dia.fecha
                 return (
                   <button

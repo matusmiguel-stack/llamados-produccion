@@ -17,18 +17,19 @@ interface Dia {
   sinPred: number
 }
 
+const TZ = 'America/Mexico_City'
+
 function agruparPorDia(partidos: PartidoConPred[]): Dia[] {
   const map = new Map<string, PartidoConPred[]>()
   for (const p of partidos) {
-    const key = new Date(p.fecha).toISOString().slice(0, 10)
+    const key = new Date(p.fecha).toLocaleDateString('en-CA', { timeZone: TZ })
     if (!map.has(key)) map.set(key, [])
     map.get(key)!.push(p)
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([fecha, ps]) => {
-      const d = new Date(fecha + 'T12:00:00')
-      const label = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+      const label = new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
       return {
         fecha,
         label: label.charAt(0).toUpperCase() + label.slice(1),
@@ -56,7 +57,7 @@ export default function PrediccionesPage() {
     setLoading(false)
 
     // abrir el primer día con partidos pendientes automáticamente
-    const hoy = new Date().toISOString().slice(0, 10)
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: TZ })
     const dias = agruparPorDia(data.filter((p) => p.estado === 'pendiente'))
     if (dias.length > 0) {
       const diaHoy = dias.find((d) => d.fecha >= hoy)
