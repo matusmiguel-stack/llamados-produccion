@@ -116,16 +116,11 @@ function libTotal(item: QuoteItemRow): number {
 }
 
 // Real display total per item row (what appears in the "Total Real" column)
-// Para ítems internos (real_expense===1) no se aplica markup.
-// Si no hay datos reales capturados, devuelve 0 — no se asume ningún gasto.
+// Siempre muestra el gasto real capturado SIN markup.
+// El markup está fijado en el precio al cliente (libVenta) y no cambia.
+// La utilidad real = libVenta - realGasto, calculada en el panel de comparativo.
 function realTotal(item: QuoteItemRow, actual: ItemActual): number {
-  const actualAmt = itemActualAmount(item, actual)
-  if (item.real_expense === 1) {
-    // Interno: sin markup. 0 si no hay datos reales capturados.
-    return actualAmt
-  }
-  const u = actualAmt * ((item.released_expense || 0) / 100)
-  return actualAmt + u
+  return itemActualAmount(item, actual)
 }
 
 function proveedorLabel(p: Proveedor): string {
@@ -500,7 +495,8 @@ export default function LiberarPage() {
 
           {/* Sections */}
           {sections.map((sec) => {
-            const secLib = sec.items.reduce((s, i) => s + libTotal(i), 0)
+            // Comparación por sección: gasto liberado vs gasto real (ambos sin markup)
+            const secLib = sec.items.reduce((s, i) => s + libItemFinancials(i).gasto, 0)
             const secReal = sec.items.reduce(
               (s, i) =>
                 s +
