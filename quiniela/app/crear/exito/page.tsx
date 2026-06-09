@@ -15,11 +15,8 @@ export default function ExitoPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const paymentId = searchParams.get('payment_id')
-    const status = searchParams.get('status')
-    const externalRef = searchParams.get('external_reference')
-
-    if (!paymentId || !externalRef) {
+    const sessionId = searchParams.get('session_id')
+    if (!sessionId) {
       setEstado('error')
       setError('No se encontró información del pago.')
       return
@@ -29,7 +26,7 @@ export default function ExitoPage() {
       const res = await fetch('/api/pago/confirmar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_id: paymentId, status, external_reference: externalRef }),
+        body: JSON.stringify({ session_id: sessionId }),
       })
       const data = await res.json()
 
@@ -71,7 +68,6 @@ export default function ExitoPage() {
             <p className="text-white/40 text-sm mt-1">{nombreGrupo}</p>
           </div>
 
-          {/* Código destacado */}
           <div className="relative bg-amber-500/8 border border-amber-400/20 rounded-2xl p-6 w-full overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
             <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Tu código de grupo</p>
@@ -104,7 +100,7 @@ export default function ExitoPage() {
           <Image src="/logo-quiniela.png" alt="" width={64} height={64} className="object-contain opacity-60" />
           <div>
             <p className="text-white font-bold text-lg">Pago en proceso</p>
-            <p className="text-white/40 text-sm mt-2 leading-relaxed">Tu pago está siendo procesado. Cuando se confirme recibirás tu código. Revisa en unos minutos.</p>
+            <p className="text-white/40 text-sm mt-2 leading-relaxed">Tu pago está siendo procesado. Cuando se confirme recibirás tu código.</p>
           </div>
           <Link href="/" className="text-amber-400/70 hover:text-amber-300 text-sm transition-colors">← Volver al inicio</Link>
         </div>

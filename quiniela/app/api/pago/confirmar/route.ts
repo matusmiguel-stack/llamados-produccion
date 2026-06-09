@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import MercadoPagoConfig, { Payment } from 'mercadopago'
+import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 
 function randomCode() {
@@ -7,55 +7,42 @@ function randomCode() {
 }
 
 export async function POST(req: NextRequest) {
-  const { payment_id, status, external_reference } = await req.json()
+  const { session_id } = await req.json()
+  if (!session_id) return NextResponse.json({ error: 'Falta session_id' }, { status: 400 })
 
-  if (!payment_id || !external_reference) {
-    return NextResponse.json({ error: 'Datos de pago incompletos' }, { status: 400 })
-  }
-
-  // Verificar si ya existe un grupo creado con este payment_id (evitar duplicados)
+  // Evitar duplicados: si ya existe un grupo con este session_id, devolverlo
   const db = supabaseAdmin()
   const { data: existente } = await db
     .from('grupos')
     .select('codigo, nombre')
-    .eq('mp_payment_id', payment_id)
+    .eq('mp_payment_id', session_id)
     .single()
 
-  if (existente) {
-    return NextResponse.json({ codigo: existente.codigo, nombre: existente.nombre })
-  }
+  if (existente) return NextResponse.json({ codigo: existente.codigo, nombre: existente.nombre })
 
-  // Verificar el pago con la API de MercadoPago
-  const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! })
-  const paymentApi = new Payment(client)
-
-  let pagoAprobado = false
-  let pagoPendiente = false
-
+  // Verificar el pago con Stripe
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+  let session: Stripe.Checkout.Session
   try {
-    const pago = await paymentApi.get({ id: payment_id })
-    pagoAprobado = pago.status === 'approved'
-    pagoPendiente = pago.status === 'in_process' || pago.status === 'pending'
+    session = await stripe.checkout.sessions.retrieve(session_id)
   } catch {
-    // Si MP falla pero el status URL param dice approved, confiamos en él (sandbox)
-    pagoAprobado = status === 'approved'
-    pagoPendiente = status === 'pending' || status === 'in_process'
+    return NextResponse.json({ error: 'Sesión de pago no encontrada' }, { status: 404 })
   }
 
-  if (pagoPendiente) {
+  if (session.payment_status === 'unpaid') {
     return NextResponse.json({ pendiente: true })
   }
 
-  if (!pagoAprobado) {
+  if (session.payment_status !== 'paid') {
     return NextResponse.json({ error: 'El pago no fue aprobado' }, { status: 402 })
   }
 
-  // Decodificar config del grupo
+  // Decodificar config del grupo desde metadata
   let config: { nombre: string; pts_exacto: number; pts_ganador: number }
   try {
-    config = JSON.parse(Buffer.from(external_reference, 'base64url').toString())
+    config = JSON.parse(Buffer.from(session.metadata!.external_reference, 'base64url').toString())
   } catch {
-    return NextResponse.json({ error: 'Referencia inválida' }, { status: 400 })
+    return NextResponse.json({ error: 'Metadata inválida' }, { status: 400 })
   }
 
   // Generar código único
@@ -73,7 +60,7 @@ export async function POST(req: NextRequest) {
       codigo,
       pts_exacto: config.pts_exacto,
       pts_ganador: config.pts_ganador,
-      mp_payment_id: payment_id,
+      mp_payment_id: session_id,
     })
     .select()
     .single()

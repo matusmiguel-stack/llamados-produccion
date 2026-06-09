@@ -23,7 +23,7 @@ export default function CrearPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Error al iniciar el pago'); return }
-      window.location.href = data.init_point
+      window.location.href = data.url
     } catch {
       setError('Error de conexión')
     } finally {
