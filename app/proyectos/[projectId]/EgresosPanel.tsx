@@ -12,6 +12,7 @@ type EgresoItem = {
   qty: number
   days: number
   unit_price: number
+  real_expense: number
   // real (pueden estar vacíos)
   actual_qty: number | null
   actual_days: number | null
@@ -58,11 +59,12 @@ export function EgresosPanel({
     async function load() {
       setLoading(true)
 
-      // 1. Quotes del proyecto
+      // 1. Solo la cotización LIBERADA del proyecto
       const { data: quotes } = await supabase
         .from("quotes")
         .select("id, name")
         .eq("project_id", projectId)
+        .eq("released", true)
         .order("created_at", { ascending: true })
 
       if (!quotes || quotes.length === 0) { setLoading(false); return }
@@ -87,7 +89,7 @@ export function EgresosPanel({
             .from("quote_items")
             .select(`
               id, description,
-              qty, days, unit_price,
+              qty, days, unit_price, real_expense,
               actual_qty, actual_days, actual_unit_price,
               actual_supplier_id, actual_employee_id,
               proveedores:actual_supplier_id ( nombre, apellido, empresa ),
@@ -127,6 +129,7 @@ export function EgresosPanel({
               qty:              row.qty,
               days:             row.days,
               unit_price:       row.unit_price,
+              real_expense:     row.real_expense,
               actual_qty:       row.actual_qty,
               actual_days:      row.actual_days,
               actual_unit_price:row.actual_unit_price,
