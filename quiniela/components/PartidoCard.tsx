@@ -49,77 +49,55 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
     }
   }
 
+  const inputClass = "w-10 h-10 text-center bg-white/8 border border-white/15 rounded-lg font-bold text-lg text-white focus:outline-none focus:border-violet-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+
   const estadoBadge = {
     pendiente: null,
-    en_curso: <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">En curso</span>,
-    finalizado: <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Finalizado</span>,
+    en_curso: <span className="text-xs bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20">En curso</span>,
+    finalizado: <span className="text-xs bg-white/8 text-white/30 px-2 py-0.5 rounded-full">Finalizado</span>,
   }[partido.estado]
 
   return (
-    <div className={`bg-white rounded-xl border p-4 flex flex-col gap-3 ${bloqueado ? 'opacity-75' : ''}`}>
-      <div className="flex items-center justify-between text-xs text-gray-400">
+    <div className={`bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3 ${bloqueado ? 'opacity-70' : ''}`}>
+      <div className="flex items-center justify-between text-xs text-white/30">
         <span>{fecha.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · {fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
         <div className="flex items-center gap-2">
-          <span className="text-gray-300">{partido.fase.replace(/_/g, ' ')}</span>
+          <span className="text-white/20">{partido.fase.replace(/_/g, ' ')}</span>
           {estadoBadge}
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Local */}
         <div className="flex-1 flex items-center gap-2">
-          {partido.bandera_local && (
-            <img src={partido.bandera_local} alt="" className="w-6 h-6 object-contain" />
-          )}
-          <span className="font-medium text-sm truncate">{partido.equipo_local}</span>
+          {partido.bandera_local && <img src={partido.bandera_local} alt="" className="w-6 h-6 object-contain" />}
+          <span className="font-medium text-sm text-white truncate">{partido.equipo_local}</span>
         </div>
 
-        {/* Score */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {partido.estado === 'finalizado' ? (
-            <span className="text-lg font-bold text-gray-700">
+            <span className="text-lg font-bold text-white/70 px-2">
               {partido.goles_local} - {partido.goles_visitante}
             </span>
           ) : (
             <>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={local}
-                disabled={bloqueado}
-                onChange={(e) => setLocal(e.target.value)}
-                className="w-10 h-10 text-center border rounded-lg font-bold text-lg disabled:bg-gray-50 disabled:text-gray-400"
-              />
-              <span className="text-gray-300 font-bold">-</span>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={visitante}
-                disabled={bloqueado}
-                onChange={(e) => setVisitante(e.target.value)}
-                className="w-10 h-10 text-center border rounded-lg font-bold text-lg disabled:bg-gray-50 disabled:text-gray-400"
-              />
+              <input type="number" min="0" max="20" value={local} disabled={bloqueado} onChange={(e) => setLocal(e.target.value)} className={inputClass} />
+              <span className="text-white/20 font-bold">-</span>
+              <input type="number" min="0" max="20" value={visitante} disabled={bloqueado} onChange={(e) => setVisitante(e.target.value)} className={inputClass} />
             </>
           )}
         </div>
 
-        {/* Visitante */}
         <div className="flex-1 flex items-center gap-2 justify-end">
-          <span className="font-medium text-sm truncate text-right">{partido.equipo_visitante}</span>
-          {partido.bandera_visitante && (
-            <img src={partido.bandera_visitante} alt="" className="w-6 h-6 object-contain" />
-          )}
+          <span className="font-medium text-sm text-white truncate text-right">{partido.equipo_visitante}</span>
+          {partido.bandera_visitante && <img src={partido.bandera_visitante} alt="" className="w-6 h-6 object-contain" />}
         </div>
       </div>
 
-      {/* Predicción guardada vs puntos */}
       {partido.prediccion && partido.estado === 'finalizado' && (
-        <div className="text-xs text-center text-gray-500">
+        <div className="text-xs text-center text-white/30">
           Tu pred: {partido.prediccion.goles_local} - {partido.prediccion.goles_visitante}
           {partido.prediccion.puntos != null && (
-            <span className={`ml-2 font-bold ${partido.prediccion.puntos > 0 ? 'text-green-600' : 'text-red-500'}`}>
+            <span className={`ml-2 font-bold ${partido.prediccion.puntos > 0 ? 'text-green-400' : 'text-red-400'}`}>
               +{partido.prediccion.puntos} pts
             </span>
           )}
@@ -128,11 +106,11 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
 
       {!bloqueado && (
         <div className="flex justify-end items-center gap-2">
-          {error && <span className="text-xs text-red-500">{error}</span>}
+          {error && <span className="text-xs text-red-400">{error}</span>}
           <button
             onClick={handleSave}
             disabled={saving || local === '' || visitante === ''}
-            className="text-sm bg-emerald-600 text-white px-4 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="text-sm bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white px-4 py-1.5 rounded-lg transition-colors"
           >
             {saved ? '✓ Guardado' : saving ? 'Guardando…' : 'Guardar'}
           </button>
@@ -140,7 +118,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
       )}
 
       {bloqueado && !partido.prediccion && partido.estado === 'pendiente' && (
-        <p className="text-xs text-center text-amber-600">Cierra en menos de 1h — ya no puedes predecir</p>
+        <p className="text-xs text-center text-amber-500/70">Cierra en menos de 1h — ya no puedes predecir</p>
       )}
     </div>
   )

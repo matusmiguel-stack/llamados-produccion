@@ -39,25 +39,28 @@ export default function PrediccionesPage() {
   const sinPred = partidos.filter((p) => p.estado === 'pendiente' && !p.prediccion).length
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-emerald-800 text-white px-4 py-5">
+    <div className="min-h-screen">
+      <div className="border-b border-white/10 bg-white/3 backdrop-blur-sm px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <Link href={`/grupo/${codigo}`} className="text-emerald-300 hover:text-white">←</Link>
+          <Link href={`/grupo/${codigo}`} className="text-white/40 hover:text-white text-lg">←</Link>
           <div>
-            <h1 className="text-lg font-bold">Predicciones</h1>
-            {sinPred > 0 && <p className="text-emerald-300 text-xs">{sinPred} pendiente{sinPred !== 1 ? 's' : ''}</p>}
+            <h1 className="text-white font-semibold">Predicciones</h1>
+            {sinPred > 0 && <p className="text-amber-400 text-xs">{sinPred} pendiente{sinPred !== 1 ? 's' : ''}</p>}
           </div>
         </div>
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-4">
-        {/* Filtro */}
         <div className="flex gap-2 mb-4">
           {(['pendientes', 'todos'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              className={`text-sm px-4 py-1.5 rounded-full transition-colors ${filtro === f ? 'bg-emerald-700 text-white' : 'bg-white border text-gray-600 hover:bg-gray-50'}`}
+              className={`text-sm px-4 py-1.5 rounded-full border transition-colors ${
+                filtro === f
+                  ? 'bg-violet-600 border-violet-500 text-white'
+                  : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
+              }`}
             >
               {f === 'pendientes' ? 'Por jugar' : 'Todos'}
             </button>
@@ -65,9 +68,9 @@ export default function PrediccionesPage() {
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-400 py-12 animate-pulse">Cargando partidos…</div>
+          <div className="text-center text-white/30 py-12 animate-pulse">Cargando partidos…</div>
         ) : mostrados.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">No hay partidos en esta vista</div>
+          <div className="text-center text-white/30 py-12">No hay partidos en esta vista</div>
         ) : (
           <div className="flex flex-col gap-3">
             {mostrados.map((p) => (
