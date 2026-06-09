@@ -77,10 +77,13 @@ export default function GrupoPage() {
       <div className="bg-black/30 backdrop-blur-md border-b border-white/8 px-4 py-4">
         <div className="max-w-lg mx-auto">
           {/* Logo + grupo centrado */}
-          <div className="flex flex-col items-center gap-1 mb-4">
-            <Image src="/logo-quiniela.png" alt="Quiniela" width={52} height={52} className="object-contain drop-shadow-lg" />
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <div className="relative">
+              <div className="absolute inset-0 blur-2xl bg-amber-400/15 rounded-full scale-150" />
+              <Image src="/logo-quiniela.png" alt="Quiniela" width={100} height={100} className="relative object-contain drop-shadow-2xl" />
+            </div>
             <div className="text-center">
-              <p className="text-white font-bold text-base tracking-tight">{grupo?.nombre}</p>
+              <p className="text-white font-bold text-lg tracking-tight">{grupo?.nombre}</p>
               <p className="text-white/30 text-xs font-mono tracking-widest">{codigo}</p>
             </div>
           </div>
