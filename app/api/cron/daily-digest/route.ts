@@ -271,6 +271,19 @@ export async function GET(req: Request) {
   // Fecha hoy en Mexico City
   const todayMx = new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" })
 
+  // ── Deduplicación: solo mandar una vez por día ────────────────────────────
+  const digestRefId = `digest-${todayMx}`
+  const { data: alreadySent } = await admin
+    .from("notification_log")
+    .select("id")
+    .eq("type", "daily_digest")
+    .eq("ref_id", digestRefId)
+    .limit(1)
+    .maybeSingle()
+  if (alreadySent) {
+    return NextResponse.json({ ok: true, skipped: true, reason: "Ya enviado hoy", date: todayMx })
+  }
+
   // ── Cargar datos del día ───────────────────────────────────────────────────
   const [
     { data: shoots },
@@ -282,7 +295,8 @@ export async function GET(req: Request) {
     { data: vacations },
     { data: vacationEmployees },
   ] = await Promise.all([
-    admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").gte("start_time", todayMx + "T00:00:00").lte("start_time", todayMx + "T23:59:59"),
+    // Todos los llamados ACTIVOS hoy: empezaron antes del fin del día y terminan después del inicio
+    admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").lte("start_time", todayMx + "T23:59:59").gte("end_time", todayMx + "T00:00:00"),
     admin.from("juntas").select("id,tipo,titulo,fecha,hora_inicio,hora_fin,notas,link").eq("fecha", todayMx),
     admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores").eq("fecha", todayMx),
     admin.from("shoot_employees").select("shoot_id,employee_id"),
@@ -416,6 +430,22 @@ export async function GET(req: Request) {
       }
     } catch (e: any) {
       errors.push(`${email}: ${e.message}`)
+    }
+  }
+
+  // ── Registrar que ya se envió hoy (para evitar duplicados) ───────────────
+  if (sent > 0) {
+    // Usar el ID del primer admin como user_id requerido por notification_log
+    const { data: firstAdmin } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("role", "admin")
+      .limit(1)
+      .maybeSingle()
+    if (firstAdmin) {
+      await admin
+        .from("notification_log")
+        .insert({ type: "daily_digest", ref_id: digestRefId, user_id: firstAdmin.id })
     }
   }
 
