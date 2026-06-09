@@ -129,8 +129,8 @@ function libItemFin(item: QuoteItem): { gasto: number; utilidad: number; venta: 
 }
 
 // Gasto real por ítem — 0 hasta que se llene al menos un campo real
+// Incluye ítems internos (real_expense===1) si tienen datos reales capturados
 function realItemGastoForBudget(item: QuoteItem): number {
-  if (item.real_expense === 1) return 0
   const anyFilled = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
   if (!anyFilled) return 0   // sin datos → gasto real = 0
   const q = item.actual_qty        != null ? item.actual_qty        : Math.max(item.qty, 1)
