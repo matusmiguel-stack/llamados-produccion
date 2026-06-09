@@ -24,6 +24,7 @@ export default function AdminPage() {
   const [creando, setCreando] = useState(false)
   const [errorCrear, setErrorCrear] = useState('')
   const [copiado, setCopiado] = useState<string | null>(null)
+  const [eliminando, setEliminando] = useState<string | null>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +71,14 @@ export default function AdminPage() {
     navigator.clipboard.writeText(codigo)
     setCopiado(codigo)
     setTimeout(() => setCopiado(null), 2000)
+  }
+
+  const handleEliminar = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar el grupo "${nombre}"? Se borrarán todos sus jugadores y predicciones.`)) return
+    setEliminando(id)
+    await fetch(`/api/admin/grupos?password=${encodeURIComponent(password)}&id=${id}`, { method: 'DELETE' })
+    setEliminando(null)
+    cargarGrupos()
   }
 
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
@@ -168,6 +177,13 @@ export default function AdminPage() {
                       className="text-xs text-white/30 hover:text-white/70 transition-colors"
                     >
                       {copiado === g.codigo ? '✓' : 'copiar'}
+                    </button>
+                    <button
+                      onClick={() => handleEliminar(g.id, g.nombre)}
+                      disabled={eliminando === g.id}
+                      className="text-xs text-red-500/50 hover:text-red-400 disabled:opacity-30 transition-colors"
+                    >
+                      {eliminando === g.id ? '…' : 'eliminar'}
                     </button>
                   </div>
                 </div>

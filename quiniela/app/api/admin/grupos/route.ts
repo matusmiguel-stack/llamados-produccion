@@ -49,3 +49,17 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+// DELETE /api/admin/grupos?password=X&id=Y — eliminar grupo
+export async function DELETE(req: NextRequest) {
+  const password = req.nextUrl.searchParams.get('password')
+  const id = req.nextUrl.searchParams.get('id')
+  if (!checkAuth(password)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+
+  const db = supabaseAdmin()
+  const { error } = await db.from('grupos').delete().eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
