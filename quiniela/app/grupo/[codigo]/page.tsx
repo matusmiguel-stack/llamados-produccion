@@ -30,12 +30,10 @@ export default function GrupoPage() {
       const supabase = createSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
-
       const res = await fetch(`/api/auth/jugador?user_id=${user.id}`)
       if (!res.ok) { router.replace('/login'); return }
       const j = await res.json()
       setJugador(j)
-
       const [grupoRes, partidosRes] = await Promise.all([
         fetch(`/api/grupo?codigo=${codigo}`),
         fetch(`/api/partidos?jugador_id=${j.id}`),
@@ -58,7 +56,9 @@ export default function GrupoPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white/40 animate-pulse">Cargando…</div>
+        <div className="flex flex-col items-center gap-3">
+          <Image src="/logo-quiniela.png" alt="" width={48} height={48} className="object-contain opacity-40 animate-pulse" />
+        </div>
       </div>
     )
   }
@@ -70,39 +70,55 @@ export default function GrupoPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="border-b border-white/10 bg-white/3 backdrop-blur-sm px-4 py-4">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo-quiniela.png" alt="Quiniela" width={40} height={40} className="object-contain opacity-90" />
-            <div className="w-px h-6 bg-white/15" />
-            <div>
-              <p className="text-white font-semibold text-sm leading-tight">{grupo?.nombre}</p>
-              <p className="text-white/40 text-xs font-mono">{codigo}</p>
+      {/* Línea dorada top */}
+      <div className="h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+
+      {/* Header premium */}
+      <div className="bg-black/30 backdrop-blur-md border-b border-white/8 px-4 py-4">
+        <div className="max-w-lg mx-auto">
+          {/* Logo + grupo centrado */}
+          <div className="flex flex-col items-center gap-1 mb-4">
+            <Image src="/logo-quiniela.png" alt="Quiniela" width={52} height={52} className="object-contain drop-shadow-lg" />
+            <div className="text-center">
+              <p className="text-white font-bold text-base tracking-tight">{grupo?.nombre}</p>
+              <p className="text-white/30 text-xs font-mono tracking-widest">{codigo}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-2xl font-bold text-amber-300">{puntosTotal}</div>
-              <div className="text-white/40 text-xs">tus pts</div>
+
+          {/* Stats */}
+          <div className="flex items-center justify-between">
+            <div className="text-center">
+              <p className="text-xs text-white/30 uppercase tracking-wider">Jugador</p>
+              <p className="text-white font-medium text-sm mt-0.5">{jugador?.nombre}</p>
             </div>
-            <button onClick={handleLogout} className="text-white/30 hover:text-white/60 text-xs transition-colors" title="Cerrar sesión">
-              ⏏
+            <div className="text-center">
+              <p className="text-xs text-white/30 uppercase tracking-wider">Puntos</p>
+              <p className="text-2xl font-bold text-amber-300 leading-tight">{puntosTotal}</p>
+            </div>
+            <button onClick={handleLogout} className="text-white/20 hover:text-white/50 transition-colors text-xs flex flex-col items-center gap-1">
+              <span className="text-lg">⏏</span>
+              <span>Salir</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="border-b border-white/10 bg-white/2">
+      {/* Nav */}
+      <div className="bg-black/20 border-b border-white/8">
         <div className="max-w-lg mx-auto flex">
           {[
-            { href: `/grupo/${codigo}`, label: 'Inicio' },
-            { href: `/grupo/${codigo}/predicciones`, label: `Predicciones${sinPrediccion > 0 ? ` (${sinPrediccion})` : ''}` },
-            { href: `/grupo/${codigo}/tabla`, label: 'Tabla' },
-          ].map((item, i) => (
+            { href: `/grupo/${codigo}`, label: 'Inicio', active: true },
+            { href: `/grupo/${codigo}/predicciones`, label: sinPrediccion > 0 ? `Predecir (${sinPrediccion})` : 'Predecir', active: false },
+            { href: `/grupo/${codigo}/tabla`, label: 'Tabla', active: false },
+          ].map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 text-center py-3 text-sm transition-colors ${i === 0 ? 'text-white border-b-2 border-amber-400' : 'text-white/40 hover:text-white/70'}`}
+              className={`flex-1 text-center py-3 text-sm font-medium transition-colors ${
+                item.active
+                  ? 'text-amber-300 border-b-2 border-amber-400'
+                  : 'text-white/35 hover:text-white/70'
+              }`}
             >
               {item.label}
             </Link>
@@ -111,40 +127,42 @@ export default function GrupoPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-5">
-        <p className="text-white/50 text-sm">Hola, <span className="text-white font-medium">{jugador?.nombre}</span> 👋</p>
-
+        {/* Alerta predicciones */}
         {sinPrediccion > 0 && (
-          <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-4 flex items-center justify-between">
+          <div className="relative overflow-hidden bg-amber-500/8 border border-amber-400/20 rounded-2xl p-4 flex items-center justify-between">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
             <div>
-              <p className="font-medium text-amber-300 text-sm">{sinPrediccion} partido{sinPrediccion !== 1 ? 's' : ''} sin predecir</p>
-              <p className="text-amber-400/70 text-xs mt-0.5">Cierra 1h antes del partido</p>
+              <p className="font-semibold text-amber-200 text-sm">{sinPrediccion} partido{sinPrediccion !== 1 ? 's' : ''} sin predecir</p>
+              <p className="text-amber-400/60 text-xs mt-0.5">Cierra 1h antes del partido</p>
             </div>
-            <Link href={`/grupo/${codigo}/predicciones`} className="bg-amber-500 hover:bg-amber-400 text-white text-sm px-4 py-1.5 rounded-lg transition-colors">
+            <Link href={`/grupo/${codigo}/predicciones`} className="bg-amber-500 hover:bg-amber-400 text-white text-sm px-4 py-2 rounded-xl font-medium transition-colors shadow-lg shadow-amber-900/30">
               Predecir
             </Link>
           </div>
         )}
 
+        {/* Próximos partidos */}
         <section>
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Próximos partidos</h2>
+          <h2 className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Próximos partidos</h2>
           {proximos.length === 0 ? (
-            <p className="text-white/30 text-sm text-center py-4">No hay partidos próximos</p>
+            <p className="text-white/20 text-sm text-center py-6">No hay partidos próximos</p>
           ) : (
             <div className="flex flex-col gap-2">
               {proximos.map((p) => {
                 const fecha = new Date(p.fecha)
                 const minutosRestantes = (fecha.getTime() - hoy.getTime()) / 60000
                 return (
-                  <div key={p.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                    <div className="flex items-center justify-between text-xs text-white/30 mb-2">
+                  <div key={p.id} className="relative bg-white/4 border border-white/8 rounded-2xl p-4 overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <div className="flex items-center justify-between text-xs text-white/25 mb-2.5">
                       <span>{fecha.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })} · {fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
-                      {minutosRestantes < 60 && <span className="text-amber-400">Cierra pronto</span>}
+                      {minutosRestantes < 60 && <span className="text-amber-400 font-medium">Cierra pronto</span>}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-white">
                       <span className="flex-1 font-medium">{p.equipo_local}</span>
                       {p.prediccion
-                        ? <span className="text-amber-300 font-bold text-xs bg-amber-500/15 px-2 py-0.5 rounded">{p.prediccion.goles_local}-{p.prediccion.goles_visitante}</span>
-                        : <span className="text-white/20 text-xs">vs</span>
+                        ? <span className="text-amber-300 font-bold text-xs bg-amber-500/15 border border-amber-400/20 px-2.5 py-1 rounded-lg">{p.prediccion.goles_local}-{p.prediccion.goles_visitante}</span>
+                        : <span className="text-white/15 text-xs px-2">vs</span>
                       }
                       <span className="flex-1 font-medium text-right">{p.equipo_visitante}</span>
                     </div>
@@ -155,11 +173,20 @@ export default function GrupoPage() {
           )}
         </section>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Sistema de puntos</h2>
-          <div className="flex gap-5 text-sm text-white/60">
-            <span><span className="text-amber-300 font-bold">{grupo?.pts_exacto} pts</span> resultado exacto</span>
-            <span><span className="text-amber-200 font-bold">{grupo?.pts_ganador} pt</span> ganador/empate</span>
+        {/* Sistema de puntos */}
+        <div className="relative bg-white/4 border border-white/8 rounded-2xl p-4 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+          <h2 className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Sistema de puntos</h2>
+          <div className="flex gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-amber-300 font-bold text-lg">{grupo?.pts_exacto}</span>
+              <span className="text-white/40 text-xs">resultado<br/>exacto</span>
+            </div>
+            <div className="w-px bg-white/10" />
+            <div className="flex items-center gap-2">
+              <span className="text-amber-200/80 font-bold text-lg">{grupo?.pts_ganador}</span>
+              <span className="text-white/40 text-xs">ganador<br/>o empate</span>
+            </div>
           </div>
         </div>
       </div>

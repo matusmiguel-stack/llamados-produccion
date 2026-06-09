@@ -14,20 +14,16 @@ export default function RegistroPage() {
   const [codigoGrupo, setCodigoGrupo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [confirmacionEnviada, setConfirmacionEnviada] = useState(false)
 
   const handleRegistro = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     try {
-      // 1. Verificar que el grupo existe
       const grupoRes = await fetch(`/api/grupo?codigo=${codigoGrupo.trim().toUpperCase()}`)
       if (!grupoRes.ok) { setError('Código de grupo no encontrado'); return }
       const grupo = await grupoRes.json()
 
-      // 2. Crear usuario en Supabase Auth
       const supabase = createSupabaseBrowserClient()
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -36,17 +32,12 @@ export default function RegistroPage() {
       })
 
       if (authError) {
-        if (authError.message.includes('already registered')) {
-          setError('Este email ya está registrado. Inicia sesión.')
-        } else {
-          setError(authError.message)
-        }
+        setError(authError.message.includes('already registered') ? 'Este email ya está registrado. Inicia sesión.' : authError.message)
         return
       }
 
       if (!authData.user) { setError('Error al crear la cuenta'); return }
 
-      // 3. Crear jugador inmediatamente (sin confirmación de email)
       const jugadorRes = await fetch('/api/auth/registro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,106 +56,78 @@ export default function RegistroPage() {
     }
   }
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/60 transition-colors"
-
-  if (confirmacionEnviada) {
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-sm flex flex-col items-center gap-8">
-          <Image src="/logo-quiniela.png" alt="Quiniela" width={56} height={56} className="object-contain" priority />
-          <div className="w-full bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm p-8 text-center flex flex-col gap-4">
-            <div className="text-4xl">📬</div>
-            <h2 className="text-white font-semibold text-lg">Revisa tu correo</h2>
-            <p className="text-white/50 text-sm leading-relaxed">
-              Te enviamos un link de confirmación a <span className="text-white font-medium">{email}</span>.
-              Haz clic en el link para activar tu cuenta y luego inicia sesión.
-            </p>
-            <Link href="/login" className="mt-2 w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-center text-sm">
-              Ir al login
-            </Link>
-          </div>
-        </div>
-      </main>
-    )
-  }
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-amber-400/50 focus:bg-white/7 transition-all text-sm"
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-sm flex flex-col items-center gap-8">
-        <div className="flex flex-col items-center gap-3">
-          <Image src="/logo-quiniela.png" alt="Quiniela" width={56} height={56} className="object-contain" priority />
-          <div className="flex items-center gap-2 text-white/50 text-sm">
-            <span>⚽</span>
-            <span>Quiniela Mundial 2026</span>
+      <div className="fixed top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+
+      <div className="w-full max-w-sm flex flex-col items-center gap-10">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="absolute inset-0 blur-2xl bg-amber-400/20 rounded-full scale-150" />
+            <Image src="/logo-quiniela.png" alt="Quiniela" width={96} height={96} className="relative object-contain drop-shadow-2xl" priority />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Quiniela Mundial</h1>
+            <p className="text-amber-400/70 text-sm tracking-widest uppercase mt-1">2026</p>
           </div>
         </div>
 
-        <div className="w-full bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm p-6">
-          <h2 className="text-white font-semibold text-lg mb-5">Crear cuenta</h2>
+        <div className="w-full relative">
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-amber-400/5 to-transparent pointer-events-none" />
+          <div className="relative bg-white/4 border border-white/10 rounded-2xl p-6 backdrop-blur-md shadow-2xl">
+            <h2 className="text-white font-semibold text-base mb-5 tracking-tight">Crear cuenta</h2>
 
-          <form onSubmit={handleRegistro} className="flex flex-col gap-4">
-            <div>
-              <label className="text-xs font-medium text-white/50 block mb-1.5">Tu nombre</label>
-              <input
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="¿Cómo te llamas?"
-                className={inputClass}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-white/50 block mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
-                className={inputClass}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-white/50 block mb-1.5">Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
-                className={inputClass}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-white/50 block mb-1.5">Código del grupo</label>
-              <input
-                value={codigoGrupo}
-                onChange={(e) => setCodigoGrupo(e.target.value.toUpperCase())}
-                placeholder="ej. AB12CD"
-                maxLength={6}
-                className={`${inputClass} font-mono tracking-widest text-center text-lg`}
-                required
-              />
+            <form onSubmit={handleRegistro} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-medium text-white/40 block mb-1.5 uppercase tracking-wider">Tu nombre</label>
+                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="¿Cómo te llamas?" className={inputClass} required />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-white/40 block mb-1.5 uppercase tracking-wider">Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" className={inputClass} required />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-white/40 block mb-1.5 uppercase tracking-wider">Contraseña</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" minLength={6} className={inputClass} required />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-white/40 block mb-1.5 uppercase tracking-wider">Código del grupo</label>
+                <input
+                  value={codigoGrupo}
+                  onChange={(e) => setCodigoGrupo(e.target.value.toUpperCase())}
+                  placeholder="AB12CD"
+                  maxLength={6}
+                  className={`${inputClass} font-mono tracking-[0.3em] text-center text-lg`}
+                  required
+                />
+              </div>
+
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={loading || !nombre || !email || !password || !codigoGrupo}
+                className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-amber-900/30 mt-1"
+              >
+                {loading ? 'Creando cuenta…' : 'Registrarme'}
+              </button>
+            </form>
+
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-white/8" />
+              <span className="text-white/20 text-xs">o</span>
+              <div className="flex-1 h-px bg-white/8" />
             </div>
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading || !nombre || !email || !password || !codigoGrupo}
-              className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
-            >
-              {loading ? 'Creando cuenta…' : 'Registrarme'}
-            </button>
-          </form>
-
-          <p className="text-center text-white/30 text-sm mt-4">
-            ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-amber-400 hover:text-amber-300">
-              Inicia sesión
-            </Link>
-          </p>
+            <p className="text-center text-white/30 text-sm">
+              ¿Ya tienes cuenta?{' '}
+              <Link href="/login" className="text-amber-400 hover:text-amber-300 font-medium transition-colors">
+                Inicia sesión
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </main>
