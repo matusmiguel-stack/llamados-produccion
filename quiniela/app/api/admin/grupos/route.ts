@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+const ADMIN_PASSWORD = 'Retro2026'
+
 function checkAuth(password: string | null) {
-  return password === process.env.ADMIN_PASSWORD
+  return password === ADMIN_PASSWORD
 }
 
 function randomCode() {
