@@ -81,13 +81,13 @@ export default function AdminPage() {
     cargarGrupos()
   }
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/60 transition-colors"
 
   if (!autenticado) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-xs flex flex-col items-center gap-8">
-          <Image src="/logo-retro.png" alt="Retro" width={100} height={34} className="object-contain opacity-80" priority />
+          <Image src="/logo-quiniela.png" alt="Quiniela" width={56} height={56} className="object-contain opacity-80" priority />
           <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-6">
             <h2 className="text-white font-semibold mb-4">Admin</h2>
             <form onSubmit={handleLogin} className="flex flex-col gap-3">
@@ -103,7 +103,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={!password}
-                className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
+                className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
               >
                 Entrar
               </button>
@@ -119,7 +119,7 @@ export default function AdminPage() {
       <div className="max-w-lg mx-auto flex flex-col gap-6 pt-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/logo-retro.png" alt="Retro" width={80} height={26} className="object-contain opacity-80" />
+            <Image src="/logo-quiniela.png" alt="Quiniela" width={40} height={40} className="object-contain opacity-80" />
             <span className="text-white/40 text-sm">Admin · Quiniela</span>
           </div>
         </div>
@@ -148,7 +148,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={creando || !nombreGrupo}
-              className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
+              className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
             >
               {creando ? 'Creando…' : 'Crear grupo'}
             </button>
@@ -171,7 +171,7 @@ export default function AdminPage() {
                     <p className="text-white/30 text-xs mt-0.5">{g.pts_exacto} pts exacto · {g.pts_ganador} pt ganador</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-violet-300 tracking-widest text-lg">{g.codigo}</span>
+                    <span className="font-mono font-bold text-amber-300 tracking-widest text-lg">{g.codigo}</span>
                     <button
                       onClick={() => copiar(g.codigo)}
                       className="text-xs text-white/30 hover:text-white/70 transition-colors"

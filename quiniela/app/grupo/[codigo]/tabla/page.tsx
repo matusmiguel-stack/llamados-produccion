@@ -73,7 +73,7 @@ export default function TablaPage() {
                 key={pos.jugador_id}
                 className={`rounded-xl border px-4 py-3 flex items-center gap-4 transition-colors ${
                   pos.jugador_id === miJugadorId
-                    ? 'bg-violet-500/10 border-violet-500/30'
+                    ? 'bg-amber-500/10 border-amber-500/30'
                     : 'bg-white/5 border-white/10'
                 }`}
               >
@@ -81,12 +81,12 @@ export default function TablaPage() {
                 <div className="flex-1">
                   <p className="font-semibold text-sm text-white">
                     {pos.nombre}
-                    {pos.jugador_id === miJugadorId && <span className="ml-1 text-xs text-violet-400">(tú)</span>}
+                    {pos.jugador_id === miJugadorId && <span className="ml-1 text-xs text-amber-400">(tú)</span>}
                   </p>
                   <p className="text-xs text-white/30">{pos.predicciones} predicciones</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold text-violet-300">{pos.puntos_total}</div>
+                  <div className="text-xl font-bold text-amber-300">{pos.puntos_total}</div>
                   <div className="text-xs text-white/30">pts</div>
                 </div>
               </div>

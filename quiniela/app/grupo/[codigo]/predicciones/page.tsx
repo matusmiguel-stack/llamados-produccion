@@ -66,7 +66,7 @@ export default function PrediccionesPage() {
               onClick={() => setFiltro(f)}
               className={`text-sm px-4 py-1.5 rounded-full border transition-colors ${
                 filtro === f
-                  ? 'bg-violet-600 border-violet-500 text-white'
+                  ? 'bg-amber-600 border-amber-500 text-white'
                   : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
               }`}
             >

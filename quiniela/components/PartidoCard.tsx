@@ -49,7 +49,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
     }
   }
 
-  const inputClass = "w-10 h-10 text-center bg-white/8 border border-white/15 rounded-lg font-bold text-lg text-white focus:outline-none focus:border-violet-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+  const inputClass = "w-10 h-10 text-center bg-white/8 border border-white/15 rounded-lg font-bold text-lg text-white focus:outline-none focus:border-amber-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 
   const estadoBadge = {
     pendiente: null,
@@ -110,7 +110,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
           <button
             onClick={handleSave}
             disabled={saving || local === '' || visitante === ''}
-            className="text-sm bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white px-4 py-1.5 rounded-lg transition-colors"
+            className="text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white px-4 py-1.5 rounded-lg transition-colors"
           >
             {saved ? '✓ Guardado' : saving ? 'Guardando…' : 'Guardar'}
           </button>

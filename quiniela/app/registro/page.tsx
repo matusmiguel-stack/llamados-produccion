@@ -72,13 +72,13 @@ export default function RegistroPage() {
     }
   }
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
+  const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/60 transition-colors"
 
   if (confirmacionEnviada) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm flex flex-col items-center gap-8">
-          <Image src="/logo-retro.png" alt="Retro" width={120} height={40} className="object-contain" priority />
+          <Image src="/logo-quiniela.png" alt="Quiniela" width={56} height={56} className="object-contain" priority />
           <div className="w-full bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm p-8 text-center flex flex-col gap-4">
             <div className="text-4xl">📬</div>
             <h2 className="text-white font-semibold text-lg">Revisa tu correo</h2>
@@ -86,7 +86,7 @@ export default function RegistroPage() {
               Te enviamos un link de confirmación a <span className="text-white font-medium">{email}</span>.
               Haz clic en el link para activar tu cuenta y luego inicia sesión.
             </p>
-            <Link href="/login" className="mt-2 w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-center text-sm">
+            <Link href="/login" className="mt-2 w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-center text-sm">
               Ir al login
             </Link>
           </div>
@@ -99,7 +99,7 @@ export default function RegistroPage() {
     <main className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-3">
-          <Image src="/logo-retro.png" alt="Retro" width={120} height={40} className="object-contain" priority />
+          <Image src="/logo-quiniela.png" alt="Quiniela" width={56} height={56} className="object-contain" priority />
           <div className="flex items-center gap-2 text-white/50 text-sm">
             <span>⚽</span>
             <span>Quiniela Mundial 2026</span>
@@ -160,7 +160,7 @@ export default function RegistroPage() {
             <button
               type="submit"
               disabled={loading || !nombre || !email || !password || !codigoGrupo}
-              className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
+              className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
             >
               {loading ? 'Creando cuenta…' : 'Registrarme'}
             </button>
@@ -168,7 +168,7 @@ export default function RegistroPage() {
 
           <p className="text-center text-white/30 text-sm mt-4">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-violet-400 hover:text-violet-300">
+            <Link href="/login" className="text-amber-400 hover:text-amber-300">
               Inicia sesión
             </Link>
           </p>

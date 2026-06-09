@@ -73,7 +73,7 @@ export default function GrupoPage() {
       <div className="border-b border-white/10 bg-white/3 backdrop-blur-sm px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/logo-retro.png" alt="Retro" width={80} height={26} className="object-contain opacity-90" />
+            <Image src="/logo-quiniela.png" alt="Quiniela" width={40} height={40} className="object-contain opacity-90" />
             <div className="w-px h-6 bg-white/15" />
             <div>
               <p className="text-white font-semibold text-sm leading-tight">{grupo?.nombre}</p>
@@ -82,7 +82,7 @@ export default function GrupoPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-2xl font-bold text-violet-300">{puntosTotal}</div>
+              <div className="text-2xl font-bold text-amber-300">{puntosTotal}</div>
               <div className="text-white/40 text-xs">tus pts</div>
             </div>
             <button onClick={handleLogout} className="text-white/30 hover:text-white/60 text-xs transition-colors" title="Cerrar sesión">
@@ -102,7 +102,7 @@ export default function GrupoPage() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 text-center py-3 text-sm transition-colors ${i === 0 ? 'text-white border-b-2 border-violet-400' : 'text-white/40 hover:text-white/70'}`}
+              className={`flex-1 text-center py-3 text-sm transition-colors ${i === 0 ? 'text-white border-b-2 border-amber-400' : 'text-white/40 hover:text-white/70'}`}
             >
               {item.label}
             </Link>
@@ -143,7 +143,7 @@ export default function GrupoPage() {
                     <div className="flex items-center gap-2 text-sm text-white">
                       <span className="flex-1 font-medium">{p.equipo_local}</span>
                       {p.prediccion
-                        ? <span className="text-violet-300 font-bold text-xs bg-violet-500/15 px-2 py-0.5 rounded">{p.prediccion.goles_local}-{p.prediccion.goles_visitante}</span>
+                        ? <span className="text-amber-300 font-bold text-xs bg-amber-500/15 px-2 py-0.5 rounded">{p.prediccion.goles_local}-{p.prediccion.goles_visitante}</span>
                         : <span className="text-white/20 text-xs">vs</span>
                       }
                       <span className="flex-1 font-medium text-right">{p.equipo_visitante}</span>
@@ -158,8 +158,8 @@ export default function GrupoPage() {
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Sistema de puntos</h2>
           <div className="flex gap-5 text-sm text-white/60">
-            <span><span className="text-violet-300 font-bold">{grupo?.pts_exacto} pts</span> resultado exacto</span>
-            <span><span className="text-violet-200 font-bold">{grupo?.pts_ganador} pt</span> ganador/empate</span>
+            <span><span className="text-amber-300 font-bold">{grupo?.pts_exacto} pts</span> resultado exacto</span>
+            <span><span className="text-amber-200 font-bold">{grupo?.pts_ganador} pt</span> ganador/empate</span>
           </div>
         </div>
       </div>

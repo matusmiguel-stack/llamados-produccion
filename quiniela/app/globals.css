@@ -5,9 +5,9 @@ html, body {
   min-height: 100%;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 32%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 28%),
-    #05070d;
+    radial-gradient(circle at top left, rgba(212, 160, 23, 0.15), transparent 32%),
+    radial-gradient(circle at top right, rgba(180, 140, 60, 0.10), transparent 28%),
+    #09080a;
   color: #f8fafc;
   font-family: Arial, Helvetica, sans-serif;
 }
