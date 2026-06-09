@@ -31,11 +31,11 @@ function fmt(n: number): string {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 }
 
-/** Monto efectivo a pagar: usa valores reales si alguno fue capturado,
- *  si no usa los valores liberados originales. */
+/** Monto real a pagar: usa valores reales si alguno fue capturado.
+ *  Si no hay datos reales capturados, devuelve 0 (sin asumir gasto). */
 function montoEgreso(item: EgresoItem): number {
   const hasActual = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
-  if (!hasActual) return item.qty * item.days * item.unit_price
+  if (!hasActual) return 0
   const q = item.actual_qty        ?? Math.max(item.qty, 1)
   const d = item.actual_days       ?? Math.max(item.days, 1)
   const p = item.actual_unit_price ?? item.unit_price
@@ -220,9 +220,9 @@ export function EgresosPanel({
                   {qItems.map((item, i) => {
                     const monto = montoEgreso(item)
                     const hasActual = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
-                    const qty   = hasActual ? (item.actual_qty   ?? Math.max(item.qty, 1))   : item.qty
-                    const days  = hasActual ? (item.actual_days  ?? Math.max(item.days, 1))  : item.days
-                    const price = hasActual ? (item.actual_unit_price ?? item.unit_price) : item.unit_price
+                    const qty   = hasActual ? (item.actual_qty   ?? Math.max(item.qty, 1))   : "—"
+                    const days  = hasActual ? (item.actual_days  ?? Math.max(item.days, 1))  : "—"
+                    const price = hasActual ? (item.actual_unit_price ?? item.unit_price) : null
 
                     return (
                       <tr key={item.id} style={{
@@ -248,7 +248,7 @@ export function EgresosPanel({
                           {days}
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>
-                          {fmt(price)}
+                          {price != null ? fmt(price) : "—"}
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>
                           {fmt(monto)}
