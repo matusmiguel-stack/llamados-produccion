@@ -14,6 +14,7 @@ export default function RegistroPage() {
   const [codigoGrupo, setCodigoGrupo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [confirmacionEnviada, setConfirmacionEnviada] = useState(false)
 
   const handleRegistro = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,14 +59,41 @@ export default function RegistroPage() {
 
       if (!jugadorRes.ok) { setError('Error al unirse al grupo'); return }
 
-      router.push(`/grupo/${grupo.codigo}`)
-      router.refresh()
+      // Si hay sesión activa (confirmación desactivada), ir directo al grupo
+      // Si no hay sesión, Supabase mandó email de confirmación
+      if (authData.session) {
+        router.push(`/grupo/${grupo.codigo}`)
+        router.refresh()
+      } else {
+        setConfirmacionEnviada(true)
+      }
     } finally {
       setLoading(false)
     }
   }
 
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
+
+  if (confirmacionEnviada) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-sm flex flex-col items-center gap-8">
+          <Image src="/logo-retro.png" alt="Retro" width={120} height={40} className="object-contain" priority />
+          <div className="w-full bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm p-8 text-center flex flex-col gap-4">
+            <div className="text-4xl">📬</div>
+            <h2 className="text-white font-semibold text-lg">Revisa tu correo</h2>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Te enviamos un link de confirmación a <span className="text-white font-medium">{email}</span>.
+              Haz clic en el link para activar tu cuenta y luego inicia sesión.
+            </p>
+            <Link href="/login" className="mt-2 w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-center text-sm">
+              Ir al login
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4">

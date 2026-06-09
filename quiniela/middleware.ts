@@ -37,5 +37,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/registro', '/grupo/:path*', '/mi-grupo'],
+  matcher: ['/', '/login', '/registro', '/grupo/:path*', '/mi-grupo', '/auth/:path*'],
 }
