@@ -1,0 +1,86 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import PartidoCard from '@/components/PartidoCard'
+import { Partido, Prediccion } from '@/types'
+
+type PartidoConPred = Partido & { prediccion?: Prediccion | null }
+
+export default function PrediccionesPage() {
+  const params = useParams()
+  const router = useRouter()
+  const codigo = params.codigo as string
+
+  const [jugadorId, setJugadorId] = useState<string | null>(null)
+  const [partidos, setPartidos] = useState<PartidoConPred[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState<'pendientes' | 'todos'>('pendientes')
+
+  const cargar = useCallback(async (jId: string) => {
+    const res = await fetch(`/api/partidos?jugador_id=${jId}`)
+    setPartidos(await res.json())
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    const stored = localStorage.getItem('quiniela_jugador')
+    if (!stored) { router.replace('/'); return }
+    const j = JSON.parse(stored)
+    setJugadorId(j.id)
+    cargar(j.id)
+  }, [cargar, router])
+
+  const mostrados = filtro === 'pendientes'
+    ? partidos.filter((p) => p.estado === 'pendiente')
+    : partidos
+
+  const sinPred = partidos.filter((p) => p.estado === 'pendiente' && !p.prediccion).length
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-emerald-800 text-white px-4 py-5">
+        <div className="max-w-lg mx-auto flex items-center gap-3">
+          <Link href={`/grupo/${codigo}`} className="text-emerald-300 hover:text-white">←</Link>
+          <div>
+            <h1 className="text-lg font-bold">Predicciones</h1>
+            {sinPred > 0 && <p className="text-emerald-300 text-xs">{sinPred} pendiente{sinPred !== 1 ? 's' : ''}</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-4">
+        {/* Filtro */}
+        <div className="flex gap-2 mb-4">
+          {(['pendientes', 'todos'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFiltro(f)}
+              className={`text-sm px-4 py-1.5 rounded-full transition-colors ${filtro === f ? 'bg-emerald-700 text-white' : 'bg-white border text-gray-600 hover:bg-gray-50'}`}
+            >
+              {f === 'pendientes' ? 'Por jugar' : 'Todos'}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="text-center text-gray-400 py-12 animate-pulse">Cargando partidos…</div>
+        ) : mostrados.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">No hay partidos en esta vista</div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {mostrados.map((p) => (
+              <PartidoCard
+                key={p.id}
+                partido={p}
+                jugadorId={jugadorId!}
+                onSave={() => jugadorId && cargar(jugadorId)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
