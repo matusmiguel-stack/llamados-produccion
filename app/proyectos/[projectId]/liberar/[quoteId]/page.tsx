@@ -116,13 +116,13 @@ function libTotal(item: QuoteItemRow): number {
 }
 
 // Real display total per item row (what appears in the "Total Real" column)
-// Para ítems internos (real_expense===1) no se aplica markup — el costo es lo que es.
-// Si no hay datos reales, se muestra el valor liberado como referencia.
+// Para ítems internos (real_expense===1) no se aplica markup.
+// Si no hay datos reales capturados, devuelve 0 — no se asume ningún gasto.
 function realTotal(item: QuoteItemRow, actual: ItemActual): number {
   const actualAmt = itemActualAmount(item, actual)
   if (item.real_expense === 1) {
-    // Interno: sin markup. Si no hay datos reales, muestra lib como placeholder.
-    return actualAmt > 0 ? actualAmt : itemAmount(item)
+    // Interno: sin markup. 0 si no hay datos reales capturados.
+    return actualAmt
   }
   const u = actualAmt * ((item.released_expense || 0) / 100)
   return actualAmt + u
