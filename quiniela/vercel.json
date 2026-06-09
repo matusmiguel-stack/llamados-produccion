@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/sync?secret=REEMPLAZA_CON_TU_CRON_SECRET",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }
