@@ -78,7 +78,7 @@ function libItemFin(item: QuoteItem) {
 }
 
 function realItemGasto(item: QuoteItem): number {
-  if (item.real_expense === 1) return 0
+  // Incluye ítems internos (real_expense===1) si tienen datos reales capturados
   const any = item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null
   if (!any) return 0
   const q = item.actual_qty != null ? item.actual_qty : Math.max(item.qty, 1)
