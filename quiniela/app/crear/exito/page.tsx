@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,6 +8,14 @@ import Image from 'next/image'
 type Estado = 'verificando' | 'ok' | 'pendiente' | 'error'
 
 export default function ExitoPage() {
+  return (
+    <Suspense>
+      <ExitoContent />
+    </Suspense>
+  )
+}
+
+function ExitoContent() {
   const searchParams = useSearchParams()
   const [estado, setEstado] = useState<Estado>('verificando')
   const [codigo, setCodigo] = useState('')
