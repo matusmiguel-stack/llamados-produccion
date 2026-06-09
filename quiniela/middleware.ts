@@ -28,8 +28,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si ya está logueado, redirigir desde / y /login
-  if (user && (request.nextUrl.pathname === '/' || request.nextUrl.pathname === '/login')) {
+  // Si ya está logueado, redirigir desde /login
+  if (user && request.nextUrl.pathname === '/login') {
     return NextResponse.redirect(new URL('/mi-grupo', request.url))
   }
 
@@ -37,5 +37,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/registro', '/grupo/:path*', '/mi-grupo', '/auth/:path*'],
+  matcher: ['/', '/login', '/registro', '/crear/:path*', '/grupo/:path*', '/mi-grupo', '/auth/:path*'],
 }
