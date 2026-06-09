@@ -113,11 +113,12 @@ export default function GrupoPage() {
             { href: `/grupo/${codigo}`, label: 'Inicio', active: true },
             { href: `/grupo/${codigo}/predicciones`, label: sinPrediccion > 0 ? `Predecir (${sinPrediccion})` : 'Predecir', active: false },
             { href: `/grupo/${codigo}/tabla`, label: 'Tabla', active: false },
+            { href: `/grupo/${codigo}/calendario`, label: 'Calendario', active: false },
           ].map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 text-center py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 text-center py-2.5 text-xs font-medium transition-colors leading-tight ${
                 item.active
                   ? 'text-amber-300 border-b-2 border-amber-400'
                   : 'text-white/35 hover:text-white/70'
