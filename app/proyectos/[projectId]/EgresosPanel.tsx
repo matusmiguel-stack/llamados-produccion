@@ -82,9 +82,7 @@ export function EgresosPanel({
         if (!sections) continue
 
         for (const section of sections) {
-          // 3. Items con proveedor o empleado asignado en la liberación
-          //    actual_supplier_id → proveedor externo del catálogo
-          //    actual_employee_id → empleado interno RETRO
+          // 3. Todos los ítems de la sección — filtramos en JS los que tienen datos reales
           const { data: raw } = await supabase
             .from("quote_items")
             .select(`
@@ -101,20 +99,21 @@ export function EgresosPanel({
           if (!raw) continue
 
           for (const row of raw as any[]) {
-            const hasProv = !!row.actual_supplier_id
-            const hasEmp  = !!row.actual_employee_id
-            if (!hasProv && !hasEmp) continue   // sin proveedor/empleado → ignorar
+            // Solo incluir ítems que tienen al menos un dato real capturado
+            const hasReal = row.actual_qty != null || row.actual_days != null || row.actual_unit_price != null
+            if (!hasReal) continue
 
-            let supplierLabel = "—"
+            // Resolver proveedor/empleado (opcional — puede no tener)
+            let supplierLabel = "Sin asignar"
             let supplierType: "proveedor" | "empleado" = "proveedor"
 
-            if (hasProv && row.proveedores) {
+            if (row.actual_supplier_id && row.proveedores) {
               const p = row.proveedores
               supplierLabel = p.empresa
                 ? `${p.empresa} — ${p.nombre} ${p.apellido}`
                 : `${p.nombre} ${p.apellido}`
               supplierType = "proveedor"
-            } else if (hasEmp && row.employees) {
+            } else if (row.actual_employee_id && row.employees) {
               const e = row.employees
               const ap = e.apellido_materno
                 ? `${e.apellido_paterno} ${e.apellido_materno}`
@@ -239,10 +238,14 @@ export function EgresosPanel({
                           {item.description}
                         </td>
                         <td style={tdStyle}>
-                          <span style={supplierBadgeStyle(item.supplierType)}>
-                            {item.supplierType === "empleado" ? "👤 " : "🏢 "}
-                            {item.supplierLabel}
-                          </span>
+                          {item.supplierLabel === "Sin asignar" ? (
+                            <span style={{ color: "#475569", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
+                          ) : (
+                            <span style={supplierBadgeStyle(item.supplierType)}>
+                              {item.supplierType === "empleado" ? "👤 " : "🏢 "}
+                              {item.supplierLabel}
+                            </span>
+                          )}
                         </td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>
                           {qty}
