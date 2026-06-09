@@ -57,7 +57,11 @@ export default function RegistroPage() {
         }),
       })
 
-      if (!jugadorRes.ok) { setError('Error al unirse al grupo'); return }
+      if (!jugadorRes.ok) {
+        const jugadorErr = await jugadorRes.json()
+        setError(jugadorErr.error || 'Error al unirse al grupo')
+        return
+      }
 
       // Si hay sesión activa (confirmación desactivada), ir directo al grupo
       // Si no hay sesión, Supabase mandó email de confirmación
