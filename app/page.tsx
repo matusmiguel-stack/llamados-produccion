@@ -2000,12 +2000,12 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
-                {!selectedShoot && !selectedVacation && !selectedJunta && (canManageVacations || isProductorRole) && (
+                {!selectedShoot && !selectedVacation && !selectedJunta && (canEdit || isProductorRole) && (
                   <div style={{
                     ...entryModeSwitchWrapStyle,
-                    gridTemplateColumns: canManageVacations ? "1fr 1fr 1fr" : "1fr",
+                    gridTemplateColumns: canManageVacations ? "1fr 1fr 1fr" : canEdit ? "1fr 1fr" : "1fr",
                   }}>
-                    {canManageVacations && (
+                    {canEdit && (
                       <button
                         type="button"
                         onClick={() => {
