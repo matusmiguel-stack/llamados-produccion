@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface Jugador { id: string; nombre: string }
-interface Grupo { id: string; nombre: string; codigo: string; pts_exacto: number; pts_ganador: number }
+interface Grupo { id: string; nombre: string; codigo: string; pts_exacto: number; pts_ganador: number; entrada: number; num_jugadores: number }
 interface Partido {
   id: string; equipo_local: string; equipo_visitante: string; bandera_local: string
   bandera_visitante: string; fecha: string; estado: string; goles_local: number | null
@@ -191,6 +191,23 @@ export default function GrupoPage() {
           </div>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white/20 group-hover:text-amber-400/50 transition-colors"><path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </Link>
+
+        {/* Premio acumulado */}
+        {grupo && grupo.entrada > 0 && (
+          <div className="relative bg-amber-500/8 border border-amber-400/20 rounded-2xl p-4 overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-amber-400/60 uppercase tracking-widest">Premio acumulado</p>
+                <p className="text-white/40 text-xs mt-1">{grupo.num_jugadores} participante{grupo.num_jugadores !== 1 ? 's' : ''} × ${grupo.entrada} entrada</p>
+              </div>
+              <div className="text-right">
+                <p className="text-amber-300 font-bold text-3xl">${(grupo.num_jugadores * grupo.entrada).toLocaleString('es-MX')}</p>
+                <p className="text-white/25 text-xs">MXN</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sistema de puntos */}
         <div className="relative bg-white/4 border border-white/8 rounded-2xl p-4 overflow-hidden">

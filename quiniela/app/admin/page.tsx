@@ -9,6 +9,7 @@ interface Grupo {
   nombre: string
   pts_exacto: number
   pts_ganador: number
+  entrada: number
   created_at: string
 }
 
@@ -21,6 +22,7 @@ export default function AdminPage() {
   const [nombreGrupo, setNombreGrupo] = useState('')
   const [ptsExacto, setPtsExacto] = useState('3')
   const [ptsGanador, setPtsGanador] = useState('1')
+  const [entrada, setEntrada] = useState('100')
   const [creando, setCreando] = useState(false)
   const [errorCrear, setErrorCrear] = useState('')
   const [copiado, setCopiado] = useState<string | null>(null)
@@ -57,6 +59,7 @@ export default function AdminPage() {
           nombre: nombreGrupo.trim(),
           pts_exacto: parseInt(ptsExacto) || 3,
           pts_ganador: parseInt(ptsGanador) || 1,
+          entrada: parseInt(entrada) || 0,
         }),
       })
       if (!res.ok) { setErrorCrear('Error creando grupo'); return }
@@ -117,11 +120,9 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen p-4">
       <div className="max-w-lg mx-auto flex flex-col gap-6 pt-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo-quiniela.png" alt="Quiniela" width={40} height={40} className="object-contain opacity-80" />
-            <span className="text-white/40 text-sm">Admin · Quiniela</span>
-          </div>
+        <div className="flex items-center gap-3">
+          <Image src="/logo-quiniela.png" alt="Quiniela" width={40} height={40} className="object-contain opacity-80" />
+          <span className="text-white/40 text-sm">Admin · Quiniela</span>
         </div>
 
         {/* Crear grupo */}
@@ -144,6 +145,16 @@ export default function AdminPage() {
                 <input type="number" min="0" max="10" value={ptsGanador} onChange={(e) => setPtsGanador(e.target.value)} className={`${inputClass} text-center`} />
               </div>
             </div>
+            <div>
+              <label className="text-xs text-white/40 block mb-1">Entrada por jugador ($MXN)</label>
+              <input
+                type="number" min="0" step="50" value={entrada}
+                onChange={(e) => setEntrada(e.target.value)}
+                placeholder="Ej: 100"
+                className={inputClass}
+              />
+              <p className="text-white/20 text-xs mt-1">El premio acumulado se calcula automáticamente: participantes × entrada</p>
+            </div>
             {errorCrear && <p className="text-red-400 text-sm">{errorCrear}</p>}
             <button
               type="submit"
@@ -165,17 +176,17 @@ export default function AdminPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {grupos.map((g) => (
-                <div key={g.id} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-medium text-sm">{g.nombre}</p>
-                    <p className="text-white/30 text-xs mt-0.5">{g.pts_exacto} pts exacto · {g.pts_ganador} pt ganador</p>
+                <div key={g.id} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-white font-medium text-sm truncate">{g.nombre}</p>
+                    <p className="text-white/30 text-xs mt-0.5">
+                      {g.pts_exacto}pts exacto · {g.pts_ganador}pt ganador
+                      {g.entrada > 0 && <span className="text-amber-400/60"> · ${g.entrada} entrada</span>}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <span className="font-mono font-bold text-amber-300 tracking-widest text-lg">{g.codigo}</span>
-                    <button
-                      onClick={() => copiar(g.codigo)}
-                      className="text-xs text-white/30 hover:text-white/70 transition-colors"
-                    >
+                    <button onClick={() => copiar(g.codigo)} className="text-xs text-white/30 hover:text-white/70 transition-colors">
                       {copiado === g.codigo ? '✓' : 'copiar'}
                     </button>
                     <button

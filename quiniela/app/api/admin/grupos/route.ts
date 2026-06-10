@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/grupos — crear grupo
 export async function POST(req: NextRequest) {
-  const { password, nombre, pts_exacto = 3, pts_ganador = 1 } = await req.json()
+  const { password, nombre, pts_exacto = 3, pts_ganador = 1, entrada = 0 } = await req.json()
   if (!checkAuth(password)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!nombre) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db
     .from('grupos')
-    .insert({ nombre, codigo, pts_exacto, pts_ganador })
+    .insert({ nombre, codigo, pts_exacto, pts_ganador, entrada })
     .select()
     .single()
 

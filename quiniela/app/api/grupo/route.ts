@@ -9,10 +9,12 @@ export async function GET(req: NextRequest) {
   const db = supabaseAdmin()
   const { data, error } = await db
     .from('grupos')
-    .select('*')
+    .select('*, jugadores(count)')
     .eq('codigo', codigo.toUpperCase())
     .single()
 
   if (error || !data) return NextResponse.json({ error: 'Grupo no encontrado' }, { status: 404 })
-  return NextResponse.json(data)
+
+  const num_jugadores = (data.jugadores as unknown as { count: number }[])?.[0]?.count ?? 0
+  return NextResponse.json({ ...data, num_jugadores })
 }
