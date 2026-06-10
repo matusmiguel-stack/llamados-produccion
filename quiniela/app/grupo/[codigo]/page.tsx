@@ -183,43 +183,60 @@ export default function GrupoPage() {
               </div>
             )}
             <div className="relative">
-              <button onClick={() => setShowGrupos(!showGrupos)} className="text-white/20 hover:text-white/50 transition-colors text-xs flex flex-col items-center gap-1">
+              <button onClick={() => setShowGrupos(!showGrupos)} className="text-white/30 hover:text-white/70 transition-colors text-xs flex flex-col items-center gap-1">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                <span>Grupos</span>
+                <span>Mis Quinielas</span>
               </button>
 
               {showGrupos && (
-                <div className="absolute right-0 top-12 w-56 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                  <div className="px-3 py-2 border-b border-white/6">
-                    <p className="text-white/30 text-xs">Mis quinielas</p>
+                <>
+                  {/* Overlay para cerrar al tocar fuera */}
+                  <div className="fixed inset-0 z-40" onClick={() => setShowGrupos(false)} />
+                  <div className="absolute right-0 top-14 w-64 z-50 overflow-hidden rounded-2xl shadow-2xl" style={{background: 'rgba(15,15,15,0.97)', border: '1px solid rgba(255,255,255,0.12)'}}>
+                    {/* Línea dorada top */}
+                    <div className="h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
+
+                    <div className="px-4 py-3 border-b border-white/8">
+                      <p className="text-white/40 text-xs uppercase tracking-widest font-semibold">Mis quinielas</p>
+                    </div>
+
+                    {misGrupos.map((g) => (
+                      <Link
+                        key={g.codigo}
+                        href={`/grupo/${g.codigo}`}
+                        onClick={() => setShowGrupos(false)}
+                        className={`flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-white/5 ${g.codigo === codigo ? 'bg-amber-500/8' : ''}`}
+                      >
+                        <div>
+                          <p className={`text-sm font-semibold ${g.codigo === codigo ? 'text-amber-300' : 'text-white/70'}`}>{g.nombre}</p>
+                          <p className="text-white/20 text-xs font-mono mt-0.5">{g.codigo}</p>
+                        </div>
+                        {g.codigo === codigo
+                          ? <span className="text-amber-400/50 text-xs border border-amber-400/20 rounded-full px-2 py-0.5">actual</span>
+                          : <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-white/20"><path d="M5 2.5L9.5 7L5 11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        }
+                      </Link>
+                    ))}
+
+                    <div className="border-t border-white/8 mt-1">
+                      <button
+                        onClick={() => { setShowGrupos(false); handleSalirGrupo() }}
+                        disabled={saliendose}
+                        className="w-full text-left px-4 py-3.5 text-red-400/60 hover:text-red-400 hover:bg-red-500/5 text-sm transition-colors flex items-center gap-2"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2H11.5C12.05 2 12.5 2.45 12.5 3V11C12.5 11.55 12.05 12 11.5 12H9M6 9.5L9 7M9 7L6 4.5M9 7H1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        {saliendose ? 'Saliendo…' : 'Salir de este grupo'}
+                      </button>
+                      <button
+                        onClick={() => { setShowGrupos(false); handleLogout() }}
+                        className="w-full text-left px-4 py-3.5 text-white/25 hover:text-white/50 hover:bg-white/4 text-sm transition-colors flex items-center gap-2 border-t border-white/6"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2H2.5C1.95 2 1.5 2.45 1.5 3V11C1.5 11.55 1.95 12 2.5 12H5M8 9.5L5 7M5 7L8 4.5M5 7H12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Cerrar sesión
+                      </button>
+                    </div>
                   </div>
-                  {misGrupos.map((g) => (
-                    <Link
-                      key={g.codigo}
-                      href={`/grupo/${g.codigo}`}
-                      onClick={() => setShowGrupos(false)}
-                      className={`flex items-center justify-between px-4 py-3 hover:bg-white/6 transition-colors ${g.codigo === codigo ? 'text-amber-300' : 'text-white/60'}`}
-                    >
-                      <span className="text-sm font-medium truncate">{g.nombre}</span>
-                      {g.codigo === codigo && <span className="text-amber-400/60 text-xs ml-2">actual</span>}
-                    </Link>
-                  ))}
-                  <div className="border-t border-white/6">
-                    <button
-                      onClick={() => { setShowGrupos(false); handleSalirGrupo() }}
-                      disabled={saliendose}
-                      className="w-full text-left px-4 py-3 text-red-400/60 hover:text-red-400 hover:bg-white/4 text-sm transition-colors"
-                    >
-                      {saliendose ? 'Saliendo…' : `Salir de "${grupo?.nombre}"`}
-                    </button>
-                    <button
-                      onClick={() => { setShowGrupos(false); handleLogout() }}
-                      className="w-full text-left px-4 py-3 text-white/25 hover:text-white/50 hover:bg-white/4 text-sm transition-colors"
-                    >
-                      Cerrar sesión
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </div>
