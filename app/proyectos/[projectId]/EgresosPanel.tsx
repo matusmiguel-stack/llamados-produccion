@@ -99,9 +99,13 @@ export function EgresosPanel({
           if (!raw) continue
 
           for (const row of raw as any[]) {
-            // Solo incluir ítems que tienen al menos un dato real capturado
+            // Solo incluir ítems con monto real > 0
             const hasReal = row.actual_qty != null || row.actual_days != null || row.actual_unit_price != null
             if (!hasReal) continue
+            const q = row.actual_qty        != null ? row.actual_qty        : Math.max(row.qty  || 0, 1)
+            const d = row.actual_days       != null ? row.actual_days       : Math.max(row.days || 0, 1)
+            const p = row.actual_unit_price != null ? row.actual_unit_price : row.unit_price
+            if (q * d * p === 0) continue  // monto cero → no es un egreso real
 
             // Resolver proveedor/empleado (opcional — puede no tener)
             let supplierLabel = "Sin asignar"
