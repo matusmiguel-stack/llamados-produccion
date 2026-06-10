@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -259,29 +259,13 @@ export function EgresosPanel({ projectId, isMobile }: { projectId: string; isMob
                             {item.description}
                           </td>
                           {/* Selector proveedor */}
-                          <td style={tdStyle}>
-                            <select
+                          <td style={{ ...tdStyle, minWidth: 200 }}>
+                            <SupplierCombobox
                               value={editState.contact}
-                              onChange={e => setEditState(s => ({ ...s, contact: e.target.value }))}
-                              style={editSelectStyle}
-                            >
-                              <option value="">— Sin asignar —</option>
-                              {employees.length > 0 && (
-                                <optgroup label="── Empleados RETRO ──">
-                                  {employees.map(e => {
-                                    const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-                                    return <option key={e.id} value={`emp:${e.id}`}>{e.nombre} {ap} · {e.puesto}</option>
-                                  })}
-                                </optgroup>
-                              )}
-                              <optgroup label="── Proveedores ──">
-                                {proveedores.map(p => (
-                                  <option key={p.id} value={`prov:${p.id}`}>
-                                    {p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido} · ${p.actividad}`}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            </select>
+                              onChange={val => setEditState(s => ({ ...s, contact: val }))}
+                              proveedores={proveedores}
+                              employees={employees}
+                            />
                           </td>
                           {/* Inputs qty / days / price */}
                           <td style={tdStyle}>
@@ -399,11 +383,6 @@ const editInputStyle: React.CSSProperties = {
   border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
   color: "#f8fafc", fontSize: 12, outline: "none", textAlign: "right",
 }
-const editSelectStyle: React.CSSProperties = {
-  minWidth: 160, padding: "4px 8px", borderRadius: 6,
-  border: "1px solid rgba(167,139,250,0.35)", background: "rgba(2,6,23,0.7)",
-  color: "#e2e8f0", fontSize: 12, outline: "none",
-}
 const saveBtnStyle: React.CSSProperties = {
   padding: "4px 10px", borderRadius: 6, border: "none",
   background: "rgba(52,211,153,0.18)", color: "#34d399",
@@ -418,6 +397,133 @@ const editBtnStyle: React.CSSProperties = {
   padding: "3px 10px", borderRadius: 6,
   border: "1px solid rgba(148,163,184,0.18)", background: "rgba(255,255,255,0.04)",
   color: "#94a3b8", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+}
+
+// ─── SupplierCombobox ─────────────────────────────────────────────────────────
+
+function SupplierCombobox({
+  value,
+  onChange,
+  proveedores,
+  employees,
+}: {
+  value: string
+  onChange: (val: string) => void
+  proveedores: Proveedor[]
+  employees: Employee[]
+}) {
+  const [query, setQuery] = useState("")
+  const [open, setOpen]   = useState(false)
+  const ref               = useRef<HTMLDivElement>(null)
+
+  let displayText = ""
+  if (value.startsWith("prov:")) {
+    const p = proveedores.find(x => x.id === value.slice(5))
+    if (p) displayText = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido} · ${p.actividad}`
+  } else if (value.startsWith("emp:")) {
+    const e = employees.find(x => x.id === value.slice(4))
+    if (e) {
+      const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+      displayText = `${e.nombre} ${ap} · ${e.puesto}`
+    }
+  }
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false); setQuery("")
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  const q             = query.toLowerCase()
+  const filteredEmps  = employees.filter(e => {
+    if (!q) return true
+    const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+    return `${e.nombre} ${ap} ${e.puesto}`.toLowerCase().includes(q)
+  })
+  const filteredProvs = proveedores.filter(p => {
+    if (!q) return true
+    return `${p.nombre} ${p.apellido} ${p.empresa ?? ""} ${p.actividad}`.toLowerCase().includes(q)
+  })
+  const hasResults = filteredEmps.length > 0 || filteredProvs.length > 0
+
+  return (
+    <div ref={ref} style={{ position: "relative", width: "100%" }}>
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input
+          type="text"
+          value={open ? query : displayText}
+          placeholder="Buscar por nombre, empresa…"
+          onFocus={() => { setOpen(true); setQuery("") }}
+          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          style={{
+            width: "100%", padding: "4px 24px 4px 8px", borderRadius: 6,
+            border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
+            color: open ? "#f8fafc" : (value ? "#e2e8f0" : "#475569"),
+            fontSize: 12, outline: "none", boxSizing: "border-box" as const,
+          }}
+        />
+        {value && !open && (
+          <button type="button"
+            onMouseDown={e => { e.preventDefault(); onChange(""); setQuery("") }}
+            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
+          >✕</button>
+        )}
+        {!value && !open && (
+          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
+        )}
+      </div>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 9999,
+          background: "rgba(8,12,24,0.97)", border: "1px solid rgba(148,163,184,0.20)",
+          borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+          maxHeight: 260, overflowY: "auto" as const, padding: "4px 0",
+        }}>
+          {!hasResults && q && (
+            <div style={{ padding: 12, color: "#475569", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
+          )}
+          {filteredEmps.length > 0 && (
+            <>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.7 }}>👤 Empleados RETRO</div>
+              {filteredEmps.map(e => {
+                const ap  = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+                return (
+                  <div key={e.id}
+                    onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}
+                    style={{ padding: "7px 12px", cursor: "pointer" }}>
+                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{e.nombre} {ap}</div>
+                    <div style={{ color: "#64748b", fontSize: 11 }}>{e.puesto}</div>
+                  </div>
+                )
+              })}
+            </>
+          )}
+          {filteredProvs.length > 0 && (
+            <>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.7, borderTop: "1px solid rgba(148,163,184,0.08)", marginTop: 2 }}>🏢 Proveedores</div>
+              {filteredProvs.map(p => {
+                const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
+                const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad
+                return (
+                  <div key={p.id}
+                    onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}
+                    style={{ padding: "7px 12px", cursor: "pointer" }}>
+                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                    <div style={{ color: "#64748b", fontSize: 11 }}>{sub}</div>
+                  </div>
+                )
+              })}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function supplierBadgeStyle(type: "proveedor" | "empleado" | "none"): React.CSSProperties {
