@@ -28,6 +28,9 @@ export default function GrupoPage() {
   const [codigoUnirse, setCodigoUnirse] = useState('')
   const [uniendose, setUniendose] = useState(false)
   const [errorUnirse, setErrorUnirse] = useState('')
+  const [misGrupos, setMisGrupos] = useState<{ codigo: string; nombre: string }[]>([])
+  const [showGrupos, setShowGrupos] = useState(false)
+  const [saliendose, setSaliendose] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -43,11 +46,12 @@ export default function GrupoPage() {
       if (!res.ok) { router.replace('/login'); return }
       const j = await res.json()
       setJugador(j)
-      const [, partidosRes] = await Promise.all([
-        Promise.resolve(),
+      const [partidosRes, gruposRes] = await Promise.all([
         fetch(`/api/partidos?jugador_id=${j.id}`),
+        fetch(`/api/auth/mis-grupos?user_id=${user.id}`),
       ])
       setPartidos(await partidosRes.json())
+      if (gruposRes.ok) setMisGrupos(await gruposRes.json())
       setLoading(false)
     }
     load()
@@ -58,6 +62,17 @@ export default function GrupoPage() {
     await supabase.auth.signOut()
     router.replace('/login')
     router.refresh()
+  }
+
+  const handleSalirGrupo = async () => {
+    if (!jugador) return
+    if (!confirm(`¿Salir del grupo "${grupo?.nombre}"? Se borrarán tus predicciones en este grupo.`)) return
+    setSaliendose(true)
+    await fetch(`/api/grupo/jugador?jugador_id=${jugador.id}`, { method: 'DELETE' })
+    setSaliendose(false)
+    const otroGrupo = misGrupos.find((g) => g.codigo !== codigo)
+    if (otroGrupo) router.replace(`/grupo/${otroGrupo.codigo}`)
+    else router.replace('/mi-grupo')
   }
 
   const handleUnirse = async (e: React.FormEvent) => {
@@ -167,10 +182,46 @@ export default function GrupoPage() {
                 <p className="text-2xl font-bold text-amber-200 leading-tight">${(grupo.num_jugadores * grupo.entrada).toLocaleString('es-MX')}</p>
               </div>
             )}
-            <button onClick={handleLogout} className="text-white/20 hover:text-white/50 transition-colors text-xs flex flex-col items-center gap-1">
-              <span className="text-lg">⏏</span>
-              <span>Salir</span>
-            </button>
+            <div className="relative">
+              <button onClick={() => setShowGrupos(!showGrupos)} className="text-white/20 hover:text-white/50 transition-colors text-xs flex flex-col items-center gap-1">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                <span>Grupos</span>
+              </button>
+
+              {showGrupos && (
+                <div className="absolute right-0 top-12 w-56 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-white/6">
+                    <p className="text-white/30 text-xs">Mis quinielas</p>
+                  </div>
+                  {misGrupos.map((g) => (
+                    <Link
+                      key={g.codigo}
+                      href={`/grupo/${g.codigo}`}
+                      onClick={() => setShowGrupos(false)}
+                      className={`flex items-center justify-between px-4 py-3 hover:bg-white/6 transition-colors ${g.codigo === codigo ? 'text-amber-300' : 'text-white/60'}`}
+                    >
+                      <span className="text-sm font-medium truncate">{g.nombre}</span>
+                      {g.codigo === codigo && <span className="text-amber-400/60 text-xs ml-2">actual</span>}
+                    </Link>
+                  ))}
+                  <div className="border-t border-white/6">
+                    <button
+                      onClick={() => { setShowGrupos(false); handleSalirGrupo() }}
+                      disabled={saliendose}
+                      className="w-full text-left px-4 py-3 text-red-400/60 hover:text-red-400 hover:bg-white/4 text-sm transition-colors"
+                    >
+                      {saliendose ? 'Saliendo…' : `Salir de "${grupo?.nombre}"`}
+                    </button>
+                    <button
+                      onClick={() => { setShowGrupos(false); handleLogout() }}
+                      className="w-full text-left px-4 py-3 text-white/25 hover:text-white/50 hover:bg-white/4 text-sm transition-colors"
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

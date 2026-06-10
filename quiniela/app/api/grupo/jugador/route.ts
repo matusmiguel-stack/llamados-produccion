@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// DELETE /api/grupo/jugador?jugador_id=X — salirse de un grupo
+export async function DELETE(req: NextRequest) {
+  const jugador_id = req.nextUrl.searchParams.get('jugador_id')
+  if (!jugador_id) return NextResponse.json({ error: 'jugador_id requerido' }, { status: 400 })
+
+  const db = supabaseAdmin()
+  // Borrar predicciones del jugador en este grupo
+  await db.from('predicciones').delete().eq('jugador_id', jugador_id)
+  // Borrar el jugador
+  const { error } = await db.from('jugadores').delete().eq('id', jugador_id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // POST /api/grupo/jugador — unirse a un grupo
 // Acepta dos formas:
 //   1. { nombre, grupo_id } — registro inicial
