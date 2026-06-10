@@ -24,6 +24,10 @@ export default function GrupoPage() {
   const [grupo, setGrupo] = useState<Grupo | null>(null)
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
+  const [showUnirse, setShowUnirse] = useState(false)
+  const [codigoUnirse, setCodigoUnirse] = useState('')
+  const [uniendose, setUniendose] = useState(false)
+  const [errorUnirse, setErrorUnirse] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -53,6 +57,25 @@ export default function GrupoPage() {
     router.refresh()
   }
 
+  const handleUnirse = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!codigoUnirse.trim() || !jugador) return
+    setUniendose(true)
+    setErrorUnirse('')
+    try {
+      const res = await fetch('/api/grupo/jugador', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: codigoUnirse.trim().toUpperCase(), jugador_id: jugador.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErrorUnirse(data.error ?? 'Error al unirse'); return }
+      router.push(`/grupo/${codigoUnirse.trim().toUpperCase()}`)
+    } finally {
+      setUniendose(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -70,6 +93,43 @@ export default function GrupoPage() {
 
   return (
     <div className="min-h-screen">
+      {/* Modal unirse a otro grupo */}
+      {showUnirse && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-xs">
+            <h2 className="text-white font-semibold mb-1">Unirse a otro grupo</h2>
+            <p className="text-white/30 text-xs mb-4">Ingresa el código que te compartieron</p>
+            <form onSubmit={handleUnirse} className="flex flex-col gap-3">
+              <input
+                value={codigoUnirse}
+                onChange={(e) => setCodigoUnirse(e.target.value.toUpperCase())}
+                placeholder="Ej: ABC123"
+                maxLength={6}
+                className="w-full bg-white/6 border border-white/12 rounded-xl px-4 py-3 text-white placeholder-white/20 font-mono text-center text-xl tracking-widest focus:outline-none focus:border-amber-400/50 uppercase"
+                autoFocus
+              />
+              {errorUnirse && <p className="text-red-400 text-sm text-center">{errorUnirse}</p>}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowUnirse(false); setCodigoUnirse(''); setErrorUnirse('') }}
+                  className="flex-1 bg-white/6 hover:bg-white/10 text-white/50 font-medium py-2.5 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={uniendose || codigoUnirse.length < 4}
+                  className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
+                >
+                  {uniendose ? 'Uniéndome…' : 'Unirme'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Línea dorada top */}
       <div className="h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
 
@@ -177,20 +237,29 @@ export default function GrupoPage() {
           )}
         </section>
 
-        {/* Crear otro grupo */}
-        <Link
-          href="/crear"
-          className="relative overflow-hidden flex items-center justify-between bg-white/4 border border-white/8 hover:border-amber-400/20 hover:bg-amber-500/6 rounded-2xl p-4 transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-amber-400/70 text-lg">✦</span>
-            <div>
-              <p className="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Crear otro grupo</p>
-              <p className="text-white/25 text-xs">Invita a más amigos</p>
+        {/* Acciones de grupo */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowUnirse(true)}
+            className="flex-1 flex items-center gap-2 justify-center bg-white/4 border border-white/8 hover:border-amber-400/20 hover:bg-amber-500/6 rounded-2xl p-4 transition-all group"
+          >
+            <span className="text-white/40 text-lg">＋</span>
+            <div className="text-left">
+              <p className="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Unirse a grupo</p>
+              <p className="text-white/25 text-xs">Con un código</p>
             </div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white/20 group-hover:text-amber-400/50 transition-colors"><path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </Link>
+          </button>
+          <Link
+            href="/crear"
+            className="flex-1 flex items-center gap-2 justify-center bg-white/4 border border-white/8 hover:border-amber-400/20 hover:bg-amber-500/6 rounded-2xl p-4 transition-all group"
+          >
+            <span className="text-amber-400/70 text-lg">✦</span>
+            <div className="text-left">
+              <p className="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Crear grupo</p>
+              <p className="text-white/25 text-xs">Invita amigos</p>
+            </div>
+          </Link>
+        </div>
 
         {/* Premio acumulado */}
         {grupo && grupo.entrada > 0 && (
