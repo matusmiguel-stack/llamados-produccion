@@ -155,9 +155,15 @@ export default function GrupoPage() {
               <p className="text-white font-medium text-sm mt-0.5">{jugador?.nombre}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-white/30 uppercase tracking-wider">Puntos</p>
+              <p className="text-xs text-white/30 uppercase tracking-wider">Mis puntos</p>
               <p className="text-2xl font-bold text-amber-300 leading-tight">{puntosTotal}</p>
             </div>
+            {grupo && grupo.entrada > 0 && (
+              <div className="text-center">
+                <p className="text-xs text-white/30 uppercase tracking-wider">Premio</p>
+                <p className="text-2xl font-bold text-amber-200 leading-tight">${(grupo.num_jugadores * grupo.entrada).toLocaleString('es-MX')}</p>
+              </div>
+            )}
             <button onClick={handleLogout} className="text-white/20 hover:text-white/50 transition-colors text-xs flex flex-col items-center gap-1">
               <span className="text-lg">⏏</span>
               <span>Salir</span>
@@ -260,23 +266,6 @@ export default function GrupoPage() {
             </div>
           </Link>
         </div>
-
-        {/* Premio acumulado */}
-        {grupo && grupo.entrada > 0 && (
-          <div className="relative bg-amber-500/8 border border-amber-400/20 rounded-2xl p-4 overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-amber-400/60 uppercase tracking-widest">Premio acumulado</p>
-                <p className="text-white/40 text-xs mt-1">{grupo.num_jugadores} participante{grupo.num_jugadores !== 1 ? 's' : ''} × ${grupo.entrada} entrada</p>
-              </div>
-              <div className="text-right">
-                <p className="text-amber-300 font-bold text-3xl">${(grupo.num_jugadores * grupo.entrada).toLocaleString('es-MX')}</p>
-                <p className="text-white/25 text-xs">MXN</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Sistema de puntos */}
         <div className="relative bg-white/4 border border-white/8 rounded-2xl p-4 overflow-hidden">
