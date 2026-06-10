@@ -6,6 +6,7 @@ import Image from 'next/image'
 
 export default function CrearPage() {
   const [nombre, setNombre] = useState('')
+  const [entrada, setEntrada] = useState('')
   const [ptsExacto, setPtsExacto] = useState(3)
   const [ptsGanador, setPtsGanador] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -19,7 +20,7 @@ export default function CrearPage() {
       const res = await fetch('/api/pago/crear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre.trim(), pts_exacto: ptsExacto, pts_ganador: ptsGanador }),
+        body: JSON.stringify({ nombre: nombre.trim(), pts_exacto: ptsExacto, pts_ganador: ptsGanador, entrada: parseInt(entrada) || 0 }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Error al iniciar el pago'); return }
@@ -102,6 +103,22 @@ export default function CrearPage() {
           </div>
         </div>
 
+        {/* Campo entrada */}
+        <div>
+          <label className="text-xs font-semibold text-white/40 uppercase tracking-widest block mb-2">Entrada por jugador (opcional)</label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 font-semibold">$</span>
+            <input
+              type="number" min="0" step="50"
+              placeholder="Ej: 100"
+              value={entrada}
+              onChange={(e) => setEntrada(e.target.value)}
+              className="w-full bg-white/6 border border-white/12 rounded-2xl pl-8 pr-4 py-3.5 text-white placeholder-white/20 focus:outline-none focus:border-amber-400/50 text-sm transition-colors"
+            />
+          </div>
+          <p className="text-white/20 text-xs mt-1.5">Este dinero lo cobrarás tú directamente — no se procesa en la app</p>
+        </div>
+
         {/* Resumen */}
         <div className="relative bg-amber-500/6 border border-amber-400/15 rounded-2xl p-4 overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
@@ -109,9 +126,10 @@ export default function CrearPage() {
             <div>
               <p className="text-amber-200/80 font-semibold text-sm">{nombre.trim() || 'Tu quiniela'}</p>
               <p className="text-white/30 text-xs mt-0.5">Exacto {ptsExacto}pts · Ganador {ptsGanador}pts · 104 partidos</p>
+              {entrada && parseInt(entrada) > 0 && <p className="text-amber-400/50 text-xs mt-0.5">Entrada ${parseInt(entrada)} MXN por jugador</p>}
             </div>
             <div className="text-right">
-              <p className="text-amber-300 font-bold text-2xl">$99</p>
+              <p className="text-amber-300 font-bold text-2xl">$49</p>
               <p className="text-white/25 text-xs">MXN</p>
             </div>
           </div>
@@ -141,10 +159,10 @@ export default function CrearPage() {
           className="relative overflow-hidden bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-amber-900/30 transition-all active:scale-95 text-base"
         >
           <div className="absolute top-0 left-0 right-0 h-px bg-white/20" />
-          {loading ? 'Preparando pago…' : 'Pagar $99 MXN →'}
+          {loading ? 'Preparando pago…' : 'Pagar $49 MXN →'}
         </button>
 
-        <p className="text-white/15 text-xs text-center">Pago seguro con MercadoPago · Recibes tu código al instante</p>
+        <p className="text-white/15 text-xs text-center">Pago seguro con Stripe · Recibes tu código al instante</p>
       </div>
     </div>
   )

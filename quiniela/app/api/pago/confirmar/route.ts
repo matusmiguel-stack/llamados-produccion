@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Decodificar config del grupo desde metadata
-  let config: { nombre: string; pts_exacto: number; pts_ganador: number }
+  let config: { nombre: string; pts_exacto: number; pts_ganador: number; entrada?: number }
   try {
     config = JSON.parse(Buffer.from(session.metadata!.external_reference, 'base64url').toString())
   } catch {
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       codigo,
       pts_exacto: config.pts_exacto,
       pts_ganador: config.pts_ganador,
+      entrada: config.entrada ?? 0,
       mp_payment_id: session_id,
     })
     .select()

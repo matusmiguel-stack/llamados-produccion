@@ -32,6 +32,11 @@ export default function AdminPage() {
   const [editando, setEditando] = useState<Grupo | null>(null)
   const [guardando, setGuardando] = useState(false)
 
+  // Participantes
+  const [viendoGrupo, setViendoGrupo] = useState<Grupo | null>(null)
+  const [participantes, setParticipantes] = useState<{ id: string; nombre: string; email: string; created_at: string }[]>([])
+  const [cargandoPart, setCargandoPart] = useState(false)
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const res = await fetch('/api/admin/auth', {
@@ -72,6 +77,14 @@ export default function AdminPage() {
     } finally {
       setCreando(false)
     }
+  }
+
+  const verParticipantes = async (g: Grupo) => {
+    setViendoGrupo(g)
+    setCargandoPart(true)
+    const res = await fetch(`/api/admin/participantes?password=${encodeURIComponent(password)}&grupo_id=${g.id}`)
+    if (res.ok) setParticipantes(await res.json())
+    setCargandoPart(false)
   }
 
   const handleGuardarEdicion = async (e: React.FormEvent) => {
@@ -154,6 +167,46 @@ export default function AdminPage() {
           <Image src="/logo-quiniela.png" alt="Quiniela" width={40} height={40} className="object-contain opacity-80" />
           <span className="text-white/40 text-sm">Admin · Quiniela</span>
         </div>
+
+        {/* Modal participantes */}
+        {viendoGrupo && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+                <div>
+                  <h2 className="text-white font-semibold">{viendoGrupo.nombre}</h2>
+                  <p className="text-white/30 text-xs mt-0.5 font-mono">{viendoGrupo.codigo} · {participantes.length} participante{participantes.length !== 1 ? 's' : ''}</p>
+                </div>
+                <button onClick={() => setViendoGrupo(null)} className="text-white/30 hover:text-white transition-colors text-xl leading-none">×</button>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                {cargandoPart ? (
+                  <p className="text-white/20 text-sm text-center py-8 animate-pulse">Cargando…</p>
+                ) : participantes.length === 0 ? (
+                  <p className="text-white/20 text-sm text-center py-8">Nadie se ha unido aún</p>
+                ) : (
+                  <div className="divide-y divide-white/6">
+                    {participantes.map((p, i) => (
+                      <div key={p.id} className="flex items-center gap-3 px-5 py-3.5">
+                        <span className="text-white/20 text-xs w-5 text-right flex-shrink-0">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-medium truncate">{p.nombre}</p>
+                          <p className="text-white/35 text-xs truncate">{p.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {viendoGrupo.entrada > 0 && (
+                <div className="border-t border-white/8 px-5 py-3 flex items-center justify-between bg-amber-500/5">
+                  <p className="text-white/30 text-xs">{participantes.length} × ${viendoGrupo.entrada} entrada</p>
+                  <p className="text-amber-300 font-bold">${(participantes.length * viendoGrupo.entrada).toLocaleString('es-MX')} MXN</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Modal editar */}
         {editando && (
@@ -267,13 +320,13 @@ export default function AdminPage() {
             <div className="flex flex-col gap-2">
               {grupos.map((g) => (
                 <div key={g.id} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white font-medium text-sm truncate">{g.nombre}</p>
+                  <button onClick={() => verParticipantes(g)} className="min-w-0 flex-1 text-left">
+                    <p className="text-white font-medium text-sm truncate hover:text-amber-300 transition-colors">{g.nombre}</p>
                     <p className="text-white/30 text-xs mt-0.5">
                       {g.pts_exacto}pts exacto · {g.pts_ganador}pt ganador
                       {g.entrada > 0 && <span className="text-amber-400/60"> · ${g.entrada} entrada</span>}
                     </p>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span className="font-mono font-bold text-amber-300 tracking-widest">{g.codigo}</span>
                     <button onClick={() => copiar(g.codigo)} className="text-xs text-white/30 hover:text-white/70 transition-colors">

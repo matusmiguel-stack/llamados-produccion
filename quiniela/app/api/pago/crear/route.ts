@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
-  const { nombre, pts_exacto, pts_ganador } = await req.json()
+  const { nombre, pts_exacto, pts_ganador, entrada = 0 } = await req.json()
   if (!nombre) return NextResponse.json({ error: 'Falta el nombre' }, { status: 400 })
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://quiniela-mundial.vercel.app'
 
-  const externalRef = Buffer.from(JSON.stringify({ nombre, pts_exacto, pts_ganador })).toString('base64url')
+  const externalRef = Buffer.from(JSON.stringify({ nombre, pts_exacto, pts_ganador, entrada })).toString('base64url')
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       {
         price_data: {
           currency: 'mxn',
-          unit_amount: 9900, // $99.00 MXN en centavos
+          unit_amount: 4900, // $49.00 MXN en centavos
           product_data: {
             name: `Quiniela: ${nombre}`,
             description: 'Grupo para la Quiniela del Mundial 2026 · 104 partidos',
