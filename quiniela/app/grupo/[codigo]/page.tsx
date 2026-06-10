@@ -192,7 +192,7 @@ export default function GrupoPage() {
                 <>
                   {/* Overlay para cerrar al tocar fuera */}
                   <div className="fixed inset-0 z-40" onClick={() => setShowGrupos(false)} />
-                  <div className="absolute right-0 top-14 w-64 z-50 overflow-hidden rounded-2xl shadow-2xl" style={{background: 'rgba(15,15,15,0.97)', border: '1px solid rgba(255,255,255,0.12)'}}>
+                  <div className="absolute right-0 top-14 w-64 z-50 overflow-hidden rounded-2xl shadow-2xl" style={{background: '#111111', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'none'}}>
                     {/* Línea dorada top */}
                     <div className="h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
 
