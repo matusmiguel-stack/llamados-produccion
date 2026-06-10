@@ -655,11 +655,22 @@ export default function CotizacionesPage() {
     const projectName = selectedProject?.name || ""
     const subtotal    = globalFinancials.venta
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
-    // Usar el responsable del proyecto, no el campo "Atención a:" de la cotización
     const responsable = selectedProject?.responsable || null
-    // Solo el nombre del proyecto (con código), sin nombre de cotización
+
+    // Generar código RS#### si el proyecto todavía no tiene uno
+    let projectCode = selectedProject?.code || null
+    if (!projectCode && projectId) {
+      const { data: codeData } = await supabase.rpc("next_project_code")
+      if (codeData) {
+        projectCode = codeData as string
+        await supabase.from("projects").update({ code: projectCode }).eq("id", projectId)
+        // Actualizar estado local para que el label ya lo refleje
+        setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, code: projectCode! } : p))
+      }
+    }
+
     const proyectoLabel = selectedProject
-      ? (selectedProject.code ? `${selectedProject.code} ${projectName}` : projectName)
+      ? (projectCode ? `${projectCode} ${projectName}` : projectName)
       : quoteName.trim()
 
     const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
