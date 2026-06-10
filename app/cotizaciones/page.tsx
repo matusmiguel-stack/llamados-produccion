@@ -307,6 +307,16 @@ export default function CotizacionesPage() {
 
       // ── Modo edición: cargar cotización existente desde URL ───────────────
       const params = new URLSearchParams(window.location.search)
+
+      // Precargar cliente/subcarpeta/proyecto si venimos desde un proyecto
+      const preClient = params.get("client")
+      const preProject = params.get("project")
+      if (preClient) {
+        suppressClientReset.current = true
+        setClientId(preClient)
+        if (preProject) setProjectId(preProject)
+      }
+
       const qid = params.get("quoteId")
       if (!qid) return
 

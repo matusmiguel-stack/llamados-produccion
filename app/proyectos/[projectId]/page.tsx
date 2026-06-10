@@ -427,6 +427,8 @@ export default function ProjectDetailPage() {
                   loadingQuote={loadingQuote}
                   onOpenQuote={openQuoteDetail}
                   projectId={projectId}
+                  clientId={project?.client_id}
+                  subfolderId={project?.subfolder_id}
                 />
               ) : activeModule === "presupuesto" ? (
                 <PresupuestoPanel
@@ -970,13 +972,20 @@ function QuotesPanel({
   loadingQuote,
   onOpenQuote,
   projectId,
+  clientId,
+  subfolderId,
 }: {
   quotes: Quote[]
   loaded: boolean
   loadingQuote: boolean
   onOpenQuote: (q: Quote) => void
   projectId: string
+  clientId?: string
+  subfolderId?: string
 }) {
+  const newQuoteHref = clientId
+    ? `/cotizaciones?client=${clientId}&subfolder=${subfolderId ?? ""}&project=${projectId}`
+    : "/cotizaciones"
   return (
     <div>
       <div style={modulePanelHeaderStyle}>
@@ -996,7 +1005,7 @@ function QuotesPanel({
                 : "Cargando..."}
             </p>
           </div>
-          <Link href="/cotizaciones" style={newQuoteButtonStyle}>
+          <Link href={newQuoteHref} style={newQuoteButtonStyle}>
             + Nueva cotización
           </Link>
         </div>
@@ -1007,7 +1016,7 @@ function QuotesPanel({
       ) : quotes.length === 0 ? (
         <div style={emptyStyle}>
           No hay cotizaciones en este proyecto.{" "}
-          <Link href="/cotizaciones" style={{ color: "#a78bfa" }}>
+          <Link href={newQuoteHref} style={{ color: "#a78bfa" }}>
             Crea la primera.
           </Link>
         </div>
