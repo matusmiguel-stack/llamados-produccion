@@ -130,6 +130,12 @@ type LocacionRow = {
   notas: string
 }
 
+type DirRow = {
+  id: string
+  nombre: string
+  url: string
+}
+
 type HojaData = {
   id: string
   project_id: string
@@ -142,8 +148,11 @@ type HojaData = {
   director: string
   productor: string
   ready_to_shoot: string
+  /** @deprecated usa direcciones */
   locacion_nombre: string
+  /** @deprecated usa direcciones */
   locacion_url: string
+  direcciones: DirRow[]
   amanecer: string
   atardecer: string
   clima: string
@@ -176,12 +185,17 @@ function emptyCrewRow(): CrewRow {
   return { id: newId(), puesto: "", nombre: "", retro: "", locacion: "", pickup: "", notas: "" }
 }
 
+function emptyDir(): DirRow {
+  return { id: newId(), nombre: "", url: "" }
+}
+
 function defaultHoja(projectId: string): Omit<HojaData, "id"> {
   return {
     project_id: projectId,
     fecha_rodaje: "", titulo: "", dia_num: 1, dia_total: 1,
     avanzada: "", client_on_loc: "", director: "", productor: "",
     ready_to_shoot: "", locacion_nombre: "", locacion_url: "",
+    direcciones: [emptyDir()],
     amanecer: "", atardecer: "", clima: "", lluvia: "",
     locaciones: [emptyLocacion()],
     cast_list: [emptyCast()],
@@ -372,6 +386,12 @@ export function HojaLlamadoPanel({
         ready_to_shoot: data.ready_to_shoot ?? "",
         locacion_nombre: data.locacion_nombre ?? "",
         locacion_url: data.locacion_url ?? "",
+        // Migrar legado → nuevo campo; si ya existe direcciones usar eso
+        direcciones: Array.isArray(data.direcciones) && data.direcciones.length > 0
+          ? (data.direcciones as DirRow[])
+          : (data.locacion_nombre
+              ? [{ id: newId(), nombre: data.locacion_nombre, url: data.locacion_url ?? "" }]
+              : [emptyDir()]),
         amanecer: data.amanecer ?? "",
         atardecer: data.atardecer ?? "",
         clima: data.clima ?? "",
@@ -438,8 +458,9 @@ export function HojaLlamadoPanel({
         director: hoja.director || null,
         productor: hoja.productor || null,
         ready_to_shoot: hoja.ready_to_shoot || null,
-        locacion_nombre: hoja.locacion_nombre || null,
-        locacion_url: hoja.locacion_url || null,
+        locacion_nombre: hoja.direcciones[0]?.nombre || hoja.locacion_nombre || null,
+        locacion_url: hoja.direcciones[0]?.url || hoja.locacion_url || null,
+        direcciones: hoja.direcciones,
         amanecer: hoja.amanecer || null,
         atardecer: hoja.atardecer || null,
         clima: hoja.clima || null,
@@ -488,32 +509,32 @@ export function HojaLlamadoPanel({
     if (!hoja) return
     try {
       const { exportHojaPdf } = await import("../../../lib/exportHojaPdf")
+      const s = (v: unknown) => (v == null ? "" : String(v))   // sanitize null → ""
       const pdfData: HojaPDFData = {
-        fecha_rodaje: hoja.fecha_rodaje,
-        titulo: hoja.titulo,
-        dia_num: hoja.dia_num,
-        dia_total: hoja.dia_total,
-        avanzada: hoja.avanzada,
-        client_on_loc: hoja.client_on_loc,
-        director: hoja.director,
-        productor: hoja.productor,
-        ready_to_shoot: hoja.ready_to_shoot,
-        locacion_nombre: hoja.locacion_nombre,
-        locacion_url: hoja.locacion_url,
-        amanecer: hoja.amanecer,
-        atardecer: hoja.atardecer,
-        clima: hoja.clima,
-        lluvia: hoja.lluvia,
-        locaciones: hoja.locaciones,
-        cast_list: hoja.cast_list,
-        crew: hoja.crew,
-        arte_needs: hoja.arte_needs,
-        makeup_needs: hoja.makeup_needs,
-        vestuario_needs: hoja.vestuario_needs,
-        efectos_needs: hoja.efectos_needs,
-        vehiculos: hoja.vehiculos,
-        equipo_especial: hoja.equipo_especial,
-        notas_produccion: hoja.notas_produccion,
+        fecha_rodaje:     s(hoja.fecha_rodaje),
+        titulo:           s(hoja.titulo),
+        dia_num:          hoja.dia_num,
+        dia_total:        hoja.dia_total,
+        avanzada:         s(hoja.avanzada),
+        client_on_loc:    s(hoja.client_on_loc),
+        director:         s(hoja.director),
+        productor:        s(hoja.productor),
+        ready_to_shoot:   s(hoja.ready_to_shoot),
+        direcciones:      hoja.direcciones.map(d => ({ nombre: s(d.nombre), url: s(d.url) })),
+        amanecer:         s(hoja.amanecer),
+        atardecer:        s(hoja.atardecer),
+        clima:            s(hoja.clima),
+        lluvia:           s(hoja.lluvia),
+        locaciones:       hoja.locaciones,
+        cast_list:        hoja.cast_list,
+        crew:             hoja.crew,
+        arte_needs:       s(hoja.arte_needs),
+        makeup_needs:     s(hoja.makeup_needs),
+        vestuario_needs:  s(hoja.vestuario_needs),
+        efectos_needs:    s(hoja.efectos_needs),
+        vehiculos:        s(hoja.vehiculos),
+        equipo_especial:  s(hoja.equipo_especial),
+        notas_produccion: s(hoja.notas_produccion),
       }
       await exportHojaPdf(pdfData, hoja.titulo || undefined)
     } catch (err: any) {
@@ -721,24 +742,61 @@ export function HojaLlamadoPanel({
           </Field>
         </div>
 
-        {/* Row 4: Locación nombre, URL */}
-        <div style={isMobile ? grid1Style : grid2Style}>
-          <Field label="Locación">
-            <input
-              value={hoja.locacion_nombre}
-              onChange={(e) => setField("locacion_nombre", e.target.value)}
-              placeholder="Nombre de la locación"
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="URL / Maps">
-            <input
-              value={hoja.locacion_url}
-              onChange={(e) => setField("locacion_url", e.target.value)}
-              placeholder="https://maps.google.com/..."
-              style={inputStyle}
-            />
-          </Field>
+        {/* Row 4: Direcciones (múltiples) */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Direcciones / Locaciones
+            </span>
+            <button
+              type="button"
+              onClick={() => setHoja(prev => prev ? { ...prev, direcciones: [...prev.direcciones, emptyDir()] } : prev)}
+              style={addDirBtnStyle}
+            >
+              + Agregar dirección
+            </button>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {hoja.direcciones.map((dir, idx) => (
+              <div key={dir.id} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr auto", gap: 8, alignItems: "end" }}>
+                <Field label={`Locación ${hoja.direcciones.length > 1 ? idx + 1 : ""}`}>
+                  <input
+                    value={dir.nombre}
+                    onChange={e => setHoja(prev => prev ? {
+                      ...prev,
+                      direcciones: prev.direcciones.map((d, i) => i === idx ? { ...d, nombre: e.target.value } : d)
+                    } : prev)}
+                    placeholder="Nombre de la locación"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="URL / Maps">
+                  <input
+                    value={dir.url}
+                    onChange={e => setHoja(prev => prev ? {
+                      ...prev,
+                      direcciones: prev.direcciones.map((d, i) => i === idx ? { ...d, url: e.target.value } : d)
+                    } : prev)}
+                    placeholder="https://maps.google.com/..."
+                    style={inputStyle}
+                  />
+                </Field>
+                {hoja.direcciones.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setHoja(prev => prev ? {
+                      ...prev,
+                      direcciones: prev.direcciones.filter((_, i) => i !== idx)
+                    } : prev)}
+                    style={removeDirBtnStyle}
+                    title="Eliminar dirección"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Row 5: Clima — se auto-llena al poner la fecha de rodaje */}
@@ -1278,4 +1336,28 @@ const grid4Style: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(4, 1fr)",
   gap: 12,
+}
+
+const addDirBtnStyle: React.CSSProperties = {
+  padding: "4px 12px",
+  borderRadius: 7,
+  border: "1px solid rgba(167,139,250,0.30)",
+  background: "rgba(167,139,250,0.08)",
+  color: "#a78bfa",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+}
+
+const removeDirBtnStyle: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: 7,
+  border: "1px solid rgba(248,113,113,0.25)",
+  background: "transparent",
+  color: "#f87171",
+  cursor: "pointer",
+  fontSize: 13,
+  lineHeight: 1,
+  alignSelf: "flex-end",
+  marginBottom: 0,
 }

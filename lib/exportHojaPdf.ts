@@ -44,8 +44,7 @@ export type HojaPDFData = {
   director: string
   productor: string
   ready_to_shoot: string
-  locacion_nombre: string
-  locacion_url: string
+  direcciones: { nombre: string; url: string }[]
   // Clima
   amanecer: string
   atardecer: string
@@ -296,13 +295,15 @@ export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
 
   y += kvH
 
-  // Locación: full width (split in name + url)
+  // Direcciones (una o varias filas)
   const locW = W * 0.62
   const urlW = W - locW
-  kv(doc, x,        y, locW, "Locación",   data.locacion_nombre, kvH)
-  kv(doc, x + locW, y, urlW, "URL / Maps", data.locacion_url,    kvH)
-
-  y += kvH
+  const dirs = data.direcciones.length > 0 ? data.direcciones : [{ nombre: "", url: "" }]
+  for (const dir of dirs) {
+    kv(doc, x,        y, locW, "Locación",   dir.nombre, kvH)
+    kv(doc, x + locW, y, urlW, "URL / Maps", dir.url,    kvH)
+    y += kvH
+  }
 
   // Clima strip
   const col4 = W / 4
