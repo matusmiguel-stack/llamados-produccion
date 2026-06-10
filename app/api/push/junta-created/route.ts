@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sendPushToUser } from "../../../../lib/web-push"
+import { sendPushToUser, markNotificationSent } from "../../../../lib/web-push"
 import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
 
 export async function POST(req: Request) {
@@ -19,6 +19,10 @@ export async function POST(req: Request) {
     for (const employeeId of attendeeEmployeeIds) {
       const profileId = profileMap[employeeId]
       if (!profileId) continue
+
+      const refId = `junta-creada-${juntaId}-${employeeId}`
+      const isNew = await markNotificationSent("junta_creada", refId, profileId)
+      if (!isNew) continue
 
       try {
         await sendPushToUser(profileId, {

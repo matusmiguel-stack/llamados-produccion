@@ -215,6 +215,7 @@ export default function Home() {
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
   const [juntaExternalEmails, setJuntaExternalEmails] = useState<string[]>([])
   const [juntaEmailInput, setJuntaEmailInput] = useState("")
+  const [savingEntry, setSavingEntry] = useState(false)
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
   const [showAddClient, setShowAddClient] = useState(false)
@@ -1125,6 +1126,7 @@ function openEditVacation() {
   }
 
   async function saveShoot() {
+    if (savingEntry) return
     if (!canEdit) return alert("No tienes permisos para editar.")
     if (!title) return alert("Ponle nombre al llamado")
     if (!selectedDate) return alert("Selecciona las fechas del llamado")
@@ -1168,6 +1170,8 @@ function openEditVacation() {
       return alert("El proyecto seleccionado no pertenece a la subcarpeta elegida")
     }
 
+    setSavingEntry(true)
+
     const payload = {
       title,
       client_id: clientId || null,
@@ -1198,7 +1202,7 @@ function openEditVacation() {
         .update(payload)
         .eq("id", selectedShoot.id)
 
-      if (error) return alert(error.message)
+      if (error) { setSavingEntry(false); return alert(error.message) }
 
       await supabase
         .from("shoot_resources")
@@ -1216,7 +1220,7 @@ function openEditVacation() {
         .select()
         .single()
 
-      if (error) return alert(error.message)
+      if (error) { setSavingEntry(false); return alert(error.message) }
       shootId = data.id
     }
 
@@ -1255,6 +1259,7 @@ function openEditVacation() {
     setModalOpen(false)
     resetForm()
     await loadAll()
+    setSavingEntry(false)
   }
 
   async function saveVacation() {
@@ -1314,7 +1319,9 @@ function openEditVacation() {
   }
 
   async function saveJunta() {
+    if (savingEntry) return
     if (!juntaDate) { alert("Selecciona una fecha para la junta"); return }
+    setSavingEntry(true)
 
     // Auto-agregar email si quedó escrito en el input sin presionar Enter
     const pendingEmail = juntaEmailInput.trim()
@@ -1339,12 +1346,12 @@ function openEditVacation() {
 
     if (selectedJunta) {
       const { error } = await supabase.from("juntas").update(payload).eq("id", selectedJunta.id)
-      if (error) { alert(error.message); return }
+      if (error) { setSavingEntry(false); alert(error.message); return }
       juntaId = selectedJunta.id
       await supabase.from("junta_attendees").delete().eq("junta_id", juntaId)
     } else {
       const { data, error } = await supabase.from("juntas").insert(payload).select("id").single()
-      if (error) { alert(error.message); return }
+      if (error) { setSavingEntry(false); alert(error.message); return }
       juntaId = data.id
     }
 
@@ -1403,6 +1410,7 @@ function openEditVacation() {
     }
     setAllJuntas(juntasData || [])
     setJuntaAttendeeMap(attMap)
+    setSavingEntry(false)
   }
 
   async function deleteJunta(id: string) {
@@ -2785,8 +2793,14 @@ function openEditVacation() {
                 >
                   Cancelar
                 </button>
-                <button onClick={saveEntry} style={formModalPrimaryButtonStyle}>
-                  {entryMode === "junta"
+                <button
+                  onClick={saveEntry}
+                  disabled={savingEntry}
+                  style={{ ...formModalPrimaryButtonStyle, opacity: savingEntry ? 0.6 : 1, cursor: savingEntry ? "not-allowed" : "pointer" }}
+                >
+                  {savingEntry
+                    ? "Guardando..."
+                    : entryMode === "junta"
                     ? selectedJunta
                       ? "Guardar junta"
                       : "Crear junta"
