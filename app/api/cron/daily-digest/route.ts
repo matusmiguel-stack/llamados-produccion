@@ -295,8 +295,10 @@ export async function GET(req: Request) {
     { data: vacations },
     { data: vacationEmployees },
   ] = await Promise.all([
-    // Todos los llamados ACTIVOS hoy: empezaron antes del fin del día y terminan después del inicio
-    admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").lte("start_time", todayMx + "T23:59:59").gte("end_time", todayMx + "T00:00:00"),
+    // Todos los llamados ACTIVOS hoy: empezaron antes del fin del día y terminan DESPUÉS del inicio del día
+    // Usamos gt (estricto) porque FullCalendar guarda all-day end_time como el día siguiente a las 00:00
+    // Ej: lunes-martes todo el día → end_time = miércoles 00:00. Con gte miércoles aparecería mal.
+    admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").lte("start_time", todayMx + "T23:59:59").gt("end_time", todayMx + "T00:00:00"),
     admin.from("juntas").select("id,tipo,titulo,fecha,hora_inicio,hora_fin,notas,link").eq("fecha", todayMx),
     admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores").eq("fecha", todayMx),
     admin.from("shoot_employees").select("shoot_id,employee_id"),
