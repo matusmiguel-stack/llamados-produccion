@@ -28,6 +28,10 @@ export default function AdminPage() {
   const [copiado, setCopiado] = useState<string | null>(null)
   const [eliminando, setEliminando] = useState<string | null>(null)
 
+  // Edición
+  const [editando, setEditando] = useState<Grupo | null>(null)
+  const [guardando, setGuardando] = useState(false)
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const res = await fetch('/api/admin/auth', {
@@ -67,6 +71,32 @@ export default function AdminPage() {
       cargarGrupos()
     } finally {
       setCreando(false)
+    }
+  }
+
+  const handleGuardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editando) return
+    setGuardando(true)
+    try {
+      const res = await fetch('/api/admin/grupos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password,
+          id: editando.id,
+          nombre: editando.nombre,
+          pts_exacto: editando.pts_exacto,
+          pts_ganador: editando.pts_ganador,
+          entrada: editando.entrada,
+        }),
+      })
+      if (res.ok) {
+        setEditando(null)
+        cargarGrupos()
+      }
+    } finally {
+      setGuardando(false)
     }
   }
 
@@ -125,6 +155,67 @@ export default function AdminPage() {
           <span className="text-white/40 text-sm">Admin · Quiniela</span>
         </div>
 
+        {/* Modal editar */}
+        {editando && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm">
+              <h2 className="text-white font-semibold mb-4">Editar grupo</h2>
+              <form onSubmit={handleGuardarEdicion} className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs text-white/40 block mb-1">Nombre</label>
+                  <input
+                    value={editando.nombre}
+                    onChange={(e) => setEditando({ ...editando, nombre: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-white/40 block mb-1">Pts exacto</label>
+                    <input type="number" min="1" max="10"
+                      value={editando.pts_exacto}
+                      onChange={(e) => setEditando({ ...editando, pts_exacto: parseInt(e.target.value) || 1 })}
+                      className={`${inputClass} text-center`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs text-white/40 block mb-1">Pts ganador</label>
+                    <input type="number" min="0" max="10"
+                      value={editando.pts_ganador}
+                      onChange={(e) => setEditando({ ...editando, pts_ganador: parseInt(e.target.value) || 0 })}
+                      className={`${inputClass} text-center`}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-white/40 block mb-1">Entrada por jugador ($MXN)</label>
+                  <input type="number" min="0" step="50"
+                    value={editando.entrada}
+                    onChange={(e) => setEditando({ ...editando, entrada: parseInt(e.target.value) || 0 })}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditando(null)}
+                    className="flex-1 bg-white/6 hover:bg-white/10 text-white/50 font-medium py-2.5 rounded-xl transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={guardando}
+                    className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors"
+                  >
+                    {guardando ? 'Guardando…' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Crear grupo */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <h2 className="text-white font-semibold mb-4">Crear grupo</h2>
@@ -153,7 +244,6 @@ export default function AdminPage() {
                 placeholder="Ej: 100"
                 className={inputClass}
               />
-              <p className="text-white/20 text-xs mt-1">El premio acumulado se calcula automáticamente: participantes × entrada</p>
             </div>
             {errorCrear && <p className="text-red-400 text-sm">{errorCrear}</p>}
             <button
@@ -177,7 +267,7 @@ export default function AdminPage() {
             <div className="flex flex-col gap-2">
               {grupos.map((g) => (
                 <div key={g.id} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-white font-medium text-sm truncate">{g.nombre}</p>
                     <p className="text-white/30 text-xs mt-0.5">
                       {g.pts_exacto}pts exacto · {g.pts_ganador}pt ganador
@@ -185,9 +275,12 @@ export default function AdminPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="font-mono font-bold text-amber-300 tracking-widest text-lg">{g.codigo}</span>
+                    <span className="font-mono font-bold text-amber-300 tracking-widest">{g.codigo}</span>
                     <button onClick={() => copiar(g.codigo)} className="text-xs text-white/30 hover:text-white/70 transition-colors">
                       {copiado === g.codigo ? '✓' : 'copiar'}
+                    </button>
+                    <button onClick={() => setEditando(g)} className="text-xs text-blue-400/60 hover:text-blue-300 transition-colors">
+                      editar
                     </button>
                     <button
                       onClick={() => handleEliminar(g.id, g.nombre)}

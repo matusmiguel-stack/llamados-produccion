@@ -50,6 +50,24 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data)
 }
 
+// PATCH /api/admin/grupos — editar grupo
+export async function PATCH(req: NextRequest) {
+  const { password, id, nombre, pts_exacto, pts_ganador, entrada } = await req.json()
+  if (!checkAuth(password)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+
+  const db = supabaseAdmin()
+  const { data, error } = await db
+    .from('grupos')
+    .update({ nombre, pts_exacto, pts_ganador, entrada })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
 // DELETE /api/admin/grupos?password=X&id=Y — eliminar grupo
 export async function DELETE(req: NextRequest) {
   const password = req.nextUrl.searchParams.get('password')
