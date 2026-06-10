@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
-// GET /api/auth/jugador?user_id=X
+// GET /api/auth/jugador?user_id=X&grupo_id=Y
+// grupo_id es opcional — si se pasa, filtra por grupo específico
 export async function GET(req: NextRequest) {
   const user_id = req.nextUrl.searchParams.get('user_id')
+  const grupo_id = req.nextUrl.searchParams.get('grupo_id')
   if (!user_id) return NextResponse.json({ error: 'user_id requerido' }, { status: 400 })
 
   const db = supabaseAdmin()
-  const { data, error } = await db
-    .from('jugadores')
-    .select('id, nombre, grupo_id')
-    .eq('user_id', user_id)
-    .single()
+  let query = db.from('jugadores').select('id, nombre, grupo_id').eq('user_id', user_id)
+
+  if (grupo_id) {
+    query = query.eq('grupo_id', grupo_id)
+  }
+
+  const { data, error } = await query.limit(1).single()
 
   if (error || !data) return NextResponse.json({ error: 'Jugador no encontrado' }, { status: 404 })
   return NextResponse.json(data)

@@ -34,16 +34,19 @@ export default function GrupoPage() {
       const supabase = createSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
-      const res = await fetch(`/api/auth/jugador?user_id=${user.id}`)
+      // Primero obtenemos el grupo para tener su ID y filtrar el jugador correcto
+      const grupoRes = await fetch(`/api/grupo?codigo=${codigo}`)
+      if (!grupoRes.ok) { router.replace('/login'); return }
+      const g = await grupoRes.json()
+      setGrupo(g)
+      const res = await fetch(`/api/auth/jugador?user_id=${user.id}&grupo_id=${g.id}`)
       if (!res.ok) { router.replace('/login'); return }
       const j = await res.json()
       setJugador(j)
-      const [grupoRes, partidosRes] = await Promise.all([
-        fetch(`/api/grupo?codigo=${codigo}`),
+      const [, partidosRes] = await Promise.all([
+        Promise.resolve(),
         fetch(`/api/partidos?jugador_id=${j.id}`),
       ])
-      if (!grupoRes.ok) { router.replace('/login'); return }
-      setGrupo(await grupoRes.json())
       setPartidos(await partidosRes.json())
       setLoading(false)
     }
