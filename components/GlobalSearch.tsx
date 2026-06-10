@@ -192,7 +192,7 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
     } else if (result.kind === "empleado") {
       router.push(`/empleados`)
     } else {
-      router.push(`/proveedores`)
+      router.push(`/proveedores/${result.id}`)
     }
     setOpen(false)
     setQuery("")
