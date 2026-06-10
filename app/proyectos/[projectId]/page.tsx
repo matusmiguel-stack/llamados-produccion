@@ -156,6 +156,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [clientName, setClientName] = useState("")
   const [subfolderName, setSubfolderName] = useState("")
+  const [projectEmpresa, setProjectEmpresa] = useState<"retro_studio" | "retro_films" | null>(null)
   const [activeModule, setActiveModule] =
     useState<ProjectModule["id"]>("cotizaciones")
   const [menuOpen, setMenuOpen] = useState(false)
@@ -230,18 +231,25 @@ export default function ProjectDetailPage() {
       return
     }
 
-    const [{ data: client }, { data: subfolder }] = await Promise.all([
+    const [{ data: client }, { data: subfolder }, { data: ingreso }] = await Promise.all([
       supabase.from("clients").select("name").eq("id", projectData.client_id).single(),
       supabase
         .from("client_subfolders")
         .select("name")
         .eq("id", projectData.subfolder_id)
         .single(),
+      supabase
+        .from("ingresos")
+        .select("empresa")
+        .eq("project_id", projectId)
+        .limit(1)
+        .maybeSingle(),
     ])
 
     setProject(projectData)
     setClientName(client?.name || "Cliente")
     setSubfolderName(subfolder?.name || "Subcarpeta")
+    setProjectEmpresa((ingreso?.empresa as "retro_studio" | "retro_films" | null) ?? null)
   }
 
   async function loadQuotes() {
@@ -516,6 +524,7 @@ export default function ProjectDetailPage() {
                 projectResponsable={project?.responsable ?? null}
                 clientName={clientName}
                 subfolderName={subfolderName}
+                empresa={projectEmpresa}
                 isMobile={isMobile}
                 isAdmin={isAdmin}
               />

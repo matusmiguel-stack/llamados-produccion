@@ -107,6 +107,7 @@ export function InformacionGeneralPanel({
   projectResponsable,
   clientName,
   subfolderName,
+  empresa,
   isMobile,
   isAdmin,
 }: {
@@ -116,6 +117,7 @@ export function InformacionGeneralPanel({
   projectResponsable: string | null
   clientName: string
   subfolderName: string
+  empresa: "retro_studio" | "retro_films" | null
   isMobile: boolean
   isAdmin: boolean
 }) {
@@ -258,6 +260,21 @@ export function InformacionGeneralPanel({
           <KV label="Cliente" value={clientName} accent />
           <KV label="Proyecto" value={projectName} accent />
           <KV label="Carpeta" value={subfolderName} />
+          {empresa && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Empresa</span>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "4px 12px", borderRadius: 999, width: "fit-content",
+                fontSize: 12, fontWeight: 700,
+                ...(empresa === "retro_studio"
+                  ? { background: "rgba(99,102,241,0.14)", border: "1px solid rgba(99,102,241,0.30)", color: "#a5b4fc" }
+                  : { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", color: "#fde68a" })
+              }}>
+                {empresa === "retro_studio" ? "🎬 Retro Studio" : "🎞️ Retro Films"}
+              </span>
+            </div>
+          )}
           {localDescription && (
             <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
               <KV label="Descripción" value={localDescription} />
