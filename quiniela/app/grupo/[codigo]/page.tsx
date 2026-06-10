@@ -177,6 +177,21 @@ export default function GrupoPage() {
           )}
         </section>
 
+        {/* Crear otro grupo */}
+        <Link
+          href="/crear"
+          className="relative overflow-hidden flex items-center justify-between bg-white/4 border border-white/8 hover:border-amber-400/20 hover:bg-amber-500/6 rounded-2xl p-4 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-amber-400/70 text-lg">✦</span>
+            <div>
+              <p className="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Crear otro grupo</p>
+              <p className="text-white/25 text-xs">Invita a más amigos</p>
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-white/20 group-hover:text-amber-400/50 transition-colors"><path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </Link>
+
         {/* Sistema de puntos */}
         <div className="relative bg-white/4 border border-white/8 rounded-2xl p-4 overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />

@@ -28,10 +28,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si ya está logueado, redirigir desde /login
+  // Si ya está logueado, redirigir desde /login (pero no desde / para que vean el botón de crear)
   if (user && request.nextUrl.pathname === '/login') {
     return NextResponse.redirect(new URL('/mi-grupo', request.url))
   }
+
+  // Si ya está logueado y va a /, mostrar landing (no redirigir)
+
 
   return response
 }
