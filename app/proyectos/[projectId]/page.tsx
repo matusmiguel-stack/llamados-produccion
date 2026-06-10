@@ -171,7 +171,7 @@ export default function ProjectDetailPage() {
   const [showGeneral, setShowGeneral] = useState(false)
   const [showEgresos, setShowEgresos] = useState(false)
 
-  const isAdmin     = profile?.role === "admin" || profile?.role === "editor"
+  const isAdmin     = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const isProductor = profile?.role === "productor"
 
   // Productor solo puede ver y editar la Matriz
@@ -212,7 +212,7 @@ export default function ProjectDetailPage() {
     const auth = await requireSessionProfile()
     if (!auth) return
 
-    if (!["admin", "editor", "productor"].includes(auth.profile.role)) {
+    if (!["admin", "editor", "editor_premium", "productor"].includes(auth.profile.role)) {
       window.location.href = "/"
       return
     }

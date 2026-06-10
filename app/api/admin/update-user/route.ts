@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 
-const VALID_ROLES = ["viewer", "productor", "editor", "admin"]
+const VALID_ROLES = ["viewer", "productor", "editor", "editor_premium", "admin"]
 
 export async function POST(request: Request) {
   try {

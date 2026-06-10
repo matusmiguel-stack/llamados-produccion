@@ -175,7 +175,7 @@ export default function LiberarPage() {
     async function load() {
       const auth = await requireSessionProfile()
       if (!auth) return
-      if (!["admin", "editor"].includes(auth.profile.role)) {
+      if (!["admin", "editor", "editor_premium"].includes(auth.profile.role)) {
         window.location.href = "/"
         return
       }

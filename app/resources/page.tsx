@@ -18,7 +18,7 @@ export default function ResourcesPage() {
 
   const isAdmin = profile?.role === "admin"
   const canEdit =
-    profile?.role === "admin" || profile?.role === "editor"
+    profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
 
   useEffect(() => {
     function checkMobile() {
@@ -36,7 +36,7 @@ export default function ResourcesPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin" && myProfile.role !== "editor") {
+    if (myProfile.role !== "admin" && myProfile.role !== "editor" && myProfile.role !== "editor_premium") {
       window.location.href = "/"
       return
     }

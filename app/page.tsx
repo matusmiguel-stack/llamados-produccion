@@ -264,12 +264,12 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [user, allJuntas, juntaAttendeeMap, employees])
 
-  const canEdit = profile?.role === "admin" || profile?.role === "editor"
+  const canEdit = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const isAdmin = profile?.role === "admin"
   const isProductorRole = profile?.role === "productor"
   const canJunta = canEdit || isProductorRole
-  const canManageJuntas = canJunta // admin, editor y productor pueden crear/editar/borrar juntas
-  const canManageVacations = isAdmin
+  const canManageJuntas = canJunta // admin, editor, editor_premium y productor pueden crear/editar/borrar juntas
+  const canManageVacations = isAdmin || profile?.role === "editor_premium"
 
   useEffect(() => {
     function checkMobile() {
@@ -3725,6 +3725,11 @@ function roleBadgeStyle(role?: string): React.CSSProperties {
       bg: "rgba(14,165,233,0.14)",
       border: "rgba(56,189,248,0.24)",
       text: "#bae6fd",
+    },
+    editor_premium: {
+      bg: "rgba(236,72,153,0.14)",
+      border: "rgba(236,72,153,0.28)",
+      text: "#fbcfe8",
     },
     viewer: {
       bg: "rgba(148,163,184,0.12)",

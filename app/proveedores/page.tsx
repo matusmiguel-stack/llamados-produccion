@@ -44,7 +44,7 @@ export default function ProveedoresPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  const isAdmin = profile?.role === "admin" || profile?.role === "editor"
+  const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
 
   useEffect(() => {
     function checkMobile() {
@@ -62,7 +62,7 @@ export default function ProveedoresPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin" && myProfile.role !== "editor") {
+    if (myProfile.role !== "admin" && myProfile.role !== "editor" && myProfile.role !== "editor_premium") {
       window.location.href = "/"
       return
     }

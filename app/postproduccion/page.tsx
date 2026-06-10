@@ -70,7 +70,7 @@ export default function PostproduccionPage() {
   const [formNotas,      setFormNotas]      = useState("")
 
   const calendarRef = useRef<any>(null)
-  const canManage = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "productor"
+  const canManage = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium" || profile?.role === "productor"
 
   useEffect(() => {
     function checkMobile() { setIsMobile(window.innerWidth < 768) }

@@ -7,10 +7,11 @@ import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 
 const ROLE_LABELS: Record<string, string> = {
-  admin:     "Admin",
-  editor:    "Editor",
-  productor: "Editor Post",
-  viewer:    "Viewer",
+  admin:          "Admin",
+  editor:         "Editor",
+  editor_premium: "Editor Premium",
+  productor:      "Editor Post",
+  viewer:         "Viewer",
 }
 const roleLabel = (r?: string) => (r ? (ROLE_LABELS[r] ?? r) : "—")
 
@@ -289,6 +290,7 @@ export default function UsersPage() {
                   <option value="viewer">Viewer</option>
                   <option value="productor">Editor Post</option>
                   <option value="editor">Editor</option>
+                  <option value="editor_premium">Editor Premium</option>
                   <option value="admin">Admin</option>
                 </select>
               </Field>
@@ -348,6 +350,7 @@ export default function UsersPage() {
                           <option value="viewer">Viewer</option>
                           <option value="productor">Editor Post</option>
                           <option value="editor">Editor</option>
+                          <option value="editor_premium">Editor Premium</option>
                           <option value="admin">Admin</option>
                         </select>
 
@@ -442,6 +445,11 @@ function roleBadgeStyle(role?: string): React.CSSProperties {
       bg: "rgba(14,165,233,0.14)",
       border: "rgba(56,189,248,0.24)",
       text: "#bae6fd",
+    },
+    editor_premium: {
+      bg: "rgba(236,72,153,0.14)",
+      border: "rgba(236,72,153,0.28)",
+      text: "#fbcfe8",
     },
     productor: {
       bg: "rgba(52,211,153,0.12)",

@@ -208,7 +208,7 @@ export default function CotizacionesPage() {
   const [editQuoteId, setEditQuoteId] = useState<string | null>(null)
   const suppressClientReset = useRef(false)
 
-  const isAdmin = profile?.role === "admin" || profile?.role === "editor"
+  const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
   const clientSubfolders = subfolders.filter((sf) => sf.client_id === clientId)
 
@@ -294,7 +294,7 @@ export default function CotizacionesPage() {
     async function load() {
       const auth = await requireSessionProfile()
       if (!auth) return
-      if (auth.profile.role !== "admin" && auth.profile.role !== "editor") { window.location.href = "/"; return }
+      if (!["admin", "editor", "editor_premium"].includes(auth.profile.role)) { window.location.href = "/"; return }
       setProfile(auth.profile)
       const [{ data: c }, { data: p }, { data: sf }] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
