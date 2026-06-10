@@ -2,6 +2,7 @@
 import { PageLoader } from "../../components/PageLoader"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
@@ -274,9 +275,13 @@ export default function ProveedoresPage() {
                       }}
                     >
                       <div style={personCellStyle}>
-                        <span style={avatarStyle(name)}>{name.charAt(0).toUpperCase()}</span>
+                        <Link href={`/proveedores/${proveedor.id}`} style={{ textDecoration: "none", flexShrink: 0 }}>
+                          <span style={avatarStyle(name)}>{name.charAt(0).toUpperCase()}</span>
+                        </Link>
                         <div style={{ minWidth: 0 }}>
-                          <p style={personNameStyle}>{name}</p>
+                          <Link href={`/proveedores/${proveedor.id}`} style={{ textDecoration: "none" }}>
+                            <p style={{ ...personNameStyle, textDecoration: "none" }}>{name}</p>
+                          </Link>
                           {proveedor.empresa && (
                             <p style={personMetaStyle}>{proveedor.empresa}</p>
                           )}
@@ -293,6 +298,9 @@ export default function ProveedoresPage() {
                       </div>
 
                       <div style={rowActionsStyle}>
+                        <Link href={`/proveedores/${proveedor.id}`} style={secondaryButtonStyle}>
+                          Ver perfil
+                        </Link>
                         <button onClick={() => startEdit(proveedor)} style={secondaryButtonStyle}>
                           Editar
                         </button>
