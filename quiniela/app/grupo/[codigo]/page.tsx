@@ -160,7 +160,7 @@ export default function GrupoPage() {
             </div>
             {grupo && grupo.entrada > 0 && (
               <div className="text-center">
-                <p className="text-xs text-white/30 uppercase tracking-wider">Premio</p>
+                <p className="text-xs text-white/30 uppercase tracking-wider">Premio acumulado</p>
                 <p className="text-2xl font-bold text-amber-200 leading-tight">${(grupo.num_jugadores * grupo.entrada).toLocaleString('es-MX')}</p>
               </div>
             )}
