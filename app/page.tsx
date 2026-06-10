@@ -221,6 +221,16 @@ export default function Home() {
   const [newClientName, setNewClientName] = useState("")
   const [savingClient, setSavingClient] = useState(false)
 
+  // ── Crear subcarpeta inline ───────────────────────────────────────────────
+  const [showAddSubfolder, setShowAddSubfolder] = useState(false)
+  const [newSubfolderName, setNewSubfolderName] = useState("")
+  const [savingSubfolder, setSavingSubfolder] = useState(false)
+
+  // ── Crear proyecto inline ─────────────────────────────────────────────────
+  const [showAddProject, setShowAddProject] = useState(false)
+  const [newProjectName, setNewProjectName] = useState("")
+  const [savingProject, setSavingProject] = useState(false)
+
   // ── Recordatorio de juntas (client-side, cada minuto) ─────────────────────
   const REMINDER_MINUTES = 1 // cambiar a 30 para producción
   const firedJuntaReminders = useRef<Set<string>>(new Set())
@@ -559,6 +569,58 @@ export default function Home() {
       alert("Error al crear cliente: " + err.message)
     } finally {
       setSavingClient(false)
+    }
+  }
+
+  async function handleSaveNewSubfolder() {
+    if (!newSubfolderName.trim() || !clientId) return
+    setSavingSubfolder(true)
+    try {
+      const { data, error } = await supabase
+        .from("client_subfolders")
+        .insert({ client_id: clientId, name: newSubfolderName.trim() })
+        .select("id, client_id, name")
+        .single()
+      if (error) throw error
+      setAllSubfolders((prev) =>
+        [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
+      )
+      setSubfolderId(data.id)
+      setProjectId("")
+      setShowAddSubfolder(false)
+      setNewSubfolderName("")
+    } catch (err: any) {
+      alert("Error al crear subcarpeta: " + err.message)
+    } finally {
+      setSavingSubfolder(false)
+    }
+  }
+
+  async function handleSaveNewProject() {
+    if (!newProjectName.trim() || !subfolderId || !clientId) return
+    setSavingProject(true)
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .insert({
+          client_id: clientId,
+          subfolder_id: subfolderId,
+          name: newProjectName.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .select("id, client_id, subfolder_id, name")
+        .single()
+      if (error) throw error
+      setAllProjects((prev) =>
+        [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
+      )
+      setProjectId(data.id)
+      setShowAddProject(false)
+      setNewProjectName("")
+    } catch (err: any) {
+      alert("Error al crear proyecto: " + err.message)
+    } finally {
+      setSavingProject(false)
     }
   }
 
@@ -2367,8 +2429,14 @@ function openEditVacation() {
                         <select
                           value={subfolderId}
                           onChange={(event) => {
-                            setSubfolderId(event.target.value)
-                            setProjectId("")
+                            const val = event.target.value
+                            if (val === "__NEW_SUBFOLDER__") {
+                              setNewSubfolderName("")
+                              setShowAddSubfolder(true)
+                            } else {
+                              setSubfolderId(val)
+                              setProjectId("")
+                            }
                           }}
                           disabled={!clientId}
                           style={{
@@ -2386,6 +2454,9 @@ function openEditVacation() {
                               {subfolder.name}
                             </option>
                           ))}
+                          {clientId && (
+                            <option value="__NEW_SUBFOLDER__">＋ Crear subcarpeta nueva...</option>
+                          )}
                         </select>
                       </div>
                     </div>
@@ -2394,7 +2465,15 @@ function openEditVacation() {
                       <label style={formModalLabelStyle}>Proyecto</label>
                       <select
                         value={projectId}
-                        onChange={(event) => setProjectId(event.target.value)}
+                        onChange={(event) => {
+                          const val = event.target.value
+                          if (val === "__NEW_PROJECT__") {
+                            setNewProjectName("")
+                            setShowAddProject(true)
+                          } else {
+                            setProjectId(val)
+                          }
+                        }}
                         disabled={!subfolderId}
                         style={{
                           ...formModalSelectStyle,
@@ -2411,6 +2490,9 @@ function openEditVacation() {
                             {project.name}
                           </option>
                         ))}
+                        {subfolderId && (
+                          <option value="__NEW_PROJECT__">＋ Crear proyecto nuevo...</option>
+                        )}
                       </select>
                     </div>
 
@@ -3323,6 +3405,180 @@ function openEditVacation() {
                 }}
               >
                 {duplicating ? "Duplicando..." : "✓ Duplicar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mini-modal: crear subcarpeta nueva */}
+      {showAddSubfolder && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000002,
+            background: "rgba(2,6,23,0.80)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => setShowAddSubfolder(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
+              border: "1px solid rgba(148,163,184,0.15)",
+              borderRadius: 16,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              width: 340,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{
+              padding: "16px 18px 12px",
+              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div>
+                <p style={{ color: "#34d399", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                  Nueva subcarpeta
+                </p>
+                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                  Agregar a {allClients.find((c) => c.id === clientId)?.name || "cliente"}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddSubfolder(false)}
+                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+              >×</button>
+            </div>
+            <div style={{ padding: "20px 18px 16px" }}>
+              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                Nombre de la subcarpeta
+              </p>
+              <input
+                type="text"
+                value={newSubfolderName}
+                onChange={(e) => setNewSubfolderName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && newSubfolderName.trim()) handleSaveNewSubfolder() }}
+                placeholder="Ej. Campaña Verano, Spot TV..."
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "rgba(15,23,42,0.6)",
+                  border: "1px solid rgba(148,163,184,0.20)",
+                  borderRadius: 10,
+                  color: "#e2e8f0",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <div style={{
+              padding: "12px 18px",
+              borderTop: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", gap: 8, justifyContent: "flex-end",
+            }}>
+              <button onClick={() => setShowAddSubfolder(false)} style={formModalSecondaryButtonStyle}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveNewSubfolder}
+                disabled={!newSubfolderName.trim() || savingSubfolder}
+                style={{
+                  ...formModalPrimaryButtonStyle,
+                  opacity: !newSubfolderName.trim() || savingSubfolder ? 0.5 : 1,
+                  cursor: !newSubfolderName.trim() || savingSubfolder ? "not-allowed" : "pointer",
+                }}
+              >
+                {savingSubfolder ? "Guardando..." : "✓ Crear subcarpeta"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mini-modal: crear proyecto nuevo */}
+      {showAddProject && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000002,
+            background: "rgba(2,6,23,0.80)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => setShowAddProject(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
+              border: "1px solid rgba(148,163,184,0.15)",
+              borderRadius: 16,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              width: 340,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{
+              padding: "16px 18px 12px",
+              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div>
+                <p style={{ color: "#60a5fa", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                  Nuevo proyecto
+                </p>
+                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                  En {allSubfolders.find((s) => s.id === subfolderId)?.name || "subcarpeta"}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddProject(false)}
+                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+              >×</button>
+            </div>
+            <div style={{ padding: "20px 18px 16px" }}>
+              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                Nombre del proyecto
+              </p>
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && newProjectName.trim()) handleSaveNewProject() }}
+                placeholder="Ej. Spot 30seg, Video Corporativo..."
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "rgba(15,23,42,0.6)",
+                  border: "1px solid rgba(148,163,184,0.20)",
+                  borderRadius: 10,
+                  color: "#e2e8f0",
+                  fontSize: 14,
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <div style={{
+              padding: "12px 18px",
+              borderTop: "1px solid rgba(148,163,184,0.10)",
+              display: "flex", gap: 8, justifyContent: "flex-end",
+            }}>
+              <button onClick={() => setShowAddProject(false)} style={formModalSecondaryButtonStyle}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveNewProject}
+                disabled={!newProjectName.trim() || savingProject}
+                style={{
+                  ...formModalPrimaryButtonStyle,
+                  opacity: !newProjectName.trim() || savingProject ? 0.5 : 1,
+                  cursor: !newProjectName.trim() || savingProject ? "not-allowed" : "pointer",
+                }}
+              >
+                {savingProject ? "Guardando..." : "✓ Crear proyecto"}
               </button>
             </div>
           </div>
