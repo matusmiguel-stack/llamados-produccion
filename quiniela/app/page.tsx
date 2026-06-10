@@ -35,7 +35,7 @@ export default function Home() {
         </Link>
       </div>
 
-      <p className="text-white/15 text-xs mt-10">Mundial FIFA 2026 · México, USA & Canadá</p>
+      <p className="text-white/15 text-xs mt-10">Mundial 2026 · México, USA & Canadá</p>
     </div>
   )
 }
