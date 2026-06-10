@@ -220,6 +220,15 @@ export default function GrupoPage() {
 
                     <div className="border-t border-white/8 mt-1">
                       <button
+                        onClick={() => { setShowGrupos(false); setShowUnirse(true) }}
+                        className="w-full text-left px-4 py-3.5 text-white/50 hover:text-white hover:bg-white/5 text-sm transition-colors flex items-center gap-2"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        Unirse a otra quiniela
+                      </button>
+                    </div>
+                    <div className="border-t border-white/8">
+                      <button
                         onClick={() => { setShowGrupos(false); handleSalirGrupo() }}
                         disabled={saliendose}
                         className="w-full text-left px-4 py-3.5 text-red-400/60 hover:text-red-400 hover:bg-red-500/5 text-sm transition-colors flex items-center gap-2"
