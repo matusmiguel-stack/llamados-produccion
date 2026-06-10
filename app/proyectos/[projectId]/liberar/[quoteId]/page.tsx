@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "../../../../../lib/supabase"
@@ -769,30 +769,17 @@ export default function LiberarPage() {
                           {/* Proveedor / Empleado mobile */}
                           <div style={{ marginTop: 10 }}>
                             <p style={inputLabelStyle}>Proveedor / Empleado</p>
-                            <select
+                            <SupplierCombobox
                               value={a.supplier_id}
-                              onChange={(e) => handleSelectProveedor(item.id, e.target.value)}
-                              style={selectStyle}
-                            >
-                              <option value="">Sin asignar</option>
-                              {employees.length > 0 && (
-                                <optgroup label="── Empleados RETRO ──">
-                                  {employees.map((e) => (
-                                    <option key={e.id} value={`emp:${e.id}`}>
-                                      {employeeLabel(e)}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              )}
-                              <optgroup label="── Proveedores externos ──">
-                                {proveedores.map((p) => (
-                                  <option key={p.id} value={`prov:${p.id}`}>
-                                    {proveedorLabel(p)}
-                                  </option>
-                                ))}
-                                <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
-                              </optgroup>
-                            </select>
+                              onChange={(val) => updateActual(item.id, "supplier_id", val)}
+                              proveedores={proveedores}
+                              employees={employees}
+                              onAddNew={() => {
+                                setAddProvForItem(item.id)
+                                setNewProv({ nombre: "", apellido: "", empresa: "", actividad: "", email: "", telefono: "" })
+                                setShowAddProv(true)
+                              }}
+                            />
                           </div>
                         </div>
                       )
@@ -887,31 +874,18 @@ export default function LiberarPage() {
                           {fmt(realTot)}
                         </span>
 
-                        {/* Proveedor / Empleado select */}
-                        <select
+                        {/* Proveedor / Empleado combobox */}
+                        <SupplierCombobox
                           value={a.supplier_id}
-                          onChange={(e) => handleSelectProveedor(item.id, e.target.value)}
-                          style={selectStyle}
-                        >
-                          <option value="">—</option>
-                          {employees.length > 0 && (
-                            <optgroup label="── Empleados RETRO ──">
-                              {employees.map((e) => (
-                                <option key={e.id} value={`emp:${e.id}`}>
-                                  {employeeLabel(e)}
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                          <optgroup label="── Proveedores externos ──">
-                            {proveedores.map((p) => (
-                              <option key={p.id} value={`prov:${p.id}`}>
-                                {proveedorLabel(p)}
-                              </option>
-                            ))}
-                            <option value="__NEW__">＋ Agregar nuevo proveedor...</option>
-                          </optgroup>
-                        </select>
+                          onChange={(val) => updateActual(item.id, "supplier_id", val)}
+                          proveedores={proveedores}
+                          employees={employees}
+                          onAddNew={() => {
+                            setAddProvForItem(item.id)
+                            setNewProv({ nombre: "", apellido: "", empresa: "", actividad: "", email: "", telefono: "" })
+                            setShowAddProv(true)
+                          }}
+                        />
                       </div>
                     )
                   })}
@@ -1243,6 +1217,241 @@ export default function LiberarPage() {
       )}
     </div>
   )
+}
+
+// ─── SupplierCombobox ──────────────────────────────────────────────────────────
+
+function SupplierCombobox({
+  value,
+  onChange,
+  proveedores,
+  employees,
+  onAddNew,
+}: {
+  value: string
+  onChange: (val: string) => void
+  proveedores: Proveedor[]
+  employees: Employee[]
+  onAddNew: () => void
+}) {
+  const [query, setQuery]   = useState("")
+  const [open, setOpen]     = useState(false)
+  const containerRef        = useRef<HTMLDivElement>(null)
+
+  // Label to show when closed
+  let displayText = ""
+  if (value.startsWith("prov:")) {
+    const p = proveedores.find(x => x.id === value.slice(5))
+    if (p) displayText = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido} · ${p.actividad}`
+  } else if (value.startsWith("emp:")) {
+    const e = employees.find(x => x.id === value.slice(4))
+    if (e) {
+      const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+      displayText = `${e.nombre} ${ap} · ${e.puesto}`
+    }
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        setQuery("")
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  // Filter
+  const q             = query.toLowerCase()
+  const filteredEmps  = employees.filter(e => {
+    if (q === "") return true
+    const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+    return `${e.nombre} ${ap} ${e.puesto}`.toLowerCase().includes(q)
+  })
+  const filteredProvs = proveedores.filter(p => {
+    if (q === "") return true
+    return `${p.nombre} ${p.apellido} ${p.empresa ?? ""} ${p.actividad}`.toLowerCase().includes(q)
+  })
+
+  const hasResults = filteredEmps.length > 0 || filteredProvs.length > 0
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
+      {/* Input */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input
+          type="text"
+          value={open ? query : displayText}
+          placeholder="Buscar por nombre, empresa…"
+          onFocus={() => { setOpen(true); setQuery("") }}
+          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          style={{
+            ...comboboxInputStyle,
+            paddingRight: value ? 28 : 12,
+            color: open ? "#f8fafc" : (value ? "#e2e8f0" : "#475569"),
+          }}
+        />
+        {value && !open && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); onChange(""); setQuery("") }}
+            style={comboboxClearStyle}
+            title="Limpiar"
+          >✕</button>
+        )}
+        {!value && !open && (
+          <span style={comboboxChevronStyle} aria-hidden>▾</span>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {open && (
+        <div style={comboboxDropdownStyle}>
+          {!hasResults && q !== "" && (
+            <div style={comboboxNoResultsStyle}>Sin resultados para "{query}"</div>
+          )}
+
+          {filteredEmps.length > 0 && (
+            <>
+              <div style={comboboxGroupHeaderStyle}>👤 Empleados RETRO</div>
+              {filteredEmps.map(e => {
+                const ap  = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
+                const lbl = `${e.nombre} ${ap}`
+                return (
+                  <div key={e.id} style={comboboxOptionStyle}
+                    onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}>
+                    <div>
+                      <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                      <div style={{ color: "#64748b", fontSize: 11 }}>{e.puesto}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          )}
+
+          {filteredProvs.length > 0 && (
+            <>
+              <div style={comboboxGroupHeaderStyle}>🏢 Proveedores externos</div>
+              {filteredProvs.map(p => {
+                const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
+                const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad
+                return (
+                  <div key={p.id} style={comboboxOptionStyle}
+                    onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}>
+                    <div>
+                      <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                      <div style={{ color: "#64748b", fontSize: 11 }}>{sub}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          )}
+
+          {/* Agregar nuevo */}
+          <div
+            style={comboboxAddNewStyle}
+            onMouseDown={() => { setOpen(false); setQuery(""); onAddNew() }}
+          >
+            ＋ Agregar nuevo proveedor…
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const comboboxInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "5px 12px 5px 8px",
+  borderRadius: 6,
+  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(2,6,23,0.55)",
+  color: "#e2e8f0",
+  fontSize: 12,
+  outline: "none",
+  boxSizing: "border-box",
+  cursor: "text",
+}
+
+const comboboxClearStyle: React.CSSProperties = {
+  position: "absolute",
+  right: 6,
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "none",
+  border: "none",
+  color: "#475569",
+  cursor: "pointer",
+  fontSize: 11,
+  padding: "0 2px",
+  lineHeight: 1,
+}
+
+const comboboxChevronStyle: React.CSSProperties = {
+  position: "absolute",
+  right: 8,
+  top: "50%",
+  transform: "translateY(-50%)",
+  color: "#475569",
+  fontSize: 10,
+  pointerEvents: "none",
+}
+
+const comboboxDropdownStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "calc(100% + 4px)",
+  left: 0,
+  right: 0,
+  zIndex: 9999,
+  background: "rgba(8,12,24,0.97)",
+  border: "1px solid rgba(148,163,184,0.20)",
+  borderRadius: 10,
+  boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+  maxHeight: 280,
+  overflowY: "auto",
+  padding: "4px 0",
+}
+
+const comboboxGroupHeaderStyle: React.CSSProperties = {
+  padding: "8px 12px 4px",
+  fontSize: 10,
+  fontWeight: 700,
+  color: "#475569",
+  textTransform: "uppercase",
+  letterSpacing: 0.7,
+  borderTop: "1px solid rgba(148,163,184,0.08)",
+  marginTop: 2,
+}
+
+const comboboxOptionStyle: React.CSSProperties = {
+  padding: "7px 12px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  transition: "background 0.1s",
+  // hover handled via onMouseEnter/Leave or CSS — JS inline works here
+}
+
+const comboboxNoResultsStyle: React.CSSProperties = {
+  padding: "12px",
+  color: "#475569",
+  fontSize: 12,
+  textAlign: "center",
+}
+
+const comboboxAddNewStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  fontSize: 12,
+  fontWeight: 600,
+  color: "#a78bfa",
+  cursor: "pointer",
+  borderTop: "1px solid rgba(148,163,184,0.10)",
+  marginTop: 4,
 }
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
