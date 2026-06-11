@@ -180,6 +180,8 @@ export default function GrupoPage() {
               <div className="text-center">
                 <p className="text-xs text-white/30 uppercase tracking-wider">Premio acumulado</p>
                 <p className="text-2xl font-bold text-amber-200 leading-tight">${(grupo.num_jugadores * grupo.entrada).toLocaleString('es-MX')}</p>
+                <p className="text-xs text-amber-400/50 mt-0.5">🥇 ${Math.floor(grupo.num_jugadores * grupo.entrada * 0.7).toLocaleString('es-MX')}</p>
+                <p className="text-xs text-white/25">🥈 ${Math.floor(grupo.num_jugadores * grupo.entrada * 0.3).toLocaleString('es-MX')}</p>
               </div>
             )}
             <div className="relative">
