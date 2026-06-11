@@ -215,6 +215,8 @@ export default function Home() {
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
   const [juntaExternalEmails, setJuntaExternalEmails] = useState<string[]>([])
   const [juntaEmailInput, setJuntaEmailInput] = useState("")
+  const [juntaAttendeeSearch, setJuntaAttendeeSearch] = useState("")
+  const [juntaAttendeeDropOpen, setJuntaAttendeeDropOpen] = useState(false)
   const [savingEntry, setSavingEntry] = useState(false)
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
@@ -787,6 +789,8 @@ export default function Home() {
     setJuntaAttendees([])
     setJuntaExternalEmails([])
     setJuntaEmailInput("")
+    setJuntaAttendeeSearch("")
+    setJuntaAttendeeDropOpen(false)
     setSelectedJunta(null)
     setJuntaDetailsOpen(false)
   }
@@ -2238,30 +2242,90 @@ function openEditVacation() {
                     {/* Personal asistente */}
                     <div>
                       <label style={formModalLabelStyle}>Personal asistente</label>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                        {employees.map((emp: any) => {
-                          const selected = juntaAttendees.includes(emp.id)
-                          return (
-                            <button
-                              key={emp.id}
-                              type="button"
-                              onClick={() => setJuntaAttendees(prev =>
-                                selected ? prev.filter(id => id !== emp.id) : [...prev, emp.id]
-                              )}
-                              style={{
-                                padding: "4px 12px",
-                                borderRadius: 999,
-                                border: selected ? "1px solid #0891b2" : "1px solid rgba(148,163,184,0.2)",
-                                background: selected ? "rgba(8,145,178,0.15)" : "transparent",
-                                color: selected ? "#67e8f9" : "#94a3b8",
-                                fontSize: 12,
-                                cursor: "pointer",
-                              }}
-                            >
-                              {emp.nombre} {emp.apellido_paterno}
-                            </button>
+
+                      {/* Chips de seleccionados */}
+                      {juntaAttendees.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, marginBottom: 8 }}>
+                          {juntaAttendees.map((empId) => {
+                            const emp = employees.find((e: any) => e.id === empId)
+                            if (!emp) return null
+                            return (
+                              <span key={empId} style={{
+                                display: "inline-flex", alignItems: "center", gap: 5,
+                                padding: "3px 10px", borderRadius: 999,
+                                background: "rgba(8,145,178,0.15)",
+                                border: "1px solid rgba(8,145,178,0.35)",
+                                color: "#67e8f9", fontSize: 12,
+                              }}>
+                                {emp.nombre} {emp.apellido_paterno}
+                                {emp.nickname ? ` (${emp.nickname})` : ""}
+                                <button
+                                  type="button"
+                                  onClick={() => setJuntaAttendees(prev => prev.filter(id => id !== empId))}
+                                  style={{ background: "none", border: "none", color: "#67e8f9", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, marginLeft: 2 }}
+                                >×</button>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Buscador */}
+                      <div style={{ position: "relative" }}>
+                        <input
+                          type="text"
+                          value={juntaAttendeeSearch}
+                          onChange={(e) => { setJuntaAttendeeSearch(e.target.value); setJuntaAttendeeDropOpen(true) }}
+                          onFocus={() => setJuntaAttendeeDropOpen(true)}
+                          onBlur={() => setTimeout(() => setJuntaAttendeeDropOpen(false), 150)}
+                          placeholder="Buscar empleado..."
+                          style={{ ...formModalInputStyle, width: "100%", boxSizing: "border-box" }}
+                        />
+                        {juntaAttendeeDropOpen && (() => {
+                          const q = juntaAttendeeSearch.toLowerCase()
+                          const filtered = (employees as any[]).filter(emp =>
+                            !juntaAttendees.includes(emp.id) && (
+                              emp.nombre?.toLowerCase().includes(q) ||
+                              emp.apellido_paterno?.toLowerCase().includes(q) ||
+                              emp.apellido_materno?.toLowerCase().includes(q) ||
+                              emp.nickname?.toLowerCase().includes(q) ||
+                              emp.puesto?.toLowerCase().includes(q)
+                            )
                           )
-                        })}
+                          if (!filtered.length) return null
+                          return (
+                            <div style={{
+                              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+                              background: "#0f172a", border: "1px solid rgba(148,163,184,0.2)",
+                              borderRadius: 10, marginTop: 4, maxHeight: 200, overflowY: "auto",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                            }}>
+                              {filtered.map((emp: any) => (
+                                <button
+                                  key={emp.id}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setJuntaAttendees(prev => [...prev, emp.id])
+                                    setJuntaAttendeeSearch("")
+                                    setJuntaAttendeeDropOpen(true)
+                                  }}
+                                  style={{
+                                    display: "block", width: "100%", textAlign: "left",
+                                    padding: "8px 12px", background: "none", border: "none",
+                                    color: "#e2e8f0", fontSize: 13, cursor: "pointer",
+                                    borderBottom: "1px solid rgba(148,163,184,0.08)",
+                                  }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(148,163,184,0.08)")}
+                                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                                >
+                                  <span style={{ fontWeight: 500 }}>{emp.nombre} {emp.apellido_paterno}</span>
+                                  {emp.nickname && <span style={{ color: "#64748b", marginLeft: 6 }}>({emp.nickname})</span>}
+                                  {emp.puesto && <span style={{ color: "#64748b", marginLeft: 6, fontSize: 11 }}>· {emp.puesto}</span>}
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
 
