@@ -53,13 +53,14 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function EgresosPanel({
-  projectId, isMobile, projectName, projectCode, empresa,
+  projectId, isMobile, projectName, projectCode, empresa, projectResponsable,
 }: {
   projectId: string
   isMobile: boolean
   projectName: string
   projectCode: string | null
   empresa: "retro_studio" | "retro_films" | null
+  projectResponsable: string | null
 }) {
   const [loading, setLoading]       = useState(true)
   const [items, setItems]           = useState<EgresoItem[]>([])
@@ -69,6 +70,7 @@ export function EgresosPanel({
   const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "" })
   const [saving, setSaving]         = useState(false)
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
+  const [sendingAll, setSendingAll]  = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -199,34 +201,72 @@ export function EgresosPanel({
     }
   }
 
+  const fmt2 = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+  const proyectoLabel = projectCode ? `${projectCode} ${projectName}` : projectName
+
+  async function callBillingApi(proveedorId: string, billingItems: { description: string; monto: string }[]) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch("/api/egresos/send-billing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({
+        proveedorId,
+        items: billingItems,
+        proyectoLabel,
+        empresa: empresa || "retro_studio",
+        responsableNombre: projectResponsable,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error || "Error al enviar")
+    return data
+  }
+
   async function sendBilling(item: EgresoItem, monto: number) {
     if (!item.actual_supplier_id) return
     setSendingBilling(item.id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const proyectoLabel = projectCode ? `${projectCode} ${projectName}` : projectName
-      const montoFmt = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(monto)
-      const res = await fetch("/api/egresos/send-billing", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          proveedorId: item.actual_supplier_id,
-          itemDescription: item.description,
-          monto: montoFmt,
-          proyectoLabel,
-          empresa: empresa || "retro_studio",
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || "Error al enviar")
-      alert(`✓ Instrucciones enviadas a ${data.sentTo}`)
+      const data = await callBillingApi(item.actual_supplier_id, [{ description: item.description, monto: fmt2(monto) }])
+      alert(`✓ Instrucciones enviadas a ${data.sentTo}${data.cc ? `\nCopia a: ${data.cc}` : ""}`)
     } catch (err: any) {
       alert("Error al enviar: " + err.message)
     } finally {
       setSendingBilling(null)
+    }
+  }
+
+  async function sendAllBilling() {
+    // Agrupar ítems de proveedores por actual_supplier_id
+    const provItems: Record<string, { id: string; billingItems: { description: string; monto: string }[] }> = {}
+    for (const item of items) {
+      if (item.supplierType !== "proveedor" || !item.actual_supplier_id) continue
+      const monto = montoEgreso(item)
+      if (monto === 0) continue
+      if (!provItems[item.actual_supplier_id]) {
+        provItems[item.actual_supplier_id] = { id: item.actual_supplier_id, billingItems: [] }
+      }
+      provItems[item.actual_supplier_id].billingItems.push({ description: item.description, monto: fmt2(monto) })
+    }
+    const provList = Object.values(provItems)
+    if (provList.length === 0) { alert("No hay proveedores externos en este control de egresos."); return }
+    if (!confirm(`¿Enviar instrucciones de facturación a ${provList.length} proveedor${provList.length !== 1 ? "es" : ""}?`)) return
+
+    setSendingAll(true)
+    const errors: string[] = []
+    let sent = 0
+    for (const prov of provList) {
+      try {
+        await callBillingApi(prov.id, prov.billingItems)
+        sent++
+      } catch (err: any) {
+        errors.push(err.message)
+      }
+    }
+    setSendingAll(false)
+    if (errors.length) {
+      alert(`Enviados: ${sent}/${provList.length}\nErrores:\n${errors.join("\n")}`)
+    } else {
+      alert(`✓ Instrucciones enviadas a ${sent} proveedor${sent !== 1 ? "es"  : ""}`)
     }
   }
 
@@ -251,11 +291,27 @@ export function EgresosPanel({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
-      {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12 }}>
-        <SummaryCard label="Total egresos"  value={fmt(totalGlobal)}     color="#f87171" />
-        <SummaryCard label="Ítems"          value={String(items.length)} color="#94a3b8" />
-        <SummaryCard label="Cotizaciones"   value={String(quoteCount)}   color="#94a3b8" />
+      {/* Summary cards + Facturar todos */}
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12, flex: 1 }}>
+          <SummaryCard label="Total egresos"  value={fmt(totalGlobal)}     color="#f87171" />
+          <SummaryCard label="Ítems"          value={String(items.length)} color="#94a3b8" />
+          <SummaryCard label="Cotizaciones"   value={String(quoteCount)}   color="#94a3b8" />
+        </div>
+        <button
+          onClick={sendAllBilling}
+          disabled={sendingAll}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "12px 20px", borderRadius: 10, cursor: sendingAll ? "not-allowed" : "pointer",
+            background: sendingAll ? "rgba(6,182,212,0.06)" : "rgba(6,182,212,0.12)",
+            border: "1px solid rgba(6,182,212,0.30)", color: "#67e8f9",
+            fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+            opacity: sendingAll ? 0.6 : 1, flexShrink: 0,
+          }}
+        >
+          {sendingAll ? "⏳ Enviando..." : "✉ Facturar todos"}
+        </button>
       </div>
 
       {/* Per-quote tables */}

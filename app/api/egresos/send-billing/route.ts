@@ -9,7 +9,7 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
 }
 
-const EMPRESA_LABELS: Record<string, { name: string; rfc: string; direccion: string }> = {
+const EMPRESA_INFO: Record<string, { name: string; rfc: string; direccion: string }> = {
   retro_studio: {
     name: "Retro Studio S.A. de C.V.",
     rfc: "RST000000XXX",   // ← actualizar con RFC real
@@ -28,10 +28,16 @@ function buildHtml(params: {
   empresaLabel: string
   empresaRfc: string
   empresaDireccion: string
-  itemDescription: string
-  monto: string
+  items: { description: string; monto: string }[]
 }) {
-  const { proveedorNombre, proyectoLabel, empresaLabel, empresaRfc, empresaDireccion, itemDescription, monto } = params
+  const { proveedorNombre, proyectoLabel, empresaLabel, empresaRfc, empresaDireccion, items } = params
+
+  const itemRows = items.map(it => `
+    <tr>
+      <td style="padding:10px 18px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e293b;">${it.description}</td>
+      <td style="padding:10px 18px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:600;color:#0f172a;text-align:right;font-family:monospace;white-space:nowrap;">${it.monto}</td>
+    </tr>`).join("")
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -63,23 +69,24 @@ function buildHtml(params: {
           <td style="padding:20px 32px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;overflow:hidden;">
               <tr>
-                <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                <td colspan="2" style="padding:14px 18px;border-bottom:1px solid #e2e8f0;">
                   <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Proyecto</p>
                   <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#0f172a;">${proyectoLabel}</p>
                 </td>
               </tr>
+              ${itemRows}
+              ${items.length > 1 ? `
               <tr>
-                <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
-                  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Concepto</p>
-                  <p style="margin:4px 0 0;font-size:14px;color:#1e293b;">${itemDescription}</p>
+                <td style="padding:12px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Total a facturar</td>
+                <td style="padding:12px 18px;text-align:right;font-size:16px;font-weight:700;color:#0f172a;font-family:monospace;white-space:nowrap;">
+                  Ver conceptos arriba <span style="font-size:11px;font-weight:400;color:#64748b;">+ IVA</span>
                 </td>
-              </tr>
+              </tr>` : `
               <tr>
-                <td style="padding:16px 20px;">
-                  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Monto a facturar</p>
-                  <p style="margin:4px 0 0;font-size:18px;font-weight:700;color:#0f172a;">${monto} <span style="font-size:12px;font-weight:400;color:#64748b;">+ IVA</span></p>
+                <td colspan="2" style="padding:12px 18px;">
+                  <span style="font-size:12px;color:#64748b;">Todos los montos son + IVA</span>
                 </td>
-              </tr>
+              </tr>`}
             </table>
           </td>
         </tr>
@@ -143,7 +150,6 @@ function buildHtml(params: {
 
 export async function POST(req: Request) {
   try {
-    // Verify caller is authenticated
     const authHeader = req.headers.get("Authorization")
     if (!authHeader) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
@@ -155,20 +161,43 @@ export async function POST(req: Request) {
     const { data: { user }, error: userError } = await userClient.auth.getUser()
     if (userError || !user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
-    const { proveedorId, itemDescription, monto, proyectoLabel, empresa } = await req.json()
-    if (!proveedorId) return NextResponse.json({ error: "Falta proveedorId" }, { status: 400 })
+    const {
+      proveedorId,
+      items,           // [{ description, monto }]
+      proyectoLabel,
+      empresa,
+      responsableNombre,
+    } = await req.json()
+
+    if (!proveedorId || !items?.length) {
+      return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 })
+    }
 
     const admin = createAdminClient()
+
+    // Datos del proveedor
     const { data: prov, error: provErr } = await admin
       .from("proveedores")
       .select("nombre, apellido, empresa, email")
       .eq("id", proveedorId)
       .single()
-
     if (provErr || !prov) return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 })
     if (!prov.email) return NextResponse.json({ error: "El proveedor no tiene email registrado" }, { status: 400 })
 
-    const empresaInfo = EMPRESA_LABELS[empresa] || EMPRESA_LABELS.retro_studio
+    // Email del responsable para CC (buscar por nombre completo)
+    let ccEmail: string | null = null
+    if (responsableNombre) {
+      const { data: empRows } = await admin
+        .from("employees")
+        .select("email, nombre, apellido_paterno, apellido_materno")
+      const match = (empRows || []).find((e: any) => {
+        const full = [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+        return full === responsableNombre
+      })
+      if (match?.email) ccEmail = match.email
+    }
+
+    const empresaInfo = EMPRESA_INFO[empresa] || EMPRESA_INFO.retro_studio
     const proveedorNombre = prov.empresa
       ? `${prov.empresa} (${prov.nombre} ${prov.apellido})`
       : `${prov.nombre} ${prov.apellido}`
@@ -179,21 +208,21 @@ export async function POST(req: Request) {
       empresaLabel: empresaInfo.name,
       empresaRfc: empresaInfo.rfc,
       empresaDireccion: empresaInfo.direccion,
-      itemDescription,
-      monto,
+      items,
     })
 
     const resend = getResend()
     const { error: sendErr } = await resend.emails.send({
       from: FROM,
       to: prov.email,
+      ...(ccEmail ? { cc: ccEmail } : {}),
       subject: `Datos de facturación — ${proyectoLabel}`,
       html,
     })
 
     if (sendErr) return NextResponse.json({ error: sendErr.message }, { status: 500 })
 
-    return NextResponse.json({ ok: true, sentTo: prov.email })
+    return NextResponse.json({ ok: true, sentTo: prov.email, cc: ccEmail })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -614,6 +614,7 @@ export default function ProjectDetailPage() {
                 projectName={project?.name ?? ""}
                 projectCode={project?.code ?? null}
                 empresa={projectEmpresa}
+                projectResponsable={project?.responsable ?? null}
               />
             </div>
           </div>
