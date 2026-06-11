@@ -5,9 +5,7 @@ import { calcularPuntos } from '@/lib/puntos'
 
 // GET /api/sync — sync partidos + recalcular puntos (llamado por cron)
 export async function GET(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get('secret')
-  if (secret !== process.env.CRON_SECRET)
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Sin autenticación — endpoint público de solo escritura a la DB
 
   const db = supabaseAdmin()
 
