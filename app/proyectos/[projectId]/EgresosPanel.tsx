@@ -52,7 +52,15 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function EgresosPanel({ projectId, isMobile }: { projectId: string; isMobile: boolean }) {
+export function EgresosPanel({
+  projectId, isMobile, projectName, projectCode, empresa,
+}: {
+  projectId: string
+  isMobile: boolean
+  projectName: string
+  projectCode: string | null
+  empresa: "retro_studio" | "retro_films" | null
+}) {
   const [loading, setLoading]       = useState(true)
   const [items, setItems]           = useState<EgresoItem[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -60,6 +68,7 @@ export function EgresosPanel({ projectId, isMobile }: { projectId: string; isMob
   const [editingId, setEditingId]   = useState<string | null>(null)
   const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "" })
   const [saving, setSaving]         = useState(false)
+  const [sendingBilling, setSendingBilling] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -187,6 +196,37 @@ export function EgresosPanel({ projectId, isMobile }: { projectId: string; isMob
       alert("Error al guardar: " + err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function sendBilling(item: EgresoItem, monto: number) {
+    if (!item.actual_supplier_id) return
+    setSendingBilling(item.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const proyectoLabel = projectCode ? `${projectCode} ${projectName}` : projectName
+      const montoFmt = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(monto)
+      const res = await fetch("/api/egresos/send-billing", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          proveedorId: item.actual_supplier_id,
+          itemDescription: item.description,
+          monto: montoFmt,
+          proyectoLabel,
+          empresa: empresa || "retro_studio",
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || "Error al enviar")
+      alert(`✓ Instrucciones enviadas a ${data.sentTo}`)
+    } catch (err: any) {
+      alert("Error al enviar: " + err.message)
+    } finally {
+      setSendingBilling(null)
     }
   }
 
@@ -322,7 +362,24 @@ export function EgresosPanel({ projectId, isMobile }: { projectId: string; isMob
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>{days}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right" }}>
+                        <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
+                          {item.supplierType === "proveedor" && (
+                            <button
+                              onClick={() => sendBilling(item, monto)}
+                              disabled={sendingBilling === item.id}
+                              title="Enviar instrucciones de facturación"
+                              style={{
+                                ...editBtnStyle,
+                                marginRight: 6,
+                                background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
+                                border: "1px solid rgba(6,182,212,0.25)",
+                                color: "#67e8f9",
+                                opacity: sendingBilling === item.id ? 0.6 : 1,
+                              }}
+                            >
+                              {sendingBilling === item.id ? "…" : "✉ Facturar"}
+                            </button>
+                          )}
                           <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
                         </td>
                       </tr>

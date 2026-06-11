@@ -611,6 +611,9 @@ export default function ProjectDetailPage() {
               <EgresosPanel
                 projectId={projectId}
                 isMobile={isMobile}
+                projectName={project?.name ?? ""}
+                projectCode={project?.code ?? null}
+                empresa={projectEmpresa}
               />
             </div>
           </div>
