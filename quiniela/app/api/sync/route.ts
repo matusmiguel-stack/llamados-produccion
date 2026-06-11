@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getMatches, mapMatchToPartido } from '@/lib/football-api'
 import { calcularPuntos } from '@/lib/puntos'
 
 // GET /api/sync — sync partidos + recalcular puntos (llamado por cron)
-export async function GET(req: NextRequest) {
+export async function GET() {
   // Sin autenticación — endpoint público de solo escritura a la DB
 
   const db = supabaseAdmin()
