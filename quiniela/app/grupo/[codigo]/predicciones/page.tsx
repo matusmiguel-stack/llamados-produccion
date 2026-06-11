@@ -70,7 +70,10 @@ export default function PrediccionesPage() {
       const supabase = createSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
-      const res = await fetch(`/api/auth/jugador?user_id=${user.id}`)
+      const grupoRes = await fetch(`/api/grupo?codigo=${codigo}`)
+      if (!grupoRes.ok) { router.replace('/login'); return }
+      const g = await grupoRes.json()
+      const res = await fetch(`/api/auth/jugador?user_id=${user.id}&grupo_id=${g.id}`)
       if (!res.ok) { router.replace('/login'); return }
       const j = await res.json()
       setJugadorId(j.id)

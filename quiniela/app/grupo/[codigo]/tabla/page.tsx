@@ -33,14 +33,14 @@ export default function TablaPage() {
       const supabase = createSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
-      const jugadorRes = await fetch(`/api/auth/jugador?user_id=${user.id}`)
-      if (!jugadorRes.ok) { router.replace('/login'); return }
-      const jugador = await jugadorRes.json()
-      setMiJugadorId(jugador.id)
       const grupoRes = await fetch(`/api/grupo?codigo=${codigo}`)
       if (!grupoRes.ok) { router.replace('/login'); return }
       const grupo = await grupoRes.json()
       setGrupoId(grupo.id)
+      const jugadorRes = await fetch(`/api/auth/jugador?user_id=${user.id}&grupo_id=${grupo.id}`)
+      if (!jugadorRes.ok) { router.replace('/login'); return }
+      const jugador = await jugadorRes.json()
+      setMiJugadorId(jugador.id)
       await cargarTabla(grupo.id)
       setLoading(false)
     }
