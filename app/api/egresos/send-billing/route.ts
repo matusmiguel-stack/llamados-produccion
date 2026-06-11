@@ -23,15 +23,16 @@ const EMPRESA_INFO: Record<string, { name: string; rfc: string; direccion: strin
 }
 
 function buildHtml(params: {
-  proveedorNombre: string   // nombre para el saludo
-  proveedorConcepto: string // "Actividad — Nombre/Empresa — $monto"
+  proveedorNombre: string
+  proveedorConcepto: string  // "Actividad — Nombre/Empresa"
+  montoStr: string           // monto sin IVA formateado
   proyectoLabel: string
   proyectoCodigo: string
   empresaLabel: string
   empresaRfc: string
   empresaDireccion: string
 }) {
-  const { proveedorNombre, proveedorConcepto, proyectoLabel, proyectoCodigo, empresaLabel, empresaRfc, empresaDireccion } = params
+  const { proveedorNombre, proveedorConcepto, montoStr, proyectoLabel, proyectoCodigo, empresaLabel, empresaRfc, empresaDireccion } = params
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -71,9 +72,15 @@ function buildHtml(params: {
                 </td>
               </tr>
               <tr>
-                <td style="padding:16px 20px;">
+                <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
                   <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Concepto</p>
                   <p style="margin:6px 0 0;font-size:14px;color:#1e293b;line-height:1.6;">${proveedorConcepto}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:16px 20px;">
+                  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Monto a facturar</p>
+                  <p style="margin:6px 0 0;font-size:18px;font-weight:700;color:#0f172a;font-family:monospace;">${montoStr} <span style="font-size:12px;font-weight:400;color:#64748b;">sin IVA</span></p>
                 </td>
               </tr>
             </table>
@@ -176,24 +183,29 @@ export async function POST(req: Request) {
         .select("email, nombre, apellido_paterno, apellido_materno")
       const norm = (s: string) => s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
       const target = norm(responsableNombre)
+      console.log("[billing-cc] responsableNombre:", responsableNombre, "→ normalized:", target)
+      console.log("[billing-cc] employees:", (empRows || []).map((e: any) => {
+        const full3 = norm([e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "))
+        return { full3, email: e.email }
+      }))
       const match = (empRows || []).find((e: any) => {
         const full3 = norm([e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "))
         const full2 = norm([e.nombre, e.apellido_paterno].filter(Boolean).join(" "))
         return full3 === target || full2 === target
       })
       ccEmail = match?.email ?? null
+      console.log("[billing-cc] matched:", match ? `${match.nombre} → ${match.email}` : "NONE")
+    } else {
+      console.log("[billing-cc] no responsableNombre received")
     }
 
-    // Construir línea de concepto: Actividad — Nombre/Empresa — Monto sin IVA
     const nombreLabel = prov.empresa
       ? `${prov.empresa} — ${prov.nombre} ${prov.apellido}`
       : `${prov.nombre} ${prov.apellido}`
     const saludoNombre = prov.empresa || `${prov.nombre} ${prov.apellido}`
-
-    // Si hay múltiples montos (varios ítems del mismo proveedor) los concatenamos
-    const montosStr = items.map((it: any) => it.monto).join(" + ")
     const actividad = prov.actividad || "Servicios"
-    const proveedorConcepto = `${actividad} — ${nombreLabel} — ${montosStr} sin IVA`
+    const proveedorConcepto = `${actividad} — ${nombreLabel}`
+    const montoStr = items.map((it: any) => it.monto).join(" + ")
 
     // Separar código del nombre del proyecto para mostrarlos en dos líneas
     // proyectoLabel puede ser "RS3000 Kueski Junio" o sólo "Kueski Junio"
@@ -206,6 +218,7 @@ export async function POST(req: Request) {
     const html = buildHtml({
       proveedorNombre: saludoNombre,
       proveedorConcepto,
+      montoStr,
       proyectoLabel: proyectoNombre,
       proyectoCodigo,
       empresaLabel: empresaInfo.name,
