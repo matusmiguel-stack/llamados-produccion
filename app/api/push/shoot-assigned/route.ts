@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import { sendPushToUser, markNotificationSent } from "../../../../lib/web-push"
 import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
-import { verifyApiUser } from "../../../../lib/api-auth"
+import { verifyApiRole } from "../../../../lib/api-auth"
 
 export async function POST(req: Request) {
   try {
-    const user = await verifyApiUser(req)
+    // Mismos roles que pueden crear/editar llamados en la app
+    const user = await verifyApiRole(req, ["admin", "editor", "editor_premium"])
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
     const { shootId, shootTitle, shootDate, employeeIds } = await req.json()
