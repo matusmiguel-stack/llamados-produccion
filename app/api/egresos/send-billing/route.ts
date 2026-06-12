@@ -11,12 +11,12 @@ function getResend() {
 
 const EMPRESA_INFO: Record<string, { name: string; rfc: string; direccion: string }> = {
   retro_studio: {
-    name: "Retro Studio",
+    name: "Retro Studio S.C.",
     rfc: "RST070309F47",
     direccion: "Benjamin Franklin 233 mz, col. Hipódromo Condesa, Cuauhtémoc, CP 06170, Ciudad de México, México",
   },
   retro_films: {
-    name: "Retro Films",
+    name: "Retro Films S.A. de C.V.",
     rfc: "RFI1303229I4",
     direccion: "Benjamin Franklin 233 mz, col. Hipódromo Condesa, Cuauhtémoc, CP 06170, Ciudad de México, México",
   },
