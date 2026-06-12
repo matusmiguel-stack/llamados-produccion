@@ -12,7 +12,7 @@ async function requireFinanzasRole(req: Request) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from("profiles").select("role").eq("id", user.id).single()
-  if (!profile || !["admin", "editor", "editor_premium"].includes(profile.role)) return null
+  if (!profile || !["admin", "finanzas"].includes(profile.role)) return null
   return { user, admin }
 }
 

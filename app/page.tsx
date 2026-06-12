@@ -4075,6 +4075,11 @@ function roleBadgeStyle(role?: string): React.CSSProperties {
       border: "rgba(236,72,153,0.28)",
       text: "#fbcfe8",
     },
+    finanzas: {
+      bg: "rgba(245,158,11,0.14)",
+      border: "rgba(245,158,11,0.28)",
+      text: "#fde68a",
+    },
     viewer: {
       bg: "rgba(148,163,184,0.12)",
       border: "rgba(148,163,184,0.22)",

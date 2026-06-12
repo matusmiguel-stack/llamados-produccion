@@ -11,6 +11,7 @@ const ROLE_LABELS: Record<string, string> = {
   editor:         "Editor",
   editor_premium: "Editor Premium",
   productor:      "Editor Post",
+  finanzas:       "Finanzas",
   viewer:         "Viewer",
 }
 const roleLabel = (r?: string) => (r ? (ROLE_LABELS[r] ?? r) : "—")
@@ -291,6 +292,7 @@ export default function UsersPage() {
                   <option value="productor">Editor Post</option>
                   <option value="editor">Editor</option>
                   <option value="editor_premium">Editor Premium</option>
+                  <option value="finanzas">Finanzas</option>
                   <option value="admin">Admin</option>
                 </select>
               </Field>
@@ -351,6 +353,7 @@ export default function UsersPage() {
                           <option value="productor">Editor Post</option>
                           <option value="editor">Editor</option>
                           <option value="editor_premium">Editor Premium</option>
+                          <option value="finanzas">Finanzas</option>
                           <option value="admin">Admin</option>
                         </select>
 
@@ -450,6 +453,11 @@ function roleBadgeStyle(role?: string): React.CSSProperties {
       bg: "rgba(236,72,153,0.14)",
       border: "rgba(236,72,153,0.28)",
       text: "#fbcfe8",
+    },
+    finanzas: {
+      bg: "rgba(245,158,11,0.14)",
+      border: "rgba(245,158,11,0.28)",
+      text: "#fde68a",
     },
     productor: {
       bg: "rgba(52,211,153,0.12)",

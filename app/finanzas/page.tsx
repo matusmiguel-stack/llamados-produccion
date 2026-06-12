@@ -81,7 +81,7 @@ export default function FinanzasPage() {
   async function loadPage() {
     const auth = await requireSessionProfile()
     if (!auth) return
-    if (!["admin", "editor", "editor_premium"].includes(auth.profile.role)) {
+    if (!["admin", "finanzas"].includes(auth.profile.role)) {
       window.location.href = "/"
       return
     }

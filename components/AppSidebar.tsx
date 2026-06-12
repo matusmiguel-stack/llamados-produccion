@@ -29,14 +29,14 @@ const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
 // roles: null/undefined = visible para todos; array = visible solo para esos roles
 const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
   { href: "/",            label: "Calendario",   icon: "calendar"   },
-  { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
+  { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "editor_premium", "productor", "viewer", "finanzas"] },
   { href: "/resources",   label: "Inventario",   icon: "inventory",  roles: ["admin", "editor", "editor_premium", "viewer"] },
   { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor", "editor_premium"] },
   { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "editor_premium", "productor"] },
   { href: "/postproduccion", label: "Post Producción", icon: "postpro", roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
   { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor", "editor_premium"] },
   { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin"] },
-  { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "editor", "editor_premium"] },
+  { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin"] },
 ]
