@@ -19,6 +19,7 @@ type Project = {
   code: string | null
   description: string | null
   responsable: string | null
+  empresa?: "retro_studio" | "retro_films" | null
 }
 
 type Quote = {
@@ -249,7 +250,11 @@ export default function ProjectDetailPage() {
     setProject(projectData)
     setClientName(client?.name || "Cliente")
     setSubfolderName(subfolder?.name || "Subcarpeta")
-    setProjectEmpresa((ingreso?.empresa as "retro_studio" | "retro_films" | null) ?? null)
+    // Prioridad: campo empresa del proyecto; fallback al ingreso aprobado
+    setProjectEmpresa(
+      (projectData.empresa as "retro_studio" | "retro_films" | null) ??
+      ((ingreso?.empresa as "retro_studio" | "retro_films" | null) ?? null)
+    )
   }
 
   async function loadQuotes() {
@@ -1209,6 +1214,10 @@ function QuoteModal({
     })
     if (error) { alert(error.message); setAproving(false); return }
     await supabase.from("quotes").update({ status: "approved" }).eq("id", quote.id)
+    // Guardar la empresa en el proyecto (para facturación)
+    if (quote.project_id) {
+      await supabase.from("projects").update({ empresa: aprobarEmpresa }).eq("id", quote.project_id)
+    }
     setAproving(false)
     setYaAprobado(true)
     setShowAprobar(false)

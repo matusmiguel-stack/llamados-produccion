@@ -693,6 +693,10 @@ export default function CotizacionesPage() {
 
     // Mark the quote as approved too
     await supabase.from("quotes").update({ status: "approved" }).eq("id", editQuoteId)
+    // Guardar la empresa en el proyecto (para facturación)
+    if (projectId) {
+      await supabase.from("projects").update({ empresa: aprobarEmpresa }).eq("id", projectId)
+    }
     setStatus("approved")
     setYaAprobado(true)
 

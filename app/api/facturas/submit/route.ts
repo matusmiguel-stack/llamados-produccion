@@ -166,10 +166,51 @@ function parseSubtotal(xml: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+function parseReceptorRfc(xml: string): string | null {
+  const m = xml.match(/<(?:cfdi:)?Receptor[^>]*\sRfc="([A-Z0-9&Ñ]{12,13})"/i)
+  return m ? m[1].toUpperCase() : null
+}
+
+function parseUuidFiscal(xml: string): string | null {
+  // TimbreFiscalDigital → UUID (folio fiscal)
+  const m = xml.match(/UUID="([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})"/i)
+  return m ? m[1].toUpperCase() : null
+}
+
+const RFC_POR_EMPRESA: Record<string, string> = {
+  retro_studio: "RST070309F47",
+  retro_films:  "RFI1303229I4",
+}
+
+// ── Rate limiting básico (por instancia serverless) ──────────────────────────
+const rateMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 10          // intentos
+const RATE_WINDOW = 60 * 60e3  // por hora
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW })
+    return false
+  }
+  entry.count++
+  return entry.count > RATE_LIMIT
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
   try {
+    // 0. Rate limiting por IP
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+    if (rateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Demasiados intentos. Espera una hora y vuelve a intentarlo." },
+        { status: 429 }
+      )
+    }
+
     // 1. Solo jueves
     if (!isThursdayInMexico()) {
       return NextResponse.json(
@@ -228,7 +269,7 @@ export async function POST(req: Request) {
     // 3. Buscar proyecto por código
     const { data: project } = await admin
       .from("projects")
-      .select("id, name, code")
+      .select("id, name, code, empresa")
       .eq("code", codigo)
       .maybeSingle()
 
@@ -256,6 +297,47 @@ export async function POST(req: Request) {
         "No pudimos leer el subtotal de tu factura. Asegúrate de subir el archivo XML del CFDI (no el PDF renombrado).",
         project.id, proyectoLabel, null
       )
+    }
+
+    // 5b. Verificar RFC del receptor (la factura debe estar emitida a la empresa correcta)
+    const receptorRfc = parseReceptorRfc(xmlText)
+    let empresaProyecto: string | null = project.empresa || null
+    if (!empresaProyecto) {
+      // Fallback: inferir del ingreso aprobado
+      const { data: ingreso } = await admin
+        .from("ingresos").select("empresa")
+        .eq("project_id", project.id).limit(1).maybeSingle()
+      empresaProyecto = ingreso?.empresa || null
+    }
+
+    if (receptorRfc) {
+      const rfcsValidos = empresaProyecto
+        ? [RFC_POR_EMPRESA[empresaProyecto]]
+        : Object.values(RFC_POR_EMPRESA) // empresa desconocida: aceptar cualquiera de las dos
+      if (!rfcsValidos.includes(receptorRfc)) {
+        const empresaEsperada = empresaProyecto === "retro_films" ? "Retro Films (RFC RFI1303229I4)" : "Retro Studio (RFC RST070309F47)"
+        return rechazar(
+          `La factura está emitida al RFC ${receptorRfc}, pero este proyecto se factura a ${empresaEsperada}. Verifica los datos de facturación que te enviamos.`,
+          project.id, proyectoLabel, subtotal
+        )
+      }
+    }
+
+    // 5c. Rechazar facturas duplicadas (mismo folio fiscal UUID)
+    const uuidFiscal = parseUuidFiscal(xmlText)
+    if (uuidFiscal) {
+      const { data: dup } = await admin
+        .from("facturas")
+        .select("id, status")
+        .eq("uuid_fiscal", uuidFiscal)
+        .in("status", ["aceptada", "pagada"])
+        .maybeSingle()
+      if (dup) {
+        return rechazar(
+          `Esta factura (folio fiscal ${uuidFiscal}) ya fue recibida y aceptada anteriormente. No es necesario volver a enviarla.`,
+          project.id, proyectoLabel, subtotal
+        )
+      }
     }
 
     // 6. Calcular el monto esperado en el control de egresos para este proveedor en este proyecto
@@ -325,6 +407,7 @@ export async function POST(req: Request) {
       proveedor_id: prov.id, project_id: project.id, proveedor_email: email,
       codigo_proyecto: codigo, subtotal, status: "aceptada",
       fecha_pago: fechaISO(fechaPago), xml_path: xmlPath, pdf_path: pdfPath,
+      uuid_fiscal: uuidFiscal,
     })
 
     // 10. Correo de confirmación

@@ -235,7 +235,7 @@ export default function Home() {
   const [savingProject, setSavingProject] = useState(false)
 
   // ── Recordatorio de juntas (client-side, cada minuto) ─────────────────────
-  const REMINDER_MINUTES = 1 // cambiar a 30 para producción
+  const REMINDER_MINUTES = 30 // minutos de anticipación del recordatorio de junta
   const firedJuntaReminders = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -255,7 +255,6 @@ export default function Home() {
         juntaTime.setHours(h, m, 0, 0)
 
         const diffMin = (juntaTime.getTime() - now.getTime()) / 60000
-        console.log(`[junta-reminder] ${junta.hora_inicio} diffMin=${diffMin.toFixed(2)}`)
 
         if (diffMin <= REMINDER_MINUTES && diffMin > -2) {
           const key = `${junta.id}-${REMINDER_MINUTES}`
@@ -1242,7 +1241,10 @@ function openEditVacation() {
       if (session) {
         fetch("/api/push/shoot-assigned", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             shootId,
             shootTitle: title,
@@ -1367,12 +1369,18 @@ function openEditVacation() {
       )
     }
 
+    const { data: { session: juntaSession } } = await supabase.auth.getSession()
+    const juntaAuthHeaders = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${juntaSession?.access_token}`,
+    }
+
     // Enviar emails con ICS adjunto
     if (juntaAttendees.length > 0 || finalExternalEmails.length > 0) {
       try {
         const res = await fetch("/api/juntas/send-invites", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: juntaAuthHeaders,
           body: JSON.stringify({
             junta: { ...payload, id: juntaId },
             attendeeEmployeeIds: juntaAttendees,
@@ -1392,7 +1400,7 @@ function openEditVacation() {
     // Push notification a todos (fire-and-forget)
     fetch("/api/push/junta-created", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: juntaAuthHeaders,
       body: JSON.stringify({
         juntaId,
         tipo:        payload.tipo,

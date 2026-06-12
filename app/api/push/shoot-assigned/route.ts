@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { sendPushToUser, markNotificationSent } from "../../../../lib/web-push"
 import { getProfileIdsForEmployees } from "../../../../lib/employee-profile"
+import { verifyApiUser } from "../../../../lib/api-auth"
 
 export async function POST(req: Request) {
   try {
+    const user = await verifyApiUser(req)
+    if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
     const { shootId, shootTitle, shootDate, employeeIds } = await req.json()
     if (!shootId || !employeeIds?.length) {
       return NextResponse.json({ ok: true, skipped: true })

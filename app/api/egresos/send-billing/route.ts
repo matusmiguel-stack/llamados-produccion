@@ -219,20 +219,12 @@ export async function POST(req: Request) {
         .select("email, nombre, apellido_paterno, apellido_materno")
       const norm = (s: string) => s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
       const target = norm(responsableNombre)
-      console.log("[billing-cc] responsableNombre:", responsableNombre, "→ normalized:", target)
-      console.log("[billing-cc] employees:", (empRows || []).map((e: any) => {
-        const full3 = norm([e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "))
-        return { full3, email: e.email }
-      }))
       const match = (empRows || []).find((e: any) => {
         const full3 = norm([e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "))
         const full2 = norm([e.nombre, e.apellido_paterno].filter(Boolean).join(" "))
         return full3 === target || full2 === target
       })
       ccEmail = match?.email ?? null
-      console.log("[billing-cc] matched:", match ? `${match.nombre} → ${match.email}` : "NONE")
-    } else {
-      console.log("[billing-cc] no responsableNombre received")
     }
 
     const nombreLabel = prov.empresa

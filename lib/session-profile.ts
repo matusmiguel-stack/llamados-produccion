@@ -8,14 +8,17 @@ export type AppProfile = {
   must_change_password?: boolean
 }
 
-export function findProfileByEmail(
-  profiles: AppProfile[] | null | undefined,
-  email: string | undefined | null
-) {
-  return profiles?.find(
-    (profile) =>
-      profile.email?.trim().toLowerCase() === email?.trim().toLowerCase()
-  )
+async function fetchOwnProfile(userId: string): Promise<AppProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle()
+  if (error) {
+    alert(error.message)
+    return null
+  }
+  return data
 }
 
 export async function requireSessionProfile(options?: {
@@ -30,14 +33,7 @@ export async function requireSessionProfile(options?: {
     return null
   }
 
-  const { data: profiles, error } = await supabase.from("profiles").select("*")
-
-  if (error) {
-    alert(error.message)
-    return null
-  }
-
-  const profile = findProfileByEmail(profiles, session.user.email)
+  const profile = await fetchOwnProfile(session.user.id)
 
   if (!profile) {
     window.location.href = "/login"
@@ -69,8 +65,7 @@ export async function redirectAfterLogin() {
     return
   }
 
-  const { data: profiles } = await supabase.from("profiles").select("*")
-  const profile = findProfileByEmail(profiles, session.user.email)
+  const profile = await fetchOwnProfile(session.user.id)
 
   if (profile?.must_change_password) {
     window.location.href = "/perfil"
