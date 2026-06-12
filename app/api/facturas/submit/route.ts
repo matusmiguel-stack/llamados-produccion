@@ -21,7 +21,11 @@ function todayInMexico(): Date {
   return new Date(y, m - 1, d)
 }
 
+// Modo pruebas: poner en true para abrir el sistema cualquier día. Regresar a false al terminar.
+const FORCE_OPEN = true
+
 function isThursdayInMexico(): boolean {
+  if (FORCE_OPEN) return true
   return todayInMexico().getDay() === 4
 }
 
