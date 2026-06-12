@@ -16,6 +16,7 @@ type EgresoItem = {
   actual_supplier_id: string | null; actual_employee_id: string | null
   supplierLabel: string; supplierType: "proveedor" | "empleado" | "none"
   section_name: string; quote_id: string; quote_name: string
+  billing_sent_at: string | null
 }
 
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
@@ -101,7 +102,7 @@ export function EgresosPanel({
         for (const section of sections) {
           const { data: raw } = await supabase
             .from("quote_items")
-            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id")
+            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at")
             .eq("section_id", section.id).order("order_index", { ascending: true })
           if (!raw) continue
 
@@ -138,6 +139,7 @@ export function EgresosPanel({
               actual_supplier_id: row.actual_supplier_id, actual_employee_id: row.actual_employee_id,
               supplierLabel, supplierType,
               section_name: section.name, quote_id: quote.id, quote_name: quote.name,
+              billing_sent_at: row.billing_sent_at ?? null,
             })
           }
         }
@@ -222,11 +224,18 @@ export function EgresosPanel({
     return data
   }
 
+  async function markBillingSent(itemIds: string[]) {
+    const now = new Date().toISOString()
+    await supabase.from("quote_items").update({ billing_sent_at: now }).in("id", itemIds)
+    setItems(prev => prev.map(it => itemIds.includes(it.id) ? { ...it, billing_sent_at: now } : it))
+  }
+
   async function sendBilling(item: EgresoItem, monto: number) {
     if (!item.actual_supplier_id) return
     setSendingBilling(item.id)
     try {
       const data = await callBillingApi(item.actual_supplier_id, [{ monto: fmt2(monto) }])
+      await markBillingSent([item.id])
       alert(`✓ Instrucciones enviadas a ${data.sentTo}${data.cc ? `\nCopia a: ${data.cc}` : ""}`)
     } catch (err: any) {
       alert("Error al enviar: " + err.message)
@@ -237,14 +246,15 @@ export function EgresosPanel({
 
   async function sendAllBilling() {
     // Agrupar ítems de proveedores por actual_supplier_id
-    const provItems: Record<string, { id: string; billingItems: { monto: string }[] }> = {}
+    const provItems: Record<string, { id: string; itemIds: string[]; billingItems: { monto: string }[] }> = {}
     for (const item of items) {
       if (item.supplierType !== "proveedor" || !item.actual_supplier_id) continue
       const monto = montoEgreso(item)
       if (monto === 0) continue
       if (!provItems[item.actual_supplier_id]) {
-        provItems[item.actual_supplier_id] = { id: item.actual_supplier_id, billingItems: [] }
+        provItems[item.actual_supplier_id] = { id: item.actual_supplier_id, itemIds: [], billingItems: [] }
       }
+      provItems[item.actual_supplier_id].itemIds.push(item.id)
       provItems[item.actual_supplier_id].billingItems.push({ monto: fmt2(monto) })
     }
     const provList = Object.values(provItems)
@@ -257,6 +267,7 @@ export function EgresosPanel({
     for (const prov of provList) {
       try {
         await callBillingApi(prov.id, prov.billingItems)
+        await markBillingSent(prov.itemIds)
         sent++
       } catch (err: any) {
         errors.push(err.message)
@@ -420,21 +431,31 @@ export function EgresosPanel({
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
                           {item.supplierType === "proveedor" && (
-                            <button
-                              onClick={() => sendBilling(item, monto)}
-                              disabled={sendingBilling === item.id}
-                              title="Enviar instrucciones de facturación"
-                              style={{
-                                ...editBtnStyle,
-                                marginRight: 6,
-                                background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
-                                border: "1px solid rgba(6,182,212,0.25)",
-                                color: "#67e8f9",
-                                opacity: sendingBilling === item.id ? 0.6 : 1,
-                              }}
-                            >
-                              {sendingBilling === item.id ? "…" : "✉ Facturar"}
-                            </button>
+                            <>
+                              {item.billing_sent_at && (
+                                <span
+                                  title={`Enviado el ${new Date(item.billing_sent_at).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`}
+                                  style={{ color: "#34d399", fontSize: 13, fontWeight: 700, marginRight: 6 }}
+                                >
+                                  ✓
+                                </span>
+                              )}
+                              <button
+                                onClick={() => sendBilling(item, monto)}
+                                disabled={sendingBilling === item.id}
+                                title={item.billing_sent_at ? "Volver a enviar instrucciones de facturación" : "Enviar instrucciones de facturación"}
+                                style={{
+                                  ...editBtnStyle,
+                                  marginRight: 6,
+                                  background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
+                                  border: "1px solid rgba(6,182,212,0.25)",
+                                  color: "#67e8f9",
+                                  opacity: sendingBilling === item.id ? 0.6 : 1,
+                                }}
+                              >
+                                {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
+                              </button>
+                            </>
                           )}
                           <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
                         </td>
