@@ -118,10 +118,43 @@ function buildHtml(params: {
         <tr>
           <td style="padding:20px 32px 0;">
             <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Instrucciones para facturar</p>
-            <div style="padding:16px 18px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
-              <p style="margin:0;font-size:14px;color:#92400e;line-height:1.7;">
-                [INSTRUCCIONES DE FACTURACIÓN — PRÓXIMAMENTE]<br>
-                Aquí irán las instrucciones específicas para proveedores.
+            <div style="padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+              <p style="margin:0;font-size:13px;color:#334155;line-height:1.7;">
+                A continuación, te hacemos llegar el proceso de facturación y pagos que se llevará a cabo a partir de ahora.
+              </p>
+              <ol style="margin:12px 0 0;padding-left:20px;font-size:13px;color:#334155;line-height:1.8;">
+                <li>En el concepto de la factura se deberá agregar la clave del proyecto (información en este correo).</li>
+                <li>Describir el servicio ofrecido a dicho proyecto.</li>
+                <li>La cantidad de la factura antes de IVA exactamente como la aprobó el productor al realizar la negociación.</li>
+                <li>Todos los requisitos del SAT claros.</li>
+              </ol>
+              <p style="margin:14px 0 0;font-size:13px;color:#334155;line-height:1.7;">
+                Las facturas se deberán subir a la página
+                <a href="https://llamados-produccion.vercel.app/facturas" style="color:#0ea5e9;text-decoration:none;font-weight:600;">llamados-produccion.vercel.app/facturas</a>
+                los días <strong>jueves</strong> de cada semana. En caso de que falte algún dato antes mencionado recibirás un correo automático con la causa por la cual fue rechazada para que se vuelva a ingresar.
+              </p>
+              <p style="margin:12px 0 0;font-size:13px;color:#334155;line-height:1.7;">
+                El sistema mandará automáticamente la confirmación de la factura junto con la fecha estimada de pago.
+              </p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Fechas de pago -->
+        <tr>
+          <td style="padding:20px 32px 0;">
+            <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Fechas estimadas de pago</p>
+            <div style="padding:18px 20px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+              <ol style="margin:0;padding-left:20px;font-size:13px;color:#78350f;line-height:1.8;">
+                <li style="margin-bottom:10px;">Facturas menores a 10 mil pesos con IVA incluido se pagarán a los próximos <strong>30 días naturales</strong>. En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
+                <li style="margin-bottom:10px;">Facturas de 10 mil pesos a 30 mil pesos con IVA incluido se pagarán a los próximos <strong>60 días naturales</strong>. En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
+                <li>Facturas de más de 30 mil pesos con IVA incluido se pagarán en los próximos <strong>75 días naturales</strong>. En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
+              </ol>
+              <p style="margin:14px 0 0;font-size:12px;color:#92400e;line-height:1.7;">
+                *Si hay una forma distinta de pago por la naturaleza del proyecto se verá directamente con el proveedor.
+              </p>
+              <p style="margin:10px 0 0;font-size:12px;font-weight:700;color:#92400e;line-height:1.7;">
+                *NO SE PODRÁ TERCERIZAR FACTURAS, DEBERÁ SER RECIBO O FACTURA A NOMBRE DEL PROVEEDOR O NOMBRE DE LA EMPRESA QUE DÉ EL SERVICIO.
               </p>
             </div>
           </td>
