@@ -419,11 +419,13 @@ export default function Home() {
 
     const channel = supabase
       .channel("calendar-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "shoots" },           scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_employees" },  scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_resources" },  scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "vacations" },        scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoots" },             scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_employees" },    scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_resources" },    scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vacations" },          scheduleReload)
       .on("postgres_changes", { event: "*", schema: "public", table: "vacation_employees" }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "juntas" },             scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "junta_attendees" },    scheduleReload)
       .subscribe((status) => {
         setLiveConnected(status === "SUBSCRIBED")
       })
