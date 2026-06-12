@@ -205,7 +205,7 @@ export default function Home() {
   const [selectedJunta, setSelectedJunta] = useState<any>(null)
   const [juntaDetailsOpen, setJuntaDetailsOpen] = useState(false)
   // junta form state
-  const [juntaTipo, setJuntaTipo] = useState<"Brief" | "PPM" | "Junta Cliente">("Brief")
+  const [juntaTipo, setJuntaTipo] = useState<"Brief" | "PPM" | "Junta Cliente" | "Junta Interna">("Brief")
   const [juntaDate, setJuntaDate] = useState("")
   const [juntaStartTime, setJuntaStartTime] = useState("09:00")
   const [juntaEndTime, setJuntaEndTime] = useState("")
@@ -503,7 +503,7 @@ export default function Home() {
     })
 
     const juntaEvents = allJuntas.map((j) => {
-      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : "🤝"
+      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : j.tipo === "Junta Interna" ? "🏠" : "🤝"
       return {
         id: `${JUNTA_EVENT_PREFIX}${j.id}`,
         title: j.titulo ? `${emoji} ${j.titulo}` : `${emoji} ${j.tipo}`,
@@ -2139,7 +2139,7 @@ function openEditVacation() {
                     <div>
                       <label style={formModalLabelStyle}>Tipo de Junta</label>
                       <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                        {(["Brief", "PPM", "Junta Cliente"] as const).map((tipo) => (
+                        {(["Brief", "PPM", "Junta Cliente", "Junta Interna"] as const).map((tipo) => (
                           <button
                             key={tipo}
                             type="button"
@@ -3031,7 +3031,7 @@ function openEditVacation() {
               <div style={formModalHeaderStyle}>
                 <div>
                   <h2 style={formModalTitleStyle}>
-                    {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : "🤝"}{" "}
+                    {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : selectedJunta.tipo === "Junta Interna" ? "🏠" : "🤝"}{" "}
                     {selectedJunta.titulo || selectedJunta.tipo}
                   </h2>
                   <p style={formModalMetaStyle}>
@@ -3147,7 +3147,7 @@ function openEditVacation() {
                   <button
                     onClick={() => {
                       // Pre-fill form for editing
-                      setJuntaTipo(selectedJunta.tipo as "Brief" | "PPM" | "Junta Cliente")
+                      setJuntaTipo(selectedJunta.tipo as "Brief" | "PPM" | "Junta Cliente" | "Junta Interna")
                       setJuntaTitulo(selectedJunta.titulo || "")
                       setJuntaDate(selectedJunta.fecha)
                       setJuntaStartTime(selectedJunta.hora_inicio || "09:00")
