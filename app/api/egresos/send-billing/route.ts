@@ -146,11 +146,14 @@ function buildHtml(params: {
             <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Fechas estimadas de pago</p>
             <div style="padding:18px 20px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
               <ol style="margin:0;padding-left:20px;font-size:13px;color:#78350f;line-height:1.8;">
-                <li style="margin-bottom:10px;">Facturas menores a 10 mil pesos con IVA incluido se pagarán a los próximos <strong>30 días naturales</strong>. En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
-                <li style="margin-bottom:10px;">Facturas de 10 mil pesos a 30 mil pesos con IVA incluido se pagarán a los próximos <strong>60 días naturales</strong>. En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
-                <li>Facturas de más de 30 mil pesos con IVA incluido se pagarán en los próximos <strong>75 días naturales</strong>. En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
+                <li style="margin-bottom:10px;">Facturas de hasta 10 mil pesos antes de IVA se pagarán a los próximos <strong>30 días hábiles</strong> (no se cuentan fines de semana). En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
+                <li style="margin-bottom:10px;">Facturas de 10 mil a 30 mil pesos antes de IVA se pagarán a los próximos <strong>60 días hábiles</strong> (no se cuentan fines de semana). En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
+                <li>Facturas de más de 30 mil pesos antes de IVA se pagarán en los próximos <strong>75 días hábiles</strong> (no se cuentan fines de semana). En la factura especificar que se realizará pago en parcialidades o definido (PPD). En este caso, el proveedor tendrá que mandar el complemento de pago (CFDI), el cual tendrá que contener el folio fiscal (UUID).</li>
               </ol>
               <p style="margin:14px 0 0;font-size:12px;color:#92400e;line-height:1.7;">
+                *En todos los casos la fecha de pago se recorre al viernes más próximo, ya que los pagos se liberan los días viernes.
+              </p>
+              <p style="margin:10px 0 0;font-size:12px;color:#92400e;line-height:1.7;">
                 *Si hay una forma distinta de pago por la naturaleza del proyecto se verá directamente con el proveedor.
               </p>
               <p style="margin:10px 0 0;font-size:12px;font-weight:700;color:#92400e;line-height:1.7;">
