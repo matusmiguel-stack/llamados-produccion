@@ -441,35 +441,36 @@ export function EgresosPanel({
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>{days}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right" }}>
-                          {item.supplierType === "proveedor" && (
-                            <>
-                              {item.billing_sent_at && (
-                                <span
-                                  title={`Enviado el ${new Date(item.billing_sent_at).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`}
-                                  style={{ color: "#34d399", fontSize: 13, fontWeight: 700, marginRight: 6 }}
+                        <td style={tdStyle}>
+                          <div style={actionStackStyle}>
+                            {item.supplierType === "proveedor" && (
+                              <>
+                                {item.billing_sent_at && (
+                                  <span
+                                    title={`Enviado el ${new Date(item.billing_sent_at).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`}
+                                    style={sentBadgeStyle}
+                                  >
+                                    ✓ Enviado
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => sendBilling(item, monto)}
+                                  disabled={sendingBilling === item.id}
+                                  title={item.billing_sent_at ? "Volver a enviar instrucciones de facturación" : "Enviar instrucciones de facturación"}
+                                  style={{
+                                    ...editBtnStyle,
+                                    background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
+                                    border: "1px solid rgba(6,182,212,0.25)",
+                                    color: "#67e8f9",
+                                    opacity: sendingBilling === item.id ? 0.6 : 1,
+                                  }}
                                 >
-                                  ✓
-                                </span>
-                              )}
-                              <button
-                                onClick={() => sendBilling(item, monto)}
-                                disabled={sendingBilling === item.id}
-                                title={item.billing_sent_at ? "Volver a enviar instrucciones de facturación" : "Enviar instrucciones de facturación"}
-                                style={{
-                                  ...editBtnStyle,
-                                  marginRight: 6,
-                                  background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
-                                  border: "1px solid rgba(6,182,212,0.25)",
-                                  color: "#67e8f9",
-                                  opacity: sendingBilling === item.id ? 0.6 : 1,
-                                }}
-                              >
-                                {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
-                              </button>
-                            </>
-                          )}
-                          <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
+                                  {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
+                                </button>
+                              </>
+                            )}
+                            <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -540,9 +541,23 @@ const cancelBtnStyle: React.CSSProperties = {
   color: "#64748b", cursor: "pointer", fontSize: 12,
 }
 const editBtnStyle: React.CSSProperties = {
-  padding: "3px 10px", borderRadius: 6,
+  width: "100%", boxSizing: "border-box", textAlign: "center",
+  padding: "4px 10px", borderRadius: 6,
   border: "1px solid rgba(148,163,184,0.18)", background: "rgba(255,255,255,0.04)",
   color: "#94a3b8", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+}
+
+const actionStackStyle: React.CSSProperties = {
+  display: "flex", flexDirection: "column", alignItems: "stretch", gap: 5,
+  width: "100%", maxWidth: 120, margin: "0 auto",
+}
+
+const sentBadgeStyle: React.CSSProperties = {
+  width: "100%", boxSizing: "border-box", textAlign: "center",
+  padding: "4px 10px", borderRadius: 6,
+  border: "1px solid rgba(52,211,153,0.24)", background: "rgba(52,211,153,0.10)",
+  color: "#34d399", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+  cursor: "default",
 }
 
 // ─── SupplierCombobox ─────────────────────────────────────────────────────────
