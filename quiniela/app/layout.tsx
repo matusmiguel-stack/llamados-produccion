@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <head>
-        <link rel="apple-touch-icon" href="/logo-quiniela.png" />
+        <link rel="apple-touch-icon" href="/app_icon.png" />
         <meta name="theme-color" content="#0a0a0a" />
       </head>
       <body>{children}</body>
