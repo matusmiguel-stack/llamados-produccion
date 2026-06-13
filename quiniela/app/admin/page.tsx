@@ -400,7 +400,10 @@ export default function AdminPage() {
               <form onSubmit={handleGuardarPartido} className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 text-center">
-                    <p className="text-xs text-white/40 mb-1 truncate">{editandoPartido.bandera_local} {editandoPartido.equipo_local}</p>
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      {editandoPartido.bandera_local && <img src={editandoPartido.bandera_local} alt="" className="w-5 h-5 object-contain" />}
+                      <p className="text-xs text-white/40 truncate">{editandoPartido.equipo_local}</p>
+                    </div>
                     <input
                       type="number" min="0" max="99"
                       value={golesLocal}
@@ -411,7 +414,10 @@ export default function AdminPage() {
                   </div>
                   <span className="text-white/30 text-xl font-bold mt-5">—</span>
                   <div className="flex-1 text-center">
-                    <p className="text-xs text-white/40 mb-1 truncate">{editandoPartido.bandera_visitante} {editandoPartido.equipo_visitante}</p>
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      {editandoPartido.bandera_visitante && <img src={editandoPartido.bandera_visitante} alt="" className="w-5 h-5 object-contain" />}
+                      <p className="text-xs text-white/40 truncate">{editandoPartido.equipo_visitante}</p>
+                    </div>
                     <input
                       type="number" min="0" max="99"
                       value={golesVisitante}
@@ -440,7 +446,7 @@ export default function AdminPage() {
                   </button>
                   <button type="submit" disabled={guardandoPartido}
                     className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors">
-                    {guardandoPartido ? 'Guardando…' : 'Guardar y calcular puntos'}
+                    {guardandoPartido ? 'Guardando…' : 'Modificar resultado'}
                   </button>
                 </div>
               </form>
@@ -543,9 +549,13 @@ export default function AdminPage() {
                     className="bg-white/5 border border-white/10 hover:border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3 text-left transition-colors w-full"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-medium truncate">
-                        {p.bandera_local} {p.equipo_local} <span className="text-white/30">vs</span> {p.equipo_visitante} {p.bandera_visitante}
-                      </p>
+                      <div className="flex items-center gap-2 truncate">
+                        {p.bandera_local && <img src={p.bandera_local} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                        <span className="text-white text-sm font-medium truncate">{p.equipo_local}</span>
+                        <span className="text-white/30 text-sm flex-shrink-0">vs</span>
+                        <span className="text-white text-sm font-medium truncate">{p.equipo_visitante}</span>
+                        {p.bandera_visitante && <img src={p.bandera_visitante} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                      </div>
                       <p className="text-white/25 text-xs mt-0.5">{formatFecha(p.fecha)} · {p.fase}</p>
                     </div>
                     <div className="flex-shrink-0 text-right">
