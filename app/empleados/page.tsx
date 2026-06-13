@@ -20,6 +20,16 @@ type Employee = {
   cumpleanos: string | null
 }
 
+type SalaryChange = {
+  id: string
+  employee_id: string
+  sueldo_anterior: number | null
+  sueldo_nuevo: number
+  effective_date: string
+  applied: boolean
+  created_at: string
+}
+
 type EmployeeForm = {
   nombre: string
   apellido_paterno: string
@@ -52,6 +62,11 @@ export default function EmpleadosPage() {
   const [editForm, setEditForm] = useState<EmployeeForm>(emptyForm)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [salaryChanges, setSalaryChanges] = useState<SalaryChange[]>([])
+  const [adjustingId, setAdjustingId] = useState("")
+  const [adjustMonto, setAdjustMonto] = useState("")
+  const [adjustFecha, setAdjustFecha] = useState("")
+  const [savingAdjust, setSavingAdjust] = useState(false)
 
   const isAdmin = profile?.role === "admin"
 
@@ -78,15 +93,51 @@ export default function EmpleadosPage() {
 
     setProfile(myProfile)
 
-    const { data, error } = await supabase
-      .from("employees")
+    // Aplicar aumentos programados cuya fecha ya llegó
+    const todayStr = new Date().toLocaleDateString("sv")
+    const { data: pendientes } = await supabase
+      .from("employee_salary_changes")
       .select("*")
-      .order("nombre", { ascending: true })
-      .order("apellido_paterno", { ascending: true })
+      .eq("applied", false)
+      .lte("effective_date", todayStr)
+
+    if (pendientes && pendientes.length > 0) {
+      const latestByEmp: Record<string, SalaryChange> = {}
+      for (const change of pendientes as SalaryChange[]) {
+        const current = latestByEmp[change.employee_id]
+        if (!current || change.effective_date > current.effective_date) {
+          latestByEmp[change.employee_id] = change
+        }
+      }
+      for (const change of Object.values(latestByEmp)) {
+        await supabase
+          .from("employees")
+          .update({ sueldo_mensual: change.sueldo_nuevo })
+          .eq("id", change.employee_id)
+      }
+      await supabase
+        .from("employee_salary_changes")
+        .update({ applied: true })
+        .in("id", pendientes.map((p) => p.id))
+    }
+
+    const [{ data, error }, { data: changes }] = await Promise.all([
+      supabase
+        .from("employees")
+        .select("*")
+        .order("nombre", { ascending: true })
+        .order("apellido_paterno", { ascending: true }),
+      supabase
+        .from("employee_salary_changes")
+        .select("*")
+        .order("effective_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+    ])
 
     if (error) return alert(error.message)
 
     setEmployees(data || [])
+    setSalaryChanges((changes as SalaryChange[]) || [])
   }
 
   useEffect(() => {
@@ -176,6 +227,64 @@ export default function EmpleadosPage() {
     if (error) return alert(error.message)
 
     if (editingId === id) cancelEdit()
+    await loadPage()
+  }
+
+  function startAdjust(employee: Employee) {
+    setAdjustingId(employee.id)
+    setAdjustMonto("")
+    setAdjustFecha("")
+    if (editingId === employee.id) cancelEdit()
+  }
+
+  function cancelAdjust() {
+    setAdjustingId("")
+    setAdjustMonto("")
+    setAdjustFecha("")
+  }
+
+  async function saveAdjust(employee: Employee) {
+    const monto = Number(adjustMonto)
+
+    if (!adjustMonto.trim() || Number.isNaN(monto) || monto < 0) {
+      alert("Ingresa la nueva cantidad mensual")
+      return
+    }
+    if (!adjustFecha) {
+      alert("Selecciona a partir de qué día se aplicará el ajuste")
+      return
+    }
+
+    setSavingAdjust(true)
+    const todayStr = new Date().toLocaleDateString("sv")
+    const applyNow = adjustFecha <= todayStr
+
+    const { error } = await supabase.from("employee_salary_changes").insert({
+      employee_id: employee.id,
+      sueldo_anterior: employee.sueldo_mensual,
+      sueldo_nuevo: monto,
+      effective_date: adjustFecha,
+      applied: applyNow,
+    })
+
+    if (error) {
+      setSavingAdjust(false)
+      return alert(error.message)
+    }
+
+    if (applyNow) {
+      const { error: updateError } = await supabase
+        .from("employees")
+        .update({ sueldo_mensual: monto })
+        .eq("id", employee.id)
+      if (updateError) {
+        setSavingAdjust(false)
+        return alert(updateError.message)
+      }
+    }
+
+    setSavingAdjust(false)
+    cancelAdjust()
     await loadPage()
   }
 
@@ -311,54 +420,158 @@ export default function EmpleadosPage() {
                     )
                   }
 
+                  const history = salaryChanges.filter((c) => c.employee_id === employee.id)
+                  const pendingRaise = history.find((c) => !c.applied)
+                  const isAdjusting = adjustingId === employee.id
+
                   return (
-                    <div
-                      key={employee.id}
-                      style={{
-                        ...rowStyle,
-                        gridTemplateColumns: isMobile
-                          ? "1fr"
-                          : "minmax(180px, 1.2fr) 130px 110px 96px 96px 170px",
-                      }}
-                    >
-                      <div style={employeeCellStyle}>
-                        <span style={avatarStyle(name)}>{name.charAt(0).toUpperCase()}</span>
-                        <div style={{ minWidth: 0 }}>
-                          <p style={employeeNameStyle}>{name}</p>
-                          <p style={employeeMetaStyle}>{employee.email}</p>
-                          {employee.nickname && (
-                            <p style={employeeMetaStyle}>@{employee.nickname}</p>
+                    <div key={employee.id} style={{ display: "grid", gap: 8 }}>
+                      <div
+                        style={{
+                          ...rowStyle,
+                          gridTemplateColumns: isMobile
+                            ? "1fr"
+                            : "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px",
+                        }}
+                      >
+                        <div style={employeeCellStyle}>
+                          <span style={avatarStyle(name)}>{name.charAt(0).toUpperCase()}</span>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={employeeNameStyle}>{name}</p>
+                            <p style={employeeMetaStyle}>{employee.email}</p>
+                            {employee.nickname && (
+                              <p style={employeeMetaStyle}>@{employee.nickname}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={metaCellStyle}>
+                          <span style={positionBadgeStyle}>{employee.puesto}</span>
+                        </div>
+
+                        <div style={{ ...metaCellStyle, flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                          <span style={salaryStyle}>{formatSalary(employee.sueldo_mensual)}</span>
+                          {pendingRaise && (
+                            <span style={pendingRaiseStyle}>
+                              → {formatSalary(pendingRaise.sueldo_nuevo)} desde {formatDate(pendingRaise.effective_date)}
+                            </span>
                           )}
+                        </div>
+
+                        <div style={metaCellStyle}>
+                          <span style={dateStyle}>{formatDate(employee.fecha_ingreso)}</span>
+                        </div>
+
+                        <div style={metaCellStyle}>
+                          <span style={dateStyle}>{formatBirthday(employee.cumpleanos)}</span>
+                        </div>
+
+                        <div style={rowActionsStyle}>
+                          <button
+                            onClick={() => (isAdjusting ? cancelAdjust() : startAdjust(employee))}
+                            style={isAdjusting ? primaryButtonStyle : secondaryButtonStyle}
+                          >
+                            Sueldo
+                          </button>
+                          <button onClick={() => startEdit(employee)} style={secondaryButtonStyle}>
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => deleteEmployee(employee.id, name)}
+                            style={dangerButtonStyle}
+                          >
+                            Borrar
+                          </button>
                         </div>
                       </div>
 
-                      <div style={metaCellStyle}>
-                        <span style={positionBadgeStyle}>{employee.puesto}</span>
-                      </div>
+                      {isAdjusting && (
+                        <div style={adjustPanelStyle}>
+                          <p style={adjustTitleStyle}>Ajuste de sueldo · {name}</p>
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: 10,
+                              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr auto",
+                              alignItems: "end",
+                            }}
+                          >
+                            <div style={fieldStyle}>
+                              <span style={fieldLabelStyle}>Sueldo actual</span>
+                              <span style={{ ...salaryStyle, fontSize: 15, padding: "8px 0" }}>
+                                {formatSalary(employee.sueldo_mensual)}
+                              </span>
+                            </div>
 
-                      <div style={metaCellStyle}>
-                        <span style={salaryStyle}>{formatSalary(employee.sueldo_mensual)}</span>
-                      </div>
+                            <Field label="Nueva cantidad mensual">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={adjustMonto}
+                                onChange={(e) => setAdjustMonto(e.target.value)}
+                                style={inputStyle}
+                              />
+                            </Field>
 
-                      <div style={metaCellStyle}>
-                        <span style={dateStyle}>{formatDate(employee.fecha_ingreso)}</span>
-                      </div>
+                            <DatePickerField
+                              label="Se aplica a partir de"
+                              value={adjustFecha}
+                              labelStyle={fieldLabelStyle}
+                              onChange={setAdjustFecha}
+                            />
 
-                      <div style={metaCellStyle}>
-                        <span style={dateStyle}>{formatBirthday(employee.cumpleanos)}</span>
-                      </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={() => saveAdjust(employee)}
+                                disabled={savingAdjust}
+                                style={{ ...primaryButtonStyle, opacity: savingAdjust ? 0.6 : 1 }}
+                              >
+                                {savingAdjust ? "Guardando…" : "Guardar ajuste"}
+                              </button>
+                              <button onClick={cancelAdjust} style={secondaryButtonStyle}>
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
 
-                      <div style={rowActionsStyle}>
-                        <button onClick={() => startEdit(employee)} style={secondaryButtonStyle}>
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => deleteEmployee(employee.id, name)}
-                          style={dangerButtonStyle}
-                        >
-                          Borrar
-                        </button>
-                      </div>
+                          <div style={historyBlockStyle}>
+                            <p style={historyTitleStyle}>Histórico de sueldos</p>
+                            {history.length === 0 ? (
+                              <p style={historyEmptyStyle}>
+                                Sin ajustes registrados. El sueldo actual es el registrado desde su ingreso
+                                ({formatDate(employee.fecha_ingreso)}).
+                              </p>
+                            ) : (
+                              <div style={{ display: "grid", gap: 6 }}>
+                                {history.map((change) => (
+                                  <div key={change.id} style={historyRowStyle}>
+                                    <span style={dateStyle}>{formatDate(change.effective_date)}</span>
+                                    <span style={historyAmountStyle}>
+                                      {change.sueldo_anterior != null
+                                        ? `${formatSalary(change.sueldo_anterior)} → `
+                                        : ""}
+                                      <strong style={{ color: "#86efac" }}>
+                                        {formatSalary(change.sueldo_nuevo)}
+                                      </strong>
+                                    </span>
+                                    <span
+                                      style={
+                                        change.applied
+                                          ? historyBadgeAppliedStyle
+                                          : historyBadgePendingStyle
+                                      }
+                                    >
+                                      {change.applied ? "Aplicado" : "Programado"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })
@@ -661,7 +874,7 @@ const inputStyle: React.CSSProperties = {
 
 const tableHeaderStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(180px, 1.2fr) 130px 110px 96px 96px 170px",
+  gridTemplateColumns: "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px",
   gap: 12,
   padding: "0 4px 10px",
   color: "#64748b",
@@ -734,6 +947,84 @@ const rowActionsStyle: React.CSSProperties = {
   display: "flex",
   gap: 8,
   flexWrap: "wrap",
+}
+
+const pendingRaiseStyle: React.CSSProperties = {
+  color: "#fbbf24",
+  fontSize: 11,
+  fontWeight: 600,
+}
+
+const adjustPanelStyle: React.CSSProperties = {
+  padding: "14px 16px",
+  borderRadius: 12,
+  background: "rgba(124,58,237,0.06)",
+  border: "1px solid rgba(167,139,250,0.22)",
+}
+
+const adjustTitleStyle: React.CSSProperties = {
+  margin: "0 0 12px",
+  color: "#f8fafc",
+  fontSize: 13,
+  fontWeight: 600,
+}
+
+const historyBlockStyle: React.CSSProperties = {
+  marginTop: 14,
+  paddingTop: 12,
+  borderTop: "1px solid rgba(148,163,184,0.12)",
+}
+
+const historyTitleStyle: React.CSSProperties = {
+  margin: "0 0 8px",
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
+}
+
+const historyEmptyStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 12,
+}
+
+const historyRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: "7px 10px",
+  borderRadius: 8,
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(255,255,255,0.05)",
+  flexWrap: "wrap",
+}
+
+const historyAmountStyle: React.CSSProperties = {
+  color: "#cbd5e1",
+  fontSize: 13,
+  flex: 1,
+}
+
+const historyBadgeAppliedStyle: React.CSSProperties = {
+  padding: "2px 8px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 600,
+  background: "rgba(52,211,153,0.12)",
+  border: "1px solid rgba(52,211,153,0.24)",
+  color: "#6ee7b7",
+}
+
+const historyBadgePendingStyle: React.CSSProperties = {
+  padding: "2px 8px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 600,
+  background: "rgba(251,191,36,0.12)",
+  border: "1px solid rgba(251,191,36,0.26)",
+  color: "#fbbf24",
 }
 
 const emptyStateStyle: React.CSSProperties = {

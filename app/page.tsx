@@ -215,6 +215,7 @@ export default function Home() {
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
   const [juntaExternalEmails, setJuntaExternalEmails] = useState<string[]>([])
   const [juntaEmailInput, setJuntaEmailInput] = useState("")
+  const [externalContacts, setExternalContacts] = useState<string[]>([])
   const [juntaAttendeeSearch, setJuntaAttendeeSearch] = useState("")
   const [juntaAttendeeDropOpen, setJuntaAttendeeDropOpen] = useState(false)
   const [savingEntry, setSavingEntry] = useState(false)
@@ -391,6 +392,14 @@ export default function Home() {
     }
     setAllJuntas(juntasData || [])
     setJuntaAttendeeMap(attMap)
+
+    // Memoria de emails externos para autocompletar invitaciones
+    const { data: contactsData } = await supabase
+      .from("external_contacts")
+      .select("email")
+      .order("invite_count", { ascending: false })
+      .order("last_used_at", { ascending: false })
+    setExternalContacts((contactsData || []).map((c) => c.email))
   }
 
   useEffect(() => {
@@ -2369,6 +2378,7 @@ function openEditVacation() {
                         </div>
                       )}
                       <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
                         <input
                           type="email"
                           value={juntaEmailInput}
@@ -2376,16 +2386,61 @@ function openEditVacation() {
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === ",") {
                               e.preventDefault()
-                              const email = juntaEmailInput.trim().replace(/,$/, "")
+                              const typed = juntaEmailInput.trim().replace(/,$/, "")
+                              // Si hay sugerencias, Enter toma la primera coincidencia
+                              const q = typed.toLowerCase()
+                              const firstMatch = q
+                                ? externalContacts.find(c => c.includes(q) && !juntaExternalEmails.includes(c))
+                                : undefined
+                              const email = typed.includes("@") ? typed : (firstMatch || typed)
                               if (email.includes("@") && !juntaExternalEmails.includes(email)) {
                                 setJuntaExternalEmails(prev => [...prev, email])
                               }
                               setJuntaEmailInput("")
                             }
                           }}
-                          style={formModalInputStyle}
+                          style={{ ...formModalInputStyle, width: "100%" }}
                           placeholder="nombre@empresa.com — Enter para agregar"
                         />
+                        {(() => {
+                          const q = juntaEmailInput.trim().toLowerCase()
+                          if (!q) return null
+                          const matches = externalContacts
+                            .filter(c => c.includes(q) && !juntaExternalEmails.includes(c) && c !== q)
+                            .slice(0, 6)
+                          if (matches.length === 0) return null
+                          return (
+                            <div style={{
+                              position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50,
+                              background: "rgba(8,12,24,0.98)", border: "1px solid rgba(56,189,248,0.25)",
+                              borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+                              maxHeight: 200, overflowY: "auto", padding: "4px 0",
+                            }}>
+                              <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 0.7 }}>
+                                Contactos anteriores
+                              </div>
+                              {matches.map((email) => (
+                                <button
+                                  key={email}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    setJuntaExternalEmails(prev => [...prev, email])
+                                    setJuntaEmailInput("")
+                                  }}
+                                  style={{
+                                    display: "block", width: "100%", textAlign: "left",
+                                    padding: "7px 12px", background: "none", border: "none",
+                                    color: "#7dd3fc", fontSize: 12, cursor: "pointer",
+                                  }}
+                                >
+                                  {email}
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        })()}
+                        </div>
                         <button
                           type="button"
                           onClick={() => {

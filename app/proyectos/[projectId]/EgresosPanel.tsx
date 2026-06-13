@@ -336,7 +336,19 @@ export function EgresosPanel({
             </div>
 
             <div style={tableWrapStyle}>
-              <table style={tableStyle}>
+              <table style={isMobile ? tableStyle : { ...tableStyle, tableLayout: "fixed" }}>
+                {!isMobile && (
+                  <colgroup>
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "24%" }} />
+                    <col style={{ width: "21%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "11%" }} />
+                  </colgroup>
+                )}
                 <thead>
                   <tr>
                     {["Sección", "Rubro / Concepto", "Proveedor / Empleado", "Qty", "Días", "P. Unitario", "Monto", ""].map((h, i) => (
@@ -362,11 +374,11 @@ export function EgresosPanel({
                       return (
                         <tr key={item.id} style={{ background: "rgba(167,139,250,0.06)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
                           <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
-                          <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
                             {item.description}
                           </td>
                           {/* Selector proveedor */}
-                          <td style={{ ...tdStyle, minWidth: 200 }}>
+                          <td style={tdStyle}>
                             <SupplierCombobox
                               value={editState.contact}
                               onChange={val => setEditState(s => ({ ...s, contact: val }))}
@@ -388,7 +400,7 @@ export function EgresosPanel({
                           <td style={tdStyle}>
                             <input type="number" value={editState.unit_price}
                               onChange={e => setEditState(s => ({ ...s, unit_price: e.target.value }))}
-                              placeholder={String(price)} style={{ ...editInputStyle, width: 90 }} />
+                              placeholder={String(price)} style={editInputStyle} />
                           </td>
                           {/* Preview monto */}
                           <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
@@ -412,7 +424,7 @@ export function EgresosPanel({
                         borderBottom: "1px solid rgba(148,163,184,0.07)",
                       }}>
                         <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
-                        <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
                           {item.description}
                         </td>
                         <td style={tdStyle}>
@@ -429,7 +441,7 @@ export function EgresosPanel({
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>{days}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
+                        <td style={{ ...tdStyle, textAlign: "right" }}>
                           {item.supplierType === "proveedor" && (
                             <>
                               {item.billing_sent_at && (
@@ -508,12 +520,12 @@ const tableStyle: React.CSSProperties      = { width: "100%", borderCollapse: "c
 const thStyle: React.CSSProperties = {
   padding: "9px 12px", textAlign: "left", fontSize: 11, fontWeight: 700,
   color: "#475569", textTransform: "uppercase", letterSpacing: 0.6,
-  borderBottom: "1px solid rgba(148,163,184,0.12)", background: "rgba(255,255,255,0.025)", whiteSpace: "nowrap",
+  borderBottom: "1px solid rgba(148,163,184,0.12)", background: "rgba(255,255,255,0.025)",
 }
 const tdStyle: React.CSSProperties = { padding: "9px 12px", fontSize: 13, color: "#cbd5e1", verticalAlign: "middle" }
 
 const editInputStyle: React.CSSProperties = {
-  width: 64, padding: "4px 6px", borderRadius: 6,
+  width: "100%", maxWidth: 90, boxSizing: "border-box", padding: "4px 6px", borderRadius: 6,
   border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
   color: "#f8fafc", fontSize: 12, outline: "none", textAlign: "right",
 }
@@ -668,6 +680,6 @@ function supplierBadgeStyle(type: "proveedor" | "empleado" | "none"): React.CSSP
     color:      isEmp ? "#34d399" : "#a78bfa",
     background: isEmp ? "rgba(52,211,153,0.10)"  : "rgba(124,58,237,0.12)",
     border:     isEmp ? "1px solid rgba(52,211,153,0.22)" : "1px solid rgba(167,139,250,0.22)",
-    whiteSpace: "nowrap", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis",
+    whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis",
   }
 }

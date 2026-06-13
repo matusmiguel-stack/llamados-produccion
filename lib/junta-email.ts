@@ -14,6 +14,7 @@ const FROM = "Retro <news@retrocasaproductora.com>"
 function generateICS(junta: {
   id: string
   tipo: string
+  titulo?: string | null
   fecha: string
   hora_inicio: string
   hora_fin?: string | null
@@ -43,7 +44,7 @@ function generateICS(junta: {
     `DTSTAMP:${stamp}`,
     dtStart,
     dtEnd,
-    `SUMMARY:${(junta as any).titulo ? `${junta.tipo}: ${(junta as any).titulo}` : junta.tipo} — Retro Casa Productora`,
+    `SUMMARY:${junta.titulo ? `${junta.tipo}: ${junta.titulo}` : junta.tipo} — Retro Casa Productora`,
     junta.link ? `LOCATION:${junta.link}` : null,
     junta.notas
       ? `DESCRIPTION:${junta.notas.replace(/\n/g, "\\n").replace(/,/g, "\\,")}`
@@ -61,6 +62,7 @@ function generateICS(junta: {
 
 function buildEmailHtml(junta: {
   tipo: string
+  titulo?: string | null
   fecha: string
   hora_inicio: string
   hora_fin?: string | null
@@ -68,6 +70,7 @@ function buildEmailHtml(junta: {
   link?: string | null
 }): string {
   const emoji = junta.tipo === "Brief" ? "📋" : junta.tipo === "PPM" ? "🎬" : "🤝"
+  const headline = junta.titulo || junta.tipo
 
   const [year, month, day] = junta.fecha.split("-")
   const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
@@ -90,7 +93,8 @@ function buildEmailHtml(junta: {
         <tr>
           <td style="background:linear-gradient(135deg,#1e1b4b,#0f172a);padding:28px 32px;text-align:center;">
             <p style="margin:0;color:#a78bfa;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Retro Casa Productora</p>
-            <h1 style="margin:8px 0 0;color:#f8fafc;font-size:26px;font-weight:700;">${emoji} ${junta.tipo}</h1>
+            <h1 style="margin:8px 0 0;color:#f8fafc;font-size:28px;font-weight:700;line-height:1.25;">${emoji} ${headline}</h1>
+            ${junta.titulo ? `<p style="margin:8px 0 0;"><span style="display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.30);color:#c4b5fd;font-size:12px;font-weight:600;">${junta.tipo}</span></p>` : ""}
           </td>
         </tr>
 
@@ -156,6 +160,7 @@ export async function sendJuntaInvites(params: {
   junta: {
     id: string
     tipo: string
+    titulo?: string | null
     fecha: string
     hora_inicio: string
     hora_fin?: string | null
@@ -183,6 +188,32 @@ export async function sendJuntaInvites(params: {
   // 2. External emails
   const externalEmails = (junta.external_emails || []).filter((e) => e.includes("@"))
 
+  // Guardar contactos externos para autocompletar en futuras juntas
+  if (externalEmails.length > 0) {
+    try {
+      const normalized = [...new Set(externalEmails.map((e) => e.trim().toLowerCase()))]
+      const { data: existing } = await admin
+        .from("external_contacts")
+        .select("id,email,invite_count")
+        .in("email", normalized)
+      const existingByEmail = new Map((existing || []).map((c) => [c.email, c]))
+      const now = new Date().toISOString()
+      for (const email of normalized) {
+        const found = existingByEmail.get(email)
+        if (found) {
+          await admin
+            .from("external_contacts")
+            .update({ invite_count: found.invite_count + 1, last_used_at: now })
+            .eq("id", found.id)
+        } else {
+          await admin.from("external_contacts").insert({ email })
+        }
+      }
+    } catch {
+      // La memoria de contactos nunca debe bloquear el envío de invitaciones
+    }
+  }
+
   const allRecipients = [...new Set([...employeeEmails, ...externalEmails])]
   if (!allRecipients.length) {
     const debug = `employeeEmails=${JSON.stringify(employeeEmails)} externalEmails=${JSON.stringify(externalEmails)} ids=${JSON.stringify(attendeeEmployeeIds)}`
@@ -196,7 +227,7 @@ export async function sendJuntaInvites(params: {
   const emoji = junta.tipo === "Brief" ? "📋" : junta.tipo === "PPM" ? "🎬" : "🤝"
   const [year, month, day] = junta.fecha.split("-")
   const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
-  const subjectLabel = (junta as any).titulo || junta.tipo
+  const subjectLabel = junta.titulo || junta.tipo
   const subject = `${emoji} ${subjectLabel} · ${parseInt(day)} ${meses[parseInt(month)-1]} ${year} — Retro Casa`
 
   // 4. Send one email per recipient (Resend free tier doesn't support BCC well)

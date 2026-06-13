@@ -100,14 +100,21 @@ export function AppSidebar({
       >
         <div style={sidebarTopStyle}>
           <div style={brandZoneStyle}>
-            <Image
-              src="/logo-retro.png"
-              alt="Retro"
-              width={132}
-              height={48}
-              style={{ objectFit: "contain", height: "auto" }}
-              priority
-            />
+            <Link
+              href="/"
+              onClick={() => isMobile && onMenuClose()}
+              aria-label="Ir al calendario general"
+              style={{ display: "inline-flex" }}
+            >
+              <Image
+                src="/logo-retro.png"
+                alt="Retro"
+                width={132}
+                height={48}
+                style={{ objectFit: "contain", height: "auto" }}
+                priority
+              />
+            </Link>
           </div>
 
           {!mustChangePassword && (
@@ -155,7 +162,6 @@ export function AppSidebar({
               <span style={avatarStyle}>{initial}</span>
               <div style={profileMetaStyle}>
                 <p style={profileNameStyle}>{displayName}</p>
-                <p style={profileEmailStyle}>{email}</p>
               </div>
             </div>
             <div style={profileFooterRowStyle}>
@@ -475,15 +481,6 @@ const profileNameStyle: React.CSSProperties = {
   color: "#f8fafc",
   fontSize: 13,
   fontWeight: 600,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-}
-
-const profileEmailStyle: React.CSSProperties = {
-  margin: "2px 0 0",
-  color: "#64748b",
-  fontSize: 11,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
