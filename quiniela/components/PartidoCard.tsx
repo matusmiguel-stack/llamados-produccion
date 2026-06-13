@@ -14,6 +14,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
   const [visitante, setVisitante] = useState<string>(partido.prediccion?.goles_visitante?.toString() ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [tienePred, setTienePred] = useState(!!partido.prediccion)
   const [error, setError] = useState('')
 
   const fecha = new Date(partido.fecha)
@@ -41,6 +42,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
         setError(d.error)
       } else {
         setSaved(true)
+        setTienePred(true)
         onSave?.()
         setTimeout(() => setSaved(false), 2000)
       }
@@ -126,7 +128,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
             disabled={saving || local === '' || visitante === ''}
             className="text-sm bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-30 text-white px-5 py-2 rounded-xl font-medium transition-all shadow-md shadow-amber-900/20"
           >
-            {saved ? '✓ Guardado' : saving ? 'Guardando…' : 'Guardar'}
+            {saved ? '✓ Guardado' : saving ? 'Guardando…' : tienePred ? 'Modificar' : 'Guardar'}
           </button>
         </div>
       )}
