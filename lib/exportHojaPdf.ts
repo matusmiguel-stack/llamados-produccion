@@ -215,6 +215,21 @@ function kv(doc: jsPDF, x: number, y: number, w: number, label: string, value: s
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
+async function fetchImageBase64(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url)
+    const blob = await resp.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
 export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -222,46 +237,39 @@ export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
     format: "letter",
   })
 
-  let y = MARGIN
+  const pageW = 215.9
+  const headerImgH = 30
+  const headerDataUrl = await fetchImageBase64("/pdf-header-detail.png")
+
+  let y = 0
   const x = MARGIN
   const W = CONTENT_W
 
   // ═══════════════════════════════════════════════════════════════
-  // HEADER BAR
+  // HEADER IMAGE (full bleed, sin márgenes)
   // ═══════════════════════════════════════════════════════════════
-  setBg(doc, C_BG_HEADER)
-  doc.rect(x, y, W, 18, "F")
-
-  // Company name
-  setColor(doc, "#ffffff")
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(11)
-  doc.text("RETRO CASA PRODUCTORA", x + 3, y + 7)
-
-  // HOJA DE LLAMADO label
-  setColor(doc, C_PURPLE_LIGHT)
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(8)
-  doc.text("HOJA DE LLAMADO", x + 3, y + 12.5)
-
-  if (projectName) {
-    setColor(doc, "#94a3b8")
-    doc.setFontSize(7)
-    doc.text(projectName, x + 3, y + 16.5)
+  if (headerDataUrl) {
+    doc.addImage(headerDataUrl, "PNG", 0, 0, pageW, headerImgH)
+  } else {
+    setBg(doc, C_BG_HEADER)
+    doc.rect(0, 0, pageW, headerImgH, "F")
+    setColor(doc, "#ffffff")
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(11)
+    doc.text("RETRO CASA PRODUCTORA", x + 3, 12)
   }
 
-  // Día X de Y (top right)
+  // Día X de Y — encima de la imagen, alineado a la derecha
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(22)
-  const diaStr = `DÍA ${data.dia_num}`
-  doc.text(diaStr, x + W - 3, y + 11, { align: "right" })
+  doc.text(`DÍA ${data.dia_num}`, x + W - 3, headerImgH - 12, { align: "right" })
   setColor(doc, "#a78bfa")
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8)
-  doc.text(`de ${data.dia_total}`, x + W - 3, y + 16, { align: "right" })
+  doc.text(`de ${data.dia_total}`, x + W - 3, headerImgH - 6, { align: "right" })
 
-  y += 20
+  y = headerImgH + 4
 
   // ═══════════════════════════════════════════════════════════════
   // INFO STRIP: fecha | título
