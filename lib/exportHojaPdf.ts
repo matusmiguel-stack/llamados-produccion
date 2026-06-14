@@ -259,15 +259,16 @@ export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
     doc.text("RETRO CASA PRODUCTORA", x + 3, 12)
   }
 
-  // Día X de Y — encima de la imagen, alineado a la derecha
+  // Día X de Y — centrado horizontal y vertical sobre la imagen
+  const centerX = pageW / 2
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(22)
-  doc.text(`DÍA ${data.dia_num}`, x + W - 3, headerImgH - 12, { align: "right" })
+  doc.text(`DÍA ${data.dia_num}`, centerX, headerImgH / 2 - 1, { align: "center" })
   setColor(doc, "#a78bfa")
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8)
-  doc.text(`de ${data.dia_total}`, x + W - 3, headerImgH - 6, { align: "right" })
+  doc.text(`de ${data.dia_total}`, centerX, headerImgH / 2 + 6, { align: "center" })
 
   y = headerImgH + 4
 
