@@ -93,8 +93,13 @@ export default function CalendarioPage() {
     init()
   }, [router, codigo])
 
+  function estaBloquado(partido: Partido): boolean {
+    const lockTime = new Date(partido.fecha).getTime() - 60 * 60 * 1000
+    return Date.now() >= lockTime
+  }
+
   async function abrirPredicciones(partido: Partido) {
-    if (partido.estado !== 'finalizado' || !grupoId) return
+    if (!estaBloquado(partido) || !grupoId) return
     setModalPartido(partido)
     setPreds([])
     setLoadingPreds(true)
@@ -166,7 +171,8 @@ export default function CalendarioPage() {
                 {diaActivo.partidos.map((p) => {
                   const fecha = new Date(p.fecha)
                   const hora  = fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-                  const finalizado = p.estado === 'finalizado'
+                  const finalizado  = p.estado === 'finalizado'
+                  const bloqueado   = estaBloquado(p)
                   const estadoColor = {
                     pendiente:  'text-white/25',
                     en_curso:   'text-green-400',
@@ -178,7 +184,7 @@ export default function CalendarioPage() {
                       key={p.id}
                       onClick={() => abrirPredicciones(p)}
                       className={`relative bg-white/4 border rounded-2xl overflow-hidden transition-all ${
-                        finalizado
+                        bloqueado
                           ? 'border-white/12 cursor-pointer hover:bg-white/7 hover:border-amber-400/20 active:scale-[0.99]'
                           : 'border-white/8'
                       }`}
@@ -188,11 +194,11 @@ export default function CalendarioPage() {
                       {/* Hora + fase */}
                       <div className="flex items-center justify-between px-4 pt-3 pb-2">
                         <span className={`text-xs font-mono font-semibold ${estadoColor}`}>
-                          {p.estado === 'en_curso' ? '⚽ En vivo' : p.estado === 'finalizado' ? 'Final' : hora}
+                          {p.estado === 'en_curso' ? '⚽ En vivo' : finalizado ? 'Final' : hora}
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-white/15 text-xs">{FASES[p.fase] ?? p.fase.replace(/_/g, ' ')}</span>
-                          {finalizado && (
+                          {bloqueado && (
                             <span className="text-amber-400/50 text-xs flex items-center gap-1">
                               Ver predicciones
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2.5L8.5 6L5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -263,9 +269,19 @@ export default function CalendarioPage() {
                   {modalPartido.bandera_local && <img src={modalPartido.bandera_local} alt="" className="w-7 h-7 object-contain rounded-sm" />}
                   <span className="font-semibold text-white text-sm">{modalPartido.equipo_local}</span>
                 </div>
-                <span className="text-lg font-bold text-white/60 bg-white/6 border border-white/10 px-3 py-1 rounded-xl">
-                  {modalPartido.goles_local} · {modalPartido.goles_visitante}
-                </span>
+                {modalPartido.estado === 'finalizado' && modalPartido.goles_local != null ? (
+                  <span className="text-lg font-bold text-white/60 bg-white/6 border border-white/10 px-3 py-1 rounded-xl">
+                    {modalPartido.goles_local} · {modalPartido.goles_visitante}
+                  </span>
+                ) : modalPartido.estado === 'en_curso' && modalPartido.goles_local != null ? (
+                  <span className="text-lg font-bold text-green-300 bg-green-500/10 border border-green-500/20 px-3 py-1 rounded-xl">
+                    {modalPartido.goles_local} · {modalPartido.goles_visitante}
+                  </span>
+                ) : (
+                  <span className="text-sm font-mono text-white/30 bg-white/4 border border-white/8 px-3 py-1.5 rounded-xl">
+                    {new Date(modalPartido.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
                 <div className="flex-1 flex items-center gap-2 justify-end">
                   <span className="font-semibold text-white text-sm text-right">{modalPartido.equipo_visitante}</span>
                   {modalPartido.bandera_visitante && <img src={modalPartido.bandera_visitante} alt="" className="w-7 h-7 object-contain rounded-sm" />}
