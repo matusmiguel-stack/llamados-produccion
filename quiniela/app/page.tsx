@@ -36,6 +36,10 @@ export default function Home() {
       </div>
 
       <p className="text-white/15 text-xs mt-10">Mundial 2026 · México, USA & Canadá</p>
+
+      <Link href="/admin" className="absolute bottom-4 right-4 text-white/10 hover:text-white/30 text-xs transition-colors">
+        admin
+      </Link>
     </div>
   )
 }
