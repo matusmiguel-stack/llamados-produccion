@@ -1,11 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Partido } from '@/types'
+import { useGrupo } from '@/context/grupo-context'
 
 interface Dia {
   fecha: string
@@ -46,40 +43,26 @@ function agruparPorDia(partidos: Partido[]): Dia[] {
 }
 
 const FASES: Record<string, string> = {
-  GROUP_STAGE:    'Fase de grupos',
-  ROUND_OF_16:   'Octavos de final',
-  QUARTER_FINALS:'Cuartos de final',
-  SEMI_FINALS:   'Semifinales',
-  THIRD_PLACE:   'Tercer lugar',
-  FINAL:         'Final',
+  GROUP_STAGE:     'Fase de grupos',
+  ROUND_OF_16:    'Octavos de final',
+  QUARTER_FINALS: 'Cuartos de final',
+  SEMI_FINALS:    'Semifinales',
+  THIRD_PLACE:    'Tercer lugar',
+  FINAL:          'Final',
 }
 
 export default function CalendarioPage() {
-  const params = useParams()
-  const router = useRouter()
-  const codigo = params.codigo as string
+  const { grupoId } = useGrupo()
 
-  const [dias, setDias]                     = useState<Dia[]>([])
-  const [loading, setLoading]               = useState(true)
-  const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null)
-  const [grupoId, setGrupoId]               = useState<string | null>(null)
-
-  // Modal de predicciones
-  const [modalPartido, setModalPartido]     = useState<Partido | null>(null)
-  const [preds, setPreds]                   = useState<PredRow[]>([])
-  const [loadingPreds, setLoadingPreds]     = useState(false)
+  const [dias,             setDias]             = useState<Dia[]>([])
+  const [loading,          setLoading]          = useState(true)
+  const [diaSeleccionado,  setDiaSeleccionado]  = useState<string | null>(null)
+  const [modalPartido,     setModalPartido]     = useState<Partido | null>(null)
+  const [preds,            setPreds]            = useState<PredRow[]>([])
+  const [loadingPreds,     setLoadingPreds]     = useState(false)
 
   useEffect(() => {
     const init = async () => {
-      const supabase = createSupabaseBrowserClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
-
-      const grupoRes = await fetch(`/api/grupo?codigo=${codigo}`)
-      if (!grupoRes.ok) { router.replace('/login'); return }
-      const g = await grupoRes.json()
-      setGrupoId(g.id)
-
       const res = await fetch('/api/partidos')
       const partidos: Partido[] = await res.json()
       const agrupados = agruparPorDia(partidos)
@@ -91,7 +74,7 @@ export default function CalendarioPage() {
       setLoading(false)
     }
     init()
-  }, [router, codigo])
+  }, [])
 
   function estaBloquado(partido: Partido): boolean {
     const lockTime = new Date(partido.fecha).getTime() - 60 * 60 * 1000
@@ -99,7 +82,7 @@ export default function CalendarioPage() {
   }
 
   async function abrirPredicciones(partido: Partido) {
-    if (!estaBloquado(partido) || !grupoId) return
+    if (!estaBloquado(partido)) return
     setModalPartido(partido)
     setPreds([])
     setLoadingPreds(true)
@@ -111,24 +94,7 @@ export default function CalendarioPage() {
   const diaActivo = dias.find((d) => d.fecha === diaSeleccionado)
 
   return (
-    <div className="min-h-screen">
-      <div className="h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
-
-      <div className="bg-black/30 backdrop-blur-md border-b border-white/8 px-4 py-4">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <Link href={`/grupo/${codigo}`} className="text-white/30 hover:text-white transition-colors">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Link>
-          <div className="flex-1 flex items-center gap-3">
-            <Image src="/logo-quiniela.png" alt="" width={32} height={32} className="object-contain opacity-80" />
-            <div>
-              <h1 className="text-white font-semibold text-sm">Calendario de juegos</h1>
-              <p className="text-white/30 text-xs">{dias.length} jornadas · {dias.reduce((s, d) => s + d.partidos.length, 0)} partidos</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div>
       {loading ? (
         <div className="text-center text-white/20 py-16 animate-pulse">Cargando calendario…</div>
       ) : (
@@ -137,7 +103,7 @@ export default function CalendarioPage() {
           <div className="border-b border-white/8 bg-black/10">
             <div className="flex overflow-x-auto scrollbar-hide px-4 py-2 gap-2">
               {dias.map((dia) => {
-                const esHoy = dia.fecha === new Date().toLocaleDateString('en-CA', { timeZone: TZ })
+                const esHoy  = dia.fecha === new Date().toLocaleDateString('en-CA', { timeZone: TZ })
                 const activo = diaSeleccionado === dia.fecha
                 return (
                   <button
@@ -169,10 +135,10 @@ export default function CalendarioPage() {
               <h2 className="text-white font-bold text-base mb-4">{diaActivo.label}</h2>
               <div className="flex flex-col gap-3">
                 {diaActivo.partidos.map((p) => {
-                  const fecha = new Date(p.fecha)
-                  const hora  = fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-                  const finalizado  = p.estado === 'finalizado'
-                  const bloqueado   = estaBloquado(p)
+                  const fecha      = new Date(p.fecha)
+                  const hora       = fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                  const finalizado = p.estado === 'finalizado'
+                  const bloqueado  = estaBloquado(p)
                   const estadoColor = {
                     pendiente:  'text-white/25',
                     en_curso:   'text-green-400',
@@ -251,12 +217,10 @@ export default function CalendarioPage() {
             className="w-full sm:max-w-sm bg-[#0f0f13] border border-white/12 rounded-t-3xl sm:rounded-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Handle bar móvil */}
             <div className="flex justify-center pt-3 pb-1 sm:hidden">
               <div className="w-10 h-1 rounded-full bg-white/20" />
             </div>
 
-            {/* Encabezado del partido */}
             <div className="px-5 pt-4 pb-4 border-b border-white/8">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-white/30 text-xs">Predicciones del grupo</span>
@@ -289,7 +253,6 @@ export default function CalendarioPage() {
               </div>
             </div>
 
-            {/* Lista de predicciones */}
             <div className="overflow-y-auto max-h-80 px-4 py-3 flex flex-col gap-2">
               {loadingPreds ? (
                 <div className="text-center text-white/20 py-8 text-sm animate-pulse">Cargando predicciones…</div>
@@ -297,41 +260,30 @@ export default function CalendarioPage() {
                 <div className="text-center text-white/20 py-8 text-sm">Nadie predijo este partido</div>
               ) : (
                 preds.map((pred, i) => {
-                  const exacto   = pred.puntos != null && pred.puntos >= 3
-                  const acerto   = pred.puntos != null && pred.puntos > 0 && !exacto
+                  const exacto    = pred.puntos != null && pred.puntos >= 3
+                  const acerto    = pred.puntos != null && pred.puntos > 0 && !exacto
                   const sinPuntos = pred.puntos === 0 || pred.puntos == null
 
                   return (
                     <div
                       key={pred.jugador.id}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors ${
-                        exacto
-                          ? 'bg-amber-500/10 border-amber-400/25'
-                          : acerto
-                          ? 'bg-white/5 border-white/10'
-                          : 'bg-white/3 border-white/6'
+                        exacto   ? 'bg-amber-500/10 border-amber-400/25'
+                        : acerto ? 'bg-white/5 border-white/10'
+                        :          'bg-white/3 border-white/6'
                       }`}
                     >
-                      {/* Posición */}
                       <span className="text-white/20 text-xs font-mono w-4 text-right">{i + 1}</span>
-
-                      {/* Nombre */}
                       <span className={`flex-1 text-sm font-medium truncate ${exacto ? 'text-amber-200' : 'text-white/70'}`}>
                         {pred.jugador.nombre}
                       </span>
-
-                      {/* Predicción */}
                       <span className={`text-sm font-bold px-2.5 py-1 rounded-lg border ${
-                        exacto
-                          ? 'text-amber-300 bg-amber-500/15 border-amber-400/25'
-                          : acerto
-                          ? 'text-white/60 bg-white/6 border-white/10'
-                          : 'text-white/30 bg-white/4 border-white/8'
+                        exacto   ? 'text-amber-300 bg-amber-500/15 border-amber-400/25'
+                        : acerto ? 'text-white/60 bg-white/6 border-white/10'
+                        :          'text-white/30 bg-white/4 border-white/8'
                       }`}>
                         {pred.goles_local}–{pred.goles_visitante}
                       </span>
-
-                      {/* Puntos */}
                       <span className={`text-xs font-bold w-12 text-right ${
                         exacto ? 'text-amber-300' : acerto ? 'text-white/40' : 'text-white/20'
                       }`}>
