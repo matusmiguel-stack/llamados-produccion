@@ -1502,7 +1502,7 @@ function openEditVacation() {
 
   async function saveEnsayo() {
     if (savingEntry) return
-    if (!isAdmin) return alert("Solo admin puede gestionar ensayos.")
+    if (!canEdit) return alert("No tienes permisos para gestionar ensayos.")
     if (!ensayoDate) { alert("Selecciona una fecha para el ensayo"); return }
     setSavingEntry(true)
 
@@ -1533,7 +1533,7 @@ function openEditVacation() {
   }
 
   async function deleteEnsayo(id: string) {
-    if (!isAdmin) return
+    if (!canEdit) return
     if (!confirm("¿Eliminar este ensayo?")) return
     await supabase.from("ensayos").delete().eq("id", id)
     setEnsayoDetailsOpen(false)
@@ -1543,7 +1543,7 @@ function openEditVacation() {
   }
 
   function openEditEnsayo() {
-    if (!selectedEnsayo || !isAdmin) return
+    if (!selectedEnsayo || !canEdit) return
     setEnsayoTitulo(selectedEnsayo.titulo || "")
     setEnsayoDate(selectedEnsayo.fecha)
     setEnsayoAllDay(!!selectedEnsayo.all_day)
@@ -2213,7 +2213,7 @@ function openEditVacation() {
                 {!selectedShoot && !selectedVacation && !selectedJunta && !selectedEnsayo && (canEdit || isProductorRole) && (
                   <div style={{
                     ...entryModeSwitchWrapStyle,
-                    gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (isAdmin ? 1 : 0)}, 1fr)`,
+                    gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (canEdit ? 1 : 0)}, 1fr)`,
                   }}>
                     {canEdit && (
                       <button
@@ -2264,7 +2264,7 @@ function openEditVacation() {
                     >
                       Junta
                     </button>
-                    {isAdmin && (
+                    {canEdit && (
                       <button
                         type="button"
                         onClick={() => {
@@ -3465,10 +3465,10 @@ function openEditVacation() {
               </div>
               <div style={formModalFooterStyle}>
                 <button onClick={() => { setEnsayoDetailsOpen(false); setSelectedEnsayo(null) }} style={formModalSecondaryButtonStyle}>Cerrar</button>
-                {isAdmin && (
+                {canEdit && (
                   <button onClick={openEditEnsayo} style={formModalPrimaryButtonStyle}>Editar</button>
                 )}
-                {isAdmin && (
+                {canEdit && (
                   <button onClick={() => deleteEnsayo(selectedEnsayo.id)} style={formModalDangerButtonStyle}>Borrar</button>
                 )}
               </div>
