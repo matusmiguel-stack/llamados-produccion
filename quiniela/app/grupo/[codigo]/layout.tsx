@@ -182,12 +182,14 @@ export default function GrupoLayout({ children }: { children: React.ReactNode })
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowGrupos(!showGrupos)}
-                className="text-white/30 hover:text-white/70 transition-colors text-xs flex flex-col items-center gap-0.5 p-1"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/6 border border-white/10 hover:bg-amber-500/10 hover:border-amber-400/25 transition-all"
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-white/40">
+                  <path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
-                <span>Mis Quinielas</span>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`text-white/25 transition-transform duration-200 ${showGrupos ? 'rotate-180' : ''}`}>
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
 
               {showGrupos && (
