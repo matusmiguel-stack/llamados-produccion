@@ -20,7 +20,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
   const fecha = new Date(partido.fecha)
   const ahora = new Date()
   const minutosRestantes = (fecha.getTime() - ahora.getTime()) / 60000
-  const bloqueado = partido.estado !== 'pendiente' || minutosRestantes < 60
+  const bloqueado = partido.estado !== 'pendiente' || minutosRestantes < 15
 
   const handleSave = async () => {
     if (local === '' || visitante === '') return
@@ -134,7 +134,7 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
       )}
 
       {bloqueado && !partido.prediccion && partido.estado === 'pendiente' && (
-        <p className="text-xs text-center text-amber-500/50">Cierra en menos de 1h</p>
+        <p className="text-xs text-center text-amber-500/50">Cierra en menos de 15 min</p>
       )}
     </div>
   )

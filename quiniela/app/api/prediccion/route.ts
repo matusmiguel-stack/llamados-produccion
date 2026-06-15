@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const ahora = new Date()
   const minutosRestantes = (fechaPartido.getTime() - ahora.getTime()) / 60000
 
-  if (partido.estado !== 'pendiente' || minutosRestantes < 60)
+  if (partido.estado !== 'pendiente' || minutosRestantes < 15)
     return NextResponse.json({ error: 'Ya no se pueden modificar predicciones para este partido' }, { status: 400 })
 
   const { data, error } = await db
