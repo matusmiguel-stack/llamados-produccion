@@ -30,6 +30,8 @@ const BIRTHDAY_COLOR = "#f59e0b"
 const ANNIVERSARY_COLOR = "#14b8a6"
 const JUNTA_EVENT_PREFIX = "junta:"
 const JUNTA_COLOR = "#0891b2"
+const ENSAYO_EVENT_PREFIX = "ensayo:"
+const ENSAYO_COLOR = "#db2777"
 
 const RESPONSABLES_PRODUCCION = [
   "Miguel Matus",
@@ -156,7 +158,7 @@ export default function Home() {
   const [duplicating, setDuplicating] = useState(false)
   const [liveConnected, setLiveConnected] = useState(false)
 
-  const [entryMode, setEntryMode] = useState<"shoot" | "vacation" | "junta">("shoot")
+  const [entryMode, setEntryMode] = useState<"shoot" | "vacation" | "junta" | "ensayo">("shoot")
   const [vacationStartDate, setVacationStartDate] = useState("")
   const [vacationEndDate, setVacationEndDate] = useState("")
 
@@ -168,6 +170,7 @@ export default function Home() {
   const [showLlamados, setShowLlamados] = useState(true)
   const [showVacaciones, setShowVacaciones] = useState(true)
   const [showJuntas, setShowJuntas] = useState(true)
+  const [showEnsayos, setShowEnsayos] = useState(true)
   const [showCumpleanos, setShowCumpleanos] = useState(true)
   const [showAniversarios, setShowAniversarios] = useState(true)
 
@@ -219,6 +222,16 @@ export default function Home() {
   const [juntaAttendeeSearch, setJuntaAttendeeSearch] = useState("")
   const [juntaAttendeeDropOpen, setJuntaAttendeeDropOpen] = useState(false)
   const [savingEntry, setSavingEntry] = useState(false)
+
+  // ── Ensayos (obra de teatro) — solo admin ─────────────────────────────────
+  const [allEnsayos, setAllEnsayos] = useState<any[]>([])
+  const [selectedEnsayo, setSelectedEnsayo] = useState<any>(null)
+  const [ensayoDetailsOpen, setEnsayoDetailsOpen] = useState(false)
+  const [ensayoTitulo, setEnsayoTitulo] = useState("")
+  const [ensayoDate, setEnsayoDate] = useState("")
+  const [ensayoStartTime, setEnsayoStartTime] = useState("09:00")
+  const [ensayoEndTime, setEnsayoEndTime] = useState("")
+  const [ensayoAllDay, setEnsayoAllDay] = useState(false)
 
   // ── Crear cliente inline ──────────────────────────────────────────────────
   const [showAddClient, setShowAddClient] = useState(false)
@@ -393,6 +406,12 @@ export default function Home() {
     setAllJuntas(juntasData || [])
     setJuntaAttendeeMap(attMap)
 
+    const { data: ensayosData } = await supabase
+      .from("ensayos")
+      .select("*")
+      .order("fecha", { ascending: true })
+    setAllEnsayos(ensayosData || [])
+
     // Memoria de emails externos para autocompletar invitaciones
     const { data: contactsData } = await supabase
       .from("external_contacts")
@@ -434,6 +453,7 @@ export default function Home() {
       .on("postgres_changes", { event: "*", schema: "public", table: "vacation_employees" }, scheduleReload)
       .on("postgres_changes", { event: "*", schema: "public", table: "juntas" },             scheduleReload)
       .on("postgres_changes", { event: "*", schema: "public", table: "junta_attendees" },    scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "ensayos" },            scheduleReload)
       .subscribe((status) => {
         setLiveConnected(status === "SUBSCRIBED")
       })
@@ -527,17 +547,31 @@ export default function Home() {
       }
     })
 
+    const ensayoEvents = allEnsayos.map((e) => ({
+      id: `${ENSAYO_EVENT_PREFIX}${e.id}`,
+      title: e.titulo ? `🎭 ${e.titulo}` : "🎭 Ensayo",
+      start: !e.all_day && e.hora_inicio ? `${e.fecha}T${e.hora_inicio}` : e.fecha,
+      end:   !e.all_day && e.hora_fin    ? `${e.fecha}T${e.hora_fin}`    : undefined,
+      allDay: !!e.all_day || !e.hora_inicio,
+      backgroundColor: ENSAYO_COLOR,
+      borderColor:     ENSAYO_COLOR,
+      textColor: "#ffffff",
+      editable: false,
+    }))
+
     setEvents([
       ...(showLlamados ? shootEvents : []),
       ...(showVacaciones ? vacationEvents : []),
       ...(showCumpleanos ? birthdayEvents : []),
       ...(showAniversarios ? anniversaryEvents : []),
       ...(showJuntas ? juntaEvents : []),
+      ...(showEnsayos ? ensayoEvents : []),
     ])
   }, [
     allShoots,
     allVacations,
     allJuntas,
+    allEnsayos,
     juntaAttendeeMap,
     employees,
     shootResources,
@@ -554,6 +588,7 @@ export default function Home() {
     showLlamados,
     showVacaciones,
     showJuntas,
+    showEnsayos,
     showCumpleanos,
     showAniversarios,
   ])
@@ -803,6 +838,13 @@ export default function Home() {
     setJuntaAttendeeDropOpen(false)
     setSelectedJunta(null)
     setJuntaDetailsOpen(false)
+    setEnsayoTitulo("")
+    setEnsayoDate("")
+    setEnsayoStartTime("09:00")
+    setEnsayoEndTime("")
+    setEnsayoAllDay(false)
+    setSelectedEnsayo(null)
+    setEnsayoDetailsOpen(false)
   }
 
   function clearFilters() {
@@ -842,16 +884,21 @@ export default function Home() {
     setVacationStartDate(startDate)
     setVacationEndDate(endDate)
     setJuntaDate(startDate)
+    setEnsayoDate(startDate)
 
     const isMultiDay = endDate > startDate
 
     if (isMultiDay || info.allDay) {
       setAllDay(true)
+      setEnsayoAllDay(true)
     } else {
       const st = info.start.toTimeString().slice(0, 5)
       setStartTime(st)
       setEndTime(info.end.toTimeString().slice(0, 5))
       setJuntaStartTime(st)
+      setEnsayoStartTime(st)
+      setEnsayoEndTime(info.end.toTimeString().slice(0, 5))
+      setEnsayoAllDay(false)
     }
 
     setModalOpen(true)
@@ -882,6 +929,14 @@ export default function Home() {
       const vacation = allVacations.find((item) => item.id === vacationId)
       setSelectedVacation(vacation || null)
       setVacationDetailsOpen(true)
+      return
+    }
+
+    if (eventId.startsWith(ENSAYO_EVENT_PREFIX)) {
+      const ensayoId = eventId.slice(ENSAYO_EVENT_PREFIX.length)
+      const ensayo = allEnsayos.find((item) => item.id === ensayoId)
+      setSelectedEnsayo(ensayo || null)
+      setEnsayoDetailsOpen(true)
       return
     }
 
@@ -1445,9 +1500,68 @@ function openEditVacation() {
     setAllJuntas(data || [])
   }
 
+  async function saveEnsayo() {
+    if (savingEntry) return
+    if (!isAdmin) return alert("Solo admin puede gestionar ensayos.")
+    if (!ensayoDate) { alert("Selecciona una fecha para el ensayo"); return }
+    setSavingEntry(true)
+
+    const payload = {
+      titulo:      ensayoTitulo.trim() || null,
+      fecha:       ensayoDate,
+      all_day:     ensayoAllDay,
+      hora_inicio: ensayoAllDay ? null : (ensayoStartTime || "09:00"),
+      hora_fin:    ensayoAllDay ? null : (ensayoEndTime || null),
+      created_by:  user?.id || null,
+      updated_at:  new Date().toISOString(),
+    }
+
+    if (selectedEnsayo) {
+      const { error } = await supabase.from("ensayos").update(payload).eq("id", selectedEnsayo.id)
+      if (error) { setSavingEntry(false); alert(error.message); return }
+    } else {
+      const { error } = await supabase.from("ensayos").insert(payload)
+      if (error) { setSavingEntry(false); alert(error.message); return }
+    }
+
+    setModalOpen(false)
+    setEnsayoDetailsOpen(false)
+    resetForm()
+    const { data } = await supabase.from("ensayos").select("*").order("fecha", { ascending: true })
+    setAllEnsayos(data || [])
+    setSavingEntry(false)
+  }
+
+  async function deleteEnsayo(id: string) {
+    if (!isAdmin) return
+    if (!confirm("¿Eliminar este ensayo?")) return
+    await supabase.from("ensayos").delete().eq("id", id)
+    setEnsayoDetailsOpen(false)
+    setSelectedEnsayo(null)
+    const { data } = await supabase.from("ensayos").select("*").order("fecha", { ascending: true })
+    setAllEnsayos(data || [])
+  }
+
+  function openEditEnsayo() {
+    if (!selectedEnsayo || !isAdmin) return
+    setEnsayoTitulo(selectedEnsayo.titulo || "")
+    setEnsayoDate(selectedEnsayo.fecha)
+    setEnsayoAllDay(!!selectedEnsayo.all_day)
+    setEnsayoStartTime(selectedEnsayo.hora_inicio || "09:00")
+    setEnsayoEndTime(selectedEnsayo.hora_fin || "")
+    setEntryMode("ensayo")
+    setEnsayoDetailsOpen(false)
+    setModalOpen(true)
+  }
+
   async function saveEntry() {
     if (entryMode === "junta") {
       await saveJunta()
+      return
+    }
+
+    if (entryMode === "ensayo") {
+      await saveEnsayo()
       return
     }
 
@@ -1931,6 +2045,7 @@ function openEditVacation() {
               { key: "llamados",   label: "🎬 Llamados",   color: "#7c3aed", active: showLlamados,   set: setShowLlamados },
               { key: "vacaciones", label: "🏖️ Vacaciones", color: "#9333ea", active: showVacaciones, set: setShowVacaciones },
               { key: "juntas",     label: "📋 Juntas",     color: "#0891b2", active: showJuntas,     set: setShowJuntas },
+              { key: "ensayos",    label: "🎭 Ensayos",    color: "#db2777", active: showEnsayos,    set: setShowEnsayos },
               { key: "cumple",     label: "🎂 Cumpleaños", color: "#f59e0b", active: showCumpleanos, set: setShowCumpleanos },
               { key: "aniv",       label: "🎉 Aniversarios", color: "#14b8a6", active: showAniversarios, set: setShowAniversarios },
             ] as const).map(({ key, label, color, active, set }) => (
@@ -2064,11 +2179,13 @@ function openEditVacation() {
                         ? "Editar vacaciones"
                         : selectedShoot
                           ? "Editar llamado"
-                          : entryMode === "junta"
-                            ? "Nueva junta"
-                            : isVacationForm
-                              ? "Nuevas vacaciones"
-                              : "Nuevo llamado"}
+                          : entryMode === "ensayo"
+                            ? (selectedEnsayo ? "Editar ensayo" : "Nuevo ensayo")
+                            : entryMode === "junta"
+                              ? "Nueva junta"
+                              : isVacationForm
+                                ? "Nuevas vacaciones"
+                                : "Nuevo llamado"}
                   </h2>
                   {!isVacationForm && selectedDate && (
                     <p style={formModalMetaStyle}>
@@ -2093,10 +2210,10 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
-                {!selectedShoot && !selectedVacation && !selectedJunta && (canEdit || isProductorRole) && (
+                {!selectedShoot && !selectedVacation && !selectedJunta && !selectedEnsayo && (canEdit || isProductorRole) && (
                   <div style={{
                     ...entryModeSwitchWrapStyle,
-                    gridTemplateColumns: canManageVacations ? "1fr 1fr 1fr" : canEdit ? "1fr 1fr" : "1fr",
+                    gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (isAdmin ? 1 : 0)}, 1fr)`,
                   }}>
                     {canEdit && (
                       <button
@@ -2147,10 +2264,79 @@ function openEditVacation() {
                     >
                       Junta
                     </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedDate) setEnsayoDate(selectedDate)
+                          setEntryMode("ensayo")
+                        }}
+                        style={{
+                          ...entryModeSwitchButtonStyle,
+                          ...(entryMode === "ensayo" ? entryModeSwitchActiveStyle : {}),
+                        }}
+                      >
+                        Ensayo
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {entryMode === "junta" && !selectedShoot && !selectedVacation ? (
+                {entryMode === "ensayo" && !selectedShoot && !selectedVacation && !selectedJunta ? (
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>{selectedEnsayo ? "Editar ensayo" : "Nuevo ensayo"}</p>
+
+                    <div>
+                      <label style={formModalLabelStyle}>Título (opcional)</label>
+                      <input
+                        type="text"
+                        value={ensayoTitulo}
+                        onChange={(e) => setEnsayoTitulo(e.target.value)}
+                        placeholder="Ej. Ensayo general, Acto II..."
+                        style={formModalInputStyle}
+                      />
+                    </div>
+
+                    <DatePickerField
+                      label="Fecha"
+                      value={ensayoDate}
+                      labelStyle={formModalLabelStyle}
+                      onChange={setEnsayoDate}
+                    />
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#cbd5e1", fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={ensayoAllDay}
+                        onChange={(e) => setEnsayoAllDay(e.target.checked)}
+                      />
+                      Todo el día
+                    </label>
+
+                    {!ensayoAllDay && (
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={formModalLabelStyle}>Hora inicio</label>
+                          <input
+                            type="time"
+                            value={ensayoStartTime}
+                            onChange={(e) => setEnsayoStartTime(e.target.value)}
+                            style={formModalInputStyle}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={formModalLabelStyle}>Hora fin</label>
+                          <input
+                            type="time"
+                            value={ensayoEndTime}
+                            onChange={(e) => setEnsayoEndTime(e.target.value)}
+                            style={formModalInputStyle}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : entryMode === "junta" && !selectedShoot && !selectedVacation ? (
                   <div style={formModalColumnStyle}>
                     <p style={formModalSectionLabelStyle}>Nueva Junta</p>
 
@@ -2929,6 +3115,10 @@ function openEditVacation() {
                 >
                   {savingEntry
                     ? "Guardando..."
+                    : entryMode === "ensayo"
+                    ? selectedEnsayo
+                      ? "Guardar ensayo"
+                      : "Crear ensayo"
                     : entryMode === "junta"
                     ? selectedJunta
                       ? "Guardar junta"
@@ -3236,6 +3426,50 @@ function openEditVacation() {
                   >
                     Borrar
                   </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {ensayoDetailsOpen && selectedEnsayo && (
+          <div style={overlayStyle} className="modal-overlay" onClick={() => { setEnsayoDetailsOpen(false); setSelectedEnsayo(null) }}>
+            <div
+              style={{ ...formModalStyle, maxWidth: 400, borderRadius: 16 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={formModalHeaderStyle}>
+                <div>
+                  <h2 style={formModalTitleStyle}>🎭 {selectedEnsayo.titulo || "Ensayo"}</h2>
+                  <p style={formModalMetaStyle}>
+                    {formatVacationDate(selectedEnsayo.fecha)}
+                    {selectedEnsayo.all_day || !selectedEnsayo.hora_inicio
+                      ? " · Todo el día"
+                      : ` · ${selectedEnsayo.hora_inicio}${selectedEnsayo.hora_fin ? ` – ${selectedEnsayo.hora_fin}` : ""} hrs`}
+                  </p>
+                </div>
+                <button onClick={() => { setEnsayoDetailsOpen(false); setSelectedEnsayo(null) }} style={formModalCloseStyle} aria-label="Cerrar">×</button>
+              </div>
+              <div style={formModalBodyStyle}>
+                <div style={{ padding: "16px", borderRadius: 12, background: "rgba(219,39,119,0.08)", border: "1px solid rgba(219,39,119,0.2)", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 32 }}>🎭</p>
+                  <p style={{ margin: "8px 0 4px", color: "#f8fafc", fontSize: 17, fontWeight: 700 }}>
+                    {selectedEnsayo.titulo || "Ensayo de la obra"}
+                  </p>
+                  <p style={{ margin: 0, color: "#f9a8d4", fontSize: 14, fontWeight: 600 }}>
+                    {selectedEnsayo.all_day || !selectedEnsayo.hora_inicio
+                      ? "Todo el día"
+                      : `${selectedEnsayo.hora_inicio}${selectedEnsayo.hora_fin ? ` – ${selectedEnsayo.hora_fin}` : ""} hrs`}
+                  </p>
+                </div>
+              </div>
+              <div style={formModalFooterStyle}>
+                <button onClick={() => { setEnsayoDetailsOpen(false); setSelectedEnsayo(null) }} style={formModalSecondaryButtonStyle}>Cerrar</button>
+                {isAdmin && (
+                  <button onClick={openEditEnsayo} style={formModalPrimaryButtonStyle}>Editar</button>
+                )}
+                {isAdmin && (
+                  <button onClick={() => deleteEnsayo(selectedEnsayo.id)} style={formModalDangerButtonStyle}>Borrar</button>
                 )}
               </div>
             </div>

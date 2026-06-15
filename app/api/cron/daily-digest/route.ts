@@ -76,13 +76,14 @@ function buildDigestHtml(data: {
   fecha: string
   shoots: any[]
   juntas: any[]
+  ensayos: any[]
   entregas: any[]
   shootEmployees: any[]
   juntaAttendees: any[]
   employees: any[]
   vacationEmployeeIds: Set<string>
 }) {
-  const { fecha, shoots, juntas, entregas, shootEmployees, juntaAttendees, employees, vacationEmployeeIds } = data
+  const { fecha, shoots, juntas, ensayos, entregas, shootEmployees, juntaAttendees, employees, vacationEmployeeIds } = data
 
   // Vacaciones: employees que están de vacaciones hoy
   const onVacation = employees.filter((e: any) => vacationEmployeeIds.has(e.id))
@@ -106,7 +107,7 @@ function buildDigestHtml(data: {
     return { ...e, years }
   })
 
-  const total = shoots.length + juntas.length + entregas.length
+  const total = shoots.length + juntas.length + ensayos.length + entregas.length
   const fechaLabel = formatFecha(fecha)
 
   // ── Llamados ────────────────────────────────────────────────────────────────
@@ -145,6 +146,21 @@ function buildDigestHtml(data: {
         ${j.link ? `<p style="margin:4px 0 4px;"><a href="${j.link}" style="color:#38bdf8;font-size:12px;">🔗 Unirse a la reunión</a></p>` : ""}
         ${asistentes.length > 0 ? `<p style="margin:0;color:#64748b;font-size:12px;">👥 ${asistentes.join(" · ")}</p>` : ""}
         ${j.notas ? `<p style="margin:4px 0 0;color:#64748b;font-size:12px;">${j.notas}</p>` : ""}
+      `)
+    }
+  }
+
+  // ── Ensayos ──────────────────────────────────────────────────────────────────
+  let ensayosHtml = ""
+  if (ensayos.length > 0) {
+    ensayosHtml = sectionHeader("🎭", "Ensayos", ensayos.length, "#ec4899")
+    for (const e of ensayos) {
+      const hora = e.all_day || !e.hora_inicio
+        ? "Todo el día"
+        : `${e.hora_inicio}${e.hora_fin ? ` – ${e.hora_fin}` : ""} hrs`
+      ensayosHtml += card("#ec4899", `
+        <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">🎭 ${e.titulo || "Ensayo"}</p>
+        <p style="margin:0;color:#94a3b8;font-size:12px;">🕐 ${hora}</p>
       `)
     }
   }
@@ -238,6 +254,7 @@ function buildDigestHtml(data: {
             ${emptyMsg}
             ${llamadosHtml}
             ${juntasHtml}
+            ${ensayosHtml}
             ${postHtml}
             ${vacacionesHtml}
             ${cumpleHtml}
@@ -288,6 +305,7 @@ export async function GET(req: Request) {
   const [
     { data: shoots },
     { data: juntas },
+    { data: ensayos },
     { data: entregas },
     { data: shootEmployees },
     { data: juntaAttendees },
@@ -300,6 +318,7 @@ export async function GET(req: Request) {
     // Ej: lunes-martes todo el día → end_time = miércoles 00:00. Con gte miércoles aparecería mal.
     admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").lte("start_time", todayMx + "T23:59:59").gt("end_time", todayMx + "T00:00:00"),
     admin.from("juntas").select("id,tipo,titulo,fecha,hora_inicio,hora_fin,notas,link").eq("fecha", todayMx),
+    admin.from("ensayos").select("id,titulo,fecha,hora_inicio,hora_fin,all_day").eq("fecha", todayMx),
     admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores").eq("fecha", todayMx),
     admin.from("shoot_employees").select("shoot_id,employee_id"),
     admin.from("junta_attendees").select("junta_id,employee_id"),
@@ -319,6 +338,7 @@ export async function GET(req: Request) {
     fecha: todayMx,
     shoots: (shoots || []).filter((s: any) => s.status !== "cancelled"),
     juntas: juntas || [],
+    ensayos: ensayos || [],
     entregas: entregas || [],
     shootEmployees: shootEmployees || [],
     juntaAttendees: juntaAttendees || [],

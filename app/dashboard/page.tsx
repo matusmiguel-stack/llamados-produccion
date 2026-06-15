@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [allVacations, setAllVacations] = useState<any[]>([])
   const [vacationEmployees, setVacationEmployees] = useState<any[]>([])
   const [allJuntas, setAllJuntas] = useState<any[]>([])
+  const [allEnsayos, setAllEnsayos] = useState<any[]>([])
   const [juntaAttendees, setJuntaAttendees] = useState<any[]>([])
   const [allEntregas, setAllEntregas] = useState<any[]>([])
   const [selectedDate, setSelectedDate] = useState(getLocalDateString)
@@ -82,6 +83,11 @@ export default function DashboardPage() {
       .from("junta_attendees")
       .select("junta_id, employee_id")
 
+    const { data: ensayos } = await supabase
+      .from("ensayos")
+      .select("*")
+      .order("fecha")
+
     setAllShoots(shoots || [])
     setEmployees(emps || [])
     setShootEmployees(employeeAssignments || [])
@@ -89,6 +95,7 @@ export default function DashboardPage() {
     setVacationEmployees(vacationAssignments || [])
     setAllJuntas(juntas || [])
     setJuntaAttendees(juntaAttendeesData || [])
+    setAllEnsayos(ensayos || [])
 
     const { data: entregas } = await supabase
       .from("entregas")
@@ -210,6 +217,13 @@ export default function DashboardPage() {
     [allEntregas, selectedDate]
   )
 
+  const ensayosToday = useMemo(
+    () => allEnsayos.filter((e) => e.fecha === selectedDate).sort((a, b) =>
+      (a.hora_inicio || "").localeCompare(b.hora_inicio || "")
+    ),
+    [allEnsayos, selectedDate]
+  )
+
   const birthdaysToday = useMemo(
     () => getEmployeesWithBirthdayOnDate(employees, selectedDate),
     [employees, selectedDate]
@@ -304,6 +318,7 @@ export default function DashboardPage() {
               <p style={pageSubtitleStyle}>
                 {shootsOnDate.length} llamado{shootsOnDate.length === 1 ? "" : "s"} ·{" "}
                 {juntasToday.length} junta{juntasToday.length === 1 ? "" : "s"} ·{" "}
+                {ensayosToday.length} ensayo{ensayosToday.length === 1 ? "" : "s"} ·{" "}
                 {entregasToday.length} entrega{entregasToday.length === 1 ? "" : "s"} post ·{" "}
                 {participantsCount} en set · {vacationsToday.length} de vacaciones ·{" "}
                 {birthdaysToday.length} cumpleaños · {anniversariesToday.length} aniversarios
@@ -593,6 +608,27 @@ export default function DashboardPage() {
                         </div>
                       )
                     })}
+                  </div>
+                </section>
+              )}
+              {ensayosToday.length > 0 && (
+                <section style={panelStyle}>
+                  <div style={panelHeaderStyle}>
+                    <p style={panelTitleStyle}>🎭 Ensayos del día</p>
+                    <p style={panelHintStyle}>{ensayosToday.length} ensayo{ensayosToday.length === 1 ? "" : "s"}</p>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {ensayosToday.map((e) => (
+                      <div key={e.id} style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(219,39,119,0.08)", border: "1px solid rgba(219,39,119,0.2)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 16 }}>🎭</span>
+                          <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: 14 }}>{e.titulo || "Ensayo"}</span>
+                          <span style={{ marginLeft: "auto", color: "#f9a8d4", fontSize: 13 }}>
+                            {e.all_day || !e.hora_inicio ? "Todo el día" : `${e.hora_inicio}${e.hora_fin ? ` – ${e.hora_fin}` : ""} hrs`}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
               )}
