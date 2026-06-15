@@ -21,12 +21,26 @@ function todayInMexico(): Date {
   return new Date(y, m - 1, d)
 }
 
-// Modo pruebas: poner en true para abrir el sistema cualquier día. Regresar a false al terminar.
-const FORCE_OPEN = true
+// Modo pruebas: poner en true para abrir el sistema cualquier día/hora. Mantener en false en producción.
+const FORCE_OPEN = false
 
-function isThursdayInMexico(): boolean {
+// Recepción abierta solo jueves de 10:00 a 19:00 hora CDMX
+const RECEPCION_DIA = 4        // jueves
+const RECEPCION_HORA_INICIO = 10
+const RECEPCION_HORA_FIN = 19  // 7pm (exclusivo a partir de las 19:00)
+
+function isFacturasOpen(): boolean {
   if (FORCE_OPEN) return true
-  return todayInMexico().getDay() === 4
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Mexico_City",
+    weekday: "short",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(new Date())
+  const weekday = parts.find((p) => p.type === "weekday")?.value
+  const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10)
+  const isThursday = weekday === "Thu"
+  return isThursday && hour >= RECEPCION_HORA_INICIO && hour < RECEPCION_HORA_FIN
 }
 
 function addBusinessDays(start: Date, days: number): Date {
@@ -212,9 +226,9 @@ export async function POST(req: Request) {
     }
 
     // 1. Solo jueves
-    if (!isThursdayInMexico()) {
+    if (!isFacturasOpen()) {
       return NextResponse.json(
-        { error: "La recepción de facturas solo está abierta los días jueves." },
+        { error: "La recepción de facturas solo está abierta los jueves de 10:00 a 19:00 hrs (CDMX)." },
         { status: 403 }
       )
     }
@@ -457,5 +471,5 @@ export async function POST(req: Request) {
 
 // El front consulta este endpoint para saber si está abierto
 export async function GET() {
-  return NextResponse.json({ open: isThursdayInMexico() })
+  return NextResponse.json({ open: isFacturasOpen() })
 }

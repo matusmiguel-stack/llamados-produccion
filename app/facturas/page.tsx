@@ -81,9 +81,9 @@ export default function FacturasPage() {
               La recepción de facturas está cerrada
             </p>
             <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-              Las facturas solo se reciben los días <strong style={{ color: "#67e8f9" }}>jueves</strong>.
+              Las facturas solo se reciben los <strong style={{ color: "#67e8f9" }}>jueves de 10:00 a 19:00 hrs</strong> (hora de la Ciudad de México).
               <br />
-              Vuelve el próximo jueves para subir tu factura.
+              Vuelve en ese horario para subir tu factura.
             </p>
           </div>
         ) : result?.status === "aceptada" ? (
