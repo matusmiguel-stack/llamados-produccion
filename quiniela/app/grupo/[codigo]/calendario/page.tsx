@@ -77,7 +77,7 @@ export default function CalendarioPage() {
   }, [])
 
   function estaBloquado(partido: Partido): boolean {
-    const lockTime = new Date(partido.fecha).getTime() - 60 * 60 * 1000
+    const lockTime = new Date(partido.fecha).getTime() - 15 * 60 * 1000
     return Date.now() >= lockTime
   }
 

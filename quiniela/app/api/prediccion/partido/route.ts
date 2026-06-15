@@ -12,6 +12,19 @@ export async function GET(req: NextRequest) {
 
   const db = supabaseAdmin()
 
+  const { data: partido } = await db
+    .from('partidos')
+    .select('fecha, estado')
+    .eq('id', partido_id)
+    .single()
+
+  if (partido) {
+    const minutosRestantes = (new Date(partido.fecha).getTime() - Date.now()) / 60000
+    if (partido.estado === 'pendiente' && minutosRestantes > 15) {
+      return NextResponse.json({ error: 'Predicciones ocultas hasta que empiece el partido' }, { status: 403 })
+    }
+  }
+
   const { data, error } = await db
     .from('predicciones')
     .select('goles_local, goles_visitante, puntos, jugador:jugadores!inner(id, nombre, grupo_id)')
