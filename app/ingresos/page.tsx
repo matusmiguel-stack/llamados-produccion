@@ -1,6 +1,7 @@
 "use client"
 import { PageLoader } from "../../components/PageLoader"
 
+import Link from "next/link"
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
@@ -419,7 +420,17 @@ export default function IngresosPage() {
                       <td style={{ ...tdStyle, fontWeight: 600, color: "#e2e8f0" }}>{r.cliente_agencia}</td>
                       <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12 }}>{r.responsable || "—"}</td>
                       <td style={{ ...tdStyle, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {r.proyecto}
+                        {r.project_id ? (
+                          <Link
+                            href={`/proyectos/${r.project_id}`}
+                            style={{ color: "#a78bfa", textDecoration: "none" }}
+                            title="Abrir proyecto"
+                          >
+                            {r.proyecto}
+                          </Link>
+                        ) : (
+                          r.proyecto
+                        )}
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>{r.numero_factura || "—"}</td>
                       <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc" }}>

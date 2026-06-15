@@ -614,21 +614,13 @@ export default function CotizacionesPage() {
         if (itemsErr) throw itemsErr
       }
 
-      if (editQuoteId) {
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 3000)
-      } else {
-        setValues(initValues())
-        setExtras({})
-        setClientId("")
-        setProjectId("")
-        setQuoteName("")
-        setAtencion("")
-        setCommissionPct("30")
-        setCommissionMarkup("0")
-        setStatus("draft")
-        alert("Cotización guardada. Revísala desde la sección de Proyectos.")
+      if (!editQuoteId) {
+        // Tras la primera vez, quedarse en esta cotización para seguir editando
+        setEditQuoteId(quoteId)
+        window.history.replaceState(null, "", `/cotizaciones?quoteId=${quoteId}`)
       }
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: any) {
       alert(err.message)
     } finally {

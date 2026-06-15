@@ -15,6 +15,7 @@ type ProjectResult = {
   kind: "project"
   id: string
   name: string
+  code: string | null
   clientName: string
   subfolderName: string
   responsable: string | null
@@ -107,8 +108,8 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
         ] = await Promise.all([
           supabase
             .from("projects")
-            .select("id, name, responsable, client_id, subfolder_id, clients(name), client_subfolders(name)")
-            .ilike("name", pattern)
+            .select("id, name, code, responsable, client_id, subfolder_id, clients(name), client_subfolders(name)")
+            .or(`name.ilike.${pattern},code.ilike.${pattern}`)
             .limit(8),
           // Project counts per matched client
           clientIds.length > 0
@@ -137,6 +138,7 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
           kind: "project" as const,
           id: p.id,
           name: p.name,
+          code: p.code || null,
           clientName: (p.clients as any)?.name || "—",
           subfolderName: (p.client_subfolders as any)?.name || "—",
           responsable: p.responsable || null,
@@ -299,7 +301,7 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
                       <ProjectIcon />
                     </span>
                     <div style={resultBodyStyle}>
-                      <span style={resultNameStyle}>{r.name}</span>
+                      <span style={resultNameStyle}>{r.code ? `${r.code} ${r.name}` : r.name}</span>
                       <span style={resultMetaStyle}>
                         {r.clientName}
                         {r.subfolderName !== "—" ? ` · ${r.subfolderName}` : ""}
