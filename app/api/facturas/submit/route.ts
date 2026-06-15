@@ -340,12 +340,14 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. Calcular el monto esperado en el control de egresos para este proveedor en este proyecto
+    // 6. Reunir el monto de CADA concepto (egreso) del proveedor en este proyecto.
+    //    Cada factura debe cubrir un concepto individual — no la suma de todos.
     const { data: quotes } = await admin
       .from("quotes").select("id")
       .eq("project_id", project.id).eq("released", true)
 
-    let esperado = 0
+    const fmtMx = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+    const lineAmounts: number[] = []
     for (const quote of quotes || []) {
       const { data: sections } = await admin
         .from("quote_sections").select("id").eq("quote_id", quote.id)
@@ -361,22 +363,42 @@ export async function POST(req: Request) {
           const q = r.actual_qty        ?? Math.max(r.qty  || 0, 1)
           const d = r.actual_days       ?? Math.max(r.days || 0, 1)
           const p = r.actual_unit_price ?? r.unit_price
-          esperado += q * d * p
+          const monto = Math.round(q * d * p * 100) / 100
+          if (monto > 0) lineAmounts.push(monto)
         }
       }
     }
 
-    if (esperado === 0) {
+    if (lineAmounts.length === 0) {
       return rechazar(
-        `No tienes montos asignados en el control de egresos del proyecto ${proyectoLabel}. Contacta al productor del proyecto.`,
+        `No tienes conceptos asignados en el control de egresos del proyecto ${proyectoLabel}. Contacta al productor del proyecto.`,
         project.id, proyectoLabel, subtotal
       )
     }
 
-    if (Math.abs(subtotal - esperado) > MONTO_TOLERANCIA) {
-      const fmtMx = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+    // ¿El subtotal coincide con algún concepto individual?
+    const conceptosCoinciden = lineAmounts.filter((m) => Math.abs(subtotal - m) <= MONTO_TOLERANCIA)
+    if (conceptosCoinciden.length === 0) {
+      const montosUnicos = [...new Set(lineAmounts)].sort((a, b) => a - b).map(fmtMx).join(", ")
       return rechazar(
-        `El subtotal de tu factura (${fmtMx(subtotal)}) no coincide con el monto autorizado en el control de egresos (${fmtMx(esperado)}). El monto debe ser exacto, antes de IVA.`,
+        `El subtotal de tu factura (${fmtMx(subtotal)}) no coincide con ningún concepto autorizado en el control de egresos. Recuerda enviar una factura por concepto. Montos autorizados (antes de IVA): ${montosUnicos}.`,
+        project.id, proyectoLabel, subtotal
+      )
+    }
+
+    // Evitar sobre-facturación: no aceptar más facturas de ese monto que conceptos existentes.
+    const { data: facturasPrevias } = await admin
+      .from("facturas")
+      .select("subtotal")
+      .eq("proveedor_id", prov.id)
+      .eq("project_id", project.id)
+      .in("status", ["aceptada", "pagada"])
+    const yaFacturadasMismoMonto = (facturasPrevias || []).filter(
+      (f: any) => f.subtotal != null && Math.abs(Number(f.subtotal) - subtotal) <= MONTO_TOLERANCIA
+    ).length
+    if (yaFacturadasMismoMonto >= conceptosCoinciden.length) {
+      return rechazar(
+        `Ya recibimos ${yaFacturadasMismoMonto} factura(s) por ${fmtMx(subtotal)} en este proyecto, que es el número de conceptos autorizados con ese monto. Si crees que es un error, contacta al productor.`,
         project.id, proyectoLabel, subtotal
       )
     }
@@ -411,7 +433,6 @@ export async function POST(req: Request) {
     })
 
     // 10. Correo de confirmación
-    const fmtMx = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
     await resend.emails.send({
       from: FROM, to: prov.email, cc: CC_EMAILS,
       subject: `Factura recibida ✓ — ${proyectoLabel}`,
