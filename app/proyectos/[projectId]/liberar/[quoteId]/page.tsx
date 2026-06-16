@@ -43,6 +43,7 @@ type QuoteItemRow = {
   actual_unit_price: number | null
   actual_supplier_id: string | null
   actual_employee_id: string | null
+  is_extra: boolean
 }
 
 type QuoteSection = {
@@ -277,6 +278,57 @@ export default function LiberarPage() {
     }))
   }
 
+  // ── Gastos no contemplados (extra) ────────────────────────────────────────
+  async function addExtraExpense(sectionId: string) {
+    setSaved(false)
+    const maxOrder = Math.max(0, ...sections
+      .find((s) => s.id === sectionId)?.items.map((i) => i.order_index) ?? [0])
+    const { data, error } = await supabase
+      .from("quote_items")
+      .insert({
+        section_id: sectionId,
+        description: "",
+        qty: 0, days: 0, unit_price: 0,
+        released_expense: 0, real_expense: 0,
+        order_index: maxOrder + 1,
+        is_extra: true,
+      })
+      .select("*")
+      .single()
+    if (error) { alert("Error al agregar gasto: " + error.message); return }
+    const newItem = data as QuoteItemRow
+    setSections((prev) => prev.map((s) =>
+      s.id === sectionId ? { ...s, items: [...s.items, newItem] } : s
+    ))
+    setActuals((prev) => ({
+      ...prev,
+      [newItem.id]: { qty: "1", days: "1", unit_price: "", supplier_id: "" },
+    }))
+  }
+
+  async function removeExtraExpense(itemId: string, sectionId: string) {
+    if (!confirm("¿Eliminar este gasto no contemplado?")) return
+    const { error } = await supabase.from("quote_items").delete().eq("id", itemId)
+    if (error) { alert("Error al eliminar: " + error.message); return }
+    setSections((prev) => prev.map((s) =>
+      s.id === sectionId ? { ...s, items: s.items.filter((i) => i.id !== itemId) } : s
+    ))
+    setActuals((prev) => {
+      const next = { ...prev }
+      delete next[itemId]
+      return next
+    })
+  }
+
+  function updateExtraDescription(itemId: string, sectionId: string, value: string) {
+    setSaved(false)
+    setSections((prev) => prev.map((s) =>
+      s.id === sectionId
+        ? { ...s, items: s.items.map((i) => i.id === itemId ? { ...i, description: value } : i) }
+        : s
+    ))
+  }
+
   // Intercepts the sentinel "__NEW__" value from the supplier select
   function handleSelectProveedor(itemId: string, value: string) {
     if (value === "__NEW__") {
@@ -366,8 +418,9 @@ export default function LiberarPage() {
           const a = actuals[item.id]
           if (!a) continue
 
-          const actual_qty = a.qty !== "" ? parseFloat(a.qty) : null
-          const actual_days = a.days !== "" ? parseFloat(a.days) : null
+          // Gastos extra: el monto va en unit_price con qty=días=1
+          const actual_qty = item.is_extra ? 1 : (a.qty !== "" ? parseFloat(a.qty) : null)
+          const actual_days = item.is_extra ? 1 : (a.days !== "" ? parseFloat(a.days) : null)
           const actual_unit_price =
             a.unit_price !== "" ? parseFloat(a.unit_price) : null
           // Decode tagged contact value
@@ -379,9 +432,13 @@ export default function LiberarPage() {
             actual_employee_id = a.supplier_id.slice(4)
           }
 
+          const payload: Record<string, unknown> = { actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id }
+          // Para gastos extra guardamos también la descripción editable
+          if (item.is_extra) payload.description = item.description.trim() || "Gasto no contemplado"
+
           const { error } = await supabase
             .from("quote_items")
-            .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id })
+            .update(payload)
             .eq("id", item.id)
 
           if (error) throw error
@@ -639,6 +696,59 @@ export default function LiberarPage() {
                     const realTot = realTotal(item, a)
                     const itemDiff = realTot - libTot
 
+                    // ── Gasto no contemplado (extra) → fila simplificada ──
+                    if (item.is_extra) {
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: isMobile ? "1fr" : "1.6fr 0.9fr 1.4fr auto",
+                            gap: 10,
+                            alignItems: "center",
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            background: "rgba(248,113,113,0.06)",
+                            border: "1px solid rgba(248,113,113,0.22)",
+                          }}
+                        >
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateExtraDescription(item.id, sec.id, e.target.value)}
+                            placeholder="Concepto del gasto no contemplado"
+                            style={{ ...extraInputStyle }}
+                          />
+                          <input
+                            type="number"
+                            value={a.unit_price}
+                            onChange={(e) => updateActual(item.id, "unit_price", e.target.value)}
+                            placeholder="Monto $"
+                            style={{ ...extraInputStyle, textAlign: "right" }}
+                          />
+                          <SupplierCombobox
+                            value={a.supplier_id}
+                            onChange={(val) => updateActual(item.id, "supplier_id", val)}
+                            proveedores={proveedores}
+                            employees={employees}
+                            onAddNew={() => {
+                              setAddProvForItem(item.id)
+                              setNewProv({ nombre: "", apellido: "", empresa: "", actividad: "", email: "", telefono: "" })
+                              setShowAddProv(true)
+                            }}
+                          />
+                          <button
+                            onClick={() => removeExtraExpense(item.id, sec.id)}
+                            title="Eliminar gasto"
+                            style={{
+                              background: "none", border: "none", color: "#f87171",
+                              cursor: "pointer", fontSize: 16, padding: "4px 8px", justifySelf: "end",
+                            }}
+                          >✕</button>
+                        </div>
+                      )
+                    }
+
                     if (isMobile) {
                       return (
                         <div key={item.id} style={itemRowStyle}>
@@ -894,6 +1004,13 @@ export default function LiberarPage() {
                     )
                   })}
                 </div>
+
+                <button
+                  onClick={() => addExtraExpense(sec.id)}
+                  style={addExtraBtnStyle}
+                >
+                  + Agregar gasto no contemplado
+                </button>
               </div>
             )
           })}
@@ -1849,4 +1966,29 @@ const internoBadgeStyle: React.CSSProperties = {
   flexShrink: 0,
   textTransform: "uppercase",
   letterSpacing: 0.5,
+}
+
+const extraInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 10px",
+  background: "rgba(2,6,23,0.5)",
+  border: "1px solid rgba(148,163,184,0.22)",
+  borderRadius: 8,
+  color: "#e2e8f0",
+  fontSize: 13,
+  boxSizing: "border-box",
+  outline: "none",
+}
+
+const addExtraBtnStyle: React.CSSProperties = {
+  marginTop: 10,
+  width: "100%",
+  padding: "9px 12px",
+  background: "rgba(248,113,113,0.08)",
+  border: "1px dashed rgba(248,113,113,0.35)",
+  borderRadius: 10,
+  color: "#fca5a5",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
 }
