@@ -138,13 +138,19 @@ export function InformacionGeneralPanel({
   const [editSaving, setEditSaving]       = useState(false)
   const [localResponsable, setLocalResponsable] = useState(projectResponsable)
   const [localDescription, setLocalDescription] = useState(projectDescription)
-  const RESPONSABLES_PRODUCCION = [
-    "Miguel Matus",
-    "Adriana Barrera",
-    "Maricela Peña",
-    "Carlos Muños",
-    "Diana Cobian",
-  ]
+  const [empleados, setEmpleados] = useState<{ id: string; nombre: string; apellido_paterno: string | null; apellido_materno: string | null; nickname: string | null }[]>([])
+
+  useEffect(() => {
+    supabase
+      .from("employees")
+      .select("id,nombre,apellido_paterno,apellido_materno,nickname")
+      .order("nombre")
+      .then(({ data }) => setEmpleados(data || []))
+  }, [])
+
+  const fullName = (e: { nombre: string; apellido_paterno: string | null; apellido_materno: string | null }) =>
+    [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+  const nick = (e: { nombre: string; nickname: string | null }) => e.nickname?.trim() || e.nombre
 
   function openEdit() {
     setEditResponsable(localResponsable || "")
@@ -282,7 +288,11 @@ export function InformacionGeneralPanel({
           )}
           <KV
             label="Responsable"
-            value={localResponsable || "—"}
+            value={(() => {
+              if (!localResponsable) return "—"
+              const match = empleados.find(e => fullName(e) === localResponsable)
+              return match ? nick(match) : localResponsable
+            })()}
             accent={!!localResponsable}
           />
         </div>
@@ -303,8 +313,11 @@ export function InformacionGeneralPanel({
                   style={editInputStyle}
                 >
                   <option value="">— Sin asignar —</option>
-                  {RESPONSABLES_PRODUCCION.map(name => (
-                    <option key={name} value={name}>{name}</option>
+                  {editResponsable && !empleados.some(e => fullName(e) === editResponsable) && (
+                    <option value={editResponsable}>{editResponsable}</option>
+                  )}
+                  {empleados.map(e => (
+                    <option key={e.id} value={fullName(e)}>{nick(e)}</option>
                   ))}
                 </select>
               </div>

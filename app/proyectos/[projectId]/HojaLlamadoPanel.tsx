@@ -287,14 +287,14 @@ export function HojaLlamadoPanel({
           ? supabase.from("proveedores").select("id, nombre, apellido").in("id", supplierIds)
           : Promise.resolve({ data: [] }),
         employeeIds.length > 0
-          ? supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno").in("id", employeeIds)
+          ? supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, nickname").in("id", employeeIds)
           : Promise.resolve({ data: [] }),
       ])
 
       const provMap = new Map((provRes.data || []).map((p: any) => [p.id, `${p.nombre} ${p.apellido}`.trim()]))
       const empMap  = new Map((empRes.data  || []).map((e: any) => {
-        const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-        return [e.id, `${e.nombre} ${ap}`.trim()]
+        // Gente interna de Retro siempre con su nickname
+        return [e.id, (e.nickname?.trim() || e.nombre)]
       }))
 
       // 4. Build/merge crew rows preserving existing times

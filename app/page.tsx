@@ -33,13 +33,10 @@ const JUNTA_COLOR = "#0891b2"
 const ENSAYO_EVENT_PREFIX = "ensayo:"
 const ENSAYO_COLOR = "#db2777"
 
-const RESPONSABLES_PRODUCCION = [
-  "Miguel Matus",
-  "Adriana Barrera",
-  "Maricela Peña",
-  "Carlos Muños",
-  "Diana Cobian",
-]
+// Nombre completo de un empleado (para el valor guardado de responsable)
+function fullEmployeeName(e: { nombre: string; apellido_paterno?: string | null; apellido_materno?: string | null }) {
+  return [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+}
 
 type CatalogClient = {
   id: string
@@ -2462,8 +2459,7 @@ function openEditVacation() {
                                 border: "1px solid rgba(8,145,178,0.35)",
                                 color: "#67e8f9", fontSize: 12,
                               }}>
-                                {emp.nombre} {emp.apellido_paterno}
-                                {emp.nickname ? ` (${emp.nickname})` : ""}
+                                {employeeDisplayName(emp)}
                                 <button
                                   type="button"
                                   onClick={() => setJuntaAttendees(prev => prev.filter(id => id !== empId))}
@@ -2523,8 +2519,7 @@ function openEditVacation() {
                                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(148,163,184,0.08)")}
                                   onMouseLeave={e => (e.currentTarget.style.background = "none")}
                                 >
-                                  <span style={{ fontWeight: 500 }}>{emp.nombre} {emp.apellido_paterno}</span>
-                                  {emp.nickname && <span style={{ color: "#64748b", marginLeft: 6 }}>({emp.nickname})</span>}
+                                  <span style={{ fontWeight: 500 }}>{employeeDisplayName(emp)}</span>
                                   {emp.puesto && <span style={{ color: "#64748b", marginLeft: 6, fontSize: 11 }}>· {emp.puesto}</span>}
                                 </button>
                               ))}
@@ -2991,8 +2986,11 @@ function openEditVacation() {
                         style={formModalSelectStyle}
                       >
                         <option value="">— Sin asignar —</option>
-                        {RESPONSABLES_PRODUCCION.map((name) => (
-                          <option key={name} value={name}>{name}</option>
+                        {shootResponsable && !employees.some((e: any) => fullEmployeeName(e) === shootResponsable) && (
+                          <option value={shootResponsable}>{shootResponsable}</option>
+                        )}
+                        {employees.map((e: any) => (
+                          <option key={e.id} value={fullEmployeeName(e)}>{employeeDisplayName(e)}</option>
                         ))}
                       </select>
                     </div>
@@ -3230,7 +3228,7 @@ function openEditVacation() {
           const isBirthday = type === "birthday"
           const emoji = isBirthday ? "🎂" : "🎉"
           const color = isBirthday ? "#f59e0b" : "#14b8a6"
-          const nombre = `${employee.nombre} ${employee.apellido_paterno}`
+          const nombre = employeeDisplayName(employee)
 
           let subtitle = ""
           if (isBirthday && employee.cumpleanos) {
@@ -3377,7 +3375,7 @@ function openEditVacation() {
                                 fontWeight: 600,
                               }}
                             >
-                              {emp.nombre} {emp.apellido_paterno}
+                              {employeeDisplayName(emp)}
                               <span style={{ color: "#67e8f9", fontWeight: 500 }}>{emp.puesto}</span>
                             </span>
                           )

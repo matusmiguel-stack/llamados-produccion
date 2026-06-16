@@ -21,7 +21,11 @@ type Employee = {
   apellido_paterno: string
   apellido_materno: string | null
   puesto: string
+  nickname: string | null
 }
+
+// Gente interna de Retro siempre con su nickname
+const empNick = (e: { nombre: string; nickname?: string | null }) => e.nickname?.trim() || e.nombre
 
 type QuoteItemRow = {
   id: string
@@ -251,7 +255,7 @@ export default function LiberarPage() {
 
       const [{ data: provsData }, { data: empsData }] = await Promise.all([
         supabase.from("proveedores").select("id, nombre, apellido, empresa, actividad").order("nombre"),
-        supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, puesto").order("nombre"),
+        supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, puesto, nickname").order("nombre"),
       ])
       setProveedores(provsData || [])
       setEmployees(empsData || [])
@@ -1246,8 +1250,7 @@ function SupplierCombobox({
   } else if (value.startsWith("emp:")) {
     const e = employees.find(x => x.id === value.slice(4))
     if (e) {
-      const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-      displayText = `${e.nombre} ${ap} · ${e.puesto}`
+      displayText = `${empNick(e)} · ${e.puesto}`
     }
   }
 
@@ -1268,7 +1271,7 @@ function SupplierCombobox({
   const filteredEmps  = employees.filter(e => {
     if (q === "") return true
     const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-    return `${e.nombre} ${ap} ${e.puesto}`.toLowerCase().includes(q)
+    return `${e.nombre} ${ap} ${e.nickname ?? ""} ${e.puesto}`.toLowerCase().includes(q)
   })
   const filteredProvs = proveedores.filter(p => {
     if (q === "") return true
@@ -1317,8 +1320,7 @@ function SupplierCombobox({
             <>
               <div style={comboboxGroupHeaderStyle}>👤 Empleados RETRO</div>
               {filteredEmps.map(e => {
-                const ap  = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-                const lbl = `${e.nombre} ${ap}`
+                const lbl = empNick(e)
                 return (
                   <div key={e.id} style={comboboxOptionStyle}
                     onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}>

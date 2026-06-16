@@ -8,6 +8,7 @@ import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
+import { employeeDisplayName } from "../../lib/employee-dates"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 
@@ -89,7 +90,7 @@ export default function PostproduccionPage() {
       supabase.from("entregas").select("*").order("fecha"),
       supabase.from("clients").select("id, name").order("name"),
       supabase.from("projects").select("id, name, client_id, code").order("name"),
-      supabase.from("employees").select("id, nombre, apellido_paterno, puesto").order("nombre"),
+      supabase.from("employees").select("id, nombre, apellido_paterno, puesto, nickname").order("nombre"),
     ])
     setEntregas(entregasData || [])
     setAllClients(clients || [])
@@ -195,7 +196,7 @@ export default function PostproduccionPage() {
     const editoresNames = formEditores
       .map((id) => postproductores.find((e) => e.id === id))
       .filter(Boolean)
-      .map((e: any) => `${e.nombre} ${e.apellido_paterno}`)
+      .map((e: any) => employeeDisplayName(e))
 
     const payload = {
       titulo:     formTitulo.trim(),
@@ -287,7 +288,7 @@ export default function PostproduccionPage() {
             style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroEditor ? "#f8fafc" : "#64748b", fontSize: 12 }}>
             <option value="">Editor</option>
             {postproductores.map((e: any) => (
-              <option key={e.id} value={`${e.nombre} ${e.apellido_paterno}`}>{e.nombre} {e.apellido_paterno}</option>
+              <option key={e.id} value={`${e.nombre} ${e.apellido_paterno}`}>{employeeDisplayName(e)}</option>
             ))}
           </select>
           <select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroProyecto("") }}
@@ -510,7 +511,7 @@ export default function PostproduccionPage() {
                           padding: "3px 10px", borderRadius: 999,
                           background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
                           color: "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
-                          {emp.nombre} {emp.apellido_paterno}
+                          {employeeDisplayName(emp)}
                           <button type="button" onClick={() => setFormEditores((prev) => prev.filter((i) => i !== id))}
                             style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                         </span>
@@ -531,7 +532,7 @@ export default function PostproduccionPage() {
                   const q = editorSearch.toLowerCase()
                   const sugerencias = postproductores.filter((e: any) =>
                     !formEditores.includes(e.id) &&
-                    (`${e.nombre} ${e.apellido_paterno}`).toLowerCase().includes(q)
+                    (`${e.nombre} ${e.apellido_paterno} ${e.nickname || ""}`).toLowerCase().includes(q)
                   )
                   if (!sugerencias.length) return (
                     <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>Sin resultados</p>
@@ -544,7 +545,7 @@ export default function PostproduccionPage() {
                           style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
                             background: "rgba(255,255,255,0.03)", border: "none", borderBottom: "1px solid rgba(148,163,184,0.1)",
                             color: "#e2e8f0", fontSize: 13, cursor: "pointer" }}>
-                          {e.nombre} {e.apellido_paterno}
+                          {employeeDisplayName(e)}
                           <span style={{ color: "#64748b", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
                         </button>
                       ))}
@@ -648,7 +649,9 @@ export default function PostproduccionPage() {
                   setFormClienteId(""); setFormProyectoId("")
                   const savedNames: string[] = selectedEntrega.editores || (selectedEntrega.editor ? [selectedEntrega.editor] : [])
                   const edIds = savedNames
-                    .map((name: string) => postproductores.find((e: any) => `${e.nombre} ${e.apellido_paterno}` === name)?.id)
+                    .map((name: string) => postproductores.find((e: any) =>
+                      `${e.nombre} ${e.apellido_paterno}` === name || employeeDisplayName(e) === name
+                    )?.id)
                     .filter(Boolean) as string[]
                   setFormEditores(edIds)
                   setModoLibre(true)

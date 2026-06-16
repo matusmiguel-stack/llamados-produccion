@@ -6,7 +6,10 @@ import { supabase } from "../../../lib/supabase"
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Proveedor = { id: string; nombre: string; apellido: string; empresa: string | null; actividad: string }
-type Employee  = { id: string; nombre: string; apellido_paterno: string; apellido_materno: string | null; puesto: string }
+type Employee  = { id: string; nombre: string; apellido_paterno: string; apellido_materno: string | null; puesto: string; nickname: string | null }
+
+// Mostrar siempre el nickname de la gente interna de Retro
+const empNick = (e: { nombre: string; nickname?: string | null }) => e.nickname?.trim() || e.nombre
 
 type EgresoItem = {
   id: string
@@ -44,8 +47,7 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
   if (contact.startsWith("emp:")) {
     const e = employees.find(x => x.id === contact.slice(4))
     if (e) {
-      const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-      return { label: `${e.nombre} ${ap}`, type: "empleado" }
+      return { label: empNick(e), type: "empleado" }
     }
   }
   return { label: "Sin asignar", type: "none" }
@@ -80,7 +82,7 @@ export function EgresosPanel({
       // Catálogos para el selector
       const [{ data: provs }, { data: emps }] = await Promise.all([
         supabase.from("proveedores").select("id,nombre,apellido,empresa,actividad").order("nombre"),
-        supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto").order("nombre"),
+        supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname").order("nombre"),
       ])
       setProveedores(provs || [])
       setEmployees(emps || [])
@@ -126,8 +128,7 @@ export function EgresosPanel({
             } else if (row.actual_employee_id) {
               const emp = (emps || []).find((x: Employee) => x.id === row.actual_employee_id)
               if (emp) {
-                const ap = emp.apellido_materno ? `${emp.apellido_paterno} ${emp.apellido_materno}` : emp.apellido_paterno
-                supplierLabel = `${emp.nombre} ${ap}`
+                supplierLabel = empNick(emp)
                 supplierType = "empleado"
               }
             }
@@ -584,8 +585,7 @@ function SupplierCombobox({
   } else if (value.startsWith("emp:")) {
     const e = employees.find(x => x.id === value.slice(4))
     if (e) {
-      const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-      displayText = `${e.nombre} ${ap} · ${e.puesto}`
+      displayText = `${empNick(e)} · ${e.puesto}`
     }
   }
 
@@ -603,7 +603,7 @@ function SupplierCombobox({
   const filteredEmps  = employees.filter(e => {
     if (!q) return true
     const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
-    return `${e.nombre} ${ap} ${e.puesto}`.toLowerCase().includes(q)
+    return `${e.nombre} ${ap} ${e.nickname ?? ""} ${e.puesto}`.toLowerCase().includes(q)
   })
   const filteredProvs = proveedores.filter(p => {
     if (!q) return true
@@ -652,12 +652,11 @@ function SupplierCombobox({
             <>
               <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.7 }}>👤 Empleados RETRO</div>
               {filteredEmps.map(e => {
-                const ap  = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
                 return (
                   <div key={e.id}
                     onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
-                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{e.nombre} {ap}</div>
+                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{empNick(e)}</div>
                     <div style={{ color: "#64748b", fontSize: 11 }}>{e.puesto}</div>
                   </div>
                 )

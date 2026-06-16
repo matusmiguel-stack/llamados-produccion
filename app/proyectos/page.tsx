@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
+import { employeeDisplayName } from "../../lib/employee-dates"
 
 type Client = {
   id: string
@@ -25,6 +26,7 @@ type Employee = {
   apellido_paterno: string | null
   apellido_materno: string | null
   puesto: string | null
+  nickname: string | null
 }
 
 type Project = {
@@ -160,7 +162,7 @@ export default function ProyectosPage() {
       supabase.from("projects").select("*").order("name", { ascending: true }),
       supabase
         .from("employees")
-        .select("id,nombre,apellido_paterno,apellido_materno,puesto")
+        .select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname")
         .or("puesto.ilike.%Productor%,puesto.ilike.%Productora%")
         .order("nombre", { ascending: true }),
     ])
@@ -776,7 +778,7 @@ export default function ProyectosPage() {
                             {employees.map((e) => {
                               const full = [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
                               return (
-                                <option key={e.id} value={full}>{full}</option>
+                                <option key={e.id} value={full}>{employeeDisplayName(e)}</option>
                               )
                             })}
                           </optgroup>

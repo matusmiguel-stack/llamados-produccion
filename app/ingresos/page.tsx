@@ -86,9 +86,9 @@ const MESES = [
   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ]
 
-const RESPONSABLES = [
-  "Miguel","Charlie","Diana","Fer","Chelita","Karla","Pau",
-]
+type Empleado = { id: string; nombre: string; apellido_paterno: string | null; apellido_materno: string | null; nickname: string | null }
+const empFullName = (e: Empleado) => [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+const empNick = (e: Empleado) => e.nickname?.trim() || e.nombre
 
 type ProjectOption = {
   id: string
@@ -118,7 +118,15 @@ export default function IngresosPage() {
   const [isMobile, setIsMobile]   = useState(false)
   const [menuOpen, setMenuOpen]   = useState(false)
   const [ingresos, setIngresos]   = useState<Ingreso[]>([])
+  const [empleados, setEmpleados] = useState<Empleado[]>([])
   const [loading, setLoading]     = useState(true)
+
+  // Mostrar el nickname del responsable a partir del valor guardado (nombre completo o ya nickname)
+  function responsableLabel(value: string | null): string {
+    if (!value) return "—"
+    const match = empleados.find(e => empFullName(e) === value)
+    return match ? empNick(match) : value
+  }
 
   const [activeEmpresa, setActiveEmpresa] = useState<Empresa>("retro_studio")
   const [filtroEstatus, setFiltroEstatus] = useState<Estatus | "todos">("todos")
@@ -172,10 +180,12 @@ export default function IngresosPage() {
     setProfile(auth.profile)
     setUser(auth.session.user)
 
-    const [{ data }, { data: projs }] = await Promise.all([
+    const [{ data }, { data: projs }, { data: emps }] = await Promise.all([
       supabase.from("ingresos").select("*").order("created_at", { ascending: false }),
       supabase.from("projects").select("id, name, code, responsable, clients(name)").order("name"),
+      supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, nickname").order("nombre"),
     ])
+    setEmpleados(emps || [])
     setIngresos((data || []) as Ingreso[])
     setProjects((projs || []).map((p: any) => ({
       id: p.id,
@@ -483,7 +493,7 @@ export default function IngresosPage() {
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
                       <td style={{ ...tdStyle, fontWeight: 600, color: "#e2e8f0" }}>{r.cliente_agencia}</td>
-                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{r.responsable || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
                       <td style={{ ...tdStyle, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.project_id ? (
                           <Link
@@ -579,11 +589,11 @@ export default function IngresosPage() {
                 <FormField label="Responsable">
                   <select value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))} style={inputStyle}>
                     <option value="">— Sin asignar —</option>
-                    {/* Incluir el responsable actual aunque no esté en la lista (ej. nombre completo del proyecto) */}
-                    {form.responsable && !RESPONSABLES.includes(form.responsable) && (
-                      <option value={form.responsable}>{form.responsable}</option>
+                    {/* Incluir el responsable actual aunque no esté en la lista de empleados */}
+                    {form.responsable && !empleados.some(e => empFullName(e) === form.responsable) && (
+                      <option value={form.responsable}>{responsableLabel(form.responsable)}</option>
                     )}
-                    {RESPONSABLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {empleados.map(e => <option key={e.id} value={empFullName(e)}>{empNick(e)}</option>)}
                   </select>
                 </FormField>
               </div>

@@ -40,6 +40,9 @@ function getResend() {
 const FROM = "Retro <news@retrocasaproductora.com>"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
 
+// Gente interna de Retro siempre con su nickname
+const dispName = (e: any) => (e?.nickname?.trim() || e?.nombre || "")
+
 // ── Modo prueba: solo se manda a este mail ────────────────────────────────────
 const TEST_MODE = false
 const TEST_EMAIL = "miguel@retrocasaproductora.com" // unused in production
@@ -119,7 +122,7 @@ function buildDigestHtml(data: {
         .filter((se: any) => se.shoot_id === s.id)
         .map((se: any) => employees.find((e: any) => e.id === se.employee_id))
         .filter(Boolean)
-        .map((e: any) => `${e.nombre} ${e.apellido_paterno}`)
+        .map((e: any) => dispName(e))
       const hora = s.all_day ? "Todo el día" : `${s.start_time?.slice(11,16) || ""} – ${s.end_time?.slice(11,16) || ""} hrs`
       llamadosHtml += card("#a78bfa", `
         <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${s.title || "Sin título"}</p>
@@ -139,7 +142,7 @@ function buildDigestHtml(data: {
         .filter((a: any) => a.junta_id === j.id)
         .map((a: any) => employees.find((e: any) => e.id === a.employee_id))
         .filter(Boolean)
-        .map((e: any) => `${e.nombre} ${e.apellido_paterno}`)
+        .map((e: any) => dispName(e))
       juntasHtml += card("#67e8f9", `
         <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${emoji} ${j.titulo || j.tipo}</p>
         <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">🕐 ${j.hora_inicio}${j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs · <span style="color:#67e8f9;">${j.tipo}</span></p>
@@ -193,7 +196,7 @@ function buildDigestHtml(data: {
     vacacionesHtml = sectionHeader("🏖️", "De vacaciones", onVacation.length, "#fb923c")
     for (const e of onVacation) {
       vacacionesHtml += card("#fb923c", `
-        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🏖️ ${e.nombre} ${e.apellido_paterno}</p>
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🏖️ ${dispName(e)}</p>
         ${e.puesto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
       `)
     }
@@ -205,7 +208,7 @@ function buildDigestHtml(data: {
     cumpleHtml = sectionHeader("🎂", "Cumpleaños", birthdays.length, "#f59e0b")
     for (const e of birthdays) {
       cumpleHtml += card("#f59e0b", `
-        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎂 ${e.nombre} ${e.apellido_paterno}</p>
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎂 ${dispName(e)}</p>
         ${e.puesto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
       `)
     }
@@ -217,7 +220,7 @@ function buildDigestHtml(data: {
     anivHtml = sectionHeader("🎉", "Aniversarios", anniversaries.length, "#14b8a6")
     for (const e of anniversaries) {
       anivHtml += card("#14b8a6", `
-        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎉 ${e.nombre} ${e.apellido_paterno}</p>
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎉 ${dispName(e)}</p>
         <p style="margin:4px 0 0;color:#2dd4bf;font-size:12px;font-weight:600;">${e.years} año${e.years !== 1 ? "s" : ""} en Retro Casa</p>
         ${e.puesto ? `<p style="margin:2px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
       `)
@@ -322,7 +325,7 @@ export async function GET(req: Request) {
     admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores").eq("fecha", todayMx),
     admin.from("shoot_employees").select("shoot_id,employee_id"),
     admin.from("junta_attendees").select("junta_id,employee_id"),
-    admin.from("employees").select("id,nombre,apellido_paterno,email,puesto,cumpleanos,fecha_ingreso"),
+    admin.from("employees").select("id,nombre,apellido_paterno,nickname,email,puesto,cumpleanos,fecha_ingreso"),
     admin.from("vacations").select("id,start_date,end_date").lte("start_date", todayMx).gte("end_date", todayMx),
     admin.from("vacation_employees").select("vacation_id,employee_id"),
   ])
@@ -397,7 +400,7 @@ export async function GET(req: Request) {
   const onVacationPlain = (employees || []).filter((e: any) => vacationEmployeeIds.has(e.id))
   if (onVacationPlain.length > 0) {
     textLines.push("── DE VACACIONES ──")
-    for (const e of onVacationPlain) textLines.push(`🏖️ ${e.nombre} ${e.apellido_paterno}`)
+    for (const e of onVacationPlain) textLines.push(`🏖️ ${dispName(e)}`)
     textLines.push("")
   }
 
@@ -415,14 +418,14 @@ export async function GET(req: Request) {
   })
   if (birthdaysPlain.length > 0) {
     textLines.push("── CUMPLEAÑOS ──")
-    for (const e of birthdaysPlain) textLines.push(`🎂 ${e.nombre} ${e.apellido_paterno}`)
+    for (const e of birthdaysPlain) textLines.push(`🎂 ${dispName(e)}`)
     textLines.push("")
   }
   if (anniversariesPlain.length > 0) {
     textLines.push("── ANIVERSARIOS ──")
     for (const e of anniversariesPlain) {
       const years = parseInt(todayMx.split("-")[0]) - parseInt(e.fecha_ingreso.split("-")[0])
-      textLines.push(`🎉 ${e.nombre} ${e.apellido_paterno} · ${years} año${years !== 1 ? "s" : ""} en Retro`)
+      textLines.push(`🎉 ${dispName(e)} · ${years} año${years !== 1 ? "s" : ""} en Retro`)
     }
     textLines.push("")
   }
