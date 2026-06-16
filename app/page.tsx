@@ -1667,7 +1667,7 @@ function openEditVacation() {
   }
 
   async function deleteVacation() {
-    if (!isAdmin) return alert("Solo admin puede borrar.")
+    if (!canManageVacations) return alert("No tienes permisos para borrar vacaciones.")
     if (!selectedVacation) return
     if (!confirm("¿Seguro que quieres borrar estas vacaciones?")) return
 
@@ -3206,13 +3206,13 @@ function openEditVacation() {
                   Cerrar
                 </button>
 
-                {isAdmin && (
+                {canManageVacations && (
                   <button onClick={openEditVacation} style={formModalPrimaryButtonStyle}>
                     Editar
                   </button>
                 )}
 
-                {isAdmin && (
+                {canManageVacations && (
                   <button onClick={deleteVacation} style={formModalDangerButtonStyle}>
                     Borrar
                   </button>
