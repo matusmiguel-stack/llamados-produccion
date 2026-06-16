@@ -645,7 +645,9 @@ export default function CotizacionesPage() {
     const selectedProject = projects.find((p) => p.id === projectId)
     const clientName  = clients.find((c) => c.id === clientId)?.name || "—"
     const projectName = selectedProject?.name || ""
-    const subtotal    = globalFinancials.venta
+    // Subtotal = precio de venta + markup general (lo que realmente se cobra al cliente)
+    const markupPct   = parseFloat(markupGeneral) || 0
+    const subtotal    = Math.round(globalFinancials.venta * (1 + markupPct / 100) * 100) / 100
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
     const responsable = selectedProject?.responsable || null
 

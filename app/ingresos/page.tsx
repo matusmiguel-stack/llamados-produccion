@@ -122,7 +122,7 @@ export default function IngresosPage() {
 
   const [activeEmpresa, setActiveEmpresa] = useState<Empresa>("retro_studio")
   const [filtroEstatus, setFiltroEstatus] = useState<Estatus | "todos">("todos")
-  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<string | null>("cliente")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   // Columnas ordenables: key + cómo extraer el valor de cada fila
