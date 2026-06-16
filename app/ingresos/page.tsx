@@ -579,6 +579,10 @@ export default function IngresosPage() {
                 <FormField label="Responsable">
                   <select value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))} style={inputStyle}>
                     <option value="">— Sin asignar —</option>
+                    {/* Incluir el responsable actual aunque no esté en la lista (ej. nombre completo del proyecto) */}
+                    {form.responsable && !RESPONSABLES.includes(form.responsable) && (
+                      <option value={form.responsable}>{form.responsable}</option>
+                    )}
                     {RESPONSABLES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </FormField>
