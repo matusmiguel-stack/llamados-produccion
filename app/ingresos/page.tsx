@@ -428,11 +428,6 @@ export default function IngresosPage() {
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
-              <colgroup>
-                {["10%","7%","14%","7%","16%","7%","9%","7%","9%","7%","7%","6%"].map((w, i) => (
-                  <col key={i} style={{ width: w }} />
-                ))}
-              </colgroup>
               <thead>
                 <tr>
                   {([
@@ -488,13 +483,13 @@ export default function IngresosPage() {
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
                       <td style={{ ...tdStyle, fontWeight: 600, color: "#e2e8f0" }}>{r.cliente_agencia}</td>
-                      <td style={{ ...tdStyle, color: "#94a3b8" }}>{r.responsable || "—"}</td>
-                      <td style={tdStyle}>
+                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{r.responsable || "—"}</td>
+                      <td style={{ ...tdStyle, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.project_id ? (
                           <Link
                             href={`/proyectos/${r.project_id}`}
                             style={{ color: "#a78bfa", textDecoration: "none" }}
-                            title="Abrir proyecto"
+                            title={r.proyecto}
                           >
                             {r.proyecto}
                           </Link>
@@ -751,7 +746,7 @@ const layoutStyle: React.CSSProperties = {
 const mainStyle = (isMobile: boolean): React.CSSProperties => ({
   flex: 1,
   padding: isMobile ? "20px 14px 40px" : "32px 36px 48px",
-  overflowX: "auto",
+  overflowX: "hidden",
   minWidth: 0,
 })
 
@@ -875,24 +870,23 @@ const tableWrapStyle: React.CSSProperties = {
 
 const tableStyle: React.CSSProperties = {
   width: "100%",
-  tableLayout: "fixed",
+  minWidth: 1080,
   borderCollapse: "collapse",
-  fontSize: 12,
+  fontSize: 13,
   color: "#cbd5e1",
 }
 
 const thStyle: React.CSSProperties = {
-  padding: "9px 8px",
+  padding: "10px 12px",
   textAlign: "left",
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 700,
   color: "#475569",
   textTransform: "uppercase",
-  letterSpacing: 0.4,
+  letterSpacing: 0.6,
   borderBottom: "1px solid rgba(148,163,184,0.12)",
   background: "rgba(255,255,255,0.03)",
-  verticalAlign: "bottom",
-  wordBreak: "break-word",
+  whiteSpace: "nowrap",
 }
 
 const trStyle: React.CSSProperties = {
@@ -900,12 +894,10 @@ const trStyle: React.CSSProperties = {
 }
 
 const tdStyle: React.CSSProperties = {
-  padding: "9px 8px",
-  fontSize: 12,
+  padding: "9px 12px",
+  fontSize: 13,
   color: "#cbd5e1",
-  verticalAlign: "top",
-  wordBreak: "break-word",
-  overflowWrap: "anywhere",
+  verticalAlign: "middle",
 }
 
 const estatusBadgeStyle = (cfg: typeof ESTATUS[Estatus]): React.CSSProperties => ({
