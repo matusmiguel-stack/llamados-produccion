@@ -428,6 +428,11 @@ export default function IngresosPage() {
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
+              <colgroup>
+                {["10%","7%","14%","7%","16%","7%","9%","7%","9%","7%","7%","6%"].map((w, i) => (
+                  <col key={i} style={{ width: w }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
                   {([
@@ -483,8 +488,8 @@ export default function IngresosPage() {
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
                       <td style={{ ...tdStyle, fontWeight: 600, color: "#e2e8f0" }}>{r.cliente_agencia}</td>
-                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12 }}>{r.responsable || "—"}</td>
-                      <td style={{ ...tdStyle, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, color: "#94a3b8" }}>{r.responsable || "—"}</td>
+                      <td style={tdStyle}>
                         {r.project_id ? (
                           <Link
                             href={`/proyectos/${r.project_id}`}
@@ -498,20 +503,20 @@ export default function IngresosPage() {
                         )}
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>{r.numero_factura || "—"}</td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc", whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal)}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#64748b", fontSize: 12 }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#64748b", whiteSpace: "nowrap" }}>
                         {fmt(r.iva)}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#a78bfa", fontWeight: 600 }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#a78bfa", fontWeight: 600, whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal + r.iva)}
                       </td>
-                      <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", fontSize: 12, fontWeight: isOverdue ? 600 : undefined }}>
+                      <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", whiteSpace: "nowrap", fontWeight: isOverdue ? 600 : undefined }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
-                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{r.mes_cierre || "—"}</td>
-                      <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, color: "#64748b", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
+                      <td style={{ ...tdStyle, whiteSpace: "nowrap", textAlign: "right" }}>
                         <button onClick={() => openEdit(r)} style={actionBtnStyle}>✎</button>
                         <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, color: "#f87171" }}>✕</button>
                       </td>
@@ -870,22 +875,24 @@ const tableWrapStyle: React.CSSProperties = {
 
 const tableStyle: React.CSSProperties = {
   width: "100%",
+  tableLayout: "fixed",
   borderCollapse: "collapse",
-  fontSize: 13,
+  fontSize: 12,
   color: "#cbd5e1",
 }
 
 const thStyle: React.CSSProperties = {
-  padding: "10px 12px",
+  padding: "9px 8px",
   textAlign: "left",
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 700,
   color: "#475569",
   textTransform: "uppercase",
-  letterSpacing: 0.6,
+  letterSpacing: 0.4,
   borderBottom: "1px solid rgba(148,163,184,0.12)",
   background: "rgba(255,255,255,0.03)",
-  whiteSpace: "nowrap",
+  verticalAlign: "bottom",
+  wordBreak: "break-word",
 }
 
 const trStyle: React.CSSProperties = {
@@ -893,10 +900,12 @@ const trStyle: React.CSSProperties = {
 }
 
 const tdStyle: React.CSSProperties = {
-  padding: "9px 12px",
-  fontSize: 13,
+  padding: "9px 8px",
+  fontSize: 12,
   color: "#cbd5e1",
-  verticalAlign: "middle",
+  verticalAlign: "top",
+  wordBreak: "break-word",
+  overflowWrap: "anywhere",
 }
 
 const estatusBadgeStyle = (cfg: typeof ESTATUS[Estatus]): React.CSSProperties => ({
@@ -913,7 +922,7 @@ const estatusBadgeStyle = (cfg: typeof ESTATUS[Estatus]): React.CSSProperties =>
 })
 
 const actionBtnStyle: React.CSSProperties = {
-  padding: "3px 7px",
+  padding: "3px 4px",
   border: "none",
   background: "none",
   color: "#475569",
