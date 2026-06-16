@@ -130,8 +130,8 @@ function buildHtml(params: {
               </ol>
               <p style="margin:14px 0 0;font-size:13px;color:#334155;line-height:1.7;">
                 Las facturas se deberán subir a la página
-                <a href="https://llamados-produccion.vercel.app/facturas" style="color:#0ea5e9;text-decoration:none;font-weight:600;">llamados-produccion.vercel.app/facturas</a>
-                los días <strong>jueves</strong> de cada semana. En caso de que falte algún dato antes mencionado recibirás un correo automático con la causa por la cual fue rechazada para que se vuelva a ingresar.
+                <a href="https://app.retrocasaproductora.com/facturas" style="color:#0ea5e9;text-decoration:none;font-weight:600;">app.retrocasaproductora.com/facturas</a>
+                únicamente los días <strong>jueves de 10:00 a.m. a 7:00 p.m.</strong> (hora de la Ciudad de México). En caso de que falte algún dato antes mencionado recibirás un correo automático con la causa por la cual fue rechazada para que se vuelva a ingresar.
               </p>
               <p style="margin:12px 0 0;font-size:13px;color:#334155;line-height:1.7;">
                 El sistema mandará automáticamente la confirmación de la factura junto con la fecha estimada de pago.
