@@ -122,6 +122,32 @@ export default function IngresosPage() {
 
   const [activeEmpresa, setActiveEmpresa] = useState<Empresa>("retro_studio")
   const [filtroEstatus, setFiltroEstatus] = useState<Estatus | "todos">("todos")
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+
+  // Columnas ordenables: key + cómo extraer el valor de cada fila
+  const SORT_ACCESSORS: Record<string, (r: Ingreso) => string | number | null> = {
+    estatus:    r => r.estatus,
+    odc:        r => r.odc,
+    cliente:    r => r.cliente_agencia,
+    responsable:r => r.responsable,
+    proyecto:   r => r.proyecto,
+    factura:    r => r.numero_factura,
+    subtotal:   r => r.subtotal,
+    iva:        r => r.iva,
+    total:      r => r.subtotal + r.iva,
+    fecha:      r => r.fecha_pago || r.fecha_aprox_pago,
+    mes:        r => r.mes_cierre,
+  }
+
+  function toggleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir(d => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDir("asc")
+    }
+  }
 
   const [projects, setProjects]     = useState<ProjectOption[]>([])
 
@@ -240,10 +266,29 @@ export default function IngresosPage() {
   }
 
   // ── Filtered rows ───────────────────────────────────────────────────────────
-  const rows = ingresos.filter(r =>
+  const filteredRows = ingresos.filter(r =>
     r.empresa === activeEmpresa &&
     (filtroEstatus === "todos" || r.estatus === filtroEstatus)
   )
+
+  const rows = (() => {
+    if (!sortKey) return filteredRows
+    const accessor = SORT_ACCESSORS[sortKey]
+    if (!accessor) return filteredRows
+    const dir = sortDir === "asc" ? 1 : -1
+    return [...filteredRows].sort((a, b) => {
+      const va = accessor(a)
+      const vb = accessor(b)
+      // Vacíos siempre al final, sin importar la dirección
+      const aEmpty = va === null || va === undefined || va === ""
+      const bEmpty = vb === null || vb === undefined || vb === ""
+      if (aEmpty && bEmpty) return 0
+      if (aEmpty) return 1
+      if (bEmpty) return -1
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir
+      return String(va).localeCompare(String(vb), "es", { numeric: true, sensitivity: "base" }) * dir
+    })
+  })()
 
   // ── Totals ──────────────────────────────────────────────────────────────────
   const empresaRows = ingresos.filter(r => r.empresa === activeEmpresa)
@@ -385,8 +430,28 @@ export default function IngresosPage() {
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  {["Estatus","ODC","Cliente / Agencia","Resp.","Proyecto","Factura","Subtotal","IVA","Total c/IVA","Fecha Pago","Mes Cierre",""].map(h => (
-                    <th key={h} style={thStyle}>{h}</th>
+                  {([
+                    ["Estatus","estatus"],["ODC","odc"],["Cliente / Agencia","cliente"],
+                    ["Resp.","responsable"],["Proyecto","proyecto"],["Factura","factura"],
+                    ["Subtotal","subtotal"],["IVA","iva"],["Total c/IVA","total"],
+                    ["Fecha Pago","fecha"],["Mes Cierre","mes"],["",null],
+                  ] as [string, string | null][]).map(([h, key]) => (
+                    <th
+                      key={h || "acciones"}
+                      style={{
+                        ...thStyle,
+                        cursor: key ? "pointer" : "default",
+                        userSelect: "none",
+                        color: key && sortKey === key ? "#a78bfa" : thStyle.color,
+                      }}
+                      onClick={key ? () => toggleSort(key) : undefined}
+                      title={key ? "Ordenar" : undefined}
+                    >
+                      {h}
+                      {key && sortKey === key && (
+                        <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </th>
                   ))}
                 </tr>
               </thead>
