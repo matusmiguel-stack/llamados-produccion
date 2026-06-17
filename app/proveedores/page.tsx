@@ -43,6 +43,28 @@ export default function ProveedoresPage() {
   const [editForm, setEditForm] = useState<ProveedorForm>(emptyForm)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [search, setSearch] = useState("")
+
+  // Filtra y ordena: las coincidencias que empiezan con el texto van primero
+  const displayedProveedores = (() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return proveedores
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    const nq = norm(q)
+    const scored = proveedores
+      .map((p) => {
+        const campos = [p.nombre, p.apellido, p.empresa || "", p.actividad].map(norm)
+        const haystack = campos.join(" ")
+        if (!haystack.includes(nq)) return null
+        // mejor puntaje si algún campo empieza con la búsqueda
+        const startsScore = campos.some((c) => c.startsWith(nq)) ? 0 : 1
+        return { p, startsScore }
+      })
+      .filter(Boolean) as { p: Proveedor; startsScore: number }[]
+    return scored
+      .sort((a, b) => a.startsScore - b.startsScore)
+      .map((s) => s.p)
+  })()
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
 
@@ -190,8 +212,9 @@ export default function ProveedoresPage() {
               <p style={eyebrowStyle}>Admin</p>
               <h1 style={pageTitleStyle}>Proveedores</h1>
               <p style={pageSubtitleStyle}>
-                {proveedores.length} proveedor{proveedores.length === 1 ? "" : "es"} registrado
-                {proveedores.length === 1 ? "" : "s"}
+                {search
+                  ? `${displayedProveedores.length} de ${proveedores.length} proveedores`
+                  : `${proveedores.length} proveedor${proveedores.length === 1 ? "" : "es"} registrado${proveedores.length === 1 ? "" : "s"}`}
               </p>
             </div>
           </header>
@@ -222,7 +245,24 @@ export default function ProveedoresPage() {
               <p style={panelHintStyle}>Consulta, edita o elimina proveedores registrados</p>
             </div>
 
-            {!isMobile && proveedores.length > 0 && (
+            <div style={{ position: "relative", margin: "0 0 14px" }}>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nombre, empresa o actividad…"
+                style={searchInputStyle}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  style={searchClearStyle}
+                  aria-label="Limpiar búsqueda"
+                >✕</button>
+              )}
+            </div>
+
+            {!isMobile && displayedProveedores.length > 0 && (
               <div style={tableHeaderStyle}>
                 <span>Proveedor</span>
                 <span>Actividad</span>
@@ -234,8 +274,10 @@ export default function ProveedoresPage() {
             <div style={tableBodyStyle}>
               {proveedores.length === 0 ? (
                 <div style={emptyStateStyle}>Sin proveedores registrados</div>
+              ) : displayedProveedores.length === 0 ? (
+                <div style={emptyStateStyle}>Sin coincidencias para “{search}”</div>
               ) : (
-                proveedores.map((proveedor) => {
+                displayedProveedores.map((proveedor) => {
                   const isEditing = editingId === proveedor.id
                   const name = fullName(proveedor)
 
@@ -586,6 +628,31 @@ const tableHeaderStyle: React.CSSProperties = {
 const tableBodyStyle: React.CSSProperties = {
   display: "grid",
   gap: 8,
+}
+
+const searchInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 38px 11px 14px",
+  background: "rgba(2,6,23,0.55)",
+  border: "1px solid rgba(148,163,184,0.22)",
+  borderRadius: 12,
+  color: "#e2e8f0",
+  fontSize: 14,
+  boxSizing: "border-box",
+  outline: "none",
+}
+
+const searchClearStyle: React.CSSProperties = {
+  position: "absolute",
+  right: 12,
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "none",
+  border: "none",
+  color: "#64748b",
+  cursor: "pointer",
+  fontSize: 14,
+  lineHeight: 1,
 }
 
 const rowStyle: React.CSSProperties = {
