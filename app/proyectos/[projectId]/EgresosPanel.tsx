@@ -534,17 +534,32 @@ export function EgresosPanel({
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
                         <td style={tdStyle}>
-                          <div style={actionStackStyle}>
-                            {item.supplierType === "proveedor" && (
-                              <>
-                                {item.billing_sent_at && (
-                                  <span
-                                    title={`Enviado el ${new Date(item.billing_sent_at).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`}
-                                    style={sentBadgeStyle}
-                                  >
-                                    ✓ Enviado
-                                  </span>
-                                )}
+                          <div style={actionGridStyle}>
+                            {/* Columna izquierda: pagos */}
+                            <div style={actionColStyle}>
+                              {item.pago_estado === "pagado" ? (
+                                <span style={paidBadgeStyle} title={item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación cerrada"}>
+                                  ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : ""}
+                                </span>
+                              ) : item.pago_estado === "pendiente_cierre" ? (
+                                <button
+                                  onClick={() => { setCloseModal(item); setCloseMonto(String(item.monto_comprobado ?? monto)) }}
+                                  style={pendienteCierreBtnStyle}
+                                  title="Cerrar comprobación con el monto real"
+                                >
+                                  ⚠ Pendiente Cierre
+                                </button>
+                              ) : item.supplierType !== "none" ? (
+                                <>
+                                  <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                                  <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>
+                                </>
+                              ) : null}
+                            </div>
+
+                            {/* Columna derecha: facturar + editar */}
+                            <div style={actionColStyle}>
+                              {item.supplierType === "proveedor" && (
                                 <button
                                   onClick={() => sendBilling(item, monto)}
                                   disabled={sendingBilling === item.id}
@@ -559,28 +574,9 @@ export function EgresosPanel({
                                 >
                                   {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
                                 </button>
-                              </>
-                            )}
-                            {/* Pagos */}
-                            {item.pago_estado === "pagado" ? (
-                              <span style={paidBadgeStyle} title={item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación cerrada"}>
-                                ✓ Pagado{item.pago_tipo === "anticipo" ? " (Anticipo)" : ""}
-                              </span>
-                            ) : item.pago_estado === "pendiente_cierre" ? (
-                              <button
-                                onClick={() => { setCloseModal(item); setCloseMonto(String(item.monto_comprobado ?? monto)) }}
-                                style={pendienteCierreBtnStyle}
-                                title="Cerrar comprobación con el monto real"
-                              >
-                                ⚠ Pendiente Cierre
-                              </button>
-                            ) : item.supplierType !== "none" && (
-                              <>
-                                <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
-                                <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprobación</button>
-                              </>
-                            )}
-                            <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
+                              )}
+                              <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -721,6 +717,14 @@ const editBtnStyle: React.CSSProperties = {
 const actionStackStyle: React.CSSProperties = {
   display: "flex", flexDirection: "column", alignItems: "stretch", gap: 5,
   width: "100%", maxWidth: 160, margin: "0 auto",
+}
+
+const actionGridStyle: React.CSSProperties = {
+  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, alignItems: "start",
+  minWidth: 280,
+}
+const actionColStyle: React.CSSProperties = {
+  display: "flex", flexDirection: "column", gap: 5,
 }
 
 const sentBadgeStyle: React.CSSProperties = {
