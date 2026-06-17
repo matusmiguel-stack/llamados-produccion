@@ -8,7 +8,7 @@ import { AppSidebar } from "../../components/AppSidebar"
 
 type Factura = {
   id: string
-  proveedor_email: string
+  proveedor_email: string | null
   codigo_proyecto: string | null
   subtotal: number | null
   status: "aceptada" | "rechazada" | "pagada"
@@ -19,15 +19,23 @@ type Factura = {
   xml_path: string | null
   pdf_path: string | null
   created_at: string
+  concepto: string | null
+  origen: "proveedor" | "anticipo" | "comprobacion" | null
   proveedores: { nombre: string; apellido: string; empresa: string | null } | null
   projects: { name: string; code: string | null } | null
+}
+
+const ORIGEN_LABEL: Record<string, string> = {
+  anticipo: "Anticipo",
+  comprobacion: "Comprobación",
+  proveedor: "Factura proveedor",
 }
 
 const fmtMx = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 
 function provLabel(f: Factura) {
-  if (!f.proveedores) return f.proveedor_email
+  if (!f.proveedores) return f.proveedor_email || "—"
   const p = f.proveedores
   return p.empresa || `${p.nombre} ${p.apellido}`
 }
@@ -136,7 +144,8 @@ export default function FinanzasPage() {
       list = list.filter(f =>
         provLabel(f).toLowerCase().includes(q) ||
         projLabel(f).toLowerCase().includes(q) ||
-        f.proveedor_email.toLowerCase().includes(q) ||
+        (f.proveedor_email || "").toLowerCase().includes(q) ||
+        (f.concepto || "").toLowerCase().includes(q) ||
         (f.uuid_fiscal || "").toLowerCase().includes(q)
       )
     }
@@ -260,9 +269,15 @@ export default function FinanzasPage() {
                       <span style={statusBadgeStyle(f.status)}>
                         {f.status === "aceptada" ? "Por pagar" : f.status === "pagada" ? "Pagada" : "Rechazada"}
                       </span>
+                      {f.origen && f.origen !== "proveedor" && (
+                        <span style={origenBadgeStyle}>{ORIGEN_LABEL[f.origen]}</span>
+                      )}
                     </div>
+                    {f.concepto && (
+                      <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
+                    )}
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-                      {projLabel(f)} · Recibida {fechaCorta(f.created_at)}
+                      {projLabel(f)} · Registrada {fechaCorta(f.created_at)}
                       {f.status === "aceptada" && f.fecha_pago && <> · <span style={{ color: "#fbbf24" }}>Pago: {fechaCorta(f.fecha_pago)}</span></>}
                       {f.status === "pagada" && f.paid_at && <> · <span style={{ color: "#34d399" }}>Pagada {fechaCorta(f.paid_at)}</span></>}
                     </p>
@@ -354,6 +369,11 @@ function statusBadgeStyle(status: string): React.CSSProperties {
 const miniBtnStyle: React.CSSProperties = {
   padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
   border: "1px solid rgba(148,163,184,0.22)", background: "rgba(148,163,184,0.08)", color: "#cbd5e1",
+}
+
+const origenBadgeStyle: React.CSSProperties = {
+  padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700,
+  background: "rgba(96,165,250,0.14)", border: "1px solid rgba(96,165,250,0.3)", color: "#93c5fd",
 }
 
 function payBtnStyle(busy: boolean): React.CSSProperties {

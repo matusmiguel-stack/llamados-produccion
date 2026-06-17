@@ -20,6 +20,9 @@ type EgresoItem = {
   supplierLabel: string; supplierType: "proveedor" | "empleado" | "none"
   section_name: string; quote_id: string; quote_name: string
   billing_sent_at: string | null
+  pago_tipo: "anticipo" | "comprobacion" | null
+  pago_estado: "pagado" | "pendiente_cierre" | null
+  monto_comprobado: number | null
 }
 
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
@@ -75,6 +78,15 @@ export function EgresosPanel({
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
   const [sendingAll, setSendingAll]  = useState(false)
 
+  // ── Pagos (anticipo / comprobación) ───────────────────────────────────────
+  const [payModal, setPayModal] = useState<{ item: EgresoItem; tipo: "anticipo" | "comprobacion" } | null>(null)
+  const [payXml, setPayXml] = useState<File | null>(null)
+  const [payPdf, setPayPdf] = useState<File | null>(null)
+  const [payMonto, setPayMonto] = useState("")
+  const [paying, setPaying] = useState(false)
+  const [closeModal, setCloseModal] = useState<EgresoItem | null>(null)
+  const [closeMonto, setCloseMonto] = useState("")
+
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -104,7 +116,7 @@ export function EgresosPanel({
         for (const section of sections) {
           const { data: raw } = await supabase
             .from("quote_items")
-            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at")
+            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado")
             .eq("section_id", section.id).order("order_index", { ascending: true })
           if (!raw) continue
 
@@ -141,6 +153,9 @@ export function EgresosPanel({
               supplierLabel, supplierType,
               section_name: section.name, quote_id: quote.id, quote_name: quote.name,
               billing_sent_at: row.billing_sent_at ?? null,
+              pago_tipo: row.pago_tipo ?? null,
+              pago_estado: row.pago_estado ?? null,
+              monto_comprobado: row.monto_comprobado ?? null,
             })
           }
         }
@@ -279,6 +294,81 @@ export function EgresosPanel({
       alert(`Enviados: ${sent}/${provList.length}\nErrores:\n${errors.join("\n")}`)
     } else {
       alert(`✓ Instrucciones enviadas a ${sent} proveedor${sent !== 1 ? "es"  : ""}`)
+    }
+  }
+
+  // ── Pagos ─────────────────────────────────────────────────────────────────
+  function openPay(item: EgresoItem, tipo: "anticipo" | "comprobacion") {
+    setPayModal({ item, tipo })
+    setPayXml(null)
+    setPayPdf(null)
+    setPayMonto(String(montoEgreso(item)))
+  }
+
+  async function submitPay() {
+    if (!payModal) return
+    const { item, tipo } = payModal
+    const monto = parseFloat(payMonto)
+    if (!monto || monto <= 0) { alert("Indica el monto del pago"); return }
+    if (tipo === "anticipo" && (!payXml || !payPdf)) {
+      alert("Para anticipo debes subir el XML y el PDF de la factura")
+      return
+    }
+    setPaying(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const fd = new FormData()
+      fd.append("itemId", item.id)
+      fd.append("tipo", tipo)
+      fd.append("monto", String(monto))
+      fd.append("concepto", `${item.description} — ${item.supplierLabel}`)
+      if (item.actual_supplier_id) fd.append("proveedorId", item.actual_supplier_id)
+      fd.append("projectId", projectId)
+      fd.append("codigo", projectCode || "")
+      if (tipo === "anticipo" && payXml && payPdf) {
+        fd.append("xml", payXml)
+        fd.append("pdf", payPdf)
+      }
+      const res = await fetch("/api/egresos/pay", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || "Error al registrar pago")
+      setItems(prev => prev.map(it => it.id === item.id
+        ? { ...it, pago_tipo: tipo, pago_estado: data.pago_estado }
+        : it))
+      setPayModal(null)
+    } catch (err: any) {
+      alert("Error: " + err.message)
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  async function submitClose() {
+    if (!closeModal) return
+    const monto = parseFloat(closeMonto)
+    if (!monto || monto <= 0) { alert("Indica el monto real comprobado"); return }
+    setPaying(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/egresos/pay", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ itemId: closeModal.id, montoReal: monto }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || "Error al cerrar comprobación")
+      setItems(prev => prev.map(it => it.id === closeModal.id
+        ? { ...it, pago_estado: "pagado", monto_comprobado: monto }
+        : it))
+      setCloseModal(null)
+    } catch (err: any) {
+      alert("Error: " + err.message)
+    } finally {
+      setPaying(false)
     }
   }
 
@@ -470,6 +560,25 @@ export function EgresosPanel({
                                 </button>
                               </>
                             )}
+                            {/* Pagos */}
+                            {item.pago_estado === "pagado" ? (
+                              <span style={paidBadgeStyle} title={item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación cerrada"}>
+                                ✓ Pagado{item.pago_tipo === "anticipo" ? " (Anticipo)" : ""}
+                              </span>
+                            ) : item.pago_estado === "pendiente_cierre" ? (
+                              <button
+                                onClick={() => { setCloseModal(item); setCloseMonto(String(item.monto_comprobado ?? monto)) }}
+                                style={pendienteCierreBtnStyle}
+                                title="Cerrar comprobación con el monto real"
+                              >
+                                ⚠ Pendiente Cierre
+                              </button>
+                            ) : item.supplierType !== "none" && (
+                              <>
+                                <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                                <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprobación</button>
+                              </>
+                            )}
                             <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
                           </div>
                         </td>
@@ -492,6 +601,66 @@ export function EgresosPanel({
           </div>
         )
       })}
+
+      {/* Modal de pago (anticipo / comprobación) */}
+      {payModal && (
+        <div style={payOverlayStyle} onClick={() => !paying && setPayModal(null)}>
+          <div style={payPanelStyle} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: payModal.tipo === "anticipo" ? "#34d399" : "#fbbf24" }}>
+              {payModal.tipo === "anticipo" ? "Pagar anticipo" : "Pagar comprobación"}
+            </p>
+            <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{payModal.item.description}</p>
+            <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>{payModal.item.supplierLabel}</p>
+
+            <label style={payLabelStyle}>Monto del pago</label>
+            <input type="number" value={payMonto} onChange={(e) => setPayMonto(e.target.value)} style={payInputStyle} />
+
+            {payModal.tipo === "anticipo" && (
+              <>
+                <label style={{ ...payLabelStyle, marginTop: 14 }}>Factura XML (CFDI) *</label>
+                <input type="file" accept=".xml,text/xml" onChange={(e) => setPayXml(e.target.files?.[0] || null)} style={payFileStyle} />
+                <label style={{ ...payLabelStyle, marginTop: 12 }}>Factura PDF *</label>
+                <input type="file" accept=".pdf,application/pdf" onChange={(e) => setPayPdf(e.target.files?.[0] || null)} style={payFileStyle} />
+              </>
+            )}
+            {payModal.tipo === "comprobacion" && (
+              <p style={{ margin: "12px 0 0", fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                No requiere factura. Tras pagar quedará como <strong style={{ color: "#fbbf24" }}>Pendiente Cierre</strong> hasta que captures el monto real comprobado.
+              </p>
+            )}
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
+              <button onClick={() => setPayModal(null)} disabled={paying} style={payCancelStyle}>Cancelar</button>
+              <button onClick={submitPay} disabled={paying} style={{ ...payConfirmStyle, opacity: paying ? 0.6 : 1 }}>
+                {paying ? "Procesando…" : "✓ Registrar pago"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de cierre de comprobación */}
+      {closeModal && (
+        <div style={payOverlayStyle} onClick={() => !paying && setCloseModal(null)}>
+          <div style={payPanelStyle} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#fbbf24" }}>
+              Cerrar comprobación
+            </p>
+            <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{closeModal.description}</p>
+            <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>
+              Monto original: {fmt(montoEgreso(closeModal))}
+            </p>
+            <label style={payLabelStyle}>Monto real comprobado</label>
+            <input type="number" value={closeMonto} onChange={(e) => setCloseMonto(e.target.value)} style={payInputStyle} autoFocus />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
+              <button onClick={() => setCloseModal(null)} disabled={paying} style={payCancelStyle}>Cancelar</button>
+              <button onClick={submitClose} disabled={paying} style={{ ...payConfirmStyle, opacity: paying ? 0.6 : 1 }}>
+                {paying ? "Guardando…" : "✓ Cerrar como pagado"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -550,7 +719,7 @@ const editBtnStyle: React.CSSProperties = {
 
 const actionStackStyle: React.CSSProperties = {
   display: "flex", flexDirection: "column", alignItems: "stretch", gap: 5,
-  width: "100%", maxWidth: 120, margin: "0 auto",
+  width: "100%", maxWidth: 160, margin: "0 auto",
 }
 
 const sentBadgeStyle: React.CSSProperties = {
@@ -559,6 +728,63 @@ const sentBadgeStyle: React.CSSProperties = {
   border: "1px solid rgba(52,211,153,0.24)", background: "rgba(52,211,153,0.10)",
   color: "#34d399", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
   cursor: "default",
+}
+
+const payBtnBase: React.CSSProperties = {
+  width: "100%", boxSizing: "border-box", textAlign: "center",
+  padding: "4px 10px", borderRadius: 6, cursor: "pointer",
+  fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+}
+const payAnticipoBtnStyle: React.CSSProperties = {
+  ...payBtnBase,
+  border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.12)", color: "#34d399",
+}
+const payCompBtnStyle: React.CSSProperties = {
+  ...payBtnBase,
+  border: "1px solid rgba(251,191,36,0.3)", background: "rgba(251,191,36,0.12)", color: "#fbbf24",
+}
+const pendienteCierreBtnStyle: React.CSSProperties = {
+  ...payBtnBase,
+  border: "1px solid rgba(248,113,113,0.4)", background: "rgba(248,113,113,0.15)", color: "#fca5a5",
+}
+const paidBadgeStyle: React.CSSProperties = {
+  width: "100%", boxSizing: "border-box", textAlign: "center",
+  padding: "4px 10px", borderRadius: 6,
+  border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.16)",
+  color: "#34d399", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", cursor: "default",
+}
+
+const payOverlayStyle: React.CSSProperties = {
+  position: "fixed", inset: 0, zIndex: 1000010,
+  background: "rgba(2,6,23,0.78)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+}
+const payPanelStyle: React.CSSProperties = {
+  width: "100%", maxWidth: 400,
+  background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
+  border: "1px solid rgba(148,163,184,0.16)", borderRadius: 16,
+  padding: "22px 22px 18px", boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+}
+const payLabelStyle: React.CSSProperties = {
+  display: "block", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+  letterSpacing: 0.5, color: "#64748b", marginBottom: 6,
+}
+const payInputStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 12px", background: "rgba(2,6,23,0.55)",
+  border: "1px solid rgba(148,163,184,0.22)", borderRadius: 10, color: "#e2e8f0",
+  fontSize: 14, boxSizing: "border-box", outline: "none",
+}
+const payFileStyle: React.CSSProperties = {
+  width: "100%", padding: "8px 10px", background: "rgba(2,6,23,0.55)",
+  border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 10, color: "#94a3b8",
+  fontSize: 12, boxSizing: "border-box",
+}
+const payCancelStyle: React.CSSProperties = {
+  padding: "9px 16px", borderRadius: 10, border: "1px solid rgba(148,163,184,0.22)",
+  background: "transparent", color: "#94a3b8", fontSize: 13, fontWeight: 600, cursor: "pointer",
+}
+const payConfirmStyle: React.CSSProperties = {
+  padding: "9px 16px", borderRadius: 10, border: "1px solid rgba(52,211,153,0.4)",
+  background: "rgba(52,211,153,0.16)", color: "#34d399", fontSize: 13, fontWeight: 700, cursor: "pointer",
 }
 
 // ─── SupplierCombobox ─────────────────────────────────────────────────────────

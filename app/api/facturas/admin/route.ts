@@ -26,6 +26,7 @@ export async function GET(req: Request) {
     .select(`
       id, proveedor_email, codigo_proyecto, subtotal, status, motivo_rechazo,
       fecha_pago, paid_at, uuid_fiscal, xml_path, pdf_path, created_at,
+      concepto, origen,
       proveedores ( nombre, apellido, empresa ),
       projects ( name, code )
     `)
