@@ -23,7 +23,7 @@ type EgresoItem = {
   pago_tipo: "anticipo" | "comprobacion" | null
   pago_estado: "pagado" | "pendiente_cierre" | null
   monto_comprobado: number | null
-  requiere_anticipo: boolean
+  pago_modo: "anticipo" | "comprobacion" | null
 }
 
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
@@ -84,9 +84,8 @@ export function EgresosPanel({
   const [payXml, setPayXml] = useState<File | null>(null)
   const [payPdf, setPayPdf] = useState<File | null>(null)
   const [payMonto, setPayMonto] = useState("")
+  const [payForma, setPayForma] = useState("")
   const [paying, setPaying] = useState(false)
-  const [closeModal, setCloseModal] = useState<EgresoItem | null>(null)
-  const [closeMonto, setCloseMonto] = useState("")
 
   useEffect(() => {
     async function load() {
@@ -117,7 +116,7 @@ export function EgresosPanel({
         for (const section of sections) {
           const { data: raw } = await supabase
             .from("quote_items")
-            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado,requiere_anticipo")
+            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado,pago_modo")
             .eq("section_id", section.id).order("order_index", { ascending: true })
           if (!raw) continue
 
@@ -157,7 +156,7 @@ export function EgresosPanel({
               pago_tipo: row.pago_tipo ?? null,
               pago_estado: row.pago_estado ?? null,
               monto_comprobado: row.monto_comprobado ?? null,
-              requiere_anticipo: row.requiere_anticipo ?? false,
+              pago_modo: row.pago_modo ?? null,
             })
           }
         }
@@ -304,6 +303,7 @@ export function EgresosPanel({
     setPayModal({ item, tipo })
     setPayXml(null)
     setPayPdf(null)
+    setPayForma("")
     setPayMonto(String(montoEgreso(item)))
   }
 
@@ -312,6 +312,7 @@ export function EgresosPanel({
     const { item, tipo } = payModal
     const monto = parseFloat(payMonto)
     if (!monto || monto <= 0) { alert("Indica el monto del pago"); return }
+    if (!payForma) { alert("Selecciona de dónde salió el pago"); return }
     if (tipo === "anticipo" && (!payXml || !payPdf)) {
       alert("Para anticipo debes subir el XML y el PDF de la factura")
       return
@@ -323,6 +324,7 @@ export function EgresosPanel({
       fd.append("itemId", item.id)
       fd.append("tipo", tipo)
       fd.append("monto", String(monto))
+      fd.append("formaPago", payForma)
       fd.append("concepto", `${item.description} — ${item.supplierLabel}`)
       if (item.actual_supplier_id) fd.append("proveedorId", item.actual_supplier_id)
       fd.append("projectId", projectId)
@@ -338,36 +340,18 @@ export function EgresosPanel({
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error al registrar pago")
+      // La comprobación cierra en un solo paso: el monto capturado es el real
       setItems(prev => prev.map(it => it.id === item.id
-        ? { ...it, pago_tipo: tipo, pago_estado: data.pago_estado }
+        ? {
+            ...it,
+            pago_tipo: tipo,
+            pago_estado: "pagado",
+            ...(tipo === "comprobacion"
+              ? { monto_comprobado: monto, actual_qty: 1, actual_days: 1, actual_unit_price: monto }
+              : {}),
+          }
         : it))
       setPayModal(null)
-    } catch (err: any) {
-      alert("Error: " + err.message)
-    } finally {
-      setPaying(false)
-    }
-  }
-
-  async function submitClose() {
-    if (!closeModal) return
-    const monto = parseFloat(closeMonto)
-    if (!monto || monto <= 0) { alert("Indica el monto real comprobado"); return }
-    setPaying(true)
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch("/api/egresos/pay", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ itemId: closeModal.id, montoReal: monto }),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || "Error al cerrar comprobación")
-      setItems(prev => prev.map(it => it.id === closeModal.id
-        ? { ...it, pago_estado: "pagado", monto_comprobado: monto,
-            actual_qty: 1, actual_days: 1, actual_unit_price: monto }
-        : it))
-      setCloseModal(null)
     } catch (err: any) {
       alert("Error: " + err.message)
     } finally {
@@ -540,20 +524,14 @@ export function EgresosPanel({
                             {/* Columna izquierda: pagos */}
                             <div style={actionColStyle}>
                               {item.pago_estado === "pagado" ? (
-                                <span style={paidBadgeStyle} title={item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación cerrada"}>
-                                  ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : ""}
+                                <span style={paidBadgeStyle} title={item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación pagada"}>
+                                  ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
                                 </span>
-                              ) : item.pago_estado === "pendiente_cierre" ? (
-                                <button
-                                  onClick={() => { setCloseModal(item); setCloseMonto(String(item.monto_comprobado ?? monto)) }}
-                                  style={pendienteCierreBtnStyle}
-                                  title="Cerrar comprobación con el monto real"
-                                >
-                                  ⚠ Pendiente Cierre
-                                </button>
-                              ) : item.requiere_anticipo && item.supplierType !== "none" ? (
+                              ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
+                                <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                              ) : item.pago_modo === "comprobacion" && item.supplierType !== "none" ? (
                                 <>
-                                  <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                                  <span style={pendienteBadgeStyle}>⚠ Pendiente Cierre</span>
                                   <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>
                                 </>
                               ) : null}
@@ -611,8 +589,25 @@ export function EgresosPanel({
             <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{payModal.item.description}</p>
             <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>{payModal.item.supplierLabel}</p>
 
-            <label style={payLabelStyle}>Monto del pago</label>
+            <label style={payLabelStyle}>
+              {payModal.tipo === "comprobacion" ? "Monto real comprobado" : "Monto del pago"}
+            </label>
             <input type="number" value={payMonto} onChange={(e) => setPayMonto(e.target.value)} style={payInputStyle} />
+            {payModal.tipo === "comprobacion" && (
+              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b" }}>
+                Monto original: {fmt(montoEgreso(payModal.item))}. Captura el monto realmente comprobado.
+              </p>
+            )}
+
+            <label style={{ ...payLabelStyle, marginTop: 14 }}>¿De dónde salió el pago? *</label>
+            <select value={payForma} onChange={(e) => setPayForma(e.target.value)} style={payInputStyle}>
+              <option value="">Selecciona…</option>
+              <option value="Retro Studio">Retro Studio</option>
+              <option value="Retro Films">Retro Films</option>
+              <option value="Konfio">Konfio</option>
+              <option value="Banregio">Banregio</option>
+              <option value="Efectivo">Efectivo</option>
+            </select>
 
             {payModal.tipo === "anticipo" && (
               <>
@@ -622,39 +617,11 @@ export function EgresosPanel({
                 <input type="file" accept=".pdf,application/pdf" onChange={(e) => setPayPdf(e.target.files?.[0] || null)} style={payFileStyle} />
               </>
             )}
-            {payModal.tipo === "comprobacion" && (
-              <p style={{ margin: "12px 0 0", fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
-                No requiere factura. Tras pagar quedará como <strong style={{ color: "#fbbf24" }}>Pendiente Cierre</strong> hasta que captures el monto real comprobado.
-              </p>
-            )}
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setPayModal(null)} disabled={paying} style={payCancelStyle}>Cancelar</button>
               <button onClick={submitPay} disabled={paying} style={{ ...payConfirmStyle, opacity: paying ? 0.6 : 1 }}>
                 {paying ? "Procesando…" : "✓ Registrar pago"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de cierre de comprobación */}
-      {closeModal && (
-        <div style={payOverlayStyle} onClick={() => !paying && setCloseModal(null)}>
-          <div style={payPanelStyle} onClick={(e) => e.stopPropagation()}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#fbbf24" }}>
-              Cerrar comprobación
-            </p>
-            <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{closeModal.description}</p>
-            <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>
-              Monto original: {fmt(montoEgreso(closeModal))}
-            </p>
-            <label style={payLabelStyle}>Monto real comprobado</label>
-            <input type="number" value={closeMonto} onChange={(e) => setCloseMonto(e.target.value)} style={payInputStyle} autoFocus />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
-              <button onClick={() => setCloseModal(null)} disabled={paying} style={payCancelStyle}>Cancelar</button>
-              <button onClick={submitClose} disabled={paying} style={{ ...payConfirmStyle, opacity: paying ? 0.6 : 1 }}>
-                {paying ? "Guardando…" : "✓ Cerrar como pagado"}
               </button>
             </div>
           </div>
@@ -750,9 +717,10 @@ const payCompBtnStyle: React.CSSProperties = {
   ...payBtnBase,
   border: "1px solid rgba(251,191,36,0.3)", background: "rgba(251,191,36,0.12)", color: "#fbbf24",
 }
-const pendienteCierreBtnStyle: React.CSSProperties = {
+const pendienteBadgeStyle: React.CSSProperties = {
   ...payBtnBase,
-  border: "1px solid rgba(248,113,113,0.4)", background: "rgba(248,113,113,0.15)", color: "#fca5a5",
+  cursor: "default",
+  border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.12)", color: "#fca5a5",
 }
 const paidBadgeStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", textAlign: "center",

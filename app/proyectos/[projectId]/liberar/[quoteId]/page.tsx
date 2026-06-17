@@ -44,7 +44,7 @@ type QuoteItemRow = {
   actual_supplier_id: string | null
   actual_employee_id: string | null
   is_extra: boolean
-  requiere_anticipo: boolean
+  pago_modo: "anticipo" | "comprobacion" | null
 }
 
 type QuoteSection = {
@@ -321,21 +321,20 @@ export default function LiberarPage() {
     })
   }
 
-  async function toggleAnticipo(item: QuoteItemRow) {
-    const next = !item.requiere_anticipo
-    // Optimista
+  async function setPagoModo(item: QuoteItemRow, modo: "anticipo" | "comprobacion" | null) {
+    const prevModo = item.pago_modo
     setSections((prev) => prev.map((s) =>
       s.id === item.section_id
-        ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, requiere_anticipo: next } : i) }
+        ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, pago_modo: modo } : i) }
         : s
     ))
     const { error } = await supabase
-      .from("quote_items").update({ requiere_anticipo: next }).eq("id", item.id)
+      .from("quote_items").update({ pago_modo: modo }).eq("id", item.id)
     if (error) {
-      alert("Error al marcar anticipo: " + error.message)
+      alert("Error al guardar modo de pago: " + error.message)
       setSections((prev) => prev.map((s) =>
         s.id === item.section_id
-          ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, requiere_anticipo: !next } : i) }
+          ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, pago_modo: prevModo } : i) }
           : s
       ))
     }
@@ -758,13 +757,16 @@ export default function LiberarPage() {
                               setShowAddProv(true)
                             }}
                           />
-                          <button
-                            onClick={() => toggleAnticipo(item)}
-                            title="Marcar para pago por anticipo/comprobación en egresos"
-                            style={anticipoToggleStyle(item.requiere_anticipo)}
+                          <select
+                            value={item.pago_modo || ""}
+                            onChange={(e) => setPagoModo(item, (e.target.value || null) as any)}
+                            title="Modo de pago en el control de egresos"
+                            style={pagoModoSelectStyle(item.pago_modo)}
                           >
-                            {item.requiere_anticipo ? "✓ Anticipo" : "Anticipo"}
-                          </button>
+                            <option value="">Pago: —</option>
+                            <option value="anticipo">Anticipo</option>
+                            <option value="comprobacion">Comprobación</option>
+                          </select>
                           <button
                             onClick={() => removeExtraExpense(item.id, sec.id)}
                             title="Eliminar gasto"
@@ -796,13 +798,16 @@ export default function LiberarPage() {
                             {item.real_expense === 1 && (
                               <span style={internoBadgeStyle}>Interno</span>
                             )}
-                            <button
-                              onClick={() => toggleAnticipo(item)}
-                              title="Marcar para pago por anticipo/comprobación en egresos"
-                              style={anticipoToggleStyle(item.requiere_anticipo)}
+                            <select
+                              value={item.pago_modo || ""}
+                              onChange={(e) => setPagoModo(item, (e.target.value || null) as any)}
+                              title="Modo de pago en el control de egresos"
+                              style={pagoModoSelectStyle(item.pago_modo)}
                             >
-                              {item.requiere_anticipo ? "✓ Anticipo" : "Anticipo"}
-                            </button>
+                              <option value="">Pago: —</option>
+                              <option value="anticipo">Anticipo</option>
+                              <option value="comprobacion">Comprobación</option>
+                            </select>
                           </p>
 
                           <div
@@ -965,13 +970,16 @@ export default function LiberarPage() {
                               <span style={internoBadgeStyle}>Interno</span>
                             )}
                           </span>
-                          <button
-                            onClick={() => toggleAnticipo(item)}
-                            title="Marcar para pago por anticipo/comprobación en egresos"
-                            style={anticipoToggleStyle(item.requiere_anticipo)}
+                          <select
+                            value={item.pago_modo || ""}
+                            onChange={(e) => setPagoModo(item, (e.target.value || null) as any)}
+                            title="Modo de pago en el control de egresos"
+                            style={pagoModoSelectStyle(item.pago_modo)}
                           >
-                            {item.requiere_anticipo ? "✓ Anticipo" : "Anticipo"}
-                          </button>
+                            <option value="">Pago: —</option>
+                            <option value="anticipo">Anticipo</option>
+                            <option value="comprobacion">Comprobación</option>
+                          </select>
                         </span>
 
                         {/* Liberado cells */}
@@ -2011,23 +2019,25 @@ const internoBadgeStyle: React.CSSProperties = {
   letterSpacing: 0.5,
 }
 
-function anticipoToggleStyle(active: boolean): React.CSSProperties {
+function pagoModoSelectStyle(modo: string | null): React.CSSProperties {
+  const active = !!modo
+  const color = modo === "anticipo" ? "#34d399" : modo === "comprobacion" ? "#fbbf24" : "#64748b"
+  const bg = modo === "anticipo" ? "rgba(52,211,153,0.12)" : modo === "comprobacion" ? "rgba(251,191,36,0.12)" : "rgba(148,163,184,0.08)"
+  const border = modo === "anticipo" ? "rgba(52,211,153,0.4)" : modo === "comprobacion" ? "rgba(251,191,36,0.4)" : "rgba(148,163,184,0.22)"
   return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    padding: "3px 9px",
-    borderRadius: 999,
+    padding: "3px 8px",
+    borderRadius: 8,
     fontSize: 10,
     fontWeight: 700,
     cursor: "pointer",
-    whiteSpace: "nowrap",
     flexShrink: 0,
     textTransform: "uppercase",
-    letterSpacing: 0.4,
-    color: active ? "#34d399" : "#64748b",
-    background: active ? "rgba(52,211,153,0.14)" : "rgba(148,163,184,0.08)",
-    border: active ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(148,163,184,0.22)",
+    letterSpacing: 0.3,
+    color,
+    background: bg,
+    border: `1px solid ${border}`,
+    outline: "none",
+    appearance: active ? "auto" : "auto",
   }
 }
 

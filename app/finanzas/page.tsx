@@ -21,6 +21,7 @@ type Factura = {
   created_at: string
   concepto: string | null
   origen: "proveedor" | "anticipo" | "comprobacion" | null
+  forma_pago: string | null
   proveedores: { nombre: string; apellido: string; empresa: string | null } | null
   projects: { name: string; code: string | null } | null
 }
@@ -280,6 +281,7 @@ export default function FinanzasPage() {
                       {projLabel(f)} · Registrada {fechaCorta(f.created_at)}
                       {f.status === "aceptada" && f.fecha_pago && <> · <span style={{ color: "#fbbf24" }}>Pago: {fechaCorta(f.fecha_pago)}</span></>}
                       {f.status === "pagada" && f.paid_at && <> · <span style={{ color: "#34d399" }}>Pagada {fechaCorta(f.paid_at)}</span></>}
+                      {f.forma_pago && <> · <span style={{ color: "#93c5fd" }}>Pago: {f.forma_pago}</span></>}
                     </p>
                     {f.status === "rechazada" && f.motivo_rechazo && (
                       <p style={{ margin: "6px 0 0", fontSize: 12, color: "#fca5a5", lineHeight: 1.5 }}>{f.motivo_rechazo}</p>

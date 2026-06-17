@@ -33,11 +33,15 @@ export async function POST(req: Request) {
     const proveedorId = String(form.get("proveedorId") || "") || null
     const projectId = String(form.get("projectId") || "") || null
     const codigoProyecto = String(form.get("codigo") || "").trim() || null
+    const formaPago = String(form.get("formaPago") || "").trim() || null
     const xmlFile = form.get("xml") as File | null
     const pdfFile = form.get("pdf") as File | null
 
     if (!itemId || !tipo || !monto || monto <= 0) {
       return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 })
+    }
+    if (!formaPago) {
+      return NextResponse.json({ error: "Indica de dónde salió el pago" }, { status: 400 })
     }
     if (tipo === "anticipo" && (!xmlFile || !pdfFile)) {
       return NextResponse.json({ error: "Para anticipo, el XML y el PDF de la factura son obligatorios" }, { status: 400 })
@@ -77,6 +81,7 @@ export async function POST(req: Request) {
         subtotal: monto,
         status: "pagada",
         origen: tipo,
+        forma_pago: formaPago,
         fecha_pago: todayISO(),
         paid_at: new Date().toISOString(),
         xml_path: xmlPath,
@@ -86,54 +91,24 @@ export async function POST(req: Request) {
       .single()
     if (facErr) return NextResponse.json({ error: facErr.message }, { status: 500 })
 
-    // Marcar el egreso (quote_item)
-    const pago_estado = tipo === "comprobacion" ? "pendiente_cierre" : "pagado"
+    // Marcar el egreso. Ambos quedan pagados en un solo paso; para comprobación
+    // el monto capturado es el real, así que actualizamos el gasto en la liberación.
+    const updatePayload: Record<string, unknown> = {
+      pago_tipo: tipo, pago_estado: "pagado", factura_id: factura.id,
+    }
+    if (tipo === "comprobacion") {
+      updatePayload.monto_comprobado = monto
+      updatePayload.actual_qty = 1
+      updatePayload.actual_days = 1
+      updatePayload.actual_unit_price = monto
+    }
     const { error: updErr } = await admin
       .from("quote_items")
-      .update({ pago_tipo: tipo, pago_estado, factura_id: factura.id })
+      .update(updatePayload)
       .eq("id", itemId)
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
 
-    return NextResponse.json({ ok: true, facturaId: factura.id, pago_estado })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
-}
-
-// PATCH → cerrar comprobación con el monto real
-export async function PATCH(req: Request) {
-  try {
-    const auth = await requireStaff(req)
-    if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    const { admin } = auth
-
-    const { itemId, montoReal } = await req.json()
-    if (!itemId || !montoReal || montoReal <= 0) {
-      return NextResponse.json({ error: "Falta el monto real comprobado" }, { status: 400 })
-    }
-
-    const { data: item } = await admin
-      .from("quote_items").select("factura_id").eq("id", itemId).single()
-
-    if (item?.factura_id) {
-      await admin.from("facturas").update({ subtotal: montoReal }).eq("id", item.factura_id)
-    }
-
-    // Actualizar el gasto real en la liberación para que la utilidad refleje lo
-    // realmente comprobado (qty=días=1, precio = monto real).
-    const { error } = await admin
-      .from("quote_items")
-      .update({
-        pago_estado: "pagado",
-        monto_comprobado: montoReal,
-        actual_qty: 1,
-        actual_days: 1,
-        actual_unit_price: montoReal,
-      })
-      .eq("id", itemId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, facturaId: factura.id, pago_estado: "pagado" })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
