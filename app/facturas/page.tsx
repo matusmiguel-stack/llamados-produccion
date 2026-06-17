@@ -25,8 +25,8 @@ export default function FacturasPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim() || !codigo.trim() || !xmlFile) {
-      setErrorMsg("Completa tu email, el código de proyecto y adjunta el XML de tu factura.")
+    if (!email.trim() || !codigo.trim() || !xmlFile || !pdfFile) {
+      setErrorMsg("Completa tu email, el código de proyecto y adjunta el XML y el PDF de tu factura.")
       return
     }
     setErrorMsg("")
@@ -37,7 +37,7 @@ export default function FacturasPage() {
       form.append("email", email.trim())
       form.append("codigo", codigo.trim())
       form.append("xml", xmlFile)
-      if (pdfFile) form.append("pdf", pdfFile)
+      form.append("pdf", pdfFile)
 
       const res = await fetch("/api/facturas/submit", { method: "POST", body: form })
       const data = await res.json()
@@ -169,7 +169,7 @@ export default function FacturasPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>PDF de la factura (opcional)</label>
+              <label style={labelStyle}>PDF de la factura *</label>
               <input
                 type="file"
                 accept=".pdf,application/pdf"

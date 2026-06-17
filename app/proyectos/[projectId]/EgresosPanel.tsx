@@ -362,7 +362,8 @@ export function EgresosPanel({
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error al cerrar comprobación")
       setItems(prev => prev.map(it => it.id === closeModal.id
-        ? { ...it, pago_estado: "pagado", monto_comprobado: monto }
+        ? { ...it, pago_estado: "pagado", monto_comprobado: monto,
+            actual_qty: 1, actual_days: 1, actual_unit_price: monto }
         : it))
       setCloseModal(null)
     } catch (err: any) {

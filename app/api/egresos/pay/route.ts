@@ -119,9 +119,17 @@ export async function PATCH(req: Request) {
       await admin.from("facturas").update({ subtotal: montoReal }).eq("id", item.factura_id)
     }
 
+    // Actualizar el gasto real en la liberación para que la utilidad refleje lo
+    // realmente comprobado (qty=días=1, precio = monto real).
     const { error } = await admin
       .from("quote_items")
-      .update({ pago_estado: "pagado", monto_comprobado: montoReal })
+      .update({
+        pago_estado: "pagado",
+        monto_comprobado: montoReal,
+        actual_qty: 1,
+        actual_days: 1,
+        actual_unit_price: montoReal,
+      })
       .eq("id", itemId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

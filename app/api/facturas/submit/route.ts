@@ -239,8 +239,8 @@ export async function POST(req: Request) {
     const xmlFile = form.get("xml") as File | null
     const pdfFile = form.get("pdf") as File | null
 
-    if (!email || !codigoInput || !xmlFile) {
-      return NextResponse.json({ error: "Faltan datos: email, código de proyecto y archivo XML son obligatorios." }, { status: 400 })
+    if (!email || !codigoInput || !xmlFile || !pdfFile) {
+      return NextResponse.json({ error: "Faltan datos: email, código de proyecto, XML y PDF de la factura son obligatorios." }, { status: 400 })
     }
 
     const codeMatch = codigoInput.match(/RS\d+/)
