@@ -23,6 +23,7 @@ type EgresoItem = {
   pago_tipo: "anticipo" | "comprobacion" | null
   pago_estado: "pagado" | "pendiente_cierre" | null
   monto_comprobado: number | null
+  requiere_anticipo: boolean
 }
 
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
@@ -116,7 +117,7 @@ export function EgresosPanel({
         for (const section of sections) {
           const { data: raw } = await supabase
             .from("quote_items")
-            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado")
+            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado,requiere_anticipo")
             .eq("section_id", section.id).order("order_index", { ascending: true })
           if (!raw) continue
 
@@ -156,6 +157,7 @@ export function EgresosPanel({
               pago_tipo: row.pago_tipo ?? null,
               pago_estado: row.pago_estado ?? null,
               monto_comprobado: row.monto_comprobado ?? null,
+              requiere_anticipo: row.requiere_anticipo ?? false,
             })
           }
         }
@@ -549,7 +551,7 @@ export function EgresosPanel({
                                 >
                                   ⚠ Pendiente Cierre
                                 </button>
-                              ) : item.supplierType !== "none" ? (
+                              ) : item.requiere_anticipo && item.supplierType !== "none" ? (
                                 <>
                                   <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
                                   <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>

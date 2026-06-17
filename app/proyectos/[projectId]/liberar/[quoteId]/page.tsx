@@ -44,6 +44,7 @@ type QuoteItemRow = {
   actual_supplier_id: string | null
   actual_employee_id: string | null
   is_extra: boolean
+  requiere_anticipo: boolean
 }
 
 type QuoteSection = {
@@ -318,6 +319,26 @@ export default function LiberarPage() {
       delete next[itemId]
       return next
     })
+  }
+
+  async function toggleAnticipo(item: QuoteItemRow) {
+    const next = !item.requiere_anticipo
+    // Optimista
+    setSections((prev) => prev.map((s) =>
+      s.id === item.section_id
+        ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, requiere_anticipo: next } : i) }
+        : s
+    ))
+    const { error } = await supabase
+      .from("quote_items").update({ requiere_anticipo: next }).eq("id", item.id)
+    if (error) {
+      alert("Error al marcar anticipo: " + error.message)
+      setSections((prev) => prev.map((s) =>
+        s.id === item.section_id
+          ? { ...s, items: s.items.map((i) => i.id === item.id ? { ...i, requiere_anticipo: !next } : i) }
+          : s
+      ))
+    }
   }
 
   function updateExtraDescription(itemId: string, sectionId: string, value: string) {
@@ -703,7 +724,7 @@ export default function LiberarPage() {
                           key={item.id}
                           style={{
                             display: "grid",
-                            gridTemplateColumns: isMobile ? "1fr" : "1.6fr 0.9fr 1.4fr auto",
+                            gridTemplateColumns: isMobile ? "1fr" : "1.5fr 0.8fr 1.3fr auto auto",
                             gap: 10,
                             alignItems: "center",
                             padding: "10px 12px",
@@ -738,6 +759,13 @@ export default function LiberarPage() {
                             }}
                           />
                           <button
+                            onClick={() => toggleAnticipo(item)}
+                            title="Marcar para pago por anticipo/comprobación en egresos"
+                            style={anticipoToggleStyle(item.requiere_anticipo)}
+                          >
+                            {item.requiere_anticipo ? "✓ Anticipo" : "Anticipo"}
+                          </button>
+                          <button
                             onClick={() => removeExtraExpense(item.id, sec.id)}
                             title="Eliminar gasto"
                             style={{
@@ -768,6 +796,13 @@ export default function LiberarPage() {
                             {item.real_expense === 1 && (
                               <span style={internoBadgeStyle}>Interno</span>
                             )}
+                            <button
+                              onClick={() => toggleAnticipo(item)}
+                              title="Marcar para pago por anticipo/comprobación en egresos"
+                              style={anticipoToggleStyle(item.requiere_anticipo)}
+                            >
+                              {item.requiere_anticipo ? "✓ Anticipo" : "Anticipo"}
+                            </button>
                           </p>
 
                           <div
@@ -916,19 +951,27 @@ export default function LiberarPage() {
                           style={{
                             color: "#e2e8f0",
                             fontSize: 13,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
                             display: "flex",
-                            alignItems: "center",
-                            gap: 6,
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            gap: 4,
+                            minWidth: 0,
                           }}
                           title={item.description}
                         >
-                          {item.description || "—"}
-                          {item.real_expense === 1 && (
-                            <span style={internoBadgeStyle}>Interno</span>
-                          )}
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {item.description || "—"}
+                            {item.real_expense === 1 && (
+                              <span style={internoBadgeStyle}>Interno</span>
+                            )}
+                          </span>
+                          <button
+                            onClick={() => toggleAnticipo(item)}
+                            title="Marcar para pago por anticipo/comprobación en egresos"
+                            style={anticipoToggleStyle(item.requiere_anticipo)}
+                          >
+                            {item.requiere_anticipo ? "✓ Anticipo" : "Anticipo"}
+                          </button>
                         </span>
 
                         {/* Liberado cells */}
@@ -1966,6 +2009,26 @@ const internoBadgeStyle: React.CSSProperties = {
   flexShrink: 0,
   textTransform: "uppercase",
   letterSpacing: 0.5,
+}
+
+function anticipoToggleStyle(active: boolean): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "3px 9px",
+    borderRadius: 999,
+    fontSize: 10,
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    color: active ? "#34d399" : "#64748b",
+    background: active ? "rgba(52,211,153,0.14)" : "rgba(148,163,184,0.08)",
+    border: active ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(148,163,184,0.22)",
+  }
 }
 
 const extraInputStyle: React.CSSProperties = {
