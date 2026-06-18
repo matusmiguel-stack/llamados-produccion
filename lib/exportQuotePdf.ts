@@ -91,11 +91,13 @@ export async function exportQuotePdfFromDetail(
       let utilidad = 0
       for (const item of sec.items) {
         const amount = item.qty * item.days * item.unit_price
+        const u = amount * ((item.released_expense || 0) / 100)
         if (item.real_expense === 1) {
-          utilidad += amount
+          // Interno: no genera gasto; el monto + markup va completo a utilidad
+          utilidad += amount + u
         } else {
           gasto += amount
-          utilidad += amount * ((item.released_expense || 0) / 100)
+          utilidad += u
         }
       }
 
@@ -138,9 +140,10 @@ function rawAmt(qty: string, days: string, cost: string): number {
 }
 
 // Precio unitario que ve el cliente (markup oculto ya incluido)
+// Aplica el markup también a los conceptos internos: el cliente paga
+// costo + markup y, como el interno no genera gasto, todo va a utilidad.
 function clientUnitPrice(item: QuoteItemPDF): number {
   const cost = parseFloat(item.cost) || 0
-  if (item.isInternal) return cost
   return cost * (1 + (parseFloat(item.markup) || 0) / 100)
 }
 

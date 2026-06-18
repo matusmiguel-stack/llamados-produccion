@@ -103,10 +103,11 @@ function itemActualAmount(item: QuoteItemRow, actual: ItemActual): number {
 // released_expense → per-item markup %
 function libItemFinancials(item: QuoteItemRow): { gasto: number; utilidad: number; venta: number } {
   const amount = itemAmount(item)
-  if (item.real_expense === 1) {
-    return { gasto: 0, utilidad: amount, venta: amount }
-  }
   const u = amount * ((item.released_expense || 0) / 100)
+  // Interno: no genera gasto; el monto + markup va completo a utilidad
+  if (item.real_expense === 1) {
+    return { gasto: 0, utilidad: amount + u, venta: amount + u }
+  }
   return { gasto: amount, utilidad: u, venta: amount + u }
 }
 

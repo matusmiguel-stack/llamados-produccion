@@ -148,8 +148,9 @@ function rawAmt(v: { qty: string; days: string; cost: string }): number {
 
 function calcItem(v: { qty: string; days: string; cost: string; markup: string; isInternal: boolean }): { gasto: number; utilidad: number; venta: number } {
   const amount = rawAmt(v)
-  if (v.isInternal) return { gasto: 0, utilidad: amount, venta: amount }
   const u = amount * ((parseFloat(v.markup) || 0) / 100)
+  // Interno: no genera gasto; el monto + markup va completo a utilidad
+  if (v.isInternal) return { gasto: 0, utilidad: amount + u, venta: amount + u }
   return { gasto: amount, utilidad: u, venta: amount + u }
 }
 
@@ -1270,8 +1271,8 @@ function RubroCard({
                       <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
                       <span style={sepStyle}>×</span>
                       <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
-                      <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: v.isInternal ? 0.25 : 1 }} disabled={v.isInternal} placeholder="0" />
-                      <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
+                      <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
+                      <span style={sepStyle}>%</span>
                       <span style={{ color: v.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
                     </div>
                   </div>
@@ -1287,8 +1288,8 @@ function RubroCard({
                     <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
-                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: v.isInternal ? 0.25 : 1 }} title="Markup %" disabled={v.isInternal} placeholder="0" />
-                    <span style={{ ...sepStyle, opacity: v.isInternal ? 0.25 : 1 }}>%</span>
+                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34 }} title="Markup %" placeholder="0" />
+                    <span style={sepStyle}>%</span>
                     <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
                     <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
                     <span style={{ ...ventaStyle, color: v.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
@@ -1320,8 +1321,8 @@ function RubroCard({
                     <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
                     <span style={sepStyle}>×</span>
                     <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
-                    <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38, opacity: item.isInternal ? 0.25 : 1 }} disabled={item.isInternal} placeholder="0" />
-                    <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
+                    <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
+                    <span style={sepStyle}>%</span>
                     <span style={{ color: item.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
                   </div>
                 </div>
@@ -1337,8 +1338,8 @@ function RubroCard({
                   <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
                   <span style={sepStyle}>×</span>
                   <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
-                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34, opacity: item.isInternal ? 0.25 : 1 }} title="Markup %" disabled={item.isInternal} placeholder="0" />
-                  <span style={{ ...sepStyle, opacity: item.isInternal ? 0.25 : 1 }}>%</span>
+                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34 }} title="Markup %" placeholder="0" />
+                  <span style={sepStyle}>%</span>
                   <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
                   <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
                   <span style={{ ...ventaStyle, color: item.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
