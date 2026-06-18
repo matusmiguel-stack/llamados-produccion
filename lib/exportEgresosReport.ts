@@ -4,7 +4,7 @@ type ReportItem = {
   proveedor: string
   monto: number
   pagado: boolean
-  pagoModo: "anticipo" | "comprobacion" | null
+  tipoPago: "proveedor" | "anticipo" | "comprobacion" | "reembolso"
   proveedorId: string | null
 }
 
@@ -139,22 +139,35 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
   // @ts-ignore
   y = doc.lastAutoTable.finalY + 12
 
-  // ── Helper: fecha programada de pago de un egreso por pagar ──────────────────
-  function fechaProgramada(item: ReportItem): { texto: string; pagada: boolean } {
+  // Facturas que NO son de pagos internos (anticipo/comprobacion/reembolso)
+  const facturasProveedor = (data.facturas || []).filter(
+    f => f.origen !== "anticipo" && f.origen !== "comprobacion" && f.origen !== "reembolso"
+  )
+
+  // ── Helper: estatus de pago de un egreso por pagar (factura de proveedor) ────
+  function estatusPorPagar(item: ReportItem): string {
+    const candidatos = facturasProveedor.filter(f => f.proveedor_id && f.proveedor_id === item.proveedorId)
+    // Preferir la que coincide en monto; si no, cualquiera con fecha
+    const fac = candidatos.find(f => Math.abs(Number(f.subtotal || 0) - item.monto) < 1.5)
+            || candidatos.find(f => f.fecha_pago)
+    if (fac?.status === "pagada" && fac.paid_at) return `Pagada ${fechaLarga(fac.paid_at)}`
+    if (fac?.fecha_pago) return `Pago programado: ${fechaLarga(fac.fecha_pago)}`
+    return "No se ha programado pago"
+  }
+
+  // ── Helper: estatus de un reembolso (factura origen reembolso) ───────────────
+  function estatusReembolso(item: ReportItem): string {
     const fac = (data.facturas || []).find(
-      f => f.proveedor_id && f.proveedor_id === item.proveedorId &&
-           (f.origen === "proveedor" || !f.origen) &&
-           Math.abs(Number(f.subtotal || 0) - item.monto) < 1
-    ) || (data.facturas || []).find(
-      f => f.proveedor_id && f.proveedor_id === item.proveedorId && (f.origen === "proveedor" || !f.origen) && f.fecha_pago
-    )
-    if (fac?.status === "pagada" && fac.paid_at) return { texto: `Pagada ${fechaLarga(fac.paid_at)}`, pagada: true }
-    if (fac?.fecha_pago) return { texto: `Pago programado: ${fechaLarga(fac.fecha_pago)}`, pagada: false }
-    return { texto: "No se ha programado pago", pagada: false }
+      f => f.origen === "reembolso" && f.proveedor_id === item.proveedorId &&
+           Math.abs(Number(f.subtotal || 0) - item.monto) < 1.5
+    ) || (data.facturas || []).find(f => f.origen === "reembolso" && f.proveedor_id === item.proveedorId)
+    if (fac?.status === "pagada" && fac.paid_at) return `Pagado ${fechaLarga(fac.paid_at)}`
+    if (fac?.fecha_pago) return `Por pagar · prog. ${fechaLarga(fac.fecha_pago)}`
+    return "Por pagar"
   }
 
   // ── 1. Por pagar (gastos vía factura de proveedor) ───────────────────────────
-  const porPagar = data.items.filter(i => i.pagoModo == null)
+  const porPagar = data.items.filter(i => i.tipoPago === "proveedor")
   if (porPagar.length > 0) {
     doc.setTextColor(15, 23, 42)
     doc.setFontSize(12)
@@ -166,10 +179,7 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
       margin: { left: mL, right: mR },
       theme: "striped",
       head: [["Sección", "Concepto", "Proveedor", "Monto", "Estatus de pago"]],
-      body: porPagar.map(i => {
-        const f = fechaProgramada(i)
-        return [i.seccion, i.concepto, i.proveedor, fmt(i.monto), f.texto]
-      }),
+      body: porPagar.map(i => [i.seccion, i.concepto, i.proveedor, fmt(i.monto), estatusPorPagar(i)]),
       headStyles: { fillColor: [248, 113, 113], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fontSize: 8.5 },
       columnStyles: { 3: { halign: "right", cellWidth: 26 }, 4: { cellWidth: 42 } },
@@ -178,14 +188,16 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     y = doc.lastAutoTable.finalY + 12
   }
 
-  // ── 2. Anticipos (pagados y por pagar) ───────────────────────────────────────
-  const anticipos = data.items.filter(i => i.pagoModo === "anticipo" || i.pagoModo === "comprobacion")
+  // ── 2. Anticipos, comprobaciones y reembolsos ────────────────────────────────
+  const anticipos = data.items.filter(i =>
+    i.tipoPago === "anticipo" || i.tipoPago === "comprobacion" || i.tipoPago === "reembolso"
+  )
   if (anticipos.length > 0) {
     if (y > 230) { doc.addPage(); y = 20 }
     doc.setTextColor(15, 23, 42)
     doc.setFontSize(12)
     doc.setFont("helvetica", "bold")
-    doc.text("Anticipos y comprobaciones", mL, y)
+    doc.text("Anticipos, comprobaciones y reembolsos", mL, y)
     y += 4
     autoTable(doc, {
       startY: y,
@@ -194,13 +206,13 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
       head: [["Sección", "Concepto", "Proveedor", "Tipo", "Monto", "Estatus"]],
       body: anticipos.map(i => [
         i.seccion, i.concepto, i.proveedor,
-        i.pagoModo === "anticipo" ? "Anticipo" : "Comprobación",
+        i.tipoPago === "anticipo" ? "Anticipo" : i.tipoPago === "comprobacion" ? "Comprobación" : "Reembolso",
         fmt(i.monto),
-        i.pagado ? "Pagado" : "Por pagar",
+        i.tipoPago === "reembolso" ? estatusReembolso(i) : (i.pagado ? "Pagado" : "Por pagar"),
       ]),
       headStyles: { fillColor: [52, 211, 153], textColor: [6, 78, 59], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fontSize: 8.5 },
-      columnStyles: { 4: { halign: "right", cellWidth: 26 } },
+      columnStyles: { 4: { halign: "right", cellWidth: 26 }, 5: { cellWidth: 36 } },
     })
     // @ts-ignore
     y = doc.lastAutoTable.finalY + 12

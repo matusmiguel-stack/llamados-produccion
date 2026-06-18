@@ -83,11 +83,6 @@ export function EgresosPanel({
   const [statusFilter, setStatusFilter] = useState<"todo" | "por_pagar" | "pagados" | "anticipos">("todo")
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
-  const [cobrado, setCobrado] = useState(0)
-  const [clienteNombre, setClienteNombre] = useState("")
-  const [facturas, setFacturas] = useState<any[]>([])
-  const [generating, setGenerating] = useState(false)
-
   function toggleSort(key: string) {
     if (sortKey === key) setSortDir(d => (d === "asc" ? "desc" : "asc"))
     else { setSortKey(key); setSortDir("asc") }
@@ -104,18 +99,13 @@ export function EgresosPanel({
   async function load() {
       setLoading(true)
 
-      // Catálogos para el selector + datos para el reporte
-      const [{ data: provs }, { data: emps }, { data: ingreso }, { data: facts }] = await Promise.all([
+      // Catálogos para el selector
+      const [{ data: provs }, { data: emps }] = await Promise.all([
         supabase.from("proveedores").select("id,nombre,apellido,empresa,actividad").order("nombre"),
         supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname").order("nombre"),
-        supabase.from("ingresos").select("subtotal,cliente_agencia").eq("project_id", projectId).limit(1).maybeSingle(),
-        supabase.from("facturas").select("proveedor_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
       ])
       setProveedores(provs || [])
       setEmployees(emps || [])
-      setCobrado(Number(ingreso?.subtotal || 0))
-      setClienteNombre((ingreso as any)?.cliente_agencia || "")
-      setFacturas(facts || [])
 
       // Solo la cotización liberada
       const { data: quotes } = await supabase
@@ -423,32 +413,6 @@ export function EgresosPanel({
   const totalGlobal = items.reduce((s, i) => s + montoEgreso(i), 0)
   const quoteCount  = Object.keys(byQuote).length
 
-  async function generarReporte() {
-    setGenerating(true)
-    try {
-      const { exportEgresosReport } = await import("../../../lib/exportEgresosReport")
-      await exportEgresosReport({
-        projectName, projectCode, empresa,
-        cliente: clienteNombre,
-        responsable: projectResponsable,
-        cobrado,
-        items: items.map(it => ({
-          seccion: it.section_name,
-          concepto: it.description,
-          proveedor: it.supplierLabel,
-          monto: montoEgreso(it),
-          pagado: it.pago_estado === "pagado",
-          pagoModo: it.pago_modo,
-          proveedorId: it.actual_supplier_id,
-        })),
-        facturas,
-      })
-    } catch (err: any) {
-      alert("Error al generar reporte: " + err.message)
-    } finally {
-      setGenerating(false)
-    }
-  }
 
   if (loading) return <p style={{ color: "#64748b", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
 
@@ -483,20 +447,6 @@ export function EgresosPanel({
             }}
           >
             {sendingAll ? "⏳ Enviando..." : "✉ Facturar todos"}
-          </button>
-          <button
-            onClick={generarReporte}
-            disabled={generating}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              padding: "10px 18px", borderRadius: 10, cursor: generating ? "not-allowed" : "pointer",
-              background: generating ? "rgba(167,139,250,0.06)" : "rgba(167,139,250,0.12)",
-              border: "1px solid rgba(167,139,250,0.30)", color: "#c4b5fd",
-              fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
-              opacity: generating ? 0.6 : 1,
-            }}
-          >
-            {generating ? "⏳ Generando..." : "📄 Generar reporte"}
           </button>
         </div>
       </div>

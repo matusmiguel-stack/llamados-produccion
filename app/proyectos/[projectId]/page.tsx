@@ -171,9 +171,29 @@ export default function ProjectDetailPage() {
   const [showHoja, setShowHoja] = useState(false)
   const [showGeneral, setShowGeneral] = useState(false)
   const [showEgresos, setShowEgresos] = useState(false)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   const isAdmin     = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
+  const isStrictAdmin = profile?.role === "admin"
   const isProductor = profile?.role === "productor"
+
+  async function handleGenerarReporte() {
+    if (!project) return
+    setGeneratingReport(true)
+    try {
+      const { generateEgresosReport } = await import("../../../lib/egresos-report-data")
+      await generateEgresosReport(projectId, {
+        projectName: project.name,
+        projectCode: project.code,
+        empresa: projectEmpresa,
+        responsable: project.responsable,
+      })
+    } catch (err: any) {
+      alert("Error al generar reporte: " + err.message)
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
 
   // Productor solo puede ver y editar la Matriz
   const visibleModules = isProductor
@@ -374,6 +394,24 @@ export default function ProjectDetailPage() {
 
             {project?.description?.trim() && (
               <p style={projectDescriptionStyle}>{project.description}</p>
+            )}
+
+            {isStrictAdmin && (
+              <button
+                onClick={handleGenerarReporte}
+                disabled={generatingReport}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  margin: "0 0 18px", padding: "10px 18px", borderRadius: 10,
+                  cursor: generatingReport ? "not-allowed" : "pointer",
+                  background: generatingReport ? "rgba(167,139,250,0.06)" : "rgba(167,139,250,0.12)",
+                  border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd",
+                  fontSize: 13, fontWeight: 600,
+                  opacity: generatingReport ? 0.6 : 1,
+                }}
+              >
+                {generatingReport ? "⏳ Generando..." : "📄 Generar reporte financiero"}
+              </button>
             )}
 
             <div
