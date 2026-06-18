@@ -629,6 +629,60 @@ export default function CotizacionesPage() {
     }
   }
 
+  const [duplicating, setDuplicating] = useState(false)
+  async function handleDuplicar() {
+    if (!editQuoteId) return
+    if (!confirm("¿Duplicar esta cotización? Se creará una copia nueva (borrador) para trabajar otra versión, sin afectar la original.")) return
+    setDuplicating(true)
+    try {
+      // Leer la cotización original con sus secciones e ítems
+      const { data: orig } = await supabase
+        .from("quotes")
+        .select("name, project_id, atencion, markup_percentage, entregables")
+        .eq("id", editQuoteId).single()
+      if (!orig) throw new Error("No se encontró la cotización")
+
+      const { data: newQuote, error: qErr } = await supabase
+        .from("quotes")
+        .insert({
+          project_id: orig.project_id,
+          name: `${orig.name} (copia)`,
+          atencion: orig.atencion,
+          status: "draft",
+          markup_percentage: orig.markup_percentage,
+          entregables: orig.entregables,
+          created_by: profile.id,
+        })
+        .select("id").single()
+      if (qErr || !newQuote) throw qErr || new Error("No se pudo crear la copia")
+
+      const { data: secs } = await supabase
+        .from("quote_sections").select("id, name, order_index").eq("quote_id", editQuoteId).order("order_index")
+      for (const sec of secs || []) {
+        const { data: newSec } = await supabase
+          .from("quote_sections")
+          .insert({ quote_id: newQuote.id, name: sec.name, order_index: sec.order_index })
+          .select("id").single()
+        if (!newSec) continue
+        const { data: its } = await supabase
+          .from("quote_items")
+          .select("description, qty, days, unit_price, released_expense, real_expense, supplier, order_index, is_extra")
+          .eq("section_id", sec.id).order("order_index")
+        if (its && its.length > 0) {
+          await supabase.from("quote_items").insert(
+            its.map((it: any) => ({ ...it, section_id: newSec.id }))
+          )
+        }
+      }
+
+      // Ir a la copia nueva
+      window.location.href = `/cotizaciones?quoteId=${newQuote.id}`
+    } catch (err: any) {
+      alert("Error al duplicar: " + err.message)
+      setDuplicating(false)
+    }
+  }
+
   async function handleAprobar() {
     if (!editQuoteId) {
       alert("Guarda la cotización primero antes de aprobar el proyecto.")
@@ -1055,6 +1109,11 @@ export default function CotizacionesPage() {
                   <button onClick={handleExportPdf} style={pdfButtonStyle}>
                     ↓ Exportar PDF
                   </button>
+                  {editQuoteId && (
+                    <button onClick={handleDuplicar} disabled={duplicating} style={duplicarBtnStyle}>
+                      {duplicating ? "Duplicando..." : "⧉ Duplicar cotización"}
+                    </button>
+                  )}
                   {editQuoteId && (
                     <button
                       onClick={handleAprobar}
@@ -1690,6 +1749,18 @@ const pdfButtonStyle: React.CSSProperties = {
   background: "transparent",
   color: "#94a3b8",
   border: "1px solid rgba(148,163,184,0.22)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
+}
+
+const duplicarBtnStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 20px",
+  background: "rgba(96,165,250,0.12)",
+  color: "#93c5fd",
+  border: "1px solid rgba(96,165,250,0.3)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
