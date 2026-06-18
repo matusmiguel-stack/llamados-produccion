@@ -48,7 +48,7 @@ export default function AdminPage() {
 
   // Participantes
   const [viendoGrupo, setViendoGrupo] = useState<Grupo | null>(null)
-  const [participantes, setParticipantes] = useState<{ id: string; nombre: string; email: string; created_at: string }[]>([])
+  const [participantes, setParticipantes] = useState<{ id: string; nombre: string; email: string; created_at: string; pagado: boolean }[]>([])
   const [cargandoPart, setCargandoPart] = useState(false)
 
   // Partidos
@@ -321,6 +321,24 @@ export default function AdminPage() {
                           <p className="text-white text-sm font-medium truncate">{p.nombre}</p>
                           <p className="text-white/35 text-xs truncate">{p.email}</p>
                         </div>
+                        <button
+                          onClick={async () => {
+                            const nuevo = !p.pagado
+                            await fetch('/api/admin/participantes', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ password, jugador_id: p.id, pagado: nuevo }),
+                            })
+                            setParticipantes((prev) => prev.map((x) => x.id === p.id ? { ...x, pagado: nuevo } : x))
+                          }}
+                          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border transition-colors flex-shrink-0 ${
+                            p.pagado
+                              ? 'bg-green-500/15 border-green-500/30 text-green-400'
+                              : 'bg-white/5 border-white/10 text-white/25 hover:text-white/50'
+                          }`}
+                        >
+                          {p.pagado ? '✓ Pagado' : 'Sin pagar'}
+                        </button>
                       </div>
                     ))}
                   </div>

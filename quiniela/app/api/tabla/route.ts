@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const { data: jugadores } = await db
     .from('jugadores')
-    .select('id, nombre')
+    .select('id, nombre, pagado')
     .eq('grupo_id', grupo_id)
 
   if (!jugadores?.length) return NextResponse.json([])
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       puntos_total,
       exactos,
       predicciones: preds.length,
+      pagado: j.pagado ?? false,
     }
   })
 

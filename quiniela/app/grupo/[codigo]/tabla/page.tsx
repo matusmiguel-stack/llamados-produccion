@@ -9,6 +9,7 @@ interface Posicion {
   puntos_total: number
   exactos: number
   predicciones: number
+  pagado: boolean
 }
 
 export default function TablaPage() {
@@ -55,10 +56,15 @@ export default function TablaPage() {
                 {esMio && <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />}
                 <div className={`text-xl w-8 text-center font-bold ${color}`}>{emoji}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-white truncate">
-                    {pos.nombre}
-                    {esMio && <span className="ml-1.5 text-xs text-amber-400/70 font-normal">(tú)</span>}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-sm text-white truncate">
+                      {pos.nombre}
+                      {esMio && <span className="ml-1.5 text-xs text-amber-400/70 font-normal">(tú)</span>}
+                    </p>
+                    {pos.pagado && (
+                      <span className="text-xs bg-green-500/15 border border-green-500/25 text-green-400 px-2 py-0.5 rounded-full flex-shrink-0">✓ Pagado</span>
+                    )}
+                  </div>
                   <p className="text-xs text-white/25 mt-0.5">
                     {pos.predicciones} predicciones
                     {pos.exactos > 0 && <span className="ml-1.5 text-amber-400/60">· {pos.exactos} exacto{pos.exactos !== 1 ? 's' : ''} ✓</span>}
