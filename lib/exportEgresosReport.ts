@@ -146,36 +146,52 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     f => f.origen !== "anticipo" && f.origen !== "comprobacion" && f.origen !== "reembolso"
   )
 
+  // ── Colores por estado de pago ───────────────────────────────────────────────
+  // gris = sin fecha · naranja = programado · verde = pagado · rojo = vencido
+  type Estado = "sin_fecha" | "programado" | "pagado" | "vencido"
+  const COLOR: Record<Estado, [number, number, number]> = {
+    sin_fecha:  [100, 116, 139],
+    programado: [234, 88, 12],
+    pagado:     [22, 163, 74],
+    vencido:    [220, 38, 38],
+  }
+  const hoy = new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" }) // YYYY-MM-DD
+  const vencida = (fecha: string | null) => !!fecha && fecha.split("T")[0] < hoy
+
+  function estadoDeFactura(fac: ReportFactura | undefined, sinFechaTexto: string): { texto: string; estado: Estado } {
+    if (fac?.status === "pagada" && fac.paid_at) return { texto: `Pagado ${fechaLarga(fac.paid_at)}`, estado: "pagado" }
+    if (fac?.fecha_pago) {
+      const venc = vencida(fac.fecha_pago)
+      return { texto: `${venc ? "Vencido · " : "Programado: "}${fechaLarga(fac.fecha_pago)}`, estado: venc ? "vencido" : "programado" }
+    }
+    return { texto: sinFechaTexto, estado: "sin_fecha" }
+  }
+
   // ── Helper: estatus de pago de un egreso por pagar (factura de proveedor) ────
   const montoCoincide = (f: ReportFactura, monto: number) => Math.abs(Number(f.subtotal || 0) - monto) < 1.5
-  function estatusPorPagar(item: ReportItem): string {
+  function estatusPorPagar(item: ReportItem): { texto: string; estado: Estado } {
     const mismoProv = facturasProveedor.filter(f => f.proveedor_id && f.proveedor_id === item.proveedorId)
-    // 0) vínculo directo egreso↔factura  1) mismo proveedor + monto
-    // 2) mismo proveedor con fecha       3) respaldo por monto en el proyecto
     const fac =
       facturasProveedor.find(f => f.quote_item_id && f.quote_item_id === item.id) ||
       mismoProv.find(f => montoCoincide(f, item.monto)) ||
       mismoProv.find(f => f.fecha_pago) ||
       facturasProveedor.find(f => montoCoincide(f, item.monto) && (f.fecha_pago || f.status === "pagada"))
-    if (fac?.status === "pagada" && fac.paid_at) return `Pagada ${fechaLarga(fac.paid_at)}`
-    if (fac?.fecha_pago) return `Pago programado: ${fechaLarga(fac.fecha_pago)}`
-    return "No se ha programado pago"
+    return estadoDeFactura(fac, "No se ha programado pago")
   }
 
   // ── Helper: estatus de un reembolso (factura origen reembolso) ───────────────
-  function estatusReembolso(item: ReportItem): string {
+  function estatusReembolso(item: ReportItem): { texto: string; estado: Estado } {
     const fac = (data.facturas || []).find(
       f => f.origen === "reembolso" && f.proveedor_id === item.proveedorId &&
            Math.abs(Number(f.subtotal || 0) - item.monto) < 1.5
     ) || (data.facturas || []).find(f => f.origen === "reembolso" && f.proveedor_id === item.proveedorId)
-    if (fac?.status === "pagada" && fac.paid_at) return `Pagado ${fechaLarga(fac.paid_at)}`
-    if (fac?.fecha_pago) return `Por pagar · prog. ${fechaLarga(fac.fecha_pago)}`
-    return "Por pagar"
+    return estadoDeFactura(fac, "Por pagar")
   }
 
   // ── 1. Por pagar (gastos vía factura de proveedor) ───────────────────────────
   const porPagar = data.items.filter(i => i.tipoPago === "proveedor")
   if (porPagar.length > 0) {
+    const estados = porPagar.map(estatusPorPagar)
     doc.setTextColor(15, 23, 42)
     doc.setFontSize(12)
     doc.setFont("helvetica", "bold")
@@ -186,10 +202,16 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
       margin: { left: mL, right: mR },
       theme: "striped",
       head: [["Sección", "Concepto", "Proveedor", "Monto", "Estatus de pago"]],
-      body: porPagar.map(i => [i.seccion, i.concepto, i.proveedor, fmt(i.monto), estatusPorPagar(i)]),
+      body: porPagar.map((i, idx) => [i.seccion, i.concepto, i.proveedor, fmt(i.monto), estados[idx].texto]),
       headStyles: { fillColor: [248, 113, 113], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fontSize: 8.5 },
       columnStyles: { 3: { halign: "right", cellWidth: 26 }, 4: { cellWidth: 42 } },
+      didParseCell: (h: any) => {
+        if (h.section === "body" && h.column.index === 4) {
+          h.cell.styles.textColor = COLOR[estados[h.row.index].estado]
+          h.cell.styles.fontStyle = "bold"
+        }
+      },
     })
     // @ts-ignore
     y = doc.lastAutoTable.finalY + 12
@@ -200,6 +222,11 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     i.tipoPago === "anticipo" || i.tipoPago === "comprobacion" || i.tipoPago === "reembolso"
   )
   if (anticipos.length > 0) {
+    const estados: { texto: string; estado: Estado }[] = anticipos.map(i =>
+      i.tipoPago === "reembolso"
+        ? estatusReembolso(i)
+        : (i.pagado ? { texto: "Pagado", estado: "pagado" } : { texto: "Por pagar", estado: "sin_fecha" })
+    )
     if (y > 230) { doc.addPage(); y = 20 }
     doc.setTextColor(15, 23, 42)
     doc.setFontSize(12)
@@ -211,19 +238,45 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
       margin: { left: mL, right: mR },
       theme: "striped",
       head: [["Sección", "Concepto", "Proveedor", "Tipo", "Monto", "Estatus"]],
-      body: anticipos.map(i => [
+      body: anticipos.map((i, idx) => [
         i.seccion, i.concepto, i.proveedor,
         i.tipoPago === "anticipo" ? "Anticipo" : i.tipoPago === "comprobacion" ? "Comprobación" : "Reembolso",
         fmt(i.monto),
-        i.tipoPago === "reembolso" ? estatusReembolso(i) : (i.pagado ? "Pagado" : "Por pagar"),
+        estados[idx].texto,
       ]),
       headStyles: { fillColor: [52, 211, 153], textColor: [6, 78, 59], fontStyle: "bold", fontSize: 8 },
       bodyStyles: { fontSize: 8.5 },
       columnStyles: { 4: { halign: "right", cellWidth: 26 }, 5: { cellWidth: 36 } },
+      didParseCell: (h: any) => {
+        if (h.section === "body" && h.column.index === 5) {
+          h.cell.styles.textColor = COLOR[estados[h.row.index].estado]
+          h.cell.styles.fontStyle = "bold"
+        }
+      },
     })
     // @ts-ignore
     y = doc.lastAutoTable.finalY + 12
   }
+
+  // ── Leyenda de colores ───────────────────────────────────────────────────────
+  if (y > 250) { doc.addPage(); y = 20 }
+  doc.setFontSize(8)
+  doc.setFont("helvetica", "normal")
+  const leyenda: [string, Estado][] = [
+    ["Sin fecha de pago", "sin_fecha"],
+    ["Pago programado", "programado"],
+    ["Pagado", "pagado"],
+    ["Vencido", "vencido"],
+  ]
+  let lx = mL
+  for (const [txt, est] of leyenda) {
+    doc.setFillColor(...COLOR[est])
+    doc.circle(lx + 1, y - 1, 1, "F")
+    doc.setTextColor(71, 85, 105)
+    doc.text(txt, lx + 4, y)
+    lx += doc.getTextWidth(txt) + 14
+  }
+  y += 6
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   const fechaGen = new Date().toLocaleDateString("es-MX", { dateStyle: "long" })
