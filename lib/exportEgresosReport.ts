@@ -145,11 +145,15 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
   )
 
   // ── Helper: estatus de pago de un egreso por pagar (factura de proveedor) ────
+  const montoCoincide = (f: ReportFactura, monto: number) => Math.abs(Number(f.subtotal || 0) - monto) < 1.5
   function estatusPorPagar(item: ReportItem): string {
-    const candidatos = facturasProveedor.filter(f => f.proveedor_id && f.proveedor_id === item.proveedorId)
-    // Preferir la que coincide en monto; si no, cualquiera con fecha
-    const fac = candidatos.find(f => Math.abs(Number(f.subtotal || 0) - item.monto) < 1.5)
-            || candidatos.find(f => f.fecha_pago)
+    const mismoProv = facturasProveedor.filter(f => f.proveedor_id && f.proveedor_id === item.proveedorId)
+    // 1) mismo proveedor + mismo monto  2) mismo proveedor con fecha
+    // 3) respaldo: cualquier factura de proveedor del proyecto que coincida en monto
+    const fac =
+      mismoProv.find(f => montoCoincide(f, item.monto)) ||
+      mismoProv.find(f => f.fecha_pago) ||
+      facturasProveedor.find(f => montoCoincide(f, item.monto) && (f.fecha_pago || f.status === "pagada"))
     if (fac?.status === "pagada" && fac.paid_at) return `Pagada ${fechaLarga(fac.paid_at)}`
     if (fac?.fecha_pago) return `Pago programado: ${fechaLarga(fac.fecha_pago)}`
     return "No se ha programado pago"
