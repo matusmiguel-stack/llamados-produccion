@@ -117,10 +117,11 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
   doc.setFont("helvetica", "bold")
   doc.text("Resumen financiero", mL, y)
   y += 4
+  const sumStartY = y
 
   autoTable(doc, {
     startY: y,
-    margin: { left: mL, right: mR },
+    margin: { left: mL, right: 80 },
     theme: "grid",
     head: [["Concepto", "Monto"]],
     body: [
@@ -130,7 +131,7 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     ],
     headStyles: { fillColor: [30, 41, 59], textColor: [248, 250, 252], fontStyle: "bold", fontSize: 9 },
     bodyStyles: { fontSize: 10 },
-    columnStyles: { 1: { halign: "right", cellWidth: 50 } },
+    columnStyles: { 1: { halign: "right", cellWidth: 42 } },
     didParseCell: (h: any) => {
       if (h.section === "body" && h.row.index === 2) {
         h.cell.styles.fontStyle = "bold"
@@ -139,7 +140,51 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     },
   })
   // @ts-ignore
-  y = doc.lastAutoTable.finalY + 12
+  const sumEndY = doc.lastAutoTable.finalY
+
+  // ── Gráfica de pie (utilidad azul vs gastos rojo) ────────────────────────────
+  if (data.cobrado > 0) {
+    const AZUL: [number, number, number] = [37, 99, 235]
+    const ROJO: [number, number, number] = [220, 38, 38]
+    const cx = pageW - mR - 24
+    const cy = (sumStartY + sumEndY) / 2
+    const r = Math.min(20, (sumEndY - sumStartY) / 2 + 6)
+
+    function slice(start: number, end: number, color: [number, number, number]) {
+      doc.setFillColor(...color)
+      const step = 2 * Math.PI / 180 // 2°
+      for (let a = start; a < end; a += step) {
+        const a2 = Math.min(a + step, end)
+        doc.triangle(
+          cx, cy,
+          cx + r * Math.cos(a),  cy + r * Math.sin(a),
+          cx + r * Math.cos(a2), cy + r * Math.sin(a2),
+          "F"
+        )
+      }
+    }
+
+    const gastosFrac = Math.min(totalGastos / data.cobrado, 1)
+    const start = -Math.PI / 2 // arriba
+    if (utilidad >= 0) {
+      const gastosEnd = start + gastosFrac * 2 * Math.PI
+      slice(start, gastosEnd, ROJO)
+      slice(gastosEnd, start + 2 * Math.PI, AZUL)
+    } else {
+      slice(start, start + 2 * Math.PI, ROJO) // gastos superan lo cobrado
+    }
+
+    // Leyenda de la gráfica
+    const ly = cy + r + 5
+    doc.setFontSize(7.5)
+    doc.setFont("helvetica", "normal")
+    doc.setFillColor(...ROJO); doc.rect(cx - 22, ly - 2, 2.5, 2.5, "F")
+    doc.setTextColor(71, 85, 105); doc.text("Gastos", cx - 18, ly)
+    doc.setFillColor(...AZUL); doc.rect(cx + 2, ly - 2, 2.5, 2.5, "F")
+    doc.text("Utilidad", cx + 6, ly)
+  }
+
+  y = Math.max(sumEndY, data.cobrado > 0 ? (sumStartY + sumEndY) / 2 + 28 : sumEndY) + 12
 
   // Facturas que NO son de pagos internos (anticipo/comprobacion/reembolso)
   const facturasProveedor = (data.facturas || []).filter(
