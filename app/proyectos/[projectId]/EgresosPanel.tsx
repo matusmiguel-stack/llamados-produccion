@@ -79,6 +79,19 @@ export function EgresosPanel({
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
   const [sendingAll, setSendingAll]  = useState(false)
 
+  // Filtro de estatus, orden de columnas, datos para reporte
+  const [statusFilter, setStatusFilter] = useState<"todo" | "por_pagar" | "pagados" | "anticipos">("todo")
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const [cobrado, setCobrado] = useState(0)
+  const [facturas, setFacturas] = useState<any[]>([])
+  const [generating, setGenerating] = useState(false)
+
+  function toggleSort(key: string) {
+    if (sortKey === key) setSortDir(d => (d === "asc" ? "desc" : "asc"))
+    else { setSortKey(key); setSortDir("asc") }
+  }
+
   // ── Pagos (anticipo / comprobación) ───────────────────────────────────────
   const [payModal, setPayModal] = useState<{ item: EgresoItem; tipo: "anticipo" | "comprobacion" } | null>(null)
   const [payXml, setPayXml] = useState<File | null>(null)
@@ -90,13 +103,17 @@ export function EgresosPanel({
   async function load() {
       setLoading(true)
 
-      // Catálogos para el selector
-      const [{ data: provs }, { data: emps }] = await Promise.all([
+      // Catálogos para el selector + datos para el reporte
+      const [{ data: provs }, { data: emps }, { data: ingreso }, { data: facts }] = await Promise.all([
         supabase.from("proveedores").select("id,nombre,apellido,empresa,actividad").order("nombre"),
         supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname").order("nombre"),
+        supabase.from("ingresos").select("subtotal").eq("project_id", projectId).limit(1).maybeSingle(),
+        supabase.from("facturas").select("proveedor_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
       ])
       setProveedores(provs || [])
       setEmployees(emps || [])
+      setCobrado(Number(ingreso?.subtotal || 0))
+      setFacturas(facts || [])
 
       // Solo la cotización liberada
       const { data: quotes } = await supabase
@@ -360,14 +377,74 @@ export function EgresosPanel({
     }
   }
 
+  // ── Filtro de estatus ──────────────────────────────────────────────────────
+  function passesFilter(it: EgresoItem): boolean {
+    switch (statusFilter) {
+      case "pagados":   return it.pago_estado === "pagado"
+      case "por_pagar": return it.pago_estado !== "pagado"
+      case "anticipos": return it.pago_modo === "anticipo" || it.pago_modo === "comprobacion"
+      default:          return true
+    }
+  }
+
+  // ── Orden de columnas ──────────────────────────────────────────────────────
+  function sortItems(list: EgresoItem[]): EgresoItem[] {
+    if (!sortKey) return list
+    const get = (it: EgresoItem): string | number => {
+      switch (sortKey) {
+        case "section":  return it.section_name
+        case "desc":     return it.description
+        case "supplier": return it.supplierLabel
+        case "qty":      return it.actual_qty ?? Math.max(it.qty, 1)
+        case "days":     return it.actual_days ?? Math.max(it.days, 1)
+        case "price":    return it.actual_unit_price ?? it.unit_price
+        case "monto":    return montoEgreso(it)
+        default:         return ""
+      }
+    }
+    const dir = sortDir === "asc" ? 1 : -1
+    return [...list].sort((a, b) => {
+      const va = get(a), vb = get(b)
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir
+      return String(va).localeCompare(String(vb), "es", { numeric: true, sensitivity: "base" }) * dir
+    })
+  }
+
   // ── Agrupar por cotización ─────────────────────────────────────────────────
+  const visibleItems = items.filter(passesFilter)
   const byQuote: Record<string, { quote_name: string; items: EgresoItem[] }> = {}
-  for (const item of items) {
+  for (const item of visibleItems) {
     if (!byQuote[item.quote_id]) byQuote[item.quote_id] = { quote_name: item.quote_name, items: [] }
     byQuote[item.quote_id].items.push(item)
   }
+  for (const k of Object.keys(byQuote)) byQuote[k].items = sortItems(byQuote[k].items)
   const totalGlobal = items.reduce((s, i) => s + montoEgreso(i), 0)
   const quoteCount  = Object.keys(byQuote).length
+
+  async function generarReporte() {
+    setGenerating(true)
+    try {
+      const { exportEgresosReport } = await import("../../../lib/exportEgresosReport")
+      await exportEgresosReport({
+        projectName, projectCode, empresa,
+        cobrado,
+        items: items.map(it => ({
+          seccion: it.section_name,
+          concepto: it.description,
+          proveedor: it.supplierLabel,
+          monto: montoEgreso(it),
+          pagado: it.pago_estado === "pagado",
+          pagoModo: it.pago_modo,
+          proveedorId: it.actual_supplier_id,
+        })),
+        facturas,
+      })
+    } catch (err: any) {
+      alert("Error al generar reporte: " + err.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   if (loading) return <p style={{ color: "#64748b", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
 
@@ -388,20 +465,60 @@ export function EgresosPanel({
           <SummaryCard label="Ítems"          value={String(items.length)} color="#94a3b8" />
           <SummaryCard label="Cotizaciones"   value={String(quoteCount)}   color="#94a3b8" />
         </div>
-        <button
-          onClick={sendAllBilling}
-          disabled={sendingAll}
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "12px 20px", borderRadius: 10, cursor: sendingAll ? "not-allowed" : "pointer",
-            background: sendingAll ? "rgba(6,182,212,0.06)" : "rgba(6,182,212,0.12)",
-            border: "1px solid rgba(6,182,212,0.30)", color: "#67e8f9",
-            fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
-            opacity: sendingAll ? 0.6 : 1, flexShrink: 0,
-          }}
-        >
-          {sendingAll ? "⏳ Enviando..." : "✉ Facturar todos"}
-        </button>
+        <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={sendAllBilling}
+            disabled={sendingAll}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "10px 18px", borderRadius: 10, cursor: sendingAll ? "not-allowed" : "pointer",
+              background: sendingAll ? "rgba(6,182,212,0.06)" : "rgba(6,182,212,0.12)",
+              border: "1px solid rgba(6,182,212,0.30)", color: "#67e8f9",
+              fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+              opacity: sendingAll ? 0.6 : 1,
+            }}
+          >
+            {sendingAll ? "⏳ Enviando..." : "✉ Facturar todos"}
+          </button>
+          <button
+            onClick={generarReporte}
+            disabled={generating}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "10px 18px", borderRadius: 10, cursor: generating ? "not-allowed" : "pointer",
+              background: generating ? "rgba(167,139,250,0.06)" : "rgba(167,139,250,0.12)",
+              border: "1px solid rgba(167,139,250,0.30)", color: "#c4b5fd",
+              fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+              opacity: generating ? 0.6 : 1,
+            }}
+          >
+            {generating ? "⏳ Generando..." : "📄 Generar reporte"}
+          </button>
+        </div>
+      </div>
+
+      {/* Filtros de estatus */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {([
+          ["todo", "Todo"],
+          ["por_pagar", "Por Pagar"],
+          ["pagados", "Pagados"],
+          ["anticipos", "Anticipos"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(key)}
+            style={{
+              padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+              cursor: "pointer",
+              border: statusFilter === key ? "1px solid rgba(167,139,250,0.45)" : "1px solid rgba(148,163,184,0.18)",
+              background: statusFilter === key ? "rgba(167,139,250,0.14)" : "transparent",
+              color: statusFilter === key ? "#c4b5fd" : "#94a3b8",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Per-quote tables */}
@@ -430,8 +547,30 @@ export function EgresosPanel({
                 )}
                 <thead>
                   <tr>
-                    {["Sección", "Rubro / Concepto", "Proveedor / Empleado", "Qty", "Días", "P. Unitario", "Monto", ""].map((h, i) => (
-                      <th key={i} style={{ ...thStyle, textAlign: i >= 3 && i <= 6 ? "right" : "left" }}>{h}</th>
+                    {([
+                      ["Sección", "section", "left"],
+                      ["Rubro / Concepto", "desc", "left"],
+                      ["Proveedor / Empleado", "supplier", "left"],
+                      ["Qty", "qty", "right"],
+                      ["Días", "days", "right"],
+                      ["P. Unitario", "price", "right"],
+                      ["Monto", "monto", "right"],
+                      ["", null, "left"],
+                    ] as [string, string | null, "left" | "right"][]).map(([h, key, align], i) => (
+                      <th
+                        key={i}
+                        onClick={key ? () => toggleSort(key) : undefined}
+                        style={{
+                          ...thStyle,
+                          textAlign: align,
+                          cursor: key ? "pointer" : "default",
+                          userSelect: "none",
+                          color: key && sortKey === key ? "#a78bfa" : thStyle.color,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {h}{key && sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                      </th>
                     ))}
                   </tr>
                 </thead>
