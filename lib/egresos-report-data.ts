@@ -15,14 +15,14 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     supabase.from("proveedores").select("id,nombre,apellido,empresa").order("nombre"),
     supabase.from("employees").select("id,nombre,nickname").order("nombre"),
     supabase.from("ingresos").select("subtotal,cliente_agencia").eq("project_id", projectId).limit(1).maybeSingle(),
-    supabase.from("facturas").select("proveedor_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
+    supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
   ])
 
   const { data: quotes } = await supabase
     .from("quotes").select("id").eq("project_id", projectId).eq("released", true)
 
   type Item = {
-    seccion: string; concepto: string; proveedor: string; monto: number
+    id: string; seccion: string; concepto: string; proveedor: string; monto: number
     pagado: boolean; tipoPago: "proveedor" | "anticipo" | "comprobacion" | "reembolso"
     proveedorId: string | null
   }
@@ -34,7 +34,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     for (const section of sections || []) {
       const { data: raw } = await supabase
         .from("quote_items")
-        .select("description,qty,days,unit_price,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,pago_estado,pago_modo")
+        .select("id,description,qty,days,unit_price,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,pago_estado,pago_modo")
         .eq("section_id", section.id).order("order_index")
       for (const row of (raw as any[]) || []) {
         const hasReal = row.actual_qty != null || row.actual_days != null || row.actual_unit_price != null
@@ -61,6 +61,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
           esReembolso ? "reembolso" : "proveedor"
 
         items.push({
+          id: row.id,
           seccion: section.name,
           concepto: row.description,
           proveedor,

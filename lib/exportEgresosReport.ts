@@ -1,4 +1,5 @@
 type ReportItem = {
+  id: string
   seccion: string
   concepto: string
   proveedor: string
@@ -10,6 +11,7 @@ type ReportItem = {
 
 type ReportFactura = {
   proveedor_id: string | null
+  quote_item_id: string | null
   subtotal: number | null
   status: string
   origen: string | null
@@ -148,9 +150,10 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
   const montoCoincide = (f: ReportFactura, monto: number) => Math.abs(Number(f.subtotal || 0) - monto) < 1.5
   function estatusPorPagar(item: ReportItem): string {
     const mismoProv = facturasProveedor.filter(f => f.proveedor_id && f.proveedor_id === item.proveedorId)
-    // 1) mismo proveedor + mismo monto  2) mismo proveedor con fecha
-    // 3) respaldo: cualquier factura de proveedor del proyecto que coincida en monto
+    // 0) vínculo directo egreso↔factura  1) mismo proveedor + monto
+    // 2) mismo proveedor con fecha       3) respaldo por monto en el proyecto
     const fac =
+      facturasProveedor.find(f => f.quote_item_id && f.quote_item_id === item.id) ||
       mismoProv.find(f => montoCoincide(f, item.monto)) ||
       mismoProv.find(f => f.fecha_pago) ||
       facturasProveedor.find(f => montoCoincide(f, item.monto) && (f.fecha_pago || f.status === "pagada"))

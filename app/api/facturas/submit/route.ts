@@ -361,14 +361,14 @@ export async function POST(req: Request) {
       .eq("project_id", project.id).eq("released", true)
 
     const fmtMx = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
-    const lineAmounts: number[] = []
+    const lineItems: { id: string; monto: number }[] = []
     for (const quote of quotes || []) {
       const { data: sections } = await admin
         .from("quote_sections").select("id").eq("quote_id", quote.id)
       for (const section of sections || []) {
         const { data: rows } = await admin
           .from("quote_items")
-          .select("qty,days,unit_price,actual_qty,actual_days,actual_unit_price,actual_supplier_id")
+          .select("id,qty,days,unit_price,actual_qty,actual_days,actual_unit_price,actual_supplier_id")
           .eq("section_id", section.id)
           .eq("actual_supplier_id", prov.id)
         for (const r of rows || []) {
@@ -378,10 +378,11 @@ export async function POST(req: Request) {
           const d = r.actual_days       ?? Math.max(r.days || 0, 1)
           const p = r.actual_unit_price ?? r.unit_price
           const monto = Math.round(q * d * p * 100) / 100
-          if (monto > 0) lineAmounts.push(monto)
+          if (monto > 0) lineItems.push({ id: r.id, monto })
         }
       }
     }
+    const lineAmounts = lineItems.map((l) => l.monto)
 
     if (lineAmounts.length === 0) {
       return rechazar(
@@ -403,7 +404,7 @@ export async function POST(req: Request) {
     // Evitar sobre-facturación: no aceptar más facturas de ese monto que conceptos existentes.
     const { data: facturasPrevias } = await admin
       .from("facturas")
-      .select("subtotal")
+      .select("subtotal, quote_item_id")
       .eq("proveedor_id", prov.id)
       .eq("project_id", project.id)
       .in("status", ["aceptada", "pagada"])
@@ -416,6 +417,15 @@ export async function POST(req: Request) {
         project.id, proyectoLabel, subtotal
       )
     }
+
+    // Elegir el egreso (quote_item) que cubre esta factura: el que coincide en
+    // monto y aún no tiene factura vinculada (preferentemente).
+    const yaVinculados = new Set(
+      (facturasPrevias || []).map((f: any) => f.quote_item_id).filter(Boolean)
+    )
+    const coincidentes = lineItems.filter((l) => Math.abs(l.monto - subtotal) <= MONTO_TOLERANCIA)
+    const matchedItem = coincidentes.find((l) => !yaVinculados.has(l.id)) || coincidentes[0]
+    const quoteItemId = matchedItem?.id || null
 
     // 7. Factura correcta → calcular fecha de pago
     const dias = plazoDias(subtotal)
@@ -438,12 +448,12 @@ export async function POST(req: Request) {
       if (!pdfUpload.error) pdfPath = pdfUpload.data.path
     }
 
-    // 9. Registrar factura aceptada
+    // 9. Registrar factura aceptada (vinculada a su egreso)
     await admin.from("facturas").insert({
       proveedor_id: prov.id, project_id: project.id, proveedor_email: email,
       codigo_proyecto: codigo, subtotal, status: "aceptada",
       fecha_pago: fechaISO(fechaPago), xml_path: xmlPath, pdf_path: pdfPath,
-      uuid_fiscal: uuidFiscal,
+      uuid_fiscal: uuidFiscal, quote_item_id: quoteItemId,
     })
 
     // 10. Correo de confirmación
