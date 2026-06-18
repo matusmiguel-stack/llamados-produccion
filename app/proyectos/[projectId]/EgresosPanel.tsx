@@ -83,9 +83,33 @@ export function EgresosPanel({
   const [statusFilter, setStatusFilter] = useState<"todo" | "por_pagar" | "pagados" | "anticipos">("todo")
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const [facturas, setFacturas] = useState<any[]>([])
+
   function toggleSort(key: string) {
     if (sortKey === key) setSortDir(d => (d === "asc" ? "desc" : "asc"))
     else { setSortKey(key); setSortDir("asc") }
+  }
+
+  // Hoy CDMX (YYYY-MM-DD) para detectar pagos vencidos
+  const hoyMx = new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" })
+
+  // Estatus de pago de un egreso: { label, color }
+  function egresoStatus(item: EgresoItem): { label: string; color: string } {
+    const GRIS = "#94a3b8", NARANJA = "#fb923c", VERDE = "#34d399", ROJO = "#f87171"
+    if (item.pago_estado === "pagado") return { label: "Pagado", color: VERDE }
+    const monto = montoEgreso(item)
+    // Factura del proveedor vinculada (o por proveedor+monto)
+    const fac =
+      facturas.find(f => f.quote_item_id && f.quote_item_id === item.id) ||
+      facturas.find(f => f.proveedor_id && f.proveedor_id === item.actual_supplier_id &&
+        f.origen !== "anticipo" && f.origen !== "comprobacion" && f.origen !== "reembolso" &&
+        Math.abs(Number(f.subtotal || 0) - monto) < 1.5)
+    if (fac?.status === "pagada") return { label: "Pagado", color: VERDE }
+    if (fac?.fecha_pago) {
+      const vencida = String(fac.fecha_pago).split("T")[0] < hoyMx
+      return vencida ? { label: "Vencido", color: ROJO } : { label: "Programado", color: NARANJA }
+    }
+    return { label: "Sin fecha", color: GRIS }
   }
 
   // ── Pagos (anticipo / comprobación) ───────────────────────────────────────
@@ -99,13 +123,15 @@ export function EgresosPanel({
   async function load() {
       setLoading(true)
 
-      // Catálogos para el selector
-      const [{ data: provs }, { data: emps }] = await Promise.all([
+      // Catálogos para el selector + facturas (para el estatus de pago)
+      const [{ data: provs }, { data: emps }, { data: facts }] = await Promise.all([
         supabase.from("proveedores").select("id,nombre,apellido,empresa,actividad").order("nombre"),
         supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname").order("nombre"),
+        supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago").eq("project_id", projectId),
       ])
       setProveedores(provs || [])
       setEmployees(emps || [])
+      setFacturas(facts || [])
 
       // Solo la cotización liberada
       const { data: quotes } = await supabase
@@ -391,6 +417,7 @@ export function EgresosPanel({
         case "days":     return it.actual_days ?? Math.max(it.days, 1)
         case "price":    return it.actual_unit_price ?? it.unit_price
         case "monto":    return montoEgreso(it)
+        case "status":   return egresoStatus(it).label
         default:         return ""
       }
     }
@@ -489,14 +516,15 @@ export function EgresosPanel({
               <table style={isMobile ? tableStyle : { ...tableStyle, tableLayout: "fixed" }}>
                 {!isMobile && (
                   <colgroup>
-                    <col style={{ width: "11%" }} />
-                    <col style={{ width: "24%" }} />
-                    <col style={{ width: "21%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "6%" }} />
                     <col style={{ width: "10%" }} />
-                    <col style={{ width: "11%" }} />
-                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "20%" }} />
+                    <col style={{ width: "18%" }} />
+                    <col style={{ width: "5%" }} />
+                    <col style={{ width: "5%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "14%" }} />
                   </colgroup>
                 )}
                 <thead>
@@ -509,6 +537,7 @@ export function EgresosPanel({
                       ["Días", "days", "right"],
                       ["P. Unitario", "price", "right"],
                       ["Monto", "monto", "right"],
+                      ["Status", "status", "left"],
                       ["", null, "left"],
                     ] as [string, string | null, "left" | "right"][]).map(([h, key, align], i) => (
                       <th
@@ -578,6 +607,8 @@ export function EgresosPanel({
                           <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
                             {fmt(previewMonto)}
                           </td>
+                          {/* Status (vacío en edición) */}
+                          <td style={tdStyle} />
                           {/* Acciones */}
                           <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
                             <button onClick={() => saveEdit(item.id)} disabled={saving} style={saveBtnStyle}>
@@ -613,6 +644,21 @@ export function EgresosPanel({
                         <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>{days}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
+                        <td style={tdStyle}>
+                          {(() => {
+                            const st = egresoStatus(item)
+                            return (
+                              <span style={{
+                                display: "inline-flex", alignItems: "center", gap: 5,
+                                padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+                                color: st.color, background: `${st.color}1f`, border: `1px solid ${st.color}55`,
+                              }}>
+                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} />
+                                {st.label}
+                              </span>
+                            )
+                          })()}
+                        </td>
                         <td style={tdStyle}>
                           <div style={actionGridStyle}>
                             {/* Columna izquierda: pagos */}
@@ -659,12 +705,13 @@ export function EgresosPanel({
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                    <td colSpan={7} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
+                    <td colSpan={6} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
                       {qItems.length} rubro{qItems.length !== 1 ? "s" : ""}
                     </td>
                     <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace", paddingTop: 10 }}>
                       {fmt(quoteTotal)}
                     </td>
+                    <td colSpan={2} />
                   </tr>
                 </tfoot>
               </table>
