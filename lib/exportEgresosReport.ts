@@ -22,6 +22,8 @@ export type EgresosReportData = {
   projectName: string
   projectCode: string | null
   empresa: "retro_studio" | "retro_films" | null
+  cliente: string | null
+  responsable: string | null
   cobrado: number
   items: ReportItem[]
   facturas: ReportFactura[]
@@ -36,6 +38,21 @@ function fechaLarga(iso: string | null): string {
   return new Date(y, m - 1, d).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
 }
 
+async function fetchImageBase64(url: string): Promise<string> {
+  try {
+    const resp = await fetch(url)
+    const blob = await resp.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return ""
+  }
+}
+
 export async function exportEgresosReport(data: EgresosReportData): Promise<void> {
   const { jsPDF } = await import("jspdf")
   const autoTable = (await import("jspdf-autotable")).default
@@ -46,27 +63,47 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
   const mR = 15
   const contentW = pageW - mL - mR
 
-  const empresaLabel = data.empresa === "retro_films" ? "Retro Films" : data.empresa === "retro_studio" ? "Retro Studio" : ""
+  const empresaLabel = data.empresa === "retro_films" ? "Retro Films" : data.empresa === "retro_studio" ? "Retro Studio" : "—"
   const proyectoLabel = data.projectCode ? `${data.projectCode} ${data.projectName}` : data.projectName
 
-  // ── Encabezado ───────────────────────────────────────────────────────────────
-  doc.setFillColor(15, 23, 42)
-  doc.rect(0, 0, pageW, 26, "F")
-  doc.setTextColor(148, 163, 184)
-  doc.setFontSize(8)
-  doc.text("RETRO CASA PRODUCTORA · REPORTE FINANCIERO", mL, 11)
-  doc.setTextColor(248, 250, 252)
-  doc.setFontSize(15)
-  doc.setFont("helvetica", "bold")
-  doc.text(proyectoLabel, mL, 19)
-  if (empresaLabel) {
-    doc.setFontSize(9)
-    doc.setFont("helvetica", "normal")
-    doc.setTextColor(148, 163, 184)
-    doc.text(empresaLabel, pageW - mR, 19, { align: "right" })
+  // ── Encabezado (imagen) con título centrado ──────────────────────────────────
+  const headerImg = await fetchImageBase64("/pdf-header-detail.png")
+  const headerH = 34
+  if (headerImg) {
+    doc.addImage(headerImg, "PNG", 0, 0, pageW, headerH)
+  } else {
+    doc.setFillColor(15, 23, 42)
+    doc.rect(0, 0, pageW, headerH, "F")
   }
+  doc.setTextColor(248, 250, 252)
+  doc.setFontSize(16)
+  doc.setFont("helvetica", "bold")
+  doc.text(proyectoLabel, pageW / 2, headerH / 2 + 1, { align: "center", baseline: "middle" })
+  doc.setFontSize(8.5)
+  doc.setFont("helvetica", "normal")
+  doc.text("REPORTE FINANCIERO", pageW / 2, headerH / 2 + 7, { align: "center", baseline: "middle" })
 
-  let y = 36
+  let y = headerH + 12
+
+  // ── Información del proyecto ──────────────────────────────────────────────────
+  autoTable(doc, {
+    startY: y,
+    margin: { left: mL, right: mR },
+    theme: "plain",
+    body: [
+      ["Cliente", data.cliente || "—", "Responsable", data.responsable || "—"],
+      ["Proyecto", proyectoLabel, "Empresa", empresaLabel],
+    ],
+    styles: { fontSize: 9.5, cellPadding: 1.5 },
+    columnStyles: {
+      0: { fontStyle: "bold", textColor: [100, 116, 139], cellWidth: 28 },
+      1: { textColor: [15, 23, 42], cellWidth: contentW / 2 - 28 },
+      2: { fontStyle: "bold", textColor: [100, 116, 139], cellWidth: 28 },
+      3: { textColor: [15, 23, 42] },
+    },
+  })
+  // @ts-ignore
+  y = doc.lastAutoTable.finalY + 10
 
   // ── Resumen financiero ───────────────────────────────────────────────────────
   const totalGastos = data.items.reduce((s, i) => s + i.monto, 0)

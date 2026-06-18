@@ -84,6 +84,7 @@ export function EgresosPanel({
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const [cobrado, setCobrado] = useState(0)
+  const [clienteNombre, setClienteNombre] = useState("")
   const [facturas, setFacturas] = useState<any[]>([])
   const [generating, setGenerating] = useState(false)
 
@@ -107,12 +108,13 @@ export function EgresosPanel({
       const [{ data: provs }, { data: emps }, { data: ingreso }, { data: facts }] = await Promise.all([
         supabase.from("proveedores").select("id,nombre,apellido,empresa,actividad").order("nombre"),
         supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname").order("nombre"),
-        supabase.from("ingresos").select("subtotal").eq("project_id", projectId).limit(1).maybeSingle(),
+        supabase.from("ingresos").select("subtotal,cliente_agencia").eq("project_id", projectId).limit(1).maybeSingle(),
         supabase.from("facturas").select("proveedor_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
       ])
       setProveedores(provs || [])
       setEmployees(emps || [])
       setCobrado(Number(ingreso?.subtotal || 0))
+      setClienteNombre((ingreso as any)?.cliente_agencia || "")
       setFacturas(facts || [])
 
       // Solo la cotización liberada
@@ -427,6 +429,8 @@ export function EgresosPanel({
       const { exportEgresosReport } = await import("../../../lib/exportEgresosReport")
       await exportEgresosReport({
         projectName, projectCode, empresa,
+        cliente: clienteNombre,
+        responsable: projectResponsable,
         cobrado,
         items: items.map(it => ({
           seccion: it.section_name,
