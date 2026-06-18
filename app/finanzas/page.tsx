@@ -232,7 +232,7 @@ export default function FinanzasPage() {
                       disabled={working === f.id}
                       style={payBtnStyle(working === f.id)}
                     >
-                      {working === f.id ? "..." : "✓ Pagada"}
+                      {working === f.id ? "..." : "Marcar Pago"}
                     </button>
                   </div>
                 </div>
@@ -308,7 +308,7 @@ export default function FinanzasPage() {
                       )}
                       {f.status === "aceptada" && (
                         <button onClick={() => markPaid(f)} disabled={working === f.id} style={payBtnStyle(working === f.id)}>
-                          {working === f.id ? "..." : "✓ Pagada"}
+                          {working === f.id ? "..." : "Marcar Pago"}
                         </button>
                       )}
                     </div>
@@ -384,6 +384,6 @@ function payBtnStyle(busy: boolean): React.CSSProperties {
   return {
     padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700,
     cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1,
-    border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.12)", color: "#34d399",
+    border: "1px solid rgba(59,130,246,0.4)", background: "rgba(59,130,246,0.14)", color: "#93c5fd",
   }
 }
