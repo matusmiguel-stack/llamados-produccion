@@ -628,7 +628,7 @@ export default function ProjectDetailPage() {
         >
           <div
             className="modal-panel"
-            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : "min(1700px, 97vw)" }}
+            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : "min(1200px, 95vw)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={modalHeaderStyle}>
