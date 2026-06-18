@@ -7,6 +7,7 @@ interface Posicion {
   jugador_id: string
   nombre: string
   puntos_total: number
+  exactos: number
   predicciones: number
 }
 
@@ -58,7 +59,10 @@ export default function TablaPage() {
                     {pos.nombre}
                     {esMio && <span className="ml-1.5 text-xs text-amber-400/70 font-normal">(tú)</span>}
                   </p>
-                  <p className="text-xs text-white/25 mt-0.5">{pos.predicciones} predicciones</p>
+                  <p className="text-xs text-white/25 mt-0.5">
+                    {pos.predicciones} predicciones
+                    {pos.exactos > 0 && <span className="ml-1.5 text-amber-400/60">· {pos.exactos} exacto{pos.exactos !== 1 ? 's' : ''} ✓</span>}
+                  </p>
                 </div>
                 <div className="text-right">
                   <div className={`text-xl font-bold ${esMio ? 'text-amber-300' : 'text-white/70'}`}>{pos.puntos_total}</div>
