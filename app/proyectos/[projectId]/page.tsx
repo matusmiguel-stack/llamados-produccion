@@ -170,7 +170,6 @@ export default function ProjectDetailPage() {
   const [showMatriz, setShowMatriz] = useState(false)
   const [showHoja, setShowHoja] = useState(false)
   const [showGeneral, setShowGeneral] = useState(false)
-  const [showEgresos, setShowEgresos] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
 
   const isAdmin     = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
@@ -221,7 +220,6 @@ export default function ProjectDetailPage() {
         setShowMatriz(false)
         setShowHoja(false)
         setShowGeneral(false)
-        setShowEgresos(false)
         setSelectedQuote(null)
       }
     }
@@ -435,8 +433,6 @@ export default function ProjectDetailPage() {
                         setShowMatriz(true)
                       } else if (module.id === "hoja-llamado") {
                         setShowHoja(true)
-                      } else if (module.id === "egresos") {
-                        setShowEgresos(true)
                       } else {
                         setActiveModule(module.id)
                       }
@@ -483,6 +479,21 @@ export default function ProjectDetailPage() {
                     router.push(`/proyectos/${projectId}/liberar/${quoteId}`)
                   }
                 />
+              ) : activeModule === "egresos" ? (
+                <>
+                  <div style={modulePanelHeaderStyle}>
+                    <p style={modulePanelTitleStyle}>Control de egresos</p>
+                    <p style={modulePanelHintStyle}>Gastos reales, pagos y reportes del proyecto</p>
+                  </div>
+                  <EgresosPanel
+                    projectId={projectId}
+                    isMobile={isMobile}
+                    projectName={project?.name ?? ""}
+                    projectCode={project?.code ?? null}
+                    empresa={projectEmpresa}
+                    projectResponsable={project?.responsable ?? null}
+                  />
+                </>
               ) : (
                 <>
                   <div style={modulePanelHeaderStyle}>
@@ -613,51 +624,6 @@ export default function ProjectDetailPage() {
               <HojaLlamadoPanel
                 projectId={projectId}
                 isMobile={isMobile}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Control de Egresos */}
-      {showEgresos && (
-        <div
-          className="modal-overlay"
-          style={modalOverlayStyle}
-          onClick={() => setShowEgresos(false)}
-        >
-          <div
-            className="modal-panel"
-            style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : 1000 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={modalHeaderStyle}>
-              <div>
-                <p style={modalEyebrowStyle}>Proyecto · {project?.name}</p>
-                <h2 style={modalTitleStyle}>Control de egresos</h2>
-              </div>
-              <button
-                onClick={() => setShowEgresos(false)}
-                style={modalCloseStyle}
-                aria-label="Cerrar"
-              >
-                ✕
-              </button>
-            </div>
-            <div
-              style={{
-                padding: isMobile ? "16px 14px 28px" : "20px 28px 32px",
-                overflowY: "auto",
-                maxHeight: "82vh",
-              }}
-            >
-              <EgresosPanel
-                projectId={projectId}
-                isMobile={isMobile}
-                projectName={project?.name ?? ""}
-                projectCode={project?.code ?? null}
-                empresa={projectEmpresa}
-                projectResponsable={project?.responsable ?? null}
               />
             </div>
           </div>

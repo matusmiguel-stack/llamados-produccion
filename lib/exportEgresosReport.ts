@@ -233,6 +233,13 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     return estadoDeFactura(fac, "Por pagar")
   }
 
+  // Estado unificado de cualquier egreso (para los totales)
+  function estadoItem(item: ReportItem): Estado {
+    if (item.tipoPago === "proveedor") return estatusPorPagar(item).estado
+    if (item.tipoPago === "reembolso") return estatusReembolso(item).estado
+    return item.pagado ? "pagado" : "sin_fecha" // anticipo / comprobación
+  }
+
   // ── 1. Por pagar (gastos vía factura de proveedor) ───────────────────────────
   const porPagar = data.items.filter(i => i.tipoPago === "proveedor")
   if (porPagar.length > 0) {
@@ -321,7 +328,40 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
     doc.text(txt, lx + 4, y)
     lx += doc.getTextWidth(txt) + 14
   }
-  y += 6
+  y += 10
+
+  // ── Totales por estatus ──────────────────────────────────────────────────────
+  if (y > 235) { doc.addPage(); y = 20 }
+  const totalPorEstado: Record<Estado, number> = { sin_fecha: 0, programado: 0, pagado: 0, vencido: 0 }
+  for (const it of data.items) totalPorEstado[estadoItem(it)] += it.monto
+
+  const totRows: [string, Estado][] = [
+    ["Total por pagar programado", "programado"],
+    ["Total por pagar sin programar", "sin_fecha"],
+    ["Total pagado", "pagado"],
+    ["Total vencido", "vencido"],
+  ]
+  doc.setFontSize(10)
+  for (const [label, est] of totRows) {
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(...COLOR[est])
+    doc.text(label, mL, y)
+    doc.text(fmt(totalPorEstado[est]), pageW - mR, y, { align: "right" })
+    y += 6
+  }
+  // Línea + total general
+  y += 1
+  doc.setDrawColor(15, 23, 42)
+  doc.setLineWidth(0.4)
+  doc.line(mL, y, pageW - mR, y)
+  y += 7
+  const totalGeneral = data.items.reduce((s, i) => s + i.monto, 0)
+  doc.setFontSize(13)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(15, 23, 42)
+  doc.text("Total general de gastos", mL, y)
+  doc.text(fmt(totalGeneral), pageW - mR, y, { align: "right" })
+  y += 8
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   const fechaGen = new Date().toLocaleDateString("es-MX", { dateStyle: "long" })
