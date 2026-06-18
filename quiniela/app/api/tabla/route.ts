@@ -23,17 +23,22 @@ export async function GET(req: NextRequest) {
     .in('jugador_id', jugadorIds)
     .not('puntos', 'is', null)
 
+  const { data: grupos } = await db.from('grupos').select('pts_exacto').eq('id', grupo_id).single()
+  const ptsExacto = grupos?.pts_exacto ?? 3
+
   const tabla = jugadores.map((j) => {
     const preds = predicciones?.filter((p) => p.jugador_id === j.id) ?? []
     const puntos_total = preds.reduce((sum, p) => sum + (p.puntos ?? 0), 0)
+    const exactos = preds.filter((p) => p.puntos === ptsExacto).length
     return {
       jugador_id: j.id,
       nombre: j.nombre,
       puntos_total,
+      exactos,
       predicciones: preds.length,
     }
   })
 
-  tabla.sort((a, b) => b.puntos_total - a.puntos_total)
+  tabla.sort((a, b) => b.puntos_total - a.puntos_total || b.exactos - a.exactos)
   return NextResponse.json(tabla)
 }
