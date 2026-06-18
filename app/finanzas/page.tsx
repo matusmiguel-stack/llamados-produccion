@@ -20,7 +20,7 @@ type Factura = {
   pdf_path: string | null
   created_at: string
   concepto: string | null
-  origen: "proveedor" | "anticipo" | "comprobacion" | null
+  origen: "proveedor" | "anticipo" | "comprobacion" | "reembolso" | null
   forma_pago: string | null
   proveedores: { nombre: string; apellido: string; empresa: string | null } | null
   projects: { name: string; code: string | null } | null
@@ -29,6 +29,7 @@ type Factura = {
 const ORIGEN_LABEL: Record<string, string> = {
   anticipo: "Anticipo",
   comprobacion: "Comprobación",
+  reembolso: "Reembolso",
   proveedor: "Factura proveedor",
 }
 
@@ -63,7 +64,7 @@ export default function FinanzasPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [facturas, setFacturas] = useState<Factura[]>([])
-  const [filter, setFilter] = useState<"todas" | "aceptada" | "pagada" | "rechazada">("todas")
+  const [filter, setFilter] = useState<"todas" | "aceptada" | "pagada" | "rechazada" | "reembolso">("todas")
   const [search, setSearch] = useState("")
   const [working, setWorking] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -139,7 +140,8 @@ export default function FinanzasPage() {
 
   const filtered = useMemo(() => {
     let list = facturas
-    if (filter !== "todas") list = list.filter(f => f.status === filter)
+    if (filter === "reembolso") list = list.filter(f => f.origen === "reembolso")
+    else if (filter !== "todas") list = list.filter(f => f.status === filter)
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter(f =>
@@ -241,9 +243,9 @@ export default function FinanzasPage() {
 
         {/* Filtros */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          {(["todas", "aceptada", "pagada", "rechazada"] as const).map(s => (
+          {(["todas", "aceptada", "pagada", "reembolso", "rechazada"] as const).map(s => (
             <button key={s} onClick={() => setFilter(s)} style={filterBtnStyle(filter === s)}>
-              {s === "todas" ? "Todas" : s === "aceptada" ? "Por pagar" : s === "pagada" ? "Pagadas" : "Rechazadas"}
+              {s === "todas" ? "Todas" : s === "aceptada" ? "Por pagar" : s === "pagada" ? "Pagadas" : s === "reembolso" ? "Reembolsos" : "Rechazadas"}
             </button>
           ))}
           <input

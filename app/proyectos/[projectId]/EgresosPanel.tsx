@@ -18,7 +18,7 @@ type EgresoItem = {
   actual_qty: number | null; actual_days: number | null; actual_unit_price: number | null
   actual_supplier_id: string | null; actual_employee_id: string | null
   supplierLabel: string; supplierType: "proveedor" | "empleado" | "none"
-  section_name: string; quote_id: string; quote_name: string
+  section_id: string; section_name: string; quote_id: string; quote_name: string
   billing_sent_at: string | null
   pago_tipo: "anticipo" | "comprobacion" | null
   pago_estado: "pagado" | "pendiente_cierre" | null
@@ -87,8 +87,7 @@ export function EgresosPanel({
   const [payForma, setPayForma] = useState("")
   const [paying, setPaying] = useState(false)
 
-  useEffect(() => {
-    async function load() {
+  async function load() {
       setLoading(true)
 
       // Catálogos para el selector
@@ -151,7 +150,7 @@ export function EgresosPanel({
               actual_qty: row.actual_qty, actual_days: row.actual_days, actual_unit_price: row.actual_unit_price,
               actual_supplier_id: row.actual_supplier_id, actual_employee_id: row.actual_employee_id,
               supplierLabel, supplierType,
-              section_name: section.name, quote_id: quote.id, quote_name: quote.name,
+              section_id: section.id, section_name: section.name, quote_id: quote.id, quote_name: quote.name,
               billing_sent_at: row.billing_sent_at ?? null,
               pago_tipo: row.pago_tipo ?? null,
               pago_estado: row.pago_estado ?? null,
@@ -163,8 +162,11 @@ export function EgresosPanel({
       }
       setItems(allItems)
       setLoading(false)
-    }
+  }
+
+  useEffect(() => {
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
   function startEdit(item: EgresoItem) {
@@ -310,8 +312,10 @@ export function EgresosPanel({
   async function submitPay() {
     if (!payModal) return
     const { item, tipo } = payModal
-    const monto = parseFloat(payMonto)
-    if (!monto || monto <= 0) { alert("Indica el monto del pago"); return }
+    const original = montoEgreso(item)
+    // Para anticipo el monto capturado es el pago. Para comprobación es el monto real.
+    const capturado = parseFloat(payMonto)
+    if (!capturado || capturado <= 0) { alert("Indica el monto"); return }
     if (!payForma) { alert("Selecciona de dónde salió el pago"); return }
     if (tipo === "anticipo" && (!payXml || !payPdf)) {
       alert("Para anticipo debes subir el XML y el PDF de la factura")
@@ -323,8 +327,11 @@ export function EgresosPanel({
       const fd = new FormData()
       fd.append("itemId", item.id)
       fd.append("tipo", tipo)
-      fd.append("monto", String(monto))
+      // monto pagado: anticipo = capturado; comprobación = el original ya pagado
+      fd.append("monto", String(tipo === "comprobacion" ? original : capturado))
+      if (tipo === "comprobacion") fd.append("montoReal", String(capturado))
       fd.append("formaPago", payForma)
+      fd.append("sectionId", item.section_id)
       fd.append("concepto", `${item.description} — ${item.supplierLabel}`)
       if (item.actual_supplier_id) fd.append("proveedorId", item.actual_supplier_id)
       fd.append("projectId", projectId)
@@ -340,18 +347,12 @@ export function EgresosPanel({
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error al registrar pago")
-      // La comprobación cierra en un solo paso: el monto capturado es el real
-      setItems(prev => prev.map(it => it.id === item.id
-        ? {
-            ...it,
-            pago_tipo: tipo,
-            pago_estado: "pagado",
-            ...(tipo === "comprobacion"
-              ? { monto_comprobado: monto, actual_qty: 1, actual_days: 1, actual_unit_price: monto }
-              : {}),
-          }
-        : it))
       setPayModal(null)
+      if (data.reembolso) {
+        alert(`✓ Pago registrado.\nSe generó un reembolso de ${fmt(data.reembolso)} para ${item.supplierLabel}, visible en Finanzas como REEMBOLSO por pagar.`)
+      }
+      // Recargar para reflejar el nuevo estado y, si aplica, la línea de reembolso
+      await load()
     } catch (err: any) {
       alert("Error: " + err.message)
     } finally {
@@ -593,11 +594,27 @@ export function EgresosPanel({
               {payModal.tipo === "comprobacion" ? "Monto real comprobado" : "Monto del pago"}
             </label>
             <input type="number" value={payMonto} onChange={(e) => setPayMonto(e.target.value)} style={payInputStyle} />
-            {payModal.tipo === "comprobacion" && (
-              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b" }}>
-                Monto original: {fmt(montoEgreso(payModal.item))}. Captura el monto realmente comprobado.
-              </p>
-            )}
+            {payModal.tipo === "comprobacion" && (() => {
+              const original = montoEgreso(payModal.item)
+              const real = parseFloat(payMonto) || 0
+              const reembolso = real - original
+              return (
+                <>
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b" }}>
+                    Monto registrado originalmente: {fmt(original)}
+                  </p>
+                  {reembolso > 0 && (
+                    <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8, background: "rgba(96,165,250,0.10)", border: "1px solid rgba(96,165,250,0.3)" }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#93c5fd", textTransform: "uppercase", letterSpacing: 0.4 }}>Monto a reembolsar</p>
+                      <p style={{ margin: "3px 0 0", fontSize: 16, fontWeight: 700, color: "#bfdbfe", fontFamily: "monospace" }}>{fmt(reembolso)}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                        El pago original de {fmt(original)} queda registrado. Se generará una línea de reembolso por la diferencia con {payModal.item.supplierLabel}.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
 
             <label style={{ ...payLabelStyle, marginTop: 14 }}>¿De dónde salió el pago? *</label>
             <select value={payForma} onChange={(e) => setPayForma(e.target.value)} style={payInputStyle}>

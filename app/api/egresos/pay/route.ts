@@ -34,6 +34,8 @@ export async function POST(req: Request) {
     const projectId = String(form.get("projectId") || "") || null
     const codigoProyecto = String(form.get("codigo") || "").trim() || null
     const formaPago = String(form.get("formaPago") || "").trim() || null
+    const montoReal = parseFloat(String(form.get("montoReal") || "0")) || 0
+    const sectionId = String(form.get("sectionId") || "") || null
     const xmlFile = form.get("xml") as File | null
     const pdfFile = form.get("pdf") as File | null
 
@@ -91,24 +93,66 @@ export async function POST(req: Request) {
       .single()
     if (facErr) return NextResponse.json({ error: facErr.message }, { status: 500 })
 
-    // Marcar el egreso. Ambos quedan pagados en un solo paso; para comprobación
-    // el monto capturado es el real, así que actualizamos el gasto en la liberación.
+    // Marcar el egreso original como pagado (conserva su monto original).
     const updatePayload: Record<string, unknown> = {
       pago_tipo: tipo, pago_estado: "pagado", factura_id: factura.id,
     }
-    if (tipo === "comprobacion") {
-      updatePayload.monto_comprobado = monto
-      updatePayload.actual_qty = 1
-      updatePayload.actual_days = 1
-      updatePayload.actual_unit_price = monto
-    }
+    if (tipo === "comprobacion") updatePayload.monto_comprobado = montoReal || monto
     const { error: updErr } = await admin
       .from("quote_items")
       .update(updatePayload)
       .eq("id", itemId)
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
 
-    return NextResponse.json({ ok: true, facturaId: factura.id, pago_estado: "pagado" })
+    // Comprobación con excedente → línea de reembolso (nuevo egreso + factura por pagar)
+    let reembolso = 0
+    if (tipo === "comprobacion" && montoReal > monto + 0.009 && sectionId) {
+      reembolso = Math.round((montoReal - monto) * 100) / 100
+
+      // Orden al final de la sección
+      const { data: ordRows } = await admin
+        .from("quote_items").select("order_index").eq("section_id", sectionId)
+      const maxOrder = Math.max(0, ...(ordRows || []).map((r: any) => r.order_index || 0))
+
+      // Nueva línea de gasto (reembolso) — cuenta como gasto real en la liberación
+      const { data: nuevoItem } = await admin
+        .from("quote_items")
+        .insert({
+          section_id: sectionId,
+          description: `Reembolso — ${concepto || "comprobación"}`,
+          qty: 0, days: 0, unit_price: 0,
+          released_expense: 0, real_expense: 0,
+          order_index: maxOrder + 1,
+          is_extra: true,
+          actual_qty: 1, actual_days: 1, actual_unit_price: reembolso,
+          actual_supplier_id: proveedorId,
+        })
+        .select("id")
+        .single()
+
+      // Registro en Finanzas como REEMBOLSO por pagar
+      const { data: facReemb } = await admin
+        .from("facturas")
+        .insert({
+          proveedor_id: proveedorId,
+          project_id: projectId,
+          proveedor_email: proveedorEmail,
+          codigo_proyecto: codigoProyecto,
+          concepto: `Reembolso — ${concepto || ""}`.trim(),
+          subtotal: reembolso,
+          status: "aceptada",      // por pagar
+          origen: "reembolso",
+          fecha_pago: todayISO(),
+        })
+        .select("id")
+        .single()
+
+      if (nuevoItem && facReemb) {
+        await admin.from("quote_items").update({ factura_id: facReemb.id }).eq("id", nuevoItem.id)
+      }
+    }
+
+    return NextResponse.json({ ok: true, facturaId: factura.id, pago_estado: "pagado", reembolso })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
