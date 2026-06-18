@@ -513,33 +513,18 @@ export function EgresosPanel({
             </div>
 
             <div style={tableWrapStyle}>
-              <table style={isMobile ? tableStyle : { ...tableStyle, tableLayout: "fixed" }}>
-                {!isMobile && (
-                  <colgroup>
-                    <col style={{ width: "10%" }} />
-                    <col style={{ width: "20%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "10%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "14%" }} />
-                  </colgroup>
-                )}
+              <table style={{ ...tableStyle, width: isMobile ? "100%" : "auto" }}>
                 <thead>
                   <tr>
                     {([
-                      ["Sección", "section", "left"],
-                      ["Rubro / Concepto", "desc", "left"],
-                      ["Proveedor / Empleado", "supplier", "left"],
-                      ["Qty", "qty", "right"],
-                      ["Días", "days", "right"],
-                      ["P. Unitario", "price", "right"],
-                      ["Monto", "monto", "right"],
-                      ["Status", "status", "left"],
-                      ["", null, "left"],
-                    ] as [string, string | null, "left" | "right"][]).map(([h, key, align], i) => (
+                      ["Sección", "section", "left", undefined],
+                      ["Rubro / Concepto", "desc", "left", 170],
+                      ["Proveedor / Empleado", "supplier", "left", 150],
+                      ["P. Unitario", "price", "right", undefined],
+                      ["Monto", "monto", "right", undefined],
+                      ["Status", "status", "left", undefined],
+                      ["", null, "left", undefined],
+                    ] as [string, string | null, "left" | "right", number | undefined][]).map(([h, key, align, maxW], i) => (
                       <th
                         key={i}
                         onClick={key ? () => toggleSort(key) : undefined}
@@ -550,6 +535,7 @@ export function EgresosPanel({
                           userSelect: "none",
                           color: key && sortKey === key ? "#a78bfa" : thStyle.color,
                           whiteSpace: "nowrap",
+                          ...(maxW ? { maxWidth: maxW } : {}),
                         }}
                       >
                         {h}{key && sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
@@ -587,21 +573,21 @@ export function EgresosPanel({
                               employees={employees}
                             />
                           </td>
-                          {/* Inputs qty / days / price */}
+                          {/* Inputs qty × días × precio compactos */}
                           <td style={tdStyle}>
-                            <input type="number" value={editState.qty}
-                              onChange={e => setEditState(s => ({ ...s, qty: e.target.value }))}
-                              placeholder={String(qty)} style={editInputStyle} />
-                          </td>
-                          <td style={tdStyle}>
-                            <input type="number" value={editState.days}
-                              onChange={e => setEditState(s => ({ ...s, days: e.target.value }))}
-                              placeholder={String(days)} style={editInputStyle} />
-                          </td>
-                          <td style={tdStyle}>
-                            <input type="number" value={editState.unit_price}
-                              onChange={e => setEditState(s => ({ ...s, unit_price: e.target.value }))}
-                              placeholder={String(price)} style={editInputStyle} />
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <input type="number" value={editState.qty}
+                                onChange={e => setEditState(s => ({ ...s, qty: e.target.value }))}
+                                placeholder={String(qty)} title="Cantidad" style={{ ...editInputStyle, width: 38 }} />
+                              <span style={{ color: "#475569", fontSize: 11 }}>×</span>
+                              <input type="number" value={editState.days}
+                                onChange={e => setEditState(s => ({ ...s, days: e.target.value }))}
+                                placeholder={String(days)} title="Días" style={{ ...editInputStyle, width: 38 }} />
+                              <span style={{ color: "#475569", fontSize: 11 }}>×</span>
+                              <input type="number" value={editState.unit_price}
+                                onChange={e => setEditState(s => ({ ...s, unit_price: e.target.value }))}
+                                placeholder={String(price)} title="Precio unitario" style={{ ...editInputStyle, width: 70 }} />
+                            </div>
                           </td>
                           {/* Preview monto */}
                           <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
@@ -627,21 +613,19 @@ export function EgresosPanel({
                         borderBottom: "1px solid rgba(148,163,184,0.07)",
                       }}>
                         <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
-                        <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
+                        <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 170, wordBreak: "break-word", whiteSpace: "normal" }}>
                           {item.description}
                         </td>
-                        <td style={tdStyle}>
+                        <td style={{ ...tdStyle, maxWidth: 150, whiteSpace: "normal" }}>
                           {item.supplierType === "none" ? (
                             <span style={{ color: "#475569", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
                           ) : (
-                            <span style={supplierBadgeStyle(item.supplierType)}>
+                            <span style={{ ...supplierBadgeStyle(item.supplierType), whiteSpace: "normal", wordBreak: "break-word" }}>
                               {item.supplierType === "empleado" ? "👤 " : "🏢 "}
                               {item.supplierLabel}
                             </span>
                           )}
                         </td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>{qty}</td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", fontSize: 12 }}>{days}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
                         <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
                         <td style={tdStyle}>
@@ -705,7 +689,7 @@ export function EgresosPanel({
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                    <td colSpan={6} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
+                    <td colSpan={4} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
                       {qItems.length} rubro{qItems.length !== 1 ? "s" : ""}
                     </td>
                     <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace", paddingTop: 10 }}>
