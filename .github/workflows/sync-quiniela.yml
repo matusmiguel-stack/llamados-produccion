@@ -1,0 +1,14 @@
+name: Sync Quiniela
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # cada 30 minutos
+  workflow_dispatch:          # permite correrlo manualmente desde GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar sync-now
+        run: |
+          curl -s https://quiniela-mundial-lovat.vercel.app/api/sync-now
