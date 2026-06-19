@@ -209,6 +209,12 @@ export default function CotizacionesPage() {
   const [editQuoteId, setEditQuoteId] = useState<string | null>(null)
   const suppressClientReset = useRef(false)
 
+  // ── Edición en vivo (colaborativa) ─────────────────────────────────────────
+  const broadcastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const liveChannel = useRef<any>(null)
+  const lastSyncJson = useRef<string>("")
+  const [collaborators, setCollaborators] = useState<string[]>([])
+
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
   const clientSubfolders = subfolders.filter((sf) => sf.client_id === clientId)
@@ -425,6 +431,63 @@ export default function CotizacionesPage() {
     setNewSubfolderName("")
     setShowNewSubfolder(false)
   }, [clientId])
+
+  // ── Suscripción a la edición en vivo de esta cotización ────────────────────
+  useEffect(() => {
+    if (!editQuoteId || !profile) return
+    const myName = profile.full_name || profile.email || "Alguien"
+    const channel = supabase.channel(`quote-edit:${editQuoteId}`, {
+      config: { broadcast: { self: false }, presence: { key: profile.id } },
+    })
+    liveChannel.current = channel
+
+    channel.on("broadcast", { event: "state" }, ({ payload }) => {
+      // Marca este contenido como ya sincronizado para no re-difundirlo (evita eco)
+      lastSyncJson.current = JSON.stringify(payload)
+      if (payload.values !== undefined) setValues(payload.values)
+      if (payload.extras !== undefined) setExtras(payload.extras)
+      if (payload.quoteName !== undefined) setQuoteName(payload.quoteName)
+      if (payload.atencion !== undefined) setAtencion(payload.atencion)
+      if (payload.entregables !== undefined) setEntregables(payload.entregables)
+      if (payload.markupGeneral !== undefined) setMarkupGeneral(payload.markupGeneral)
+      if (payload.commissionPct !== undefined) setCommissionPct(payload.commissionPct)
+      if (payload.commissionMarkup !== undefined) setCommissionMarkup(payload.commissionMarkup)
+      if (payload.status !== undefined) setStatus(payload.status)
+    })
+
+    channel.on("presence", { event: "sync" }, () => {
+      const st = channel.presenceState() as Record<string, { name: string }[]>
+      const names = new Set<string>()
+      for (const key of Object.keys(st)) {
+        if (key === profile.id) continue
+        for (const m of st[key]) if (m?.name) names.add(m.name)
+      }
+      setCollaborators([...names])
+    })
+
+    channel.subscribe((status: string) => {
+      if (status === "SUBSCRIBED") channel.track({ name: myName })
+    })
+
+    return () => {
+      supabase.removeChannel(channel)
+      liveChannel.current = null
+      setCollaborators([])
+    }
+  }, [editQuoteId, profile])
+
+  // ── Difundir cambios locales (debounced) ───────────────────────────────────
+  useEffect(() => {
+    if (!liveChannel.current) return
+    const payload = { values, extras, quoteName, atencion, entregables, markupGeneral, commissionPct, commissionMarkup, status }
+    const json = JSON.stringify(payload)
+    if (json === lastSyncJson.current) return // sin cambios reales (o viene de remoto)
+    if (broadcastTimer.current) clearTimeout(broadcastTimer.current)
+    broadcastTimer.current = setTimeout(() => {
+      lastSyncJson.current = json
+      liveChannel.current?.send({ type: "broadcast", event: "state", payload })
+    }, 250)
+  }, [values, extras, quoteName, atencion, entregables, markupGeneral, commissionPct, commissionMarkup, status])
 
   async function handleCreateClient() {
     if (!newClientName.trim()) return
@@ -836,6 +899,18 @@ export default function CotizacionesPage() {
             <p style={eyebrowStyle}>Finanzas</p>
             <h1 style={pageTitleStyle}>{editQuoteId ? "Editar cotización" : "Nueva cotización"}</h1>
             <p style={pageSubtitleStyle}>Presupuesto estructurado por rubros con análisis de utilidad</p>
+            {collaborators.length > 0 && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10,
+                padding: "6px 12px", borderRadius: 999,
+                background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.3)",
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+                <span style={{ color: "#6ee7b7", fontSize: 12, fontWeight: 600 }}>
+                  Editando en vivo: {collaborators.join(", ")}
+                </span>
+              </div>
+            )}
           </header>
 
           {/* Datos generales */}
