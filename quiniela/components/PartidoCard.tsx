@@ -69,15 +69,15 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {/* Local */}
-        <div className="flex-1 flex items-center gap-2">
-          {partido.bandera_local && <img src={partido.bandera_local} alt="" className="w-7 h-7 object-contain rounded-sm" />}
-          <span className="font-semibold text-sm text-white truncate">{partido.equipo_local}</span>
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          {partido.bandera_local && <img src={partido.bandera_local} alt="" className="w-10 h-10 object-contain rounded-sm" />}
+          <span className="font-semibold text-xs text-white text-center leading-tight">{partido.equipo_local}</span>
         </div>
 
         {/* Score */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {partido.estado === 'finalizado' ? (
             <span className="text-lg font-bold text-white/60 px-3 py-1 bg-white/5 rounded-xl border border-white/8">
               {partido.goles_local} · {partido.goles_visitante}
@@ -100,9 +100,9 @@ export default function PartidoCard({ partido, jugadorId, onSave }: Props) {
         </div>
 
         {/* Visitante */}
-        <div className="flex-1 flex items-center gap-2 justify-end">
-          <span className="font-semibold text-sm text-white truncate text-right">{partido.equipo_visitante}</span>
-          {partido.bandera_visitante && <img src={partido.bandera_visitante} alt="" className="w-7 h-7 object-contain rounded-sm" />}
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          {partido.bandera_visitante && <img src={partido.bandera_visitante} alt="" className="w-10 h-10 object-contain rounded-sm" />}
+          <span className="font-semibold text-xs text-white text-center leading-tight">{partido.equipo_visitante}</span>
         </div>
       </div>
 
