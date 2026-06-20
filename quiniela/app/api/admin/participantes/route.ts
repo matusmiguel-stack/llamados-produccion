@@ -36,6 +36,19 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(result)
 }
 
+// DELETE — eliminar participante y sus predicciones
+export async function DELETE(req: NextRequest) {
+  const password = req.nextUrl.searchParams.get('password')
+  const jugador_id = req.nextUrl.searchParams.get('jugador_id')
+  if (password !== ADMIN_PASSWORD) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!jugador_id) return NextResponse.json({ error: 'jugador_id requerido' }, { status: 400 })
+
+  const db = supabaseAdmin()
+  await db.from('predicciones').delete().eq('jugador_id', jugador_id)
+  await db.from('jugadores').delete().eq('id', jugador_id)
+  return NextResponse.json({ ok: true })
+}
+
 // PATCH — marcar/desmarcar pagado
 export async function PATCH(req: NextRequest) {
   const { password, jugador_id, pagado } = await req.json()

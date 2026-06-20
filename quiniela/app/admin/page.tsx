@@ -339,6 +339,17 @@ export default function AdminPage() {
                         >
                           {p.pagado ? '✓ Pagado' : 'Sin pagar'}
                         </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`¿Eliminar a ${p.nombre} del grupo? Se borrarán todas sus predicciones.`)) return
+                            await fetch(`/api/admin/participantes?password=${encodeURIComponent(password)}&jugador_id=${p.id}`, { method: 'DELETE' })
+                            setParticipantes((prev) => prev.filter((x) => x.id !== p.id))
+                          }}
+                          className="text-red-500/40 hover:text-red-400 transition-colors text-lg leading-none flex-shrink-0"
+                          title="Eliminar participante"
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
