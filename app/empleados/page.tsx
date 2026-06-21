@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
+import { resumenVacaciones, diasPorAnios, MESES } from "../../lib/vacaciones"
 
 type Employee = {
   id: string
@@ -18,6 +19,10 @@ type Employee = {
   sueldo_mensual: number
   fecha_ingreso: string
   cumpleanos: string | null
+  vac_anios: number | null
+  vac_mes_reseteo: number | null
+  vac_dias_base: number | null
+  vac_ultimo_reset_anio: number | null
 }
 
 type SalaryChange = {
@@ -40,6 +45,9 @@ type EmployeeForm = {
   sueldo_mensual: string
   fecha_ingreso: string
   cumpleanos: string
+  vac_anios: string
+  vac_mes_reseteo: string
+  vac_dias_base: string
 }
 
 const emptyForm: EmployeeForm = {
@@ -52,10 +60,14 @@ const emptyForm: EmployeeForm = {
   sueldo_mensual: "",
   fecha_ingreso: "",
   cumpleanos: "",
+  vac_anios: "",
+  vac_mes_reseteo: "",
+  vac_dias_base: "0",
 }
 
 export default function EmpleadosPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [vacRangesByEmp, setVacRangesByEmp] = useState<Record<string, { start_date: string; end_date: string }[]>>({})
   const [profile, setProfile] = useState<any>(null)
   const [form, setForm] = useState<EmployeeForm>(emptyForm)
   const [editingId, setEditingId] = useState("")
@@ -136,7 +148,34 @@ export default function EmpleadosPage() {
 
     if (error) return alert(error.message)
 
-    setEmployees(data || [])
+    // Vacaciones del calendario por empleado (para descontar días)
+    const { data: vacAssign } = await supabase
+      .from("vacation_employees")
+      .select("employee_id, vacations(start_date, end_date)")
+    const rangesByEmp: Record<string, { start_date: string; end_date: string }[]> = {}
+    for (const va of (vacAssign as any[]) || []) {
+      const v = va.vacations
+      if (!v?.start_date || !v?.end_date) continue
+      ;(rangesByEmp[va.employee_id] ||= []).push({ start_date: v.start_date, end_date: v.end_date })
+    }
+    setVacRangesByEmp(rangesByEmp)
+
+    // Reinicio automático: si pasó el mes de reseteo, sube años y limpia base
+    const emps = (data || []) as Employee[]
+    for (const e of emps) {
+      if (e.vac_mes_reseteo == null || e.vac_anios == null) continue
+      const r = resumenVacaciones(e, rangesByEmp[e.id] || [])
+      if (r.needsReset) {
+        await supabase.from("employees")
+          .update({ vac_anios: r.newAnios, vac_dias_base: 0, vac_ultimo_reset_anio: r.startISO.slice(0, 4) })
+          .eq("id", e.id)
+        e.vac_anios = r.newAnios
+        e.vac_dias_base = 0
+        e.vac_ultimo_reset_anio = parseInt(r.startISO.slice(0, 4))
+      }
+    }
+
+    setEmployees(emps)
     setSalaryChanges((changes as SalaryChange[]) || [])
   }
 
@@ -170,6 +209,9 @@ export default function EmpleadosPage() {
       sueldo_mensual: sueldo,
       fecha_ingreso: values.fecha_ingreso,
       cumpleanos: values.cumpleanos.trim() || null,
+      vac_anios: values.vac_anios.trim() !== "" ? parseInt(values.vac_anios) : null,
+      vac_mes_reseteo: values.vac_mes_reseteo.trim() !== "" ? parseInt(values.vac_mes_reseteo) : null,
+      vac_dias_base: values.vac_dias_base.trim() !== "" ? parseFloat(values.vac_dias_base) : 0,
     }
   }
 
@@ -197,6 +239,9 @@ export default function EmpleadosPage() {
       sueldo_mensual: String(employee.sueldo_mensual),
       fecha_ingreso: employee.fecha_ingreso,
       cumpleanos: employee.cumpleanos || "",
+      vac_anios: employee.vac_anios != null ? String(employee.vac_anios) : "",
+      vac_mes_reseteo: employee.vac_mes_reseteo != null ? String(employee.vac_mes_reseteo) : "",
+      vac_dias_base: employee.vac_dias_base != null ? String(employee.vac_dias_base) : "0",
     })
   }
 
@@ -485,6 +530,36 @@ export default function EmpleadosPage() {
                         </div>
                       </div>
 
+                      {(() => {
+                        if (employee.vac_mes_reseteo == null || employee.vac_anios == null) {
+                          return (
+                            <div style={vacBarStyle}>
+                              <span style={{ color: "#64748b", fontSize: 12 }}>
+                                🏖️ Vacaciones sin configurar · usa “Editar” para asignar años y mes de reseteo
+                              </span>
+                            </div>
+                          )
+                        }
+                        const r = resumenVacaciones(employee, vacRangesByEmp[employee.id] || [])
+                        const pct = r.corresponden > 0 ? Math.max(0, Math.min(100, (r.restantes / r.corresponden) * 100)) : 0
+                        const barColor = r.restantes <= 0 ? "#f87171" : r.restantes <= 3 ? "#fb923c" : "#34d399"
+                        return (
+                          <div style={vacBarStyle}>
+                            <span style={{ fontSize: 14 }}>🏖️</span>
+                            <span style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 700 }}>
+                              {r.restantes} <span style={{ color: "#64748b", fontWeight: 400 }}>de {r.corresponden} días restantes</span>
+                            </span>
+                            <span style={{ color: "#64748b", fontSize: 11 }}>· {r.tomados} tomados</span>
+                            <div style={{ flex: 1, minWidth: 60, maxWidth: 160, height: 6, borderRadius: 999, background: "rgba(148,163,184,0.15)", overflow: "hidden" }}>
+                              <div style={{ width: `${pct}%`, height: "100%", background: barColor }} />
+                            </div>
+                            <span style={{ color: "#64748b", fontSize: 11, marginLeft: "auto" }}>
+                              {r.anios} año{r.anios !== 1 ? "s" : ""} · resetea {MESES[r.mesReseteo - 1]}
+                            </span>
+                          </div>
+                        )
+                      })()}
+
                       {isAdjusting && (
                         <div style={adjustPanelStyle}>
                           <p style={adjustTitleStyle}>Ajuste de sueldo · {name}</p>
@@ -711,6 +786,46 @@ function EmployeeFormFields({
         />
       </div>
 
+      {/* Vacaciones */}
+      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 0.6 }}>🏖️ Vacaciones</p>
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
+        }}
+      >
+        <Field label="Años laborados">
+          <input
+            type="number" min="0" value={values.vac_anios}
+            onChange={(e) => updateField("vac_anios", e.target.value)}
+            placeholder="ej. 5" style={inputStyle}
+          />
+          {values.vac_anios.trim() !== "" && (
+            <span style={{ fontSize: 11, color: "#34d399", marginTop: 4 }}>
+              Le corresponden {diasPorAnios(parseInt(values.vac_anios) || 0)} días
+            </span>
+          )}
+        </Field>
+        <Field label="Mes de reseteo">
+          <select
+            value={values.vac_mes_reseteo}
+            onChange={(e) => updateField("vac_mes_reseteo", e.target.value)}
+            style={inputStyle}
+          >
+            <option value="">—</option>
+            {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </select>
+        </Field>
+        <Field label="Días ya tomados (este período)">
+          <input
+            type="number" min="0" step="0.5" value={values.vac_dias_base}
+            onChange={(e) => updateField("vac_dias_base", e.target.value)}
+            placeholder="0" style={inputStyle}
+          />
+        </Field>
+      </div>
+
       <div style={formActionRowStyle}>{action}</div>
     </div>
   )
@@ -887,6 +1002,18 @@ const tableHeaderStyle: React.CSSProperties = {
 const tableBodyStyle: React.CSSProperties = {
   display: "grid",
   gap: 8,
+}
+
+const vacBarStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+  padding: "8px 14px",
+  margin: "0 2px",
+  borderRadius: 10,
+  background: "rgba(52,211,153,0.06)",
+  border: "1px solid rgba(52,211,153,0.16)",
 }
 
 const rowStyle: React.CSSProperties = {
