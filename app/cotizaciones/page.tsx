@@ -180,6 +180,7 @@ export default function CotizacionesPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showAprobarModal, setShowAprobarModal] = useState(false)
   const [aprobarEmpresa, setAprobarEmpresa] = useState<"retro_studio" | "retro_films">("retro_studio")
+  const [aprobarResponsable, setAprobarResponsable] = useState("")
   const [aproving, setAproving] = useState(false)
   const [yaAprobado, setYaAprobado] = useState(false)
 
@@ -765,6 +766,7 @@ export default function CotizacionesPage() {
       alert("Este proyecto ya fue aprobado y está registrado en el control de ingresos.")
       return
     }
+    setAprobarResponsable("")
     setShowAprobarModal(true)
   }
 
@@ -777,7 +779,7 @@ export default function CotizacionesPage() {
     const markupPct   = parseFloat(markupGeneral) || 0
     const subtotal    = Math.round(globalFinancials.venta * (1 + markupPct / 100) * 100) / 100
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
-    const responsable = selectedProject?.responsable || null
+    const responsable = aprobarResponsable || selectedProject?.responsable || null
 
     // Generar código RS#### si el proyecto todavía no tiene uno
     let projectCode = selectedProject?.code || null
@@ -905,6 +907,20 @@ export default function CotizacionesPage() {
 
       <main style={{ ...mainStyle, padding: isMobile ? "76px 14px 40px" : "28px 32px 40px" }}>
         <div style={pageContainerStyle}>
+          {editQuoteId && projectId && (
+            <a
+              href={`/proyectos/${projectId}`}
+              style={{
+                display: "inline-flex", alignItems: "center", width: "fit-content",
+                padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.16)",
+                background: "rgba(255,255,255,0.04)", color: "#cbd5e1",
+                textDecoration: "none", fontSize: 13, fontWeight: 500,
+              }}
+            >
+              ← Volver al proyecto
+            </a>
+          )}
+
           <header style={pageHeaderStyle}>
             <p style={eyebrowStyle}>Finanzas</p>
             <h1 style={pageTitleStyle}>{editQuoteId ? "Editar cotización" : "Nueva cotización"}</h1>
@@ -1235,12 +1251,40 @@ export default function CotizacionesPage() {
             </p>
 
             {/* Resumen */}
-            <div style={aprobarSummaryStyle}>
-              <Row label="Cliente"    value={clients.find(c => c.id === clientId)?.name || "—"} />
-              <Row label="Proyecto"   value={quoteName || "—"} />
-              <Row label="Subtotal"   value={fmt(globalFinancials.venta)} />
-              <Row label="IVA (16%)"  value={fmt(Math.round(globalFinancials.venta * 0.16 * 100) / 100)} />
-              <Row label="Total"      value={fmt(globalFinancials.venta * 1.16)} bold />
+            {(() => {
+              const mkPct = parseFloat(markupGeneral) || 0
+              const sub   = Math.round(globalFinancials.venta * (1 + mkPct / 100) * 100) / 100
+              const iva   = Math.round(sub * 0.16 * 100) / 100
+              return (
+                <div style={aprobarSummaryStyle}>
+                  <Row label="Cliente"    value={clients.find(c => c.id === clientId)?.name || "—"} />
+                  <Row label="Proyecto"   value={quoteName || "—"} />
+                  <Row label="Subtotal"   value={fmt(sub)} />
+                  <Row label="IVA (16%)"  value={fmt(iva)} />
+                  <Row label="Total"      value={fmt(sub + iva)} bold />
+                </div>
+              )
+            })()}
+
+            {/* Responsable */}
+            <div style={{ marginTop: 16 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Responsable</p>
+              <select
+                value={aprobarResponsable}
+                onChange={(e) => setAprobarResponsable(e.target.value)}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
+                  border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
+                  color: aprobarResponsable ? "#e2e8f0" : "#64748b", outline: "none",
+                }}
+              >
+                <option value="">Sin asignar</option>
+                <option value="Miguel Matus">Miguel Matus</option>
+                <option value="Adriana Barrera">Adriana Barrera</option>
+                <option value="Diana Cobia">Diana Cobia</option>
+                <option value="Carlos Muñoz">Carlos Muñoz</option>
+                <option value="Maricela Peña">Maricela Peña</option>
+              </select>
             </div>
 
             {/* Empresa selector */}
