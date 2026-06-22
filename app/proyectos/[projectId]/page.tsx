@@ -173,14 +173,16 @@ export default function ProjectDetailPage() {
   const [showGeneral, setShowGeneral] = useState(false)
   const [showEgresos, setShowEgresos] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
+  const [generatingXlsx, setGeneratingXlsx] = useState(false)
 
   const isAdmin     = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const isStrictAdmin = profile?.role === "admin"
   const isProductor = profile?.role === "productor"
 
-  async function handleGenerarReporte() {
+  async function handleGenerarReporte(formato: "pdf" | "xlsx" = "pdf") {
     if (!project) return
-    setGeneratingReport(true)
+    if (formato === "xlsx") setGeneratingXlsx(true)
+    else setGeneratingReport(true)
     try {
       const { generateEgresosReport } = await import("../../../lib/egresos-report-data")
       await generateEgresosReport(projectId, {
@@ -188,11 +190,13 @@ export default function ProjectDetailPage() {
         projectCode: project.code,
         empresa: projectEmpresa,
         responsable: project.responsable,
+        formato,
       })
     } catch (err: any) {
       alert("Error al generar reporte: " + err.message)
     } finally {
       setGeneratingReport(false)
+      setGeneratingXlsx(false)
     }
   }
 
@@ -398,21 +402,38 @@ export default function ProjectDetailPage() {
             )}
 
             {isStrictAdmin && (
-              <button
-                onClick={handleGenerarReporte}
-                disabled={generatingReport}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  margin: "0 0 18px", padding: "10px 18px", borderRadius: 10,
-                  cursor: generatingReport ? "not-allowed" : "pointer",
-                  background: generatingReport ? "rgba(167,139,250,0.06)" : "rgba(167,139,250,0.12)",
-                  border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd",
-                  fontSize: 13, fontWeight: 600,
-                  opacity: generatingReport ? 0.6 : 1,
-                }}
-              >
-                {generatingReport ? "⏳ Generando..." : "📄 Generar reporte financiero"}
-              </button>
+              <div style={{ display: "flex", gap: 8, margin: "0 0 18px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => handleGenerarReporte("pdf")}
+                  disabled={generatingReport || generatingXlsx}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "10px 18px", borderRadius: 10,
+                    cursor: generatingReport ? "not-allowed" : "pointer",
+                    background: generatingReport ? "rgba(167,139,250,0.06)" : "rgba(167,139,250,0.12)",
+                    border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd",
+                    fontSize: 13, fontWeight: 600,
+                    opacity: generatingReport ? 0.6 : 1,
+                  }}
+                >
+                  {generatingReport ? "⏳ Generando..." : "📄 Reporte PDF"}
+                </button>
+                <button
+                  onClick={() => handleGenerarReporte("xlsx")}
+                  disabled={generatingReport || generatingXlsx}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "10px 18px", borderRadius: 10,
+                    cursor: generatingXlsx ? "not-allowed" : "pointer",
+                    background: generatingXlsx ? "rgba(52,211,153,0.06)" : "rgba(52,211,153,0.10)",
+                    border: "1px solid rgba(52,211,153,0.3)", color: "#6ee7b7",
+                    fontSize: 13, fontWeight: 600,
+                    opacity: generatingXlsx ? 0.6 : 1,
+                  }}
+                >
+                  {generatingXlsx ? "⏳ Generando..." : "📊 Reporte Excel"}
+                </button>
+              </div>
             )}
 
             <div

@@ -1,12 +1,14 @@
 import { supabase } from "./supabase"
 import { employeeDisplayName } from "./employee-dates"
 import { exportEgresosReport } from "./exportEgresosReport"
+import { exportEgresosReportXlsx } from "./exportEgresosReportXlsx"
 
 type ProjectMeta = {
   projectName: string
   projectCode: string | null
   empresa: "retro_studio" | "retro_films" | null
   responsable: string | null
+  formato?: "pdf" | "xlsx"
 }
 
 // Reúne todos los egresos y genera el reporte PDF del proyecto
@@ -74,7 +76,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     }
   }
 
-  await exportEgresosReport({
+  const reportData = {
     projectName: meta.projectName,
     projectCode: meta.projectCode,
     empresa: meta.empresa,
@@ -83,5 +85,11 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     cobrado: Number(ingreso?.subtotal || 0),
     items,
     facturas: (facturas as any[]) || [],
-  })
+  }
+
+  if (meta.formato === "xlsx") {
+    await exportEgresosReportXlsx(reportData)
+  } else {
+    await exportEgresosReport(reportData)
+  }
 }
