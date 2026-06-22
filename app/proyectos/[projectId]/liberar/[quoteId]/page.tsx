@@ -707,7 +707,14 @@ export default function LiberarPage() {
 
                 {/* Items */}
                 <div style={{ display: "grid", gap: 6 }}>
-                  {sec.items.map((item) => {
+                  {sec.items
+                    // Para cotizaciones aún no liberadas, ocultar ítems vacíos (qty=0, days=0, price=0)
+                    .filter((item) =>
+                      item.is_extra ||
+                      quote?.released ||
+                      item.qty !== 0 || item.days !== 0 || item.unit_price !== 0
+                    )
+                    .map((item) => {
                     const a = actuals[item.id] || {
                       qty: "",
                       days: "",
