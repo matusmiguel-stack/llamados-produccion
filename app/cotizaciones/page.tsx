@@ -215,6 +215,9 @@ export default function CotizacionesPage() {
   const broadcastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const liveChannel = useRef<any>(null)
   const lastSyncJson = useRef<string>("")
+  // Bloquea el broadcast hasta que la carga inicial de la cotización termine,
+  // evitando que el estado vacío inicial sobreescriba datos en otras pestañas.
+  const initialLoadDone = useRef<boolean>(false)
   const [collaborators, setCollaborators] = useState<string[]>([])
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
@@ -425,6 +428,7 @@ export default function CotizacionesPage() {
       setExtras(newExtras)
       setCommissionPct(newCommPct)
       setCommissionMarkup(newCommMarkup)
+      initialLoadDone.current = true
     }
     load()
   }, [])
@@ -489,6 +493,7 @@ export default function CotizacionesPage() {
   // ── Difundir cambios locales (debounced) ───────────────────────────────────
   useEffect(() => {
     if (!liveChannel.current) return
+    if (!initialLoadDone.current) return // no broadcast hasta que la carga inicial esté lista
     const payload = { values, extras, quoteName, atencion, entregables, markupGeneral, commissionPct, commissionMarkup, status }
     const json = JSON.stringify(payload)
     if (json === lastSyncJson.current) return // sin cambios reales (o viene de remoto)
