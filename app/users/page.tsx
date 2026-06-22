@@ -48,7 +48,7 @@ export default function UsersPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin") {
+    if (myProfile.role !== "admin" && myProfile.role !== "editor_premium") {
       window.location.href = "/"
       return
     }
@@ -215,6 +215,8 @@ export default function UsersPage() {
     window.location.href = "/login"
   }
 
+  const isAdmin = profile?.role === "admin"
+
   if (!profile) return <PageLoader />
   return (
     <div style={appShellStyle}>
@@ -291,9 +293,9 @@ export default function UsersPage() {
                   <option value="viewer">Viewer</option>
                   <option value="productor">Editor Post</option>
                   <option value="editor">Editor</option>
-                  <option value="editor_premium">Editor Premium</option>
-                  <option value="finanzas">Finanzas</option>
-                  <option value="admin">Admin</option>
+                  {isAdmin && <option value="editor_premium">Editor Premium</option>}
+                  {isAdmin && <option value="finanzas">Finanzas</option>}
+                  {isAdmin && <option value="admin">Admin</option>}
                 </select>
               </Field>
 
@@ -333,7 +335,7 @@ export default function UsersPage() {
                         : "minmax(220px, 1.4fr) 140px 220px",
                     }}
                   >
-                    {isEditing ? (
+                    {isEditing && isAdmin ? (
                       <>
                         <div style={userCellStyle}>
                           <input
@@ -390,24 +392,28 @@ export default function UsersPage() {
                         </div>
 
                         <div style={rowActionsStyle}>
-                          <button
-                            onClick={() => startEdit(user)}
-                            style={secondaryButtonStyle}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => deleteUser(user.id, user.email)}
-                            style={dangerButtonStyle}
-                            disabled={user.id === profile?.id}
-                            title={
-                              user.id === profile?.id
-                                ? "No puedes eliminar tu propia cuenta"
-                                : "Eliminar usuario"
-                            }
-                          >
-                            Borrar
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => startEdit(user)}
+                                style={secondaryButtonStyle}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => deleteUser(user.id, user.email)}
+                                style={dangerButtonStyle}
+                                disabled={user.id === profile?.id}
+                                title={
+                                  user.id === profile?.id
+                                    ? "No puedes eliminar tu propia cuenta"
+                                    : "Eliminar usuario"
+                                }
+                              >
+                                Borrar
+                              </button>
+                            </>
+                          )}
                         </div>
                       </>
                     )}

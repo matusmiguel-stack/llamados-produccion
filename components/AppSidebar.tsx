@@ -38,7 +38,7 @@ const navItems: { href: string; label: string; icon: NavIconType; roles?: string
   { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin"] },
   { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
-  { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin"] },
+  { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
 ]
 
 export function AppSidebar({
