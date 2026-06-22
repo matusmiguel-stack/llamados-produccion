@@ -81,6 +81,9 @@ export default function EmpleadosPage() {
   const [savingAdjust, setSavingAdjust] = useState(false)
 
   const isAdmin = profile?.role === "admin"
+  // Editor premium entra pero solo ve/edita vacaciones (sin sueldos)
+  const vacOnly = profile?.role === "editor_premium"
+  const canSeeSalary = isAdmin
 
   useEffect(() => {
     function checkMobile() {
@@ -98,20 +101,22 @@ export default function EmpleadosPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin") {
+    if (myProfile.role !== "admin" && myProfile.role !== "editor_premium") {
       window.location.href = "/"
       return
     }
 
     setProfile(myProfile)
 
-    // Aplicar aumentos programados cuya fecha ya llegó
+    // Aplicar aumentos programados cuya fecha ya llegó (solo admin)
     const todayStr = new Date().toLocaleDateString("sv")
-    const { data: pendientes } = await supabase
-      .from("employee_salary_changes")
-      .select("*")
-      .eq("applied", false)
-      .lte("effective_date", todayStr)
+    const { data: pendientes } = myProfile.role === "admin"
+      ? await supabase
+          .from("employee_salary_changes")
+          .select("*")
+          .eq("applied", false)
+          .lte("effective_date", todayStr)
+      : { data: null }
 
     if (pendientes && pendientes.length > 0) {
       const latestByEmp: Record<string, SalaryChange> = {}
@@ -133,17 +138,23 @@ export default function EmpleadosPage() {
         .in("id", pendientes.map((p) => p.id))
     }
 
+    // Editor premium no recibe el sueldo (solo vacaciones)
+    const empCols = myProfile.role === "admin"
+      ? "*"
+      : "id,nombre,apellido_paterno,apellido_materno,nickname,email,puesto,fecha_ingreso,cumpleanos,vac_anios,vac_mes_reseteo,vac_dias_base,vac_ultimo_reset_anio"
     const [{ data, error }, { data: changes }] = await Promise.all([
       supabase
         .from("employees")
-        .select("*")
+        .select(empCols)
         .order("nombre", { ascending: true })
         .order("apellido_paterno", { ascending: true }),
-      supabase
-        .from("employee_salary_changes")
-        .select("*")
-        .order("effective_date", { ascending: false })
-        .order("created_at", { ascending: false }),
+      myProfile.role === "admin"
+        ? supabase
+            .from("employee_salary_changes")
+            .select("*")
+            .order("effective_date", { ascending: false })
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
     ])
 
     if (error) return alert(error.message)
@@ -161,7 +172,7 @@ export default function EmpleadosPage() {
     setVacRangesByEmp(rangesByEmp)
 
     // Reinicio automático: si pasó el mes de reseteo, sube años y limpia base
-    const emps = (data || []) as Employee[]
+    const emps = (data || []) as unknown as Employee[]
     for (const e of emps) {
       if (e.vac_mes_reseteo == null || e.vac_anios == null) continue
       const r = resumenVacaciones(e, rangesByEmp[e.id] || [])
@@ -251,7 +262,17 @@ export default function EmpleadosPage() {
   }
 
   async function saveEmployee(id: string) {
-    const payload = buildPayload(editForm)
+    let payload: Record<string, unknown> | null
+    if (vacOnly) {
+      // Editor premium: solo actualiza vacaciones
+      payload = {
+        vac_anios: editForm.vac_anios.trim() !== "" ? parseInt(editForm.vac_anios) : null,
+        vac_mes_reseteo: editForm.vac_mes_reseteo.trim() !== "" ? parseInt(editForm.vac_mes_reseteo) : null,
+        vac_dias_base: editForm.vac_dias_base.trim() !== "" ? parseFloat(editForm.vac_dias_base) : 0,
+      }
+    } else {
+      payload = buildPayload(editForm)
+    }
     if (!payload) return
 
     const { error } = await supabase.from("employees").update(payload).eq("id", id)
@@ -395,25 +416,27 @@ export default function EmpleadosPage() {
             </div>
           </header>
 
-          <section style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <p style={panelTitleStyle}>Nuevo empleado</p>
-              <p style={panelHintStyle}>
-                Registra al personal con puesto, sueldo, fecha de ingreso y cumpleaños
-              </p>
-            </div>
+          {!vacOnly && (
+            <section style={panelStyle}>
+              <div style={panelHeaderStyle}>
+                <p style={panelTitleStyle}>Nuevo empleado</p>
+                <p style={panelHintStyle}>
+                  Registra al personal con puesto, sueldo, fecha de ingreso y cumpleaños
+                </p>
+              </div>
 
-            <EmployeeFormFields
-              values={form}
-              onChange={setForm}
-              isMobile={isMobile}
-              action={
-                <button onClick={createEmployee} style={primaryButtonStyle}>
-                  Agregar
-                </button>
-              }
-            />
-          </section>
+              <EmployeeFormFields
+                values={form}
+                onChange={setForm}
+                isMobile={isMobile}
+                action={
+                  <button onClick={createEmployee} style={primaryButtonStyle}>
+                    Agregar
+                  </button>
+                }
+              />
+            </section>
+          )}
 
           <section style={{ ...panelStyle, marginTop: 14 }}>
             <div style={panelHeaderStyle}>
@@ -422,10 +445,15 @@ export default function EmpleadosPage() {
             </div>
 
             {!isMobile && employees.length > 0 && (
-              <div style={tableHeaderStyle}>
+              <div style={{
+                ...tableHeaderStyle,
+                gridTemplateColumns: canSeeSalary
+                  ? "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px"
+                  : "minmax(180px, 1.4fr) 140px 110px 110px 160px",
+              }}>
                 <span>Empleado</span>
                 <span>Puesto</span>
-                <span>Sueldo</span>
+                {canSeeSalary && <span>Sueldo</span>}
                 <span>Ingreso</span>
                 <span>Cumpleaños</span>
                 <span>Acciones</span>
@@ -447,6 +475,7 @@ export default function EmpleadosPage() {
                           values={editForm}
                           onChange={setEditForm}
                           isMobile={isMobile}
+                          vacOnly={vacOnly}
                           action={
                             <div style={rowActionsStyle}>
                               <button
@@ -476,7 +505,9 @@ export default function EmpleadosPage() {
                           ...rowStyle,
                           gridTemplateColumns: isMobile
                             ? "1fr"
-                            : "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px",
+                            : canSeeSalary
+                              ? "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px"
+                              : "minmax(180px, 1.4fr) 140px 110px 110px 160px",
                         }}
                       >
                         <div style={employeeCellStyle}>
@@ -494,14 +525,16 @@ export default function EmpleadosPage() {
                           <span style={positionBadgeStyle}>{employee.puesto}</span>
                         </div>
 
-                        <div style={{ ...metaCellStyle, flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                          <span style={salaryStyle}>{formatSalary(employee.sueldo_mensual)}</span>
-                          {pendingRaise && (
-                            <span style={pendingRaiseStyle}>
-                              → {formatSalary(pendingRaise.sueldo_nuevo)} desde {formatDate(pendingRaise.effective_date)}
-                            </span>
-                          )}
-                        </div>
+                        {canSeeSalary && (
+                          <div style={{ ...metaCellStyle, flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                            <span style={salaryStyle}>{formatSalary(employee.sueldo_mensual)}</span>
+                            {pendingRaise && (
+                              <span style={pendingRaiseStyle}>
+                                → {formatSalary(pendingRaise.sueldo_nuevo)} desde {formatDate(pendingRaise.effective_date)}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         <div style={metaCellStyle}>
                           <span style={dateStyle}>{formatDate(employee.fecha_ingreso)}</span>
@@ -512,21 +545,25 @@ export default function EmpleadosPage() {
                         </div>
 
                         <div style={rowActionsStyle}>
-                          <button
-                            onClick={() => (isAdjusting ? cancelAdjust() : startAdjust(employee))}
-                            style={isAdjusting ? primaryButtonStyle : secondaryButtonStyle}
-                          >
-                            Sueldo
-                          </button>
+                          {canSeeSalary && (
+                            <button
+                              onClick={() => (isAdjusting ? cancelAdjust() : startAdjust(employee))}
+                              style={isAdjusting ? primaryButtonStyle : secondaryButtonStyle}
+                            >
+                              Sueldo
+                            </button>
+                          )}
                           <button onClick={() => startEdit(employee)} style={secondaryButtonStyle}>
-                            Editar
+                            {vacOnly ? "Vacaciones" : "Editar"}
                           </button>
-                          <button
-                            onClick={() => deleteEmployee(employee.id, name)}
-                            style={dangerButtonStyle}
-                          >
-                            Borrar
-                          </button>
+                          {canSeeSalary && (
+                            <button
+                              onClick={() => deleteEmployee(employee.id, name)}
+                              style={dangerButtonStyle}
+                            >
+                              Borrar
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -664,14 +701,48 @@ function EmployeeFormFields({
   onChange,
   isMobile,
   action,
+  vacOnly = false,
 }: {
   values: EmployeeForm
   onChange: (values: EmployeeForm) => void
   isMobile: boolean
   action: React.ReactNode
+  vacOnly?: boolean
 }) {
   function updateField(field: keyof EmployeeForm, value: string) {
     onChange({ ...values, [field]: value })
+  }
+
+  if (vacOnly) {
+    return (
+      <div style={formSectionsStyle}>
+        <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
+          Vacaciones de <strong style={{ color: "#e2e8f0" }}>{values.nombre} {values.apellido_paterno}</strong>
+        </p>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr" }}>
+          <Field label="Años laborados">
+            <input type="number" min="0" value={values.vac_anios}
+              onChange={(e) => updateField("vac_anios", e.target.value)} placeholder="ej. 5" style={inputStyle} />
+            {values.vac_anios.trim() !== "" && (
+              <span style={{ fontSize: 11, color: "#34d399", marginTop: 4 }}>
+                Le corresponden {diasPorAnios(parseInt(values.vac_anios) || 0)} días
+              </span>
+            )}
+          </Field>
+          <Field label="Mes de reseteo">
+            <select value={values.vac_mes_reseteo} onChange={(e) => updateField("vac_mes_reseteo", e.target.value)} style={inputStyle}>
+              <option value="">—</option>
+              {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+          </Field>
+          <Field label="Días ya tomados (este período)">
+            <input type="number" min="0" step="0.5" value={values.vac_dias_base}
+              onChange={(e) => updateField("vac_dias_base", e.target.value)} placeholder="0" style={inputStyle} />
+          </Field>
+        </div>
+        <div style={formActionRowStyle}>{action}</div>
+      </div>
+    )
   }
 
   return (

@@ -37,7 +37,7 @@ const navItems: { href: string; label: string; icon: NavIconType; roles?: string
   { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor", "editor_premium"] },
   { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin"] },
   { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
-  { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin"] },
+  { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin"] },
 ]
 
