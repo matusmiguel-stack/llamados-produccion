@@ -16,6 +16,7 @@ type ItemValues = {
   cost: string
   markup: string
   isInternal: boolean
+  label?: string   // nombre editable (sobrescribe el predefinido)
 }
 
 type ExtraItem = {
@@ -382,12 +383,19 @@ export default function CotizacionesPage() {
         if (!sec) continue
         const secItems = (dbItems as any[] || []).filter((i: any) => i.section_id === sec.id)
         for (const dbItem of secItems) {
-          if ((dbItem.description as string).startsWith("Comisión de agencia")) {
+          // Identificar el ítem predefinido por su POSICIÓN (no por el texto),
+          // para que se puedan renombrar sin romper la carga.
+          const oi = dbItem.order_index
+          const predefined = (typeof oi === "number" && oi >= 0 && oi < rubro.items.length)
+            ? rubro.items[oi]
+            : null
+
+          if (predefined?.special === "agency_commission" || (dbItem.description as string).startsWith("Comisión de agencia")) {
             newCommPct = dbItem.supplier || "30"
             newCommMarkup = String(dbItem.released_expense)
             continue
           }
-          const predefined = rubro.items.find((ri) => ri.label === dbItem.description)
+
           if (predefined && !predefined.special) {
             newValues[predefined.id] = {
               qty: String(dbItem.qty),
@@ -395,8 +403,9 @@ export default function CotizacionesPage() {
               cost: String(dbItem.unit_price),
               markup: String(dbItem.released_expense),
               isInternal: dbItem.real_expense === 1,
+              label: dbItem.description, // nombre guardado (posiblemente editado)
             }
-          } else if (!predefined) {
+          } else {
             if (!newExtras[rubro.id]) newExtras[rubro.id] = []
             newExtras[rubro.id].push({
               tempId: crypto.randomUUID(),
@@ -642,10 +651,11 @@ export default function CotizacionesPage() {
             }
           }
           const v = values[item.id] || DEFAULT_ITEM
-          const prev = savedActuals?.[`${rubro.label}|${item.label}`] ?? {}
+          const itemLabel = (v.label && v.label.trim()) ? v.label.trim() : item.label
+          const prev = savedActuals?.[`${rubro.label}|${itemLabel}`] ?? savedActuals?.[`${rubro.label}|${item.label}`] ?? {}
           return {
             section_id: secData.id,
-            description: item.label,
+            description: itemLabel,
             qty: parseFloat(v.qty) || 0,
             days: parseFloat(v.days) || 0,
             unit_price: parseFloat(v.cost) || 0,
@@ -838,7 +848,7 @@ export default function CotizacionesPage() {
           }
         }
         const v = values[item.id] || DEFAULT_ITEM
-        return { label: item.label, qty: v.qty, days: v.days, cost: v.cost, markup: v.markup, isInternal: v.isInternal }
+        return { label: (v.label && v.label.trim()) ? v.label.trim() : item.label, qty: v.qty, days: v.days, cost: v.cost, markup: v.markup, isInternal: v.isInternal }
       })
       const extraItems = (extras[rubro.id] || []).map((e) => ({
         label: e.description || "Concepto adicional",
@@ -1395,8 +1405,13 @@ function RubroCard({
               if (isMobile) {
                 return (
                   <div key={item.id} style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-                      <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5, gap: 8 }}>
+                      <input
+                        value={v.label != null ? v.label : item.label}
+                        onChange={(e) => onUpdate(item.id, { label: e.target.value })}
+                        title="Editar nombre del concepto"
+                        style={{ ...editableLabelStyle, fontSize: 12, flex: 1 }}
+                      />
                       <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)}>INT</button>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -1415,7 +1430,12 @@ function RubroCard({
 
               return (
                 <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
-                  <span style={itemLabelStyle}>{item.label}</span>
+                  <input
+                    value={v.label != null ? v.label : item.label}
+                    onChange={(e) => onUpdate(item.id, { label: e.target.value })}
+                    title="Editar nombre del concepto"
+                    style={editableLabelStyle}
+                  />
                   <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                     <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
                     <span style={sepStyle}>×</span>
@@ -1566,6 +1586,18 @@ const itemLabelStyle: React.CSSProperties = {
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+}
+
+const editableLabelStyle: React.CSSProperties = {
+  color: "#cbd5e1",
+  fontSize: 12,
+  flex: 1,
+  minWidth: 60,
+  background: "transparent",
+  border: "1px solid transparent",
+  borderRadius: 6,
+  padding: "3px 6px",
+  outline: "none",
 }
 
 const gastoStyle: React.CSSProperties = {
