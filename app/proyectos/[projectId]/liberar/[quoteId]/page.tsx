@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "../../../../../lib/supabase"
@@ -1409,7 +1410,18 @@ function SupplierCombobox({
 }) {
   const [query, setQuery]   = useState("")
   const [open, setOpen]     = useState(false)
+  const [pos, setPos]       = useState({ top: 0, left: 0, width: 0 })
   const containerRef        = useRef<HTMLDivElement>(null)
+  const inputWrapRef        = useRef<HTMLDivElement>(null)
+
+  // Position the dropdown relative to the input, in viewport coords (it is
+  // rendered in a portal so it escapes the section card's stacking context —
+  // section cards use backdrop-filter, which would otherwise trap it behind
+  // the next card).
+  function reposition() {
+    const rect = inputWrapRef.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+  }
 
   // Label to show when closed
   let displayText = ""
@@ -1435,6 +1447,18 @@ function SupplierCombobox({
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
+  // Keep the portalled dropdown anchored to the input while open.
+  useEffect(() => {
+    if (!open) return
+    reposition()
+    window.addEventListener("scroll", reposition, true)
+    window.addEventListener("resize", reposition)
+    return () => {
+      window.removeEventListener("scroll", reposition, true)
+      window.removeEventListener("resize", reposition)
+    }
+  }, [open])
+
   // Filter
   const q             = query.toLowerCase()
   const filteredEmps  = employees.filter(e => {
@@ -1452,12 +1476,12 @@ function SupplierCombobox({
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
       {/* Input */}
-      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+      <div ref={inputWrapRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>
         <input
           type="text"
           value={open ? query : displayText}
           placeholder="Buscar por nombre, empresa…"
-          onFocus={() => { setOpen(true); setQuery("") }}
+          onFocus={() => { reposition(); setOpen(true); setQuery("") }}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           style={{
             ...comboboxInputStyle,
@@ -1478,9 +1502,9 @@ function SupplierCombobox({
         )}
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div style={comboboxDropdownStyle}>
+      {/* Dropdown — portalled to body so it floats above every section card */}
+      {open && typeof document !== "undefined" && createPortal(
+        <div style={{ ...comboboxDropdownStyle, top: pos.top, left: pos.left, width: pos.width }}>
           {!hasResults && q !== "" && (
             <div style={comboboxNoResultsStyle}>Sin resultados para "{query}"</div>
           )}
@@ -1529,7 +1553,8 @@ function SupplierCombobox({
           >
             ＋ Agregar nuevo proveedor…
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -1573,10 +1598,7 @@ const comboboxChevronStyle: React.CSSProperties = {
 }
 
 const comboboxDropdownStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "calc(100% + 4px)",
-  left: 0,
-  right: 0,
+  position: "fixed",
   zIndex: 9999,
   background: "rgba(8,12,24,0.97)",
   border: "1px solid rgba(148,163,184,0.20)",
