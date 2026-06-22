@@ -142,7 +142,7 @@ function realItemGastoForBudget(item: QuoteItem): number {
 }
 
 function sectionSubtotal(section: QuoteSection): number {
-  return section.items.reduce((sum, i) => sum + itemTotal(i), 0)
+  return section.items.reduce((sum, i) => sum + libItemFin(i).venta, 0)
 }
 
 function quoteSubtotal(sections: QuoteSection[]): number {
@@ -1432,8 +1432,8 @@ function QuoteModal({
                       <span style={{ textAlign: "right" }}>Cant.</span>
                       <span style={{ textAlign: "right" }}>Días</span>
                       <span style={{ textAlign: "right" }}>P. unit.</span>
-                      <span style={{ textAlign: "right" }}>G. lib.</span>
-                      <span style={{ textAlign: "right" }}>G. real</span>
+                      <span style={{ textAlign: "right" }}>Gasto</span>
+                      <span style={{ textAlign: "right" }}>Utilidad</span>
                       <span>Proveedor</span>
                       <span style={{ textAlign: "right" }}>Total</span>
                     </div>
@@ -1441,7 +1441,7 @@ function QuoteModal({
 
                   <div style={{ display: "grid", gap: 4 }}>
                     {sec.items.map((item) => {
-                      const tot = itemTotal(item)
+                      const tot = libItemFin(item).venta
                       return (
                         <div
                           key={item.id}
@@ -1505,9 +1505,9 @@ function QuoteModal({
                               <span style={readCellStyle}>{item.days}</span>
                               <span style={readCellStyle}>{fmt(item.unit_price)}</span>
                               <span style={readCellStyle}>
-                                {fmt(item.released_expense)}
+                                {fmt(libItemFin(item).gasto)}
                               </span>
-                              <span style={readCellStyle}>{fmt(item.real_expense)}</span>
+                              <span style={{ ...readCellStyle, color: "#34d399" }}>{fmt(libItemFin(item).utilidad)}</span>
                               <span
                                 style={{
                                   color: "#94a3b8",
