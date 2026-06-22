@@ -128,9 +128,8 @@ export default function EmpleadosPage() {
       }
       for (const change of Object.values(latestByEmp)) {
         await supabase
-          .from("employees")
-          .update({ sueldo_mensual: change.sueldo_nuevo })
-          .eq("id", change.employee_id)
+          .from("employee_compensation")
+          .upsert({ employee_id: change.employee_id, sueldo_mensual: change.sueldo_nuevo, updated_at: new Date().toISOString() })
       }
       await supabase
         .from("employee_salary_changes")
@@ -138,14 +137,10 @@ export default function EmpleadosPage() {
         .in("id", pendientes.map((p) => p.id))
     }
 
-    // Editor premium no recibe el sueldo (solo vacaciones)
-    const empCols = myProfile.role === "admin"
-      ? "*"
-      : "id,nombre,apellido_paterno,apellido_materno,nickname,email,puesto,fecha_ingreso,cumpleanos,vac_anios,vac_mes_reseteo,vac_dias_base,vac_ultimo_reset_anio"
     const [{ data, error }, { data: changes }] = await Promise.all([
       supabase
         .from("employees")
-        .select(empCols)
+        .select("*")
         .order("nombre", { ascending: true })
         .order("apellido_paterno", { ascending: true }),
       myProfile.role === "admin"
@@ -171,8 +166,17 @@ export default function EmpleadosPage() {
     }
     setVacRangesByEmp(rangesByEmp)
 
-    // Reinicio automático: si pasó el mes de reseteo, sube años y limpia base
+    // Sueldos (solo admin): vienen de una tabla aparte protegida
     const emps = (data || []) as unknown as Employee[]
+    if (myProfile.role === "admin") {
+      const { data: comp } = await supabase
+        .from("employee_compensation")
+        .select("employee_id, sueldo_mensual")
+      const compMap = new Map((comp || []).map((c: any) => [c.employee_id, Number(c.sueldo_mensual)]))
+      for (const e of emps) e.sueldo_mensual = compMap.get(e.id) ?? 0
+    }
+
+    // Reinicio automático: si pasó el mes de reseteo, sube años y limpia base
     for (const e of emps) {
       if (e.vac_mes_reseteo == null || e.vac_anios == null) continue
       const r = resumenVacaciones(e, rangesByEmp[e.id] || [])
@@ -217,7 +221,6 @@ export default function EmpleadosPage() {
       nickname: values.nickname.trim() || null,
       email: values.email.trim().toLowerCase(),
       puesto: values.puesto.trim(),
-      sueldo_mensual: sueldo,
       fecha_ingreso: values.fecha_ingreso,
       cumpleanos: values.cumpleanos.trim() || null,
       vac_anios: values.vac_anios.trim() !== "" ? parseInt(values.vac_anios) : null,
@@ -230,9 +233,14 @@ export default function EmpleadosPage() {
     const payload = buildPayload(form)
     if (!payload) return
 
-    const { error } = await supabase.from("employees").insert(payload)
-
+    const { data: created, error } = await supabase.from("employees").insert(payload).select("id").single()
     if (error) return alert(error.message)
+
+    // Sueldo en la tabla protegida
+    if (created) {
+      await supabase.from("employee_compensation")
+        .upsert({ employee_id: created.id, sueldo_mensual: Number(form.sueldo_mensual) || 0, updated_at: new Date().toISOString() })
+    }
 
     setForm(emptyForm)
     await loadPage()
@@ -276,8 +284,13 @@ export default function EmpleadosPage() {
     if (!payload) return
 
     const { error } = await supabase.from("employees").update(payload).eq("id", id)
-
     if (error) return alert(error.message)
+
+    // Sueldo (solo admin) en la tabla protegida
+    if (!vacOnly && isAdmin) {
+      await supabase.from("employee_compensation")
+        .upsert({ employee_id: id, sueldo_mensual: Number(editForm.sueldo_mensual) || 0, updated_at: new Date().toISOString() })
+    }
 
     cancelEdit()
     await loadPage()
@@ -340,9 +353,8 @@ export default function EmpleadosPage() {
 
     if (applyNow) {
       const { error: updateError } = await supabase
-        .from("employees")
-        .update({ sueldo_mensual: monto })
-        .eq("id", employee.id)
+        .from("employee_compensation")
+        .upsert({ employee_id: employee.id, sueldo_mensual: monto, updated_at: new Date().toISOString() })
       if (updateError) {
         setSavingAdjust(false)
         return alert(updateError.message)
