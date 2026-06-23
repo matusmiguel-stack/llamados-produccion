@@ -179,9 +179,6 @@ export default function Home() {
   const [projectId, setProjectId] = useState("")
   const [location, setLocation] = useState("")
   const [address, setAddress] = useState("")
-  const [contact, setContact] = useState("")
-  const [director, setDirector] = useState("")
-  const [dop, setDop] = useState("")
   const [publicNotes, setPublicNotes] = useState("")
   const [privateNotes, setPrivateNotes] = useState("")
   const [productionNotes, setProductionNotes] = useState("")
@@ -193,7 +190,7 @@ export default function Home() {
   const [endTime, setEndTime] = useState("18:00")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
-  const [shootResponsable, setShootResponsable] = useState("")
+  const [horarioAvanzada, setHorarioAvanzada] = useState("")
 
   // ── Juntas ─────────────────────────────────────────────────────────────────
   // ── Birthday / Anniversary preview ────────────────────────────────────────
@@ -807,9 +804,6 @@ export default function Home() {
     setProjectId("")
     setLocation("")
     setAddress("")
-    setContact("")
-    setDirector("")
-    setDop("")
     setPublicNotes("")
     setPrivateNotes("")
     setProductionNotes("")
@@ -820,7 +814,7 @@ export default function Home() {
     setEndTime("18:00")
     setSelectedResources([])
     setSelectedEmployees([])
-    setShootResponsable("")
+    setHorarioAvanzada("")
     setJuntaTipo("Brief")
     setJuntaDate("")
     setJuntaStartTime("09:00")
@@ -1024,9 +1018,6 @@ function openEditShoot() {
     )
     setLocation(selectedShoot.location || "")
     setAddress(selectedShoot.address || "")
-    setContact(selectedShoot.contact || "")
-    setDirector(selectedShoot.director || "")
-    setDop(selectedShoot.dop || "")
     setPublicNotes(selectedShoot.public_notes || "")
     setPrivateNotes(selectedShoot.private_notes || "")
     setProductionNotes(selectedShoot.production_notes || "")
@@ -1041,7 +1032,7 @@ function openEditShoot() {
     setSelectedResources(
       getShootTechnicalResources(selectedShoot.id).map((resource) => resource.id)
     )
-    setShootResponsable(selectedShoot.responsable || "")
+    setHorarioAvanzada(selectedShoot.horario_avanzada || "")
     setEntryMode("shoot")
 
     setDetailsOpen(false)
@@ -1246,10 +1237,6 @@ function openEditVacation() {
       project: selectedProject?.name || null,
       location,
       address,
-      contact,
-      director,
-      dop,
-      responsable: shootResponsable || null,
       public_notes: publicNotes,
       private_notes: privateNotes,
       production_notes: productionNotes,
@@ -1258,6 +1245,7 @@ function openEditVacation() {
       start_time: range.start,
       end_time: range.end,
       all_day: range.allDay,
+      horario_avanzada: horarioAvanzada.trim() || null,
     }
 
     let shootId = selectedShoot?.id
@@ -2834,16 +2822,7 @@ function openEditVacation() {
                           style={formModalInputStyle}
                         />
                       </div>
-                      <div style={formModalFieldStyle}>
-                        <label style={formModalLabelStyle}>Contacto</label>
-                        <input
-                          placeholder="Contacto"
-                          value={contact}
-                          onChange={(e) => setContact(e.target.value)}
-                          style={formModalInputStyle}
-                        />
                       </div>
-                    </div>
 
                     <div style={formModalFieldStyle}>
                       <label style={formModalLabelStyle}>Dirección</label>
@@ -2957,42 +2936,14 @@ function openEditVacation() {
                       </div>
                     )}
 
-                    <div style={formModalRowStyle}>
-                      <div style={formModalFieldStyle}>
-                        <label style={formModalLabelStyle}>Director</label>
-                        <input
-                          placeholder="Director / Realizador"
-                          value={director}
-                          onChange={(e) => setDirector(e.target.value)}
-                          style={formModalInputStyle}
-                        />
-                      </div>
-                      <div style={formModalFieldStyle}>
-                        <label style={formModalLabelStyle}>DOP</label>
-                        <input
-                          placeholder="DOP / Fotógrafo"
-                          value={dop}
-                          onChange={(e) => setDop(e.target.value)}
-                          style={formModalInputStyle}
-                        />
-                      </div>
-                    </div>
-
                     <div style={formModalFieldStyle}>
-                      <label style={formModalLabelStyle}>Responsable</label>
-                      <select
-                        value={shootResponsable}
-                        onChange={(e) => setShootResponsable(e.target.value)}
-                        style={formModalSelectStyle}
-                      >
-                        <option value="">— Sin asignar —</option>
-                        {shootResponsable && !employees.some((e: any) => fullEmployeeName(e) === shootResponsable) && (
-                          <option value={shootResponsable}>{shootResponsable}</option>
-                        )}
-                        {employees.map((e: any) => (
-                          <option key={e.id} value={fullEmployeeName(e)}>{employeeDisplayName(e)}</option>
-                        ))}
-                      </select>
+                      <label style={formModalLabelStyle}>Horario Avanzada (Retro)</label>
+                      <input
+                        placeholder="ej. 06:00 – 08:00"
+                        value={horarioAvanzada}
+                        onChange={(e) => setHorarioAvanzada(e.target.value)}
+                        style={formModalInputStyle}
+                      />
                     </div>
 
                     <p style={{ ...formModalSectionLabelStyle, marginTop: 14 }}>
@@ -3549,16 +3500,10 @@ function openEditVacation() {
                       />
                     </div>
 
-                    <div style={formModalRowStyle}>
-                      <FormModalPreviewField
-                        label="Locación"
-                        value={selectedShoot.location}
-                      />
-                      <FormModalPreviewField
-                        label="Contacto"
-                        value={selectedShoot.contact}
-                      />
-                    </div>
+                    <FormModalPreviewField
+                      label="Locación"
+                      value={selectedShoot.location}
+                    />
 
                     <FormModalPreviewField
                       label="Dirección"
@@ -3576,10 +3521,6 @@ function openEditVacation() {
                           {statusLabel(selectedShoot.status)}
                         </span>
                       </div>
-                      <FormModalPreviewField
-                        label="Responsable"
-                        value={selectedShoot.responsable || undefined}
-                      />
                     </div>
 
                     <FormModalPreviewField
@@ -3587,13 +3528,12 @@ function openEditVacation() {
                       value={formatShootSchedule(selectedShoot)}
                     />
 
-                    <div style={formModalRowStyle}>
+                    {selectedShoot.horario_avanzada && (
                       <FormModalPreviewField
-                        label="Director"
-                        value={selectedShoot.director}
+                        label="Horario Avanzada (Retro)"
+                        value={selectedShoot.horario_avanzada}
                       />
-                      <FormModalPreviewField label="DOP" value={selectedShoot.dop} />
-                    </div>
+                    )}
 
                     <div style={formModalFieldStyle}>
                       <span style={formModalLabelStyle}>
@@ -4232,11 +4172,30 @@ function buildShootWhatsAppMessage(
   shoot: any,
   employees: any[]
 ) {
+  // Date line: only the date part (no time), formatted as "jue, 18 jun 2026"
+  const startDate = new Date(shoot.start_time)
+  const dateLabel = startDate.toLocaleDateString("es-MX", {
+    weekday: "short", day: "numeric", month: "short", year: "numeric",
+  })
+
+  // Start time only (no end time)
+  const startTimeLabel = shoot.all_day
+    ? null
+    : startDate.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false })
+
   const lines: string[] = [
     "🎬 LLAMADO",
     `*${shoot.title || "Sin título"}*`,
-    `📅 ${formatShootSchedule(shoot)}`,
+    `📅 ${dateLabel} ·`,
   ]
+
+  if (shoot.horario_avanzada?.trim()) {
+    lines.push(`Avanzada (Retro): ${shoot.horario_avanzada.trim()}`)
+  }
+
+  if (startTimeLabel) {
+    lines.push(`Locación: ${startTimeLabel}`)
+  }
 
   const clientProject = [shoot.client, shoot.project].filter(Boolean).join(" · ")
   if (clientProject) lines.push(`🏢 ${clientProject}`)
@@ -4250,19 +4209,6 @@ function buildShootWhatsAppMessage(
   }
 
   lines.push(`Estado: ${statusLabel(shoot.status)}`)
-
-  if (shoot.contact?.trim()) {
-    lines.push(`Contacto: ${shoot.contact.trim()}`)
-  }
-
-  if (shoot.director?.trim() || shoot.dop?.trim()) {
-    const productionRoles = [
-      shoot.director?.trim() ? `Director: ${shoot.director.trim()}` : "",
-      shoot.dop?.trim() ? `DOP: ${shoot.dop.trim()}` : "",
-    ].filter(Boolean)
-
-    lines.push(productionRoles.join(" | "))
-  }
 
   if (employees.length > 0) {
     lines.push("")
