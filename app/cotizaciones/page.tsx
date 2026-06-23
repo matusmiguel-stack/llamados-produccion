@@ -856,7 +856,7 @@ export default function CotizacionesPage() {
     setYaAprobado(true)
 
     setShowAprobarModal(false)
-    window.location.href = "/ingresos"
+    window.location.href = profile?.role === "admin" ? "/ingresos" : "/proyectos"
   }
 
   async function handleExportPdf() {
