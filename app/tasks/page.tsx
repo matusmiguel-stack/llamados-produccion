@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
+import { DatePickerField } from "../../components/DatePickerField"
 
 type Task = {
   id: string
@@ -103,6 +104,7 @@ export default function TasksPage() {
   async function createTask() {
     if (!newTitle.trim()) return
     const { error } = await supabase.from("user_tasks").insert({
+      user_id: user.id,
       title: newTitle.trim(),
       due_date: newDate,
       due_time: newTime || null,
@@ -190,19 +192,15 @@ export default function TasksPage() {
                 placeholder="Título de la tarea…"
                 style={inputStyle}
               />
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <input
-                  type="date"
-                  value={newDate}
-                  onChange={e => setNewDate(e.target.value)}
-                  style={{ ...inputStyle, flex: 1, minWidth: 140 }}
-                />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <DatePickerField label="Fecha" value={newDate} onChange={setNewDate} />
+                </div>
                 <input
                   type="time"
                   value={newTime}
                   onChange={e => setNewTime(e.target.value)}
-                  style={{ ...inputStyle, flex: 1, minWidth: 120 }}
-                  placeholder="Hora (opcional)"
+                  style={{ ...inputStyle, flex: 1, minWidth: 110 }}
                 />
               </div>
               <button onClick={createTask} style={primaryButtonStyle}>
@@ -325,8 +323,10 @@ function TaskRow({
       <div style={taskRowStyle}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
           <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={inputStyle} />
-          <div style={{ display: "flex", gap: 6 }}>
-            <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+          <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <DatePickerField label="Fecha" value={editDate} onChange={setEditDate} />
+            </div>
             <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
