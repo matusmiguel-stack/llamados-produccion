@@ -16,7 +16,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -39,6 +39,7 @@ const navItems: { href: string; label: string; icon: NavIconType; roles?: string
   { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
+  { href: "/tasks",       label: "Mis Tareas",   icon: "tasks" },
 ]
 
 export function AppSidebar({
@@ -181,7 +182,7 @@ export function AppSidebar({
 function NavIcon({
   type,
 }: {
-  type: "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "employees" | "suppliers" | "users" | "ingresos" | "postpro"
+  type: "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "employees" | "suppliers" | "users" | "ingresos" | "postpro" | "tasks"
 }) {
   if (type === "calendar") {
     return (
@@ -285,6 +286,15 @@ function NavIcon({
         <path d="M2 11h20" stroke="currentColor" strokeWidth="1.6" />
         <path d="M7 7V3M17 7V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         <path d="M7 3l2 4M12 3l2 4M17 3l2 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (type === "tasks") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }

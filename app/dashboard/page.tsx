@@ -14,6 +14,7 @@ import {
   getEmployeesWithBirthdayOnDate,
 } from "../../lib/employee-dates"
 import { formatShootSchedule, shootOverlapsDate } from "../../lib/shoot-dates"
+import Link from "next/link"
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [allEnsayos, setAllEnsayos] = useState<any[]>([])
   const [juntaAttendees, setJuntaAttendees] = useState<any[]>([])
   const [allEntregas, setAllEntregas] = useState<any[]>([])
+  const [myTasks, setMyTasks] = useState<any[]>([])
   const [selectedDate, setSelectedDate] = useState(getLocalDateString)
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -102,6 +104,13 @@ export default function DashboardPage() {
       .select("*")
       .order("fecha")
     setAllEntregas(entregas || [])
+
+    const { data: tasks } = await supabase
+      .from("user_tasks")
+      .select("*")
+      .eq("completed", false)
+      .order("due_date")
+    setMyTasks(tasks || [])
   }
 
   useEffect(() => {
@@ -495,6 +504,8 @@ export default function DashboardPage() {
               )}
             </section>
           </div>
+
+          <DashboardTasksWidget tasks={myTasks} />
 
           {employees.length === 0 ? (
             <section style={emptyPanelStyle}>
@@ -1248,4 +1259,62 @@ const emptyPanelStyle: React.CSSProperties = {
   fontSize: 13,
   background: "rgba(15, 23, 42, 0.72)",
   border: "1px dashed rgba(148,163,184,0.16)",
+}
+
+function getLocalDateStringSimple() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+function DashboardTasksWidget({ tasks }: { tasks: any[] }) {
+  const today = getLocalDateStringSimple()
+
+  const overdue = tasks.filter(t => {
+    if (t.due_date < today) return true
+    if (t.due_date === today && t.due_time) {
+      const now = new Date()
+      const [h, m] = t.due_time.split(":").map(Number)
+      return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m)
+    }
+    return false
+  })
+
+  const dueToday = tasks.filter(t => t.due_date === today && !overdue.includes(t))
+
+  if (tasks.length === 0) return null
+
+  return (
+    <section style={{
+      background: "rgba(255,255,255,0.03)",
+      border: overdue.length > 0 ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(148,163,184,0.1)",
+      borderRadius: 12, padding: "14px 16px", marginTop: 20,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: overdue.length > 0 ? "#f87171" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+          {overdue.length > 0 ? `⚠ ${overdue.length} tarea${overdue.length === 1 ? "" : "s"} vencida${overdue.length === 1 ? "" : "s"}` : "Mis Tareas"}
+          {dueToday.length > 0 && overdue.length === 0 && ` · ${dueToday.length} para hoy`}
+        </p>
+        <Link href="/tasks" style={{ fontSize: 12, color: "#7c3aed", textDecoration: "none" }}>Ver todas →</Link>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {[...overdue, ...dueToday].slice(0, 5).map(task => {
+          const isOvd = overdue.includes(task)
+          return (
+            <div key={task.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOvd ? "#ef4444" : "#94a3b8", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: isOvd ? "#fca5a5" : "#cbd5e1", flex: 1 }}>{task.title}</span>
+              <span style={{ fontSize: 11, color: isOvd ? "#f87171" : "#64748b" }}>
+                {isOvd ? "Vencida" : task.due_time ? task.due_time.slice(0, 5) : "Hoy"}
+              </span>
+            </div>
+          )
+        })}
+        {tasks.length > 5 && (
+          <Link href="/tasks" style={{ fontSize: 12, color: "#64748b", textDecoration: "none", marginTop: 2 }}>
+            +{tasks.length - 5} más…
+          </Link>
+        )}
+      </div>
+    </section>
+  )
 }
