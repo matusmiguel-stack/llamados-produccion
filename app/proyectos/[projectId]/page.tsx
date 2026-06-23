@@ -1316,12 +1316,21 @@ function QuoteModal({
             <Link href={`/cotizaciones?quoteId=${quote.id}`} style={editQuoteBtnStyle}>
               ✏ Editar
             </Link>
-            <Link
-              href={`/proyectos/${quote.project_id}/liberar/${quote.id}`}
-              style={liberarBtnStyle}
-            >
-              ▶ Liberar
-            </Link>
+            {quote.status === "approved" && projectCode ? (
+              <Link
+                href={`/proyectos/${quote.project_id}/liberar/${quote.id}`}
+                style={liberarBtnStyle}
+              >
+                ▶ Liberar
+              </Link>
+            ) : (
+              <span
+                title={!projectCode ? "El proyecto necesita un código antes de liberar" : "La cotización debe estar aprobada para liberar"}
+                style={{ ...liberarBtnStyle, opacity: 0.35, cursor: "not-allowed", pointerEvents: "none" }}
+              >
+                ▶ Liberar
+              </span>
+            )}
             <button
               onClick={() => {
                 if (yaAprobado) {
