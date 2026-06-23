@@ -3406,6 +3406,7 @@ function openEditVacation() {
                       setJuntaStartTime(selectedJunta.hora_inicio || "09:00")
                       setJuntaEndTime(selectedJunta.hora_fin || "")
                       setJuntaNotas(selectedJunta.notas || "")
+                      setJuntaLink(selectedJunta.link || "")
                       setJuntaAttendees(juntaAttendeeMap[selectedJunta.id] || [])
                       setEntryMode("junta")
                       setJuntaDetailsOpen(false)
