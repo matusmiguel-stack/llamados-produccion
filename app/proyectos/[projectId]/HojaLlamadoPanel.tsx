@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import type { HojaPDFData } from "../../../lib/exportHojaPdf"
 
@@ -173,6 +173,35 @@ function newId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
+// ─── Crew sort ────────────────────────────────────────────────────────────────
+
+const CREW_PRIORITY: RegExp[] = [
+  /director/i,
+  /\bAD\b/,
+  /productor/i,
+  /asistente.{0,15}produc|\bAP\b/i,
+  /\bDP\b|director\s+de\s+foto/i,
+  /fot[oó]grafo/i,
+]
+
+function crewPriorityIndex(puesto: string): number {
+  for (let i = 0; i < CREW_PRIORITY.length; i++) {
+    if (CREW_PRIORITY[i].test(puesto)) return i
+  }
+  return CREW_PRIORITY.length
+}
+
+function sortCrew(crew: CrewRow[]): CrewRow[] {
+  return [...crew].sort((a, b) => {
+    const pa = crewPriorityIndex(a.puesto)
+    const pb = crewPriorityIndex(b.puesto)
+    if (pa !== pb) return pa - pb
+    // Both are "other" → alphabetical by puesto
+    if (pa === CREW_PRIORITY.length) return a.puesto.localeCompare(b.puesto, "es", { sensitivity: "base" })
+    return 0
+  })
+}
+
 function emptyLocacion(): LocacionRow {
   return { id: newId(), locacion: "", cap: "", horario: "", accion: "", pag: "", notas: "" }
 }
@@ -220,6 +249,8 @@ export function HojaLlamadoPanel({
   const [saving, setSaving] = useState(false)
   const [saveOk, setSaveOk] = useState(false)
   const [loadingCrew, setLoadingCrew] = useState(false)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const dragSrcIdx = useRef<number | null>(null)
 
   // ── Sync crew from liberación (defined first; called inside loadHoja) ────────
   const syncCrewFromLiberacion = useCallback(async (
@@ -321,7 +352,7 @@ export function HojaLlamadoPanel({
       const manualExtra = currentCrew.filter(
         (r) => r.nombre && !libKeys.has(`${r.puesto}||${r.nombre}`),
       )
-      const merged = [...newCrew, ...manualExtra]
+      const merged = sortCrew([...newCrew, ...manualExtra])
 
       // Auto-fill director and productor from liberación items
       function resolvePersonName(item: RawItem): string {
@@ -602,6 +633,20 @@ export function HojaLlamadoPanel({
       if (!prev || prev.crew.length <= 1) return prev
       return { ...prev, crew: prev.crew.filter((_, i) => i !== idx) }
     })
+  }
+
+  function handleCrewDrop(targetIdx: number) {
+    const src = dragSrcIdx.current
+    if (src === null || src === targetIdx) { setDragOverIdx(null); return }
+    setHoja((prev) => {
+      if (!prev) return prev
+      const next = [...prev.crew]
+      const [moved] = next.splice(src, 1)
+      next.splice(targetIdx, 0, moved)
+      return { ...prev, crew: next }
+    })
+    dragSrcIdx.current = null
+    setDragOverIdx(null)
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -934,7 +979,8 @@ export function HojaLlamadoPanel({
           <table style={tableStyle}>
             <thead>
               <tr>
-                <th style={thStyle}>#</th>
+                <th style={{ ...thStyle, width: 28 }}></th>
+                <th style={{ ...thStyle, width: 32 }}>#</th>
                 <th style={thStyle}>Puesto</th>
                 <th style={thStyle}>Nombre</th>
                 <th style={{ ...thStyle, background: "rgba(124,58,237,0.14)", color: "#c4b5fd" }}>RETRO</th>
@@ -946,7 +992,19 @@ export function HojaLlamadoPanel({
             </thead>
             <tbody>
               {hoja.crew.map((row, idx) => (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  draggable
+                  onDragStart={() => { dragSrcIdx.current = idx }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx) }}
+                  onDragLeave={() => setDragOverIdx(null)}
+                  onDrop={() => handleCrewDrop(idx)}
+                  onDragEnd={() => { dragSrcIdx.current = null; setDragOverIdx(null) }}
+                  style={dragOverIdx === idx ? { ...crewDragOverStyle } : undefined}
+                >
+                  <td style={{ ...tdStyle, width: 28, textAlign: "center", cursor: "grab", color: "#475569", fontSize: 14, userSelect: "none" }}>
+                    ⠿
+                  </td>
                   <td style={{ ...tdStyle, width: 32, color: "#475569", fontSize: 12, textAlign: "center" }}>
                     {idx + 1}
                   </td>
@@ -1360,4 +1418,9 @@ const removeDirBtnStyle: React.CSSProperties = {
   lineHeight: 1,
   alignSelf: "flex-end",
   marginBottom: 0,
+}
+
+const crewDragOverStyle: React.CSSProperties = {
+  outline: "2px solid rgba(167,139,250,0.5)",
+  background: "rgba(167,139,250,0.06)",
 }
