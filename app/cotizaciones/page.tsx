@@ -219,6 +219,8 @@ export default function CotizacionesPage() {
   // evitando que el estado vacío inicial sobreescriba datos en otras pestañas.
   const initialLoadDone = useRef<boolean>(false)
   const [collaborators, setCollaborators] = useState<string[]>([])
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const savingRef = useRef(false)
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
@@ -563,6 +565,7 @@ export default function CotizacionesPage() {
     if (!projectId) return alert("Selecciona un proyecto")
     if (!quoteName.trim()) return alert("Escribe el nombre de la cotización")
 
+    savingRef.current = true
     setSaving(true)
     try {
       let quoteId: string
@@ -704,9 +707,32 @@ export default function CotizacionesPage() {
     } catch (err: any) {
       alert(err.message)
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
+
+  // ── Autosave cada 60 s cuando hay una cotización activa ────────────────────
+  useEffect(() => {
+    if (!editQuoteId) return
+    const interval = setInterval(async () => {
+      if (savingRef.current || !initialLoadDone.current) return
+      if (!clientId || !projectId || !quoteName.trim()) return
+      savingRef.current = true
+      setAutoSaveStatus("saving")
+      try {
+        await handleSave()
+        setAutoSaveStatus("saved")
+        setTimeout(() => setAutoSaveStatus("idle"), 3000)
+      } catch {
+        // silently ignore autosave errors
+      } finally {
+        savingRef.current = false
+      }
+    }, 60_000)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editQuoteId, clientId, projectId, quoteName])
 
   const [duplicating, setDuplicating] = useState(false)
   async function handleDuplicar() {
@@ -1209,6 +1235,11 @@ export default function CotizacionesPage() {
                 </div>
 
                 <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
+                  {editQuoteId && autoSaveStatus !== "idle" && (
+                    <p style={{ margin: 0, fontSize: 11, color: autoSaveStatus === "saved" ? "#4ade80" : "#94a3b8", textAlign: "center" }}>
+                      {autoSaveStatus === "saving" ? "Autoguardando..." : "✓ Autoguardado"}
+                    </p>
+                  )}
                   <button onClick={handleSave} disabled={saving} style={saveSuccess ? { ...primaryButtonStyle, background: "#059669" } : primaryButtonStyle}>
                     {saving ? "Guardando..." : saveSuccess ? "✓ Cotización actualizada" : editQuoteId ? "Actualizar cotización" : "Guardar cotización"}
                   </button>
