@@ -168,6 +168,24 @@ function fmtPct(n: number): string {
   return `${n.toFixed(1)}%`
 }
 
+// Serializa el estado persistible de la cotización para detectar cambios reales
+// (autosave) sin depender de closures de React que pueden quedar obsoletos.
+function buildQuoteSnapshot(s: {
+  values: Record<string, ItemValues>
+  extras: Record<string, ExtraItem[]>
+  quoteName: string
+  atencion: string
+  entregables: string
+  markupGeneral: string
+  commissionPct: string
+  commissionMarkup: string
+  status: string
+  projectId: string
+  clientId: string
+}): string {
+  return JSON.stringify(s)
+}
+
 type RubroFinancials = { gasto: number; utilidad: number; venta: number }
 
 export default function CotizacionesPage() {
@@ -221,6 +239,13 @@ export default function CotizacionesPage() {
   const [collaborators, setCollaborators] = useState<string[]>([])
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
   const savingRef = useRef(false)
+  // Referencia SIEMPRE actual a handleSave y al estado serializado. El intervalo
+  // de autosave captura el closure del efecto (que puede ser viejo, con valores
+  // en cero de la fase inicial de carga); usando estos refs el autosave guarda
+  // los datos reales en pantalla y nunca un snapshot obsoleto.
+  const handleSaveRef = useRef<(() => Promise<void>) | null>(null)
+  const liveSnapshotRef = useRef<string>("")
+  const savedSnapshotRef = useRef<string>("")
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const filteredProjects = projects.filter((p) => p.client_id === clientId)
@@ -430,6 +455,21 @@ export default function CotizacionesPage() {
       setExtras(newExtras)
       setCommissionPct(newCommPct)
       setCommissionMarkup(newCommMarkup)
+      // Snapshot de lo recién cargado: el autosave solo guardará si esto cambia,
+      // evitando que un re-guardado dispare con el estado vacío de la fase inicial.
+      savedSnapshotRef.current = buildQuoteSnapshot({
+        values: newValues,
+        extras: newExtras,
+        quoteName: quote.name,
+        atencion: quote.atencion || "",
+        entregables: quote.entregables || "",
+        markupGeneral: String(quote.markup_percentage || 0),
+        commissionPct: newCommPct,
+        commissionMarkup: newCommMarkup,
+        status: quote.status,
+        projectId: quote.project_id,
+        clientId: loadedProj?.client_id || "",
+      })
       initialLoadDone.current = true
     }
     load()
@@ -592,13 +632,15 @@ export default function CotizacionesPage() {
           .select("id, name")
           .eq("quote_id", editQuoteId)
 
+        let oldTotal = 0
         if (oldSecs && oldSecs.length > 0) {
           for (const sec of oldSecs) {
             const { data: oldItems } = await supabase
               .from("quote_items")
-              .select("description, actual_qty, actual_days, actual_unit_price, actual_supplier_id")
+              .select("description, qty, days, unit_price, actual_qty, actual_days, actual_unit_price, actual_supplier_id")
               .eq("section_id", sec.id)
             for (const it of oldItems || []) {
+              oldTotal += (Number(it.qty) || 0) * (Number(it.days) || 0) * (Number(it.unit_price) || 0)
               const key = `${sec.name}|${it.description}`
               savedActuals[key] = {
                 actual_qty: it.actual_qty,
@@ -608,6 +650,18 @@ export default function CotizacionesPage() {
               }
             }
           }
+
+          // 🛡️ Salvaguarda anti-borrado: nunca sustituir una cotización que YA tenía
+          // importes por un estado completamente vacío. Esto bloquea de raíz el bug
+          // que dejaba cotizaciones en cero (closure obsoleto del autosave, sobrescritura
+          // por edición en vivo, o una carga parcial). Es la última línea de defensa.
+          if (oldTotal > 0 && globalFinancials.venta === 0) {
+            throw new Error(
+              "Se evitó sobrescribir la cotización con valores en cero. " +
+              "Recarga la página para ver los datos guardados antes de volver a guardar."
+            )
+          }
+
           // Borrar secciones + ítems anteriores
           await supabase.from("quote_items").delete().in("section_id", oldSecs.map((s: any) => s.id))
           await supabase.from("quote_sections").delete().eq("quote_id", editQuoteId)
@@ -702,6 +756,9 @@ export default function CotizacionesPage() {
         setEditQuoteId(quoteId)
         window.history.replaceState(null, "", `/cotizaciones?quoteId=${quoteId}`)
       }
+      // Lo recién guardado ya está en disco: el autosave no volverá a dispararse
+      // hasta que el usuario haga un cambio real.
+      savedSnapshotRef.current = liveSnapshotRef.current
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: any) {
@@ -712,16 +769,29 @@ export default function CotizacionesPage() {
     }
   }
 
+  // Mantener SIEMPRE la versión más reciente de handleSave y del estado serializado.
+  // (Se ejecuta en cada render, así que nunca queda obsoleto.)
+  handleSaveRef.current = handleSave
+  liveSnapshotRef.current = buildQuoteSnapshot({
+    values, extras, quoteName, atencion, entregables,
+    markupGeneral, commissionPct, commissionMarkup, status, projectId, clientId,
+  })
+
   // ── Autosave cada 60 s cuando hay una cotización activa ────────────────────
   useEffect(() => {
     if (!editQuoteId) return
     const interval = setInterval(async () => {
       if (savingRef.current || !initialLoadDone.current) return
       if (!clientId || !projectId || !quoteName.trim()) return
+      // Sin cambios reales desde el último guardado/carga → no tocar la BD.
+      // Esto evita que un autosave dispare con el estado inicial vacío.
+      if (liveSnapshotRef.current === savedSnapshotRef.current) return
       savingRef.current = true
       setAutoSaveStatus("saving")
       try {
-        await handleSave()
+        // Usar el ref (no el closure del efecto) para guardar SIEMPRE los datos
+        // reales en pantalla, nunca un snapshot obsoleto con valores en cero.
+        await handleSaveRef.current?.()
         setAutoSaveStatus("saved")
         setTimeout(() => setAutoSaveStatus("idle"), 3000)
       } catch {
