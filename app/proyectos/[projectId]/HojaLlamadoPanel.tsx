@@ -309,16 +309,6 @@ export function HojaLlamadoPanel({
         return
       }
 
-      // Deduplicar: la misma persona puede aparecer en varias secciones
-      const seenItems = new Set<string>()
-      const uniqueItems: RawItem[] = []
-      for (const item of allItems) {
-        const key = `${item.description}||${item.actual_supplier_id ?? ""}||${item.actual_employee_id ?? ""}`
-        if (!seenItems.has(key)) { seenItems.add(key); uniqueItems.push(item) }
-      }
-      allItems.length = 0
-      allItems.push(...uniqueItems)
-
       // 3. Fetch proveedores y empleados en paralelo
       const supplierIds = [...new Set(allItems.map((i) => i.actual_supplier_id).filter(Boolean))] as string[]
       const employeeIds = [...new Set(allItems.map((i) => i.actual_employee_id).filter(Boolean))] as string[]
@@ -332,21 +322,39 @@ export function HojaLlamadoPanel({
           : Promise.resolve({ data: [] }),
       ])
 
-      const provMap = new Map((provRes.data || []).map((p: any) => [p.id, `${p.nombre} ${p.apellido}`.trim()]))
-      const empMap  = new Map((empRes.data  || []).map((e: any) => {
-        // Gente interna de Retro siempre con su nickname
-        return [e.id, (e.nickname?.trim() || e.nombre)]
+      const empMap = new Map((empRes.data || []).map((e: any) => [
+        e.id, (e.nickname?.trim() || e.nombre) as string,
+      ]))
+
+      // Build a lookup: "nombre apellido" → resolved display name (for cross-referencing
+      // employees that also appear as proveedores, e.g. "Ricardo Romero" → "Rich")
+      const empByFullName = new Map<string, string>()
+      for (const e of (empRes.data || []) as any[]) {
+        const full = `${e.nombre} ${e.apellido_paterno || ""}`.trim().toLowerCase()
+        empByFullName.set(full, e.nickname?.trim() || e.nombre)
+      }
+
+      const provMap = new Map((provRes.data || []).map((p: any) => {
+        const full = `${p.nombre} ${p.apellido}`.trim()
+        // If this supplier is also an internal employee, use their nickname
+        const asEmployee = empByFullName.get(full.toLowerCase())
+        return [p.id, asEmployee ?? full]
       }))
 
-      // 4. Build/merge crew rows preserving existing times
-      const newCrew: CrewRow[] = allItems.map((item) => {
+      // 4. Build/merge crew rows — deduplicate by resolved puesto+nombre
+      const seenCrew = new Set<string>()
+      const newCrew: CrewRow[] = []
+      for (const item of allItems) {
         const nombre = item.actual_supplier_id
           ? (provMap.get(item.actual_supplier_id) ?? "")
           : (empMap.get(item.actual_employee_id!) ?? "")
+        const key = `${item.description}||${nombre}`
+        if (seenCrew.has(key)) continue
+        seenCrew.add(key)
         const existing = currentCrew.find(
           (c) => c.puesto === item.description && c.nombre === nombre,
         )
-        return {
+        newCrew.push({
           id: existing?.id ?? newId(),
           puesto: item.description,
           nombre,
@@ -354,8 +362,8 @@ export function HojaLlamadoPanel({
           locacion: existing?.locacion ?? "",
           pickup:   existing?.pickup   ?? "",
           notas:    existing?.notas    ?? "",
-        }
-      })
+        })
+      }
 
       // Append manually-added rows not from liberación
       const libKeys = new Set(newCrew.map((r) => `${r.puesto}||${r.nombre}`))
