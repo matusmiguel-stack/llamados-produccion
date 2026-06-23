@@ -367,9 +367,15 @@ export function HojaLlamadoPanel({
 
       // Append manually-added rows not from liberación
       const libKeys = new Set(newCrew.map((r) => `${r.puesto}||${r.nombre}`))
-      const manualExtra = currentCrew.filter(
-        (r) => r.nombre && !libKeys.has(`${r.puesto}||${r.nombre}`),
-      )
+      const manualExtra = currentCrew.filter((r) => {
+        if (!r.nombre) return false
+        if (libKeys.has(`${r.puesto}||${r.nombre}`)) return false
+        // Si el nombre de este row resuelve a un nickname que ya está en newCrew,
+        // es un duplicado de un sync anterior — no incluir.
+        const resolvedNickname = empByFullName.get(r.nombre.toLowerCase())
+        if (resolvedNickname && libKeys.has(`${r.puesto}||${resolvedNickname}`)) return false
+        return true
+      })
       const merged = sortCrew([...newCrew, ...manualExtra])
 
       // Auto-fill director and productor from liberación items
