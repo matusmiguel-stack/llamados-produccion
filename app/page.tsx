@@ -2939,7 +2939,7 @@ function openEditVacation() {
                     <div style={formModalFieldStyle}>
                       <label style={formModalLabelStyle}>Horario Avanzada (Retro)</label>
                       <input
-                        placeholder="ej. 06:00 – 08:00"
+                        type="time"
                         value={horarioAvanzada}
                         onChange={(e) => setHorarioAvanzada(e.target.value)}
                         style={formModalInputStyle}
