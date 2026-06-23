@@ -309,34 +309,34 @@ export function HojaLlamadoPanel({
         return
       }
 
-      // 3. Fetch proveedores y empleados en paralelo
+      // 3. Fetch proveedores, empleados asignados, y TODOS los empleados para cross-ref
       const supplierIds = [...new Set(allItems.map((i) => i.actual_supplier_id).filter(Boolean))] as string[]
       const employeeIds = [...new Set(allItems.map((i) => i.actual_employee_id).filter(Boolean))] as string[]
 
-      const [provRes, empRes] = await Promise.all([
+      const [provRes, empRes, allEmpsRes] = await Promise.all([
         supplierIds.length > 0
           ? supabase.from("proveedores").select("id, nombre, apellido").in("id", supplierIds)
           : Promise.resolve({ data: [] }),
         employeeIds.length > 0
-          ? supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, nickname").in("id", employeeIds)
+          ? supabase.from("employees").select("id, nombre, apellido_paterno, nickname").in("id", employeeIds)
           : Promise.resolve({ data: [] }),
+        // Todos los empleados para detectar si un proveedor es también interno
+        supabase.from("employees").select("nombre, apellido_paterno, nickname"),
       ])
 
       const empMap = new Map((empRes.data || []).map((e: any) => [
         e.id, (e.nickname?.trim() || e.nombre) as string,
       ]))
 
-      // Build a lookup: "nombre apellido" → resolved display name (for cross-referencing
-      // employees that also appear as proveedores, e.g. "Ricardo Romero" → "Rich")
+      // Lookup nombre_completo → nickname usando TODOS los empleados
       const empByFullName = new Map<string, string>()
-      for (const e of (empRes.data || []) as any[]) {
+      for (const e of (allEmpsRes.data || []) as any[]) {
         const full = `${e.nombre} ${e.apellido_paterno || ""}`.trim().toLowerCase()
         empByFullName.set(full, e.nickname?.trim() || e.nombre)
       }
 
       const provMap = new Map((provRes.data || []).map((p: any) => {
         const full = `${p.nombre} ${p.apellido}`.trim()
-        // If this supplier is also an internal employee, use their nickname
         const asEmployee = empByFullName.get(full.toLowerCase())
         return [p.id, asEmployee ?? full]
       }))
