@@ -309,6 +309,16 @@ export function HojaLlamadoPanel({
         return
       }
 
+      // Deduplicar: la misma persona puede aparecer en varias secciones
+      const seenItems = new Set<string>()
+      const uniqueItems: RawItem[] = []
+      for (const item of allItems) {
+        const key = `${item.description}||${item.actual_supplier_id ?? ""}||${item.actual_employee_id ?? ""}`
+        if (!seenItems.has(key)) { seenItems.add(key); uniqueItems.push(item) }
+      }
+      allItems.length = 0
+      allItems.push(...uniqueItems)
+
       // 3. Fetch proveedores y empleados en paralelo
       const supplierIds = [...new Set(allItems.map((i) => i.actual_supplier_id).filter(Boolean))] as string[]
       const employeeIds = [...new Set(allItems.map((i) => i.actual_employee_id).filter(Boolean))] as string[]
