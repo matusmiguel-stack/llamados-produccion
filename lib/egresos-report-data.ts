@@ -15,7 +15,7 @@ type ProjectMeta = {
 export async function generateEgresosReport(projectId: string, meta: ProjectMeta): Promise<void> {
   const [{ data: provs }, { data: emps }, { data: ingreso }, { data: facturas }] = await Promise.all([
     supabase.from("proveedores").select("id,nombre,apellido,empresa").order("nombre"),
-    supabase.from("employees").select("id,nombre,nickname").order("nombre"),
+    supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,nickname").order("nombre"),
     supabase.from("ingresos").select("subtotal,cliente_agencia").eq("project_id", projectId).limit(1).maybeSingle(),
     supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
   ])
@@ -76,12 +76,25 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     }
   }
 
+  // El responsable se guarda como nombre completo; mostrar su nickname.
+  const nickOf = (full: string | null): string | null => {
+    if (!full) return full
+    const norm = (s: string) => s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    const t = norm(full)
+    const m = (emps as any[] || []).find((e) => {
+      const f3 = norm([e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "))
+      const f2 = norm([e.nombre, e.apellido_paterno].filter(Boolean).join(" "))
+      return f3 === t || f2 === t
+    })
+    return m?.nickname?.trim() || full
+  }
+
   const reportData = {
     projectName: meta.projectName,
     projectCode: meta.projectCode,
     empresa: meta.empresa,
     cliente: (ingreso as any)?.cliente_agencia || "",
-    responsable: meta.responsable,
+    responsable: nickOf(meta.responsable),
     cobrado: Number(ingreso?.subtotal || 0),
     items,
     facturas: (facturas as any[]) || [],

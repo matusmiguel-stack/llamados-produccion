@@ -186,6 +186,17 @@ function buildQuoteSnapshot(s: {
   return JSON.stringify(s)
 }
 
+// Responsables asignables al aprobar un proyecto.
+// value = nombre completo (igual que en `employees`, para que el CC de
+// facturación y el mapeo a nickname funcionen); label = nickname mostrado.
+const RESPONSABLES: { value: string; label: string }[] = [
+  { value: "Miguel Matus Soler",         label: "Miguel" },
+  { value: "Adriana Barrera de la Vega", label: "Adrish" },
+  { value: "Maricela Peña Ahumada",      label: "Chelita" },
+  { value: "Diana Cobián Guevara",       label: "Diana" },
+  { value: "Carlos Javier Muñoz Matus",  label: "Charlie" },
+]
+
 type RubroFinancials = { gasto: number; utilidad: number; venta: number }
 
 export default function CotizacionesPage() {
@@ -867,7 +878,11 @@ export default function CotizacionesPage() {
       alert("Este proyecto ya fue aprobado y está registrado en el control de ingresos.")
       return
     }
-    setAprobarResponsable("")
+    // Pre-seleccionar el responsable actual del proyecto si ya es uno de la lista.
+    const proj = projects.find((p) => p.id === projectId)
+    setAprobarResponsable(
+      proj?.responsable && RESPONSABLES.some((r) => r.value === proj.responsable) ? proj.responsable : ""
+    )
     setShowAprobarModal(true)
   }
 
@@ -918,9 +933,11 @@ export default function CotizacionesPage() {
 
     // Mark the quote as approved too
     await supabase.from("quotes").update({ status: "approved" }).eq("id", editQuoteId)
-    // Guardar la empresa en el proyecto (para facturación)
+    // Guardar empresa y responsable en el proyecto: el reporte de egresos lee
+    // `project.responsable`, así que sin esto el responsable no se reflejaba ahí.
     if (projectId) {
-      await supabase.from("projects").update({ empresa: aprobarEmpresa }).eq("id", projectId)
+      await supabase.from("projects").update({ empresa: aprobarEmpresa, responsable }).eq("id", projectId)
+      setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, responsable } : p))
     }
     setStatus("approved")
     setYaAprobado(true)
@@ -1385,11 +1402,9 @@ export default function CotizacionesPage() {
                 }}
               >
                 <option value="">Sin asignar</option>
-                <option value="Miguel Matus">Miguel Matus</option>
-                <option value="Adriana Barrera">Adriana Barrera</option>
-                <option value="Diana Cobia">Diana Cobia</option>
-                <option value="Carlos Muñoz">Carlos Muñoz</option>
-                <option value="Maricela Peña">Maricela Peña</option>
+                {RESPONSABLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
               </select>
             </div>
 
