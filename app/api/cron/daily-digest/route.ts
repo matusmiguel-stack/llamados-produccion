@@ -3,6 +3,10 @@ import { createAdminClient } from "../../../../lib/supabase-admin"
 import { createClient } from "@supabase/supabase-js"
 import { Resend } from "resend"
 
+// Da margen suficiente para el envío (aunque con batch es un solo request rápido).
+export const maxDuration = 60
+export const dynamic = "force-dynamic"
+
 // ── Auth: acepta cron de Vercel O sesión de admin ─────────────────────────────
 
 async function isAuthorized(req: Request): Promise<boolean> {
@@ -433,28 +437,29 @@ export async function GET(req: Request) {
   textLines.push("--\nRetro Casa Productora · Sistema de Producción")
   const text = textLines.join("\n")
 
+  // Envío por lotes (Resend batch): un solo request manda hasta 100 correos.
+  // Antes se enviaba uno por uno con await, lo que chocaba con el rate-limit de
+  // Resend (~2/seg) y hacía que a algunos destinatarios les llegara un 429 y NO
+  // recibieran el correo. Con batch todos salen juntos, a la misma hora.
+  const headers = {
+    "List-Unsubscribe": `<mailto:news@retrocasaproductora.com?subject=unsubscribe>`,
+    "Precedence": "bulk",
+  }
   let sent = 0
   const errors: string[] = []
-  for (const email of recipients) {
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
     try {
-      const result = await getResend().emails.send({
-        from: FROM,
-        to: email,
-        subject,
-        html,
-        text,
-        headers: {
-          "List-Unsubscribe": `<mailto:news@retrocasaproductora.com?subject=unsubscribe>`,
-          "Precedence": "bulk",
-        },
-      })
+      const result = await getResend().batch.send(
+        chunk.map((email) => ({ from: FROM, to: email, subject, html, text, headers }))
+      )
       if ((result as any).error) {
-        errors.push(`${email}: ${JSON.stringify((result as any).error)}`)
+        errors.push(`batch ${i}: ${JSON.stringify((result as any).error)}`)
       } else {
-        sent++
+        sent += chunk.length
       }
     } catch (e: any) {
-      errors.push(`${email}: ${e.message}`)
+      errors.push(`batch ${i}: ${e.message}`)
     }
   }
 
