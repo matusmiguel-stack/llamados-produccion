@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .single()
 
-    if (callerErr || callerProfile?.role !== "admin") {
+    const callerRole = callerProfile?.role
+    if (callerErr || (callerRole !== "admin" && callerRole !== "editor_premium")) {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 })
     }
 
@@ -41,6 +42,19 @@ export async function POST(request: Request) {
     }
     if (role !== undefined && !VALID_ROLES.includes(role)) {
       return NextResponse.json({ error: "Rol inválido" }, { status: 400 })
+    }
+
+    // Editor Premium puede gestionar usuarios, pero no el tier admin: no puede
+    // otorgar el rol Admin ni modificar a un administrador existente.
+    if (callerRole === "editor_premium") {
+      if (role === "admin") {
+        return NextResponse.json({ error: "No puedes asignar el rol Admin" }, { status: 403 })
+      }
+      const { data: target } = await adminClient
+        .from("profiles").select("role").eq("id", userId).single()
+      if (target?.role === "admin") {
+        return NextResponse.json({ error: "No puedes modificar a un administrador" }, { status: 403 })
+      }
     }
 
     const updates: Record<string, string> = {}

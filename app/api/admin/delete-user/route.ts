@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         user.email?.trim().toLowerCase()
     )
 
-    if (!myProfile || myProfile.role !== "admin") {
+    if (!myProfile || (myProfile.role !== "admin" && myProfile.role !== "editor_premium")) {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 })
     }
 
@@ -68,6 +68,11 @@ export async function POST(request: Request) {
 
     if (!targetUser) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+    }
+
+    // Editor Premium no puede eliminar administradores.
+    if (myProfile.role === "editor_premium" && targetUser.role === "admin") {
+      return NextResponse.json({ error: "No puedes eliminar a un administrador" }, { status: 403 })
     }
 
     if (targetUser.role === "admin") {

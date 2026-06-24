@@ -216,6 +216,8 @@ export default function UsersPage() {
   }
 
   const isAdmin = profile?.role === "admin"
+  // Editor Premium también puede gestionar usuarios (sin tocar el tier admin).
+  const canManageUsers = isAdmin || profile?.role === "editor_premium"
 
   if (!profile) return <PageLoader />
   return (
@@ -335,7 +337,7 @@ export default function UsersPage() {
                         : "minmax(220px, 1.4fr) 140px 220px",
                     }}
                   >
-                    {isEditing && isAdmin ? (
+                    {isEditing && canManageUsers ? (
                       <>
                         <div style={userCellStyle}>
                           <input
@@ -356,7 +358,8 @@ export default function UsersPage() {
                           <option value="editor">Editor</option>
                           <option value="editor_premium">Editor Premium</option>
                           <option value="finanzas">Finanzas</option>
-                          <option value="admin">Admin</option>
+                          {/* Solo un admin puede otorgar el rol Admin */}
+                          {isAdmin && <option value="admin">Admin</option>}
                         </select>
 
                         <div style={rowActionsStyle}>
@@ -392,7 +395,8 @@ export default function UsersPage() {
                         </div>
 
                         <div style={rowActionsStyle}>
-                          {isAdmin && (
+                          {/* Editor Premium gestiona a todos menos a los administradores */}
+                          {canManageUsers && (isAdmin || user.role !== "admin") && (
                             <>
                               <button
                                 onClick={() => startEdit(user)}
