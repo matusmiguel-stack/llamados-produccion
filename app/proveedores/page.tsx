@@ -14,7 +14,7 @@ type Proveedor = {
   empresa: string | null
   actividad: string
   email: string
-  telefono: string
+  telefono: string | null
 }
 
 type ProveedorForm = {
@@ -107,24 +107,25 @@ export default function ProveedoresPage() {
   }, [])
 
   function buildPayload(values: ProveedorForm) {
-    if (
-      !values.nombre.trim() ||
-      !values.apellido.trim() ||
-      !values.actividad.trim() ||
-      !values.email.trim() ||
-      !values.telefono.trim()
-    ) {
-      alert("Completa nombre, apellido, actividad, email y teléfono")
+    // null-safe: algunos registros antiguos traen campos en null y `.trim()`
+    // sobre null reventaba el guardado sin avisar (no pasaba nada al picar Guardar).
+    const nombre    = (values.nombre    || "").trim()
+    const apellido  = (values.apellido  || "").trim()
+    const actividad = (values.actividad || "").trim()
+    const email     = (values.email     || "").trim()
+
+    if (!nombre || !apellido || !actividad || !email) {
+      alert("Completa nombre, apellido, actividad y email")
       return null
     }
 
     return {
-      nombre: values.nombre.trim(),
-      apellido: values.apellido.trim(),
-      empresa: values.empresa.trim() || null,
-      actividad: values.actividad.trim(),
-      email: values.email.trim().toLowerCase(),
-      telefono: values.telefono.trim(),
+      nombre,
+      apellido,
+      empresa: (values.empresa || "").trim() || null,
+      actividad,
+      email: email.toLowerCase(),
+      telefono: (values.telefono || "").trim() || null,  // teléfono opcional
     }
   }
 
@@ -143,12 +144,12 @@ export default function ProveedoresPage() {
   function startEdit(proveedor: Proveedor) {
     setEditingId(proveedor.id)
     setEditForm({
-      nombre: proveedor.nombre,
-      apellido: proveedor.apellido,
+      nombre: proveedor.nombre || "",
+      apellido: proveedor.apellido || "",
       empresa: proveedor.empresa || "",
-      actividad: proveedor.actividad,
-      email: proveedor.email,
-      telefono: proveedor.telefono,
+      actividad: proveedor.actividad || "",
+      email: proveedor.email || "",
+      telefono: proveedor.telefono || "",
     })
   }
 
@@ -336,7 +337,7 @@ export default function ProveedoresPage() {
 
                       <div style={contactCellStyle}>
                         <p style={contactLineStyle}>{proveedor.email}</p>
-                        <p style={contactLineStyle}>{proveedor.telefono}</p>
+                        <p style={contactLineStyle}>{proveedor.telefono || "—"}</p>
                       </div>
 
                       <div style={rowActionsStyle}>
@@ -444,7 +445,7 @@ function ProveedorFormFields({
         <Field label="Teléfono">
           <input
             type="tel"
-            placeholder="Ej. 55 1234 5678"
+            placeholder="Opcional · Ej. 55 1234 5678"
             value={values.telefono}
             onChange={(e) => updateField("telefono", e.target.value)}
             style={inputStyle}
