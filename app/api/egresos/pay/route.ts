@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     const formaPago = String(form.get("formaPago") || "").trim() || null
     const montoReal = parseFloat(String(form.get("montoReal") || "0")) || 0
     const sectionId = String(form.get("sectionId") || "") || null
+    const fechaPago = String(form.get("fechaPago") || "").trim()
     const xmlFile = form.get("xml") as File | null
     const pdfFile = form.get("pdf") as File | null
 
@@ -44,6 +45,10 @@ export async function POST(req: Request) {
     }
     if (!formaPago) {
       return NextResponse.json({ error: "Indica de dónde salió el pago" }, { status: 400 })
+    }
+    // Fecha real del pago — obligatoria para anticipo y comprobación.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaPago)) {
+      return NextResponse.json({ error: "Indica la fecha en que se realizó el pago" }, { status: 400 })
     }
     if (tipo === "anticipo" && (!xmlFile || !pdfFile)) {
       return NextResponse.json({ error: "Para anticipo, el XML y el PDF de la factura son obligatorios" }, { status: 400 })
@@ -84,8 +89,9 @@ export async function POST(req: Request) {
         status: "pagada",
         origen: tipo,
         forma_pago: formaPago,
-        fecha_pago: todayISO(),
-        paid_at: new Date().toISOString(),
+        // Fecha real del pago (puede ser días antes de hoy).
+        fecha_pago: fechaPago,
+        paid_at: new Date(fechaPago + "T12:00:00").toISOString(),
         xml_path: xmlPath,
         pdf_path: pdfPath,
       })
@@ -95,7 +101,7 @@ export async function POST(req: Request) {
 
     // Marcar el egreso original como pagado (conserva su monto original).
     const updatePayload: Record<string, unknown> = {
-      pago_tipo: tipo, pago_estado: "pagado", factura_id: factura.id,
+      pago_tipo: tipo, pago_estado: "pagado", factura_id: factura.id, pago_fecha: fechaPago,
     }
     if (tipo === "comprobacion") updatePayload.monto_comprobado = montoReal || monto
     const { error: updErr } = await admin

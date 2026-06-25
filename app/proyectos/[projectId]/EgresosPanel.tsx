@@ -11,6 +11,13 @@ type Employee  = { id: string; nombre: string; apellido_paterno: string; apellid
 // Mostrar siempre el nickname de la gente interna de Retro
 const empNick = (e: { nombre: string; nickname?: string | null }) => e.nickname?.trim() || e.nombre
 
+// Formatea una fecha "YYYY-MM-DD" como "12 jun" sin desfase de zona horaria
+function fechaCorta(d: string | null): string {
+  if (!d) return ""
+  const [y, m, day] = d.split("T")[0].split("-").map(Number)
+  return new Date(y, m - 1, day).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })
+}
+
 type EgresoItem = {
   id: string
   description: string
@@ -24,6 +31,7 @@ type EgresoItem = {
   pago_estado: "pagado" | "pendiente_cierre" | null
   monto_comprobado: number | null
   pago_modo: "anticipo" | "comprobacion" | null
+  pago_fecha: string | null
 }
 
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
@@ -118,6 +126,7 @@ export function EgresosPanel({
   const [payPdf, setPayPdf] = useState<File | null>(null)
   const [payMonto, setPayMonto] = useState("")
   const [payForma, setPayForma] = useState("")
+  const [payFecha, setPayFecha] = useState("")
   const [paying, setPaying] = useState(false)
 
   async function load() {
@@ -150,7 +159,7 @@ export function EgresosPanel({
         for (const section of sections) {
           const { data: raw } = await supabase
             .from("quote_items")
-            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado,pago_modo")
+            .select("id,description,qty,days,unit_price,real_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,billing_sent_at,pago_tipo,pago_estado,monto_comprobado,pago_modo,pago_fecha")
             .eq("section_id", section.id).order("order_index", { ascending: true })
           if (!raw) continue
 
@@ -191,6 +200,7 @@ export function EgresosPanel({
               pago_estado: row.pago_estado ?? null,
               monto_comprobado: row.monto_comprobado ?? null,
               pago_modo: row.pago_modo ?? null,
+              pago_fecha: row.pago_fecha ?? null,
             })
           }
         }
@@ -341,6 +351,7 @@ export function EgresosPanel({
     setPayXml(null)
     setPayPdf(null)
     setPayForma("")
+    setPayFecha(hoyMx)
     setPayMonto(String(montoEgreso(item)))
   }
 
@@ -352,6 +363,7 @@ export function EgresosPanel({
     const capturado = parseFloat(payMonto)
     if (!capturado || capturado <= 0) { alert("Indica el monto"); return }
     if (!payForma) { alert("Selecciona de dónde salió el pago"); return }
+    if (!payFecha) { alert("Indica la fecha en que se realizó el pago"); return }
     if (tipo === "anticipo" && (!payXml || !payPdf)) {
       alert("Para anticipo debes subir el XML y el PDF de la factura")
       return
@@ -366,6 +378,7 @@ export function EgresosPanel({
       fd.append("monto", String(tipo === "comprobacion" ? original : capturado))
       if (tipo === "comprobacion") fd.append("montoReal", String(capturado))
       fd.append("formaPago", payForma)
+      fd.append("fechaPago", payFecha)
       fd.append("sectionId", item.section_id)
       fd.append("concepto", `${item.description} — ${item.supplierLabel}`)
       if (item.actual_supplier_id) fd.append("proveedorId", item.actual_supplier_id)
@@ -648,8 +661,13 @@ export function EgresosPanel({
                             {/* Columna izquierda: pagos */}
                             <div style={actionColStyle}>
                               {item.pago_estado === "pagado" ? (
-                                <span style={paidBadgeStyle} title={item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación pagada"}>
-                                  ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
+                                <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                                  <span style={paidBadgeStyle} title={item.pago_fecha ? `Pago realizado el ${fechaCorta(item.pago_fecha)}` : item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación pagada"}>
+                                    ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
+                                  </span>
+                                  {item.pago_fecha && (
+                                    <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
+                                  )}
                                 </span>
                               ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
                                 <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
@@ -739,6 +757,18 @@ export function EgresosPanel({
                 </>
               )
             })()}
+
+            <label style={{ ...payLabelStyle, marginTop: 14 }}>Fecha en que se realizó el pago *</label>
+            <input
+              type="date"
+              value={payFecha}
+              max={hoyMx}
+              onChange={(e) => setPayFecha(e.target.value)}
+              style={payInputStyle}
+            />
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+              El día real del pago (puede ser antes de hoy), no la fecha en que lo registras.
+            </p>
 
             <label style={{ ...payLabelStyle, marginTop: 14 }}>¿De dónde salió el pago? *</label>
             <select value={payForma} onChange={(e) => setPayForma(e.target.value)} style={payInputStyle}>
