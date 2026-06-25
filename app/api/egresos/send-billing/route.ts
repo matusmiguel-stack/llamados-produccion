@@ -80,7 +80,7 @@ function buildHtml(params: {
               <tr>
                 <td style="padding:16px 20px;">
                   <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;">Monto a facturar</p>
-                  <p style="margin:6px 0 0;font-size:18px;font-weight:700;color:#0f172a;font-family:monospace;">${montoStr} <span style="font-size:12px;font-weight:400;color:#64748b;">sin IVA</span></p>
+                  <p style="margin:6px 0 0;font-size:18px;font-weight:700;color:#0f172a;font-family:monospace;">${montoStr} <span style="font-size:12px;font-weight:400;color:#64748b;">más IVA</span></p>
                 </td>
               </tr>
             </table>
