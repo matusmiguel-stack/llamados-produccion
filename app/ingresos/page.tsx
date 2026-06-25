@@ -259,6 +259,13 @@ export default function IngresosPage() {
     if (editingId) {
       const { error } = await supabase.from("ingresos").update(payload).eq("id", editingId)
       if (error) { alert(error.message); setSaving(false); return }
+      // Mantener sincronizada la empresa con el proyecto vinculado: la información
+      // general del evento lee project.empresa, así que sin esto el cambio de
+      // empresa aquí no se reflejaba en el proyecto.
+      const linkedProjectId = ingresos.find(r => r.id === editingId)?.project_id
+      if (linkedProjectId) {
+        await supabase.from("projects").update({ empresa: form.empresa }).eq("id", linkedProjectId)
+      }
     } else {
       const { error } = await supabase.from("ingresos").insert(payload)
       if (error) { alert(error.message); setSaving(false); return }
