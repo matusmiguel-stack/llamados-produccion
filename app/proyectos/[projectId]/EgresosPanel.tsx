@@ -82,7 +82,7 @@ export function EgresosPanel({
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [employees, setEmployees]   = useState<Employee[]>([])
   const [editingId, setEditingId]   = useState<string | null>(null)
-  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "" })
+  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "" })
   const [saving, setSaving]         = useState(false)
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
   const [sendingAll, setSendingAll]  = useState(false)
