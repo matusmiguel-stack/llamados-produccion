@@ -15,6 +15,7 @@ import { DatePickerField } from "../../components/DatePickerField"
 const TIPOS_ENTREGA = [
   { label: "CDT Interna",       color: "#6366f1" },
   { label: "CDT Cliente",       color: "#0891b2" },
+  { label: "CDT Agencia",       color: "#d97706" },
   { label: "Entrega final",     color: "#16a34a" },
   { label: "Ronda Ajustes",     color: "#ea580c" },
   { label: "Edición y Post",    color: "#7c3aed" },
