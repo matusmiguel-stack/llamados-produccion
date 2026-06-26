@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
+import { RESPONSABLES } from "../../../lib/responsables"
 import { MatrizPanel } from "./MatrizPanel"
 import { HojaLlamadoPanel } from "./HojaLlamadoPanel"
 import { InformacionGeneralPanel } from "./InformacionGeneralPanel"
@@ -1161,6 +1162,9 @@ function QuoteModal({
   // Aprobar proyecto
   const [showAprobar, setShowAprobar] = useState(false)
   const [aprobarEmpresa, setAprobarEmpresa] = useState<"retro_studio" | "retro_films">("retro_studio")
+  const [aprobarResponsable, setAprobarResponsable] = useState<string>(
+    projectResponsable && RESPONSABLES.some(r => r.value === projectResponsable) ? projectResponsable : ""
+  )
   const [aproving, setAproving] = useState(false)
   const [yaAprobado, setYaAprobado] = useState(false)
 
@@ -1257,13 +1261,14 @@ function QuoteModal({
       }
     }
 
+    const responsable = aprobarResponsable || projectResponsable || null
     const iva = Math.round(total * 0.16 * 100) / 100
     const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
     const { error } = await supabase.from("ingresos").insert({
       empresa:         aprobarEmpresa,
       estatus:         "en_produccion",
       cliente_agencia: clientName,
-      responsable:     projectResponsable || null,
+      responsable,
       proyecto:        effectiveCode ? `${effectiveCode} ${projectName}` : projectName,
       subtotal:        total,
       iva,
@@ -1274,9 +1279,10 @@ function QuoteModal({
     })
     if (error) { alert(error.message); setAproving(false); return }
     await supabase.from("quotes").update({ status: "approved" }).eq("id", quote.id)
-    // Guardar la empresa en el proyecto (para facturación)
+    // Guardar empresa y responsable en el proyecto: el reporte de egresos lee
+    // project.responsable, así que sin esto el responsable no se reflejaba ahí.
     if (quote.project_id) {
-      await supabase.from("projects").update({ empresa: aprobarEmpresa }).eq("id", quote.project_id)
+      await supabase.from("projects").update({ empresa: aprobarEmpresa, responsable }).eq("id", quote.project_id)
     }
     setAproving(false)
     setYaAprobado(true)
@@ -1654,6 +1660,25 @@ function QuoteModal({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Responsable */}
+            <div style={{ marginTop: 16 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Responsable</p>
+              <select
+                value={aprobarResponsable}
+                onChange={(e) => setAprobarResponsable(e.target.value)}
+                style={{
+                  width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
+                  border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
+                  color: aprobarResponsable ? "#e2e8f0" : "#64748b", outline: "none",
+                }}
+              >
+                <option value="">Sin asignar</option>
+                {RESPONSABLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Actions */}

@@ -86,6 +86,23 @@ function itemAmount(item: QuoteItemRow): number {
   return item.qty * item.days * item.unit_price
 }
 
+// ¿El ítem ya tiene datos de liberación capturados? (no debe ocultarse nunca)
+function itemHasActual(item: QuoteItemRow): boolean {
+  return (
+    item.actual_qty != null || item.actual_days != null || item.actual_unit_price != null ||
+    item.actual_supplier_id != null || item.actual_employee_id != null
+  )
+}
+
+// Visibilidad en la liberación: en cotizaciones ya liberadas se muestra todo
+// (para no alterar lo existente). En liberaciones nuevas se ocultan los ítems
+// que se dejaron en ceros al cotizar (como en el PDF), salvo extras o ítems
+// que ya tengan gasto real capturado.
+function itemVisibleInLib(item: QuoteItemRow, released: boolean | null | undefined): boolean {
+  if (item.is_extra || released || itemHasActual(item)) return true
+  return item.qty !== 0 || item.days !== 0 || item.unit_price !== 0
+}
+
 // Actual raw amount. Starts at 0 until the user fills in at least one field.
 // Once ANY field is touched, use max(libVal, 1) as fallback for qty/days so
 // items saved with 0 in the cotización still produce a meaningful result.
@@ -161,6 +178,8 @@ export default function LiberarPage() {
   const [projectName, setProjectName] = useState("")
   const [clientName, setClientName] = useState("")
   const [extraExpenses, setExtraExpenses] = useState("")
+  // Revelar rubros vacíos (ocultos por defecto) para poder agregarles gastos no contemplados
+  const [showEmptyRubros, setShowEmptyRubros] = useState(false)
 
   // ── Add-proveedor modal ──────────────────────────────────────────────────
   const [showAddProv, setShowAddProv] = useState(false)
@@ -576,8 +595,27 @@ export default function LiberarPage() {
             </p>
           </div>
 
+          {/* Toggle para revelar rubros vacíos (ocultos por defecto en liberaciones nuevas) */}
+          {!quote?.released && sections.some((sec) => sec.items.every((i) => !itemVisibleInLib(i, quote?.released))) && (
+            <button
+              onClick={() => setShowEmptyRubros((v) => !v)}
+              style={{
+                alignSelf: "flex-start", padding: "7px 12px", borderRadius: 8, cursor: "pointer",
+                border: "1px solid rgba(148,163,184,0.18)", background: "rgba(255,255,255,0.04)",
+                color: "#94a3b8", fontSize: 12, fontWeight: 500,
+              }}
+            >
+              {showEmptyRubros ? "Ocultar rubros vacíos" : "Mostrar rubros vacíos (para agregar gastos no contemplados)"}
+            </button>
+          )}
+
           {/* Sections */}
           {sections.map((sec) => {
+            // Rubro sin nada cotizado: ocultarlo en liberaciones nuevas (como el PDF),
+            // salvo que el usuario pida verlos para agregar un gasto no contemplado.
+            const hasVisibleItems = sec.items.some((i) => itemVisibleInLib(i, quote?.released))
+            if (!hasVisibleItems && !showEmptyRubros) return null
+
             // Comparación por sección: gasto liberado vs gasto real (ambos sin markup)
             const secLib = sec.items.reduce((s, i) => s + libItemFinancials(i).gasto, 0)
             const secReal = sec.items.reduce(
@@ -708,12 +746,9 @@ export default function LiberarPage() {
                 {/* Items */}
                 <div style={{ display: "grid", gap: 6 }}>
                   {sec.items
-                    // Para cotizaciones aún no liberadas, ocultar ítems vacíos (qty=0, days=0, price=0)
-                    .filter((item) =>
-                      item.is_extra ||
-                      quote?.released ||
-                      item.qty !== 0 || item.days !== 0 || item.unit_price !== 0
-                    )
+                    // Ocultar ítems que se dejaron en ceros al cotizar (salvo extras,
+                    // cotizaciones ya liberadas, o ítems con gasto real ya capturado).
+                    .filter((item) => itemVisibleInLib(item, quote?.released))
                     .map((item) => {
                     const a = actuals[item.id] || {
                       qty: "",

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
+import { RESPONSABLES } from "../../lib/responsables"
 import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
 type Client = { id: string; name: string }
@@ -185,17 +186,6 @@ function buildQuoteSnapshot(s: {
 }): string {
   return JSON.stringify(s)
 }
-
-// Responsables asignables al aprobar un proyecto.
-// value = nombre completo (igual que en `employees`, para que el CC de
-// facturación y el mapeo a nickname funcionen); label = nickname mostrado.
-const RESPONSABLES: { value: string; label: string }[] = [
-  { value: "Miguel Matus Soler",         label: "Miguel" },
-  { value: "Adriana Barrera de la Vega", label: "Adrish" },
-  { value: "Maricela Peña Ahumada",      label: "Chelita" },
-  { value: "Diana Cobián Guevara",       label: "Diana" },
-  { value: "Carlos Javier Muñoz Matus",  label: "Charlie" },
-]
 
 type RubroFinancials = { gasto: number; utilidad: number; venta: number }
 
