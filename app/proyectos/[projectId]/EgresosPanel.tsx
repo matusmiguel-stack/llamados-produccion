@@ -34,7 +34,7 @@ type EgresoItem = {
   pago_fecha: string | null
 }
 
-type EditState = { qty: string; days: string; unit_price: string; contact: string }
+type EditState = { qty: string; days: string; unit_price: string; contact: string; fecha_pago: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -223,6 +223,7 @@ export function EgresosPanel({
       days:       item.actual_days       != null ? String(item.actual_days)       : "",
       unit_price: item.actual_unit_price != null ? String(item.actual_unit_price) : "",
       contact,
+      fecha_pago: item.pago_fecha ? String(item.pago_fecha).split("T")[0] : "",
     })
     setEditingId(item.id)
   }
@@ -240,9 +241,11 @@ export function EgresosPanel({
       if (editState.contact.startsWith("prov:")) actual_supplier_id = editState.contact.slice(5)
       else if (editState.contact.startsWith("emp:")) actual_employee_id = editState.contact.slice(4)
 
+      const pago_fecha = editState.fecha_pago !== "" ? editState.fecha_pago : null
+
       const { error } = await supabase
         .from("quote_items")
-        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id })
+        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha })
         .eq("id", itemId)
       if (error) throw error
 
@@ -250,7 +253,7 @@ export function EgresosPanel({
       const { label: supplierLabel, type: supplierType } = resolveLabel(proveedores, employees, editState.contact)
       setItems(prev => prev.map(it => {
         if (it.id !== itemId) return it
-        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType }
+        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha }
         // Recalcular monto — si queda en 0 lo quitamos
         const q2 = actual_qty        != null ? actual_qty        : Math.max(it.qty, 1)
         const d2 = actual_days       != null ? actual_days       : Math.max(it.days, 1)
@@ -606,8 +609,18 @@ export function EgresosPanel({
                           <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
                             {fmt(previewMonto)}
                           </td>
-                          {/* Status (vacío en edición) */}
-                          <td style={tdStyle} />
+                          {/* Fecha de pago (solo anticipo/comprobación) */}
+                          <td style={tdStyle}>
+                            {(item.pago_modo === "anticipo" || item.pago_modo === "comprobacion") && (
+                              <input
+                                type="date"
+                                value={editState.fecha_pago}
+                                onChange={e => setEditState(s => ({ ...s, fecha_pago: e.target.value }))}
+                                title="Fecha de pago"
+                                style={{ ...editInputStyle, width: 130 }}
+                              />
+                            )}
+                          </td>
                           {/* Acciones */}
                           <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
                             <button onClick={() => saveEdit(item.id)} disabled={saving} style={saveBtnStyle}>
