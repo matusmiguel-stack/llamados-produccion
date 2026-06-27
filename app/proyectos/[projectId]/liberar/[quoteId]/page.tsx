@@ -65,6 +65,7 @@ type Quote = {
   atencion: string | null
   released: boolean | null
   actual_extra_expenses: number | null
+  liberacion_oculta_ceros: boolean | null
 }
 
 type ItemActual = {
@@ -94,13 +95,15 @@ function itemHasActual(item: QuoteItemRow): boolean {
   )
 }
 
-// Visibilidad en la liberación: en cotizaciones ya liberadas se muestra todo
-// (para no alterar lo existente). En liberaciones nuevas se ocultan los ítems
-// que se dejaron en ceros al cotizar (como en el PDF), salvo extras o ítems
-// que ya tengan gasto real capturado.
-function itemVisibleInLib(item: QuoteItemRow, released: boolean | null | undefined): boolean {
-  if (item.is_extra || released || itemHasActual(item)) return true
-  return item.qty !== 0 || item.days !== 0 || item.unit_price !== 0
+// Visibilidad en la liberación. Extras y lo que ya tiene gasto real capturado
+// siempre se muestran. Si la cotización está exenta (las ya liberadas antes de
+// este cambio) se muestra todo. Si no, se ocultan los ítems que quedaron en
+// CERO al cotizar — medido por el MONTO (qty×días×precio), no por cada campo,
+// porque un ítem sin capturar se guarda como qty=1, days=1, precio=0.
+function itemVisibleInLib(item: QuoteItemRow, hideEmpty: boolean): boolean {
+  if (item.is_extra || itemHasActual(item)) return true
+  if (!hideEmpty) return true
+  return itemAmount(item) > 0
 }
 
 // Actual raw amount. Starts at 0 until the user fills in at least one field.
@@ -536,6 +539,10 @@ export default function LiberarPage() {
   const GRID =
     "1.8fr 52px 52px 88px 88px 52px 52px 88px 88px 1fr"
 
+  // ¿Ocultar rubros/ítems que quedaron en cero al cotizar? Sí por defecto;
+  // las cotizaciones ya liberadas antes de este cambio están exentas (flag false).
+  const hideEmpty = quote?.liberacion_oculta_ceros ?? true
+
   return (
     <div style={appShellStyle}>
       <AppSidebar
@@ -596,7 +603,7 @@ export default function LiberarPage() {
           </div>
 
           {/* Toggle para revelar rubros vacíos (ocultos por defecto en liberaciones nuevas) */}
-          {!quote?.released && sections.some((sec) => sec.items.every((i) => !itemVisibleInLib(i, quote?.released))) && (
+          {hideEmpty && sections.some((sec) => sec.items.every((i) => !itemVisibleInLib(i, hideEmpty))) && (
             <button
               onClick={() => setShowEmptyRubros((v) => !v)}
               style={{
@@ -613,7 +620,7 @@ export default function LiberarPage() {
           {sections.map((sec) => {
             // Rubro sin nada cotizado: ocultarlo en liberaciones nuevas (como el PDF),
             // salvo que el usuario pida verlos para agregar un gasto no contemplado.
-            const hasVisibleItems = sec.items.some((i) => itemVisibleInLib(i, quote?.released))
+            const hasVisibleItems = sec.items.some((i) => itemVisibleInLib(i, hideEmpty))
             if (!hasVisibleItems && !showEmptyRubros) return null
 
             // Comparación por sección: gasto liberado vs gasto real (ambos sin markup)
@@ -748,7 +755,7 @@ export default function LiberarPage() {
                   {sec.items
                     // Ocultar ítems que se dejaron en ceros al cotizar (salvo extras,
                     // cotizaciones ya liberadas, o ítems con gasto real ya capturado).
-                    .filter((item) => itemVisibleInLib(item, quote?.released))
+                    .filter((item) => itemVisibleInLib(item, hideEmpty))
                     .map((item) => {
                     const a = actuals[item.id] || {
                       qty: "",
