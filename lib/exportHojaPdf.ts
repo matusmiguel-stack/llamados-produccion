@@ -67,6 +67,10 @@ const PAGE_H = 279.4
 const MARGIN = 10
 const CONTENT_W = PAGE_W - MARGIN * 2
 
+// Si el crew supera este número de filas, se divide en 2 columnas (mitad y
+// mitad) para reducir la altura y que todo quede más grande en la hoja.
+const CREW_SPLIT_THRESHOLD = 16
+
 const C_BG_HEADER   = "#1a0a3e"
 const C_PURPLE      = "#7c3aed"
 const C_TEXT        = "#1e293b"
@@ -200,7 +204,11 @@ function estimateTotalHeight(data: HojaPDFData): number {
 
   if (locRows.length > 0)  h += 5.5 + 1 + 6 + locRows.length  * 6.5 + 3
   if (castRows.length > 0) h += 5.5 + 1 + 6 + castRows.length * 6.5 + 3
-  if (crewRows.length > 0) h += 5.5 + 1 + 6 + crewRows.length * 6.5 + 3
+  if (crewRows.length > 0) {
+    // En 2 columnas la altura es la de la columna más larga (la mitad).
+    const crewLines = crewRows.length > CREW_SPLIT_THRESHOLD ? Math.ceil(crewRows.length / 2) : crewRows.length
+    h += 5.5 + 1 + 6 + crewLines * 6.5 + 3
+  }
   if (hasNeeds)            h += 5.5 + 1 + 22 + 3
   if (hasLog)              h += 5.5 + 1 + 18 + 3
 
@@ -225,7 +233,7 @@ async function fetchImageBase64(url: string): Promise<string | null> {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
+export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   // Compute scale so everything fits on one page
   const estimatedH = estimateTotalHeight(data)
   const scale      = Math.min(1, (PAGE_H - 2) / estimatedH)
@@ -351,19 +359,43 @@ export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
   if (crewRows.length > 0) {
     y = sectionBar(doc, x, y, W, "Crew List", scale)
     y += s(1)
-    const crewCols = [
-      { header: "#",        width: W*0.04, align: "center" as const },
-      { header: "Puesto",   width: W*0.22 },
-      { header: "Nombre",   width: W*0.24 },
-      { header: "RETRO",    width: W*0.10, align: "center" as const, bgHex: "#4c1d95" },
-      { header: "LOCACIÓN", width: W*0.10, align: "center" as const, bgHex: "#0c4a6e" },
-      { header: "PICKUP",   width: W*0.10, align: "center" as const, bgHex: "#064e3b" },
-      { header: "Notas",    width: W*0.20 },
-    ]
-    y = drawTable(doc, x, y, W, crewCols,
-      crewRows.map((r, i) => [String(i+1), r.puesto, r.nombre, r.retro||"—", r.locacion||"—", r.pickup||"—", r.notas]),
-      scale)
-    y += s(3)
+
+    if (crewRows.length > CREW_SPLIT_THRESHOLD) {
+      // Crew largo → 2 columnas (mitad izquierda / mitad derecha) para ganar
+      // altura. Se omite "Notas" por espacio; las 3 horas (RETRO/LOC/PICK) sí.
+      const gap  = 4
+      const colW = (W - gap) / 2
+      const half = Math.ceil(crewRows.length / 2)
+      const cols2 = (cw: number) => [
+        { header: "#",      width: cw*0.06, align: "center" as const },
+        { header: "Puesto", width: cw*0.30 },
+        { header: "Nombre", width: cw*0.28 },
+        { header: "RETRO",  width: cw*0.12, align: "center" as const, bgHex: "#4c1d95" },
+        { header: "LOC.",   width: cw*0.12, align: "center" as const, bgHex: "#0c4a6e" },
+        { header: "PICK.",  width: cw*0.12, align: "center" as const, bgHex: "#064e3b" },
+      ]
+      const toRow = (r: CrewRowPDF, n: number) =>
+        [String(n), r.puesto, r.nombre, r.retro||"—", r.locacion||"—", r.pickup||"—"]
+      const yL = drawTable(doc, x, y, colW, cols2(colW),
+        crewRows.slice(0, half).map((r, i) => toRow(r, i + 1)), scale)
+      const yR = drawTable(doc, x + colW + gap, y, colW, cols2(colW),
+        crewRows.slice(half).map((r, i) => toRow(r, half + i + 1)), scale)
+      y = Math.max(yL, yR) + s(3)
+    } else {
+      const crewCols = [
+        { header: "#",        width: W*0.04, align: "center" as const },
+        { header: "Puesto",   width: W*0.22 },
+        { header: "Nombre",   width: W*0.24 },
+        { header: "RETRO",    width: W*0.10, align: "center" as const, bgHex: "#4c1d95" },
+        { header: "LOCACIÓN", width: W*0.10, align: "center" as const, bgHex: "#0c4a6e" },
+        { header: "PICKUP",   width: W*0.10, align: "center" as const, bgHex: "#064e3b" },
+        { header: "Notas",    width: W*0.20 },
+      ]
+      y = drawTable(doc, x, y, W, crewCols,
+        crewRows.map((r, i) => [String(i+1), r.puesto, r.nombre, r.retro||"—", r.locacion||"—", r.pickup||"—", r.notas]),
+        scale)
+      y += s(3)
+    }
   }
 
   // ── Necesidades ─────────────────────────────────────────────────
@@ -442,7 +474,11 @@ export async function exportHojaPdf(data: HojaPDFData, projectName?: string) {
   doc.text("RETRO CASA PRODUCTORA — Documento de uso interno", x, footerY + 3)
   doc.text("Pág. 1 / 1", x + W, footerY + 3, { align: "right" })
 
-  // ── Save ────────────────────────────────────────────────────────
+  return doc
+}
+
+export async function exportHojaPdf(data: HojaPDFData, _projectName?: string) {
+  const doc = await buildHojaDoc(data)
   const slug  = (data.titulo || "hoja-de-llamado").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
   const fecha = data.fecha_rodaje ? data.fecha_rodaje.replace(/-/g, "") : "sin-fecha"
   doc.save(`hoja-llamado_${slug}_${fecha}_dia${data.dia_num}.pdf`)
