@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -16,7 +17,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks" | "workspace"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -27,8 +28,9 @@ const ROLE_LABELS: Record<string, string> = {
 const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
 
 // roles: null/undefined = visible para todos; array = visible solo para esos roles
-const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
+export const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
   { href: "/",            label: "Calendario",   icon: "calendar"   },
+  { href: "/workspace",   label: "Escritorio",   icon: "workspace"  },
   { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "editor_premium", "productor", "viewer", "finanzas"] },
   { href: "/resources",   label: "Inventario",   icon: "inventory",  roles: ["admin", "editor", "editor_premium", "viewer"] },
   { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor", "editor_premium"] },
@@ -53,6 +55,13 @@ export function AppSidebar({
   onLogout,
 }: AppSidebarProps) {
   const pathname = usePathname()
+  // Dentro del Escritorio (pestañas) cada vista se carga en un iframe; ahí el
+  // sidebar se oculta para que el contenido ocupe todo el ancho (el Escritorio
+  // ya provee su propia navegación).
+  const [embedded, setEmbedded] = useState(false)
+  useEffect(() => {
+    try { setEmbedded(window.self !== window.top) } catch { setEmbedded(true) }
+  }, [])
   const email = profile?.email || user?.email || "..."
   const displayName = profile?.full_name || email.split("@")[0] || "Usuario"
   const role = profile?.role || "viewer"
@@ -66,6 +75,8 @@ export function AppSidebar({
     if (href === "/") return pathname === "/"
     return pathname.startsWith(href)
   }
+
+  if (embedded) return null
 
   return (
     <>
@@ -179,11 +190,20 @@ export function AppSidebar({
   )
 }
 
-function NavIcon({
+export function NavIcon({
   type,
 }: {
-  type: "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "employees" | "suppliers" | "users" | "ingresos" | "postpro" | "tasks"
+  type: NavIconType
 }) {
+  if (type === "workspace") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M9 5v14M15 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
   if (type === "calendar") {
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
