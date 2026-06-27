@@ -110,8 +110,8 @@ function drawTable(
 ): number {
   const headerH = 6 * scale
   const baseRH  = rowH * scale
-  const fs      = 6.5 * scale
-  const lineH   = 3.1 * scale
+  const fs      = 8.5 * scale   // +2 pts para legibilidad (las filas tienen holgura)
+  const lineH   = 3.4 * scale
 
   let cx = x
   setBg(doc, "#334155")
@@ -171,7 +171,7 @@ function sectionBar(doc: jsPDF, x: number, y: number, w: number, title: string, 
   doc.rect(x, y, w, h, "F")
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(7.5 * scale)
+  doc.setFontSize(9.5 * scale)
   doc.text(title.toUpperCase(), x + 2*scale, y + 3.8*scale)
   return y + h
 }
@@ -185,12 +185,12 @@ function kv(doc: jsPDF, x: number, y: number, w: number, label: string, value: s
 
   setColor(doc, C_MUTED)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(5.5 * scale)
+  doc.setFontSize(7 * scale)
   doc.text(label.toUpperCase(), x + 1.5*scale, y + 3*scale)
 
   setColor(doc, C_TEXT)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(7.5 * scale)
+  doc.setFontSize(9.5 * scale)
   const lines = doc.splitTextToSize(value || "—", w - 3*scale)
   doc.text(lines[0] || "—", x + 1.5*scale, y + 6.5*scale)
 }
@@ -264,17 +264,17 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
 
   // Medir cuántas líneas extra ocupan las notas del cast (se miden a escala 1 →
   // sobreestima un poco, lo cual es seguro: el contenido nunca se desborda).
-  const CAST_NOTES_MAX_LINES = 3
-  doc.setFont("helvetica", "normal"); doc.setFontSize(6.5)
+  const CAST_NOTES_MAX_LINES = 5
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5)
   let castExtraLines = 0
-  const castNotesW = W * 0.20 - 3
+  const castNotesW = W * 0.28 - 3
   for (const r of data.cast_list.filter((r) => r.nombre)) {
     const n = Math.min(CAST_NOTES_MAX_LINES, doc.splitTextToSize(r.notas || "", castNotesW).length || 1)
     castExtraLines += Math.max(0, n - 1)
   }
 
   // Escala SOLO del contenido (el header va a tamaño fijo, no se escala).
-  const contentBaseH = estimateTotalHeight(data) - 30 + castExtraLines * 3.1
+  const contentBaseH = estimateTotalHeight(data) - 30 + castExtraLines * 3.4
   const scale = Math.min(1, (PAGE_H - 2 - headerImgH) / contentBaseH)
   const s = (n: number) => n * scale
 
@@ -310,11 +310,11 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   doc.rect(x, y, W, s(8), "F")
   setColor(doc, "#ede9fe")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(s(8))
+  doc.setFontSize(s(10))
   doc.text(formatDate(data.fecha_rodaje) || "Fecha no definida", x + s(3), y + s(5))
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(s(9))
+  doc.setFontSize(s(11))
   doc.text(data.titulo || "Sin título", x + W/2, y + s(5), { align: "center" })
 
   y += s(10)
@@ -369,19 +369,19 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
     y += s(1)
     const castCols = [
       { header: "#",         width: W*0.04, align: "center" as const },
-      { header: "Nombre",    width: W*0.18 },
-      { header: "On loc.",   width: W*0.08, align: "center" as const },
-      { header: "Makeup",    width: W*0.08, align: "center" as const },
-      { header: "Hairdress", width: W*0.09, align: "center" as const },
-      { header: "Wardrobe",  width: W*0.09, align: "center" as const },
-      { header: "On set",    width: W*0.08, align: "center" as const },
-      { header: "Ensayo",    width: W*0.08, align: "center" as const },
-      { header: "Toma",      width: W*0.08, align: "center" as const },
-      { header: "Notas",     width: W*0.20 },
+      { header: "Nombre",    width: W*0.16 },
+      { header: "On loc.",   width: W*0.07, align: "center" as const },
+      { header: "Makeup",    width: W*0.07, align: "center" as const },
+      { header: "Hairdress", width: W*0.085, align: "center" as const },
+      { header: "Wardrobe",  width: W*0.085, align: "center" as const },
+      { header: "On set",    width: W*0.07, align: "center" as const },
+      { header: "Ensayo",    width: W*0.07, align: "center" as const },
+      { header: "Toma",      width: W*0.07, align: "center" as const },
+      { header: "Notas",     width: W*0.28 },
     ]
     y = drawTable(doc, x, y, W, castCols,
       castRows.map((r, i) => [r.num||String(i+1), r.nombre, r.on_loc, r.makeup, r.hairdress, r.wardrobe, r.on_set, r.ensayo, r.toma, r.notas]),
-      scale, 6.5, 3)
+      scale, 6.5, CAST_NOTES_MAX_LINES)
     y += s(3)
   }
 
@@ -451,11 +451,11 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
       doc.rect(nx, y, needW, needH, "FD")
       setColor(doc, C_MUTED)
       doc.setFont("helvetica", "bold")
-      doc.setFontSize(s(6))
+      doc.setFontSize(s(8))
       doc.text(nd.label.toUpperCase(), nx + s(1.5), y + s(3.5))
       setColor(doc, C_TEXT)
       doc.setFont("helvetica", "normal")
-      doc.setFontSize(s(7))
+      doc.setFontSize(s(9))
       const lines = doc.splitTextToSize(nd.value || "—", needW - s(3))
       doc.text(lines.slice(0, 4), nx + s(1.5), y + s(7.5))
     }
@@ -483,11 +483,11 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
       doc.rect(lx, y, col3, logH, "FD")
       setColor(doc, C_MUTED)
       doc.setFont("helvetica", "bold")
-      doc.setFontSize(s(6))
+      doc.setFontSize(s(8))
       doc.text(item.label.toUpperCase(), lx + s(1.5), y + s(3.5))
       setColor(doc, C_TEXT)
       doc.setFont("helvetica", "normal")
-      doc.setFontSize(s(7))
+      doc.setFontSize(s(9))
       const lines = doc.splitTextToSize(item.value || "—", col3 - s(3))
       doc.text(lines.slice(0, 3), lx + s(1.5), y + s(7.5))
     }
@@ -501,7 +501,7 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   doc.line(x, footerY, x + W, footerY)
   setColor(doc, "#94a3b8")
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(6)
+  doc.setFontSize(7.5)
   doc.text("RETRO CASA PRODUCTORA — Documento de uso interno", x, footerY + 3)
   doc.text("Pág. 1 / 1", x + W, footerY + 3, { align: "right" })
 
