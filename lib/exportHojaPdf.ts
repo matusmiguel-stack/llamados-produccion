@@ -106,10 +106,12 @@ function drawTable(
   rows: string[][],
   scale: number,
   rowH = 6.5,
+  maxLines = 1,   // máximo de líneas por celda; si >1, las filas crecen para no cortar texto
 ): number {
   const headerH = 6 * scale
-  const rH      = rowH * scale
-  const fs       = 6.5 * scale
+  const baseRH  = rowH * scale
+  const fs      = 6.5 * scale
+  const lineH   = 3.1 * scale
 
   let cx = x
   setBg(doc, "#334155")
@@ -129,6 +131,12 @@ function drawTable(
   y += headerH
 
   for (let ri = 0; ri < rows.length; ri++) {
+    // Envolver cada celda hasta maxLines y calcular el alto de la fila.
+    const cellLines = cols.map((col, ci) =>
+      doc.splitTextToSize(rows[ri][ci] || "", col.width - 3*scale).slice(0, maxLines))
+    const nLines = Math.max(1, ...cellLines.map((l) => l.length))
+    const rH = nLines <= 1 ? baseRH : Math.max(baseRH, nLines * lineH + 2.4 * scale)
+
     cx = x
     setBg(doc, ri % 2 === 0 ? C_ROW : C_ROW_ALT)
     doc.rect(x, y, tableW, rH, "F")
@@ -137,15 +145,19 @@ function drawTable(
     doc.rect(x, y, tableW, rH, "S")
 
     for (let ci = 0; ci < cols.length; ci++) {
-      const col  = cols[ci]
-      const cell = rows[ri][ci] || ""
+      const col   = cols[ci]
+      const lines = cellLines[ci]
       setColor(doc, C_TEXT)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(fs)
-      const maxW = col.width - 3*scale
-      const lines = doc.splitTextToSize(cell, maxW)
       const tx = col.align === "center" ? cx + col.width/2 : col.align === "right" ? cx + col.width - 1.5*scale : cx + 1.5*scale
-      doc.text(lines[0] || "", tx, y + rH/2 + 1.8*scale, { align: col.align || "left" })
+      if (lines.length <= 1) {
+        doc.text(lines[0] || "", tx, y + rH/2 + 1.8*scale, { align: col.align || "left" })
+      } else {
+        for (let li = 0; li < lines.length; li++) {
+          doc.text(lines[li], tx, y + lineH + li*lineH, { align: col.align || "left" })
+        }
+      }
       cx += col.width
     }
     y += rH
@@ -234,20 +246,39 @@ async function fetchImageBase64(url: string): Promise<string | null> {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
-  // Compute scale so everything fits on one page
-  const estimatedH = estimateTotalHeight(data)
-  const scale      = Math.min(1, (PAGE_H - 2) / estimatedH)
-
-  const s = (n: number) => n * scale   // scale a base dimension
-
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" })
-
-  const headerDataUrl  = await fetchImageBase64("/pdf-header-detail.png")
-  const headerImgH     = s(30)
-
-  let y = 0
   const x = MARGIN
   const W = CONTENT_W
+
+  // ── Header: altura FIJA según la proporción real de la imagen (a ancho
+  // completo). Antes el alto se escalaba con el contenido pero el ancho no, y
+  // por eso se deformaba. Con getImageProperties se adapta a cualquier imagen.
+  const headerDataUrl = await fetchImageBase64("/pdf-header-detail.png")
+  let headerImgH = 30
+  if (headerDataUrl) {
+    try {
+      const p = doc.getImageProperties(headerDataUrl)
+      if (p?.width && p?.height) headerImgH = PAGE_W * (p.height / p.width)
+    } catch { headerImgH = 30 }
+  }
+
+  // Medir cuántas líneas extra ocupan las notas del cast (se miden a escala 1 →
+  // sobreestima un poco, lo cual es seguro: el contenido nunca se desborda).
+  const CAST_NOTES_MAX_LINES = 3
+  doc.setFont("helvetica", "normal"); doc.setFontSize(6.5)
+  let castExtraLines = 0
+  const castNotesW = W * 0.20 - 3
+  for (const r of data.cast_list.filter((r) => r.nombre)) {
+    const n = Math.min(CAST_NOTES_MAX_LINES, doc.splitTextToSize(r.notas || "", castNotesW).length || 1)
+    castExtraLines += Math.max(0, n - 1)
+  }
+
+  // Escala SOLO del contenido (el header va a tamaño fijo, no se escala).
+  const contentBaseH = estimateTotalHeight(data) - 30 + castExtraLines * 3.1
+  const scale = Math.min(1, (PAGE_H - 2 - headerImgH) / contentBaseH)
+  const s = (n: number) => n * scale
+
+  let y = 0
 
   // ── Header image ────────────────────────────────────────────────
   if (headerDataUrl) {
@@ -257,20 +288,20 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
     doc.rect(0, 0, PAGE_W, headerImgH, "F")
     setColor(doc, "#ffffff")
     doc.setFont("helvetica", "bold")
-    doc.setFontSize(s(11))
-    doc.text("RETRO CASA PRODUCTORA", x + s(3), s(12))
+    doc.setFontSize(11)
+    doc.text("RETRO CASA PRODUCTORA", x + 3, 12)
   }
 
-  // Día X / Y
+  // Día X / Y — tamaño fijo (el header no se escala)
   const centerX = PAGE_W / 2
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(s(22))
-  doc.text(`DÍA ${data.dia_num}`, centerX, headerImgH/2 - s(1), { align: "center" })
+  doc.setFontSize(22)
+  doc.text(`DÍA ${data.dia_num}`, centerX, headerImgH/2 - 1, { align: "center" })
   setColor(doc, "#a78bfa")
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(s(8))
-  doc.text(`de ${data.dia_total}`, centerX, headerImgH/2 + s(6), { align: "center" })
+  doc.setFontSize(8)
+  doc.text(`de ${data.dia_total}`, centerX, headerImgH/2 + 6, { align: "center" })
 
   y = headerImgH + s(4)
 
@@ -350,7 +381,7 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
     ]
     y = drawTable(doc, x, y, W, castCols,
       castRows.map((r, i) => [r.num||String(i+1), r.nombre, r.on_loc, r.makeup, r.hairdress, r.wardrobe, r.on_set, r.ensayo, r.toma, r.notas]),
-      scale)
+      scale, 6.5, 3)
     y += s(3)
   }
 
