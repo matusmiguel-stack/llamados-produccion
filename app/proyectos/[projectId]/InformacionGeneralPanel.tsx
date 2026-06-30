@@ -72,8 +72,10 @@ function fmtTime(iso: string) {
 
 function libItemFin(item: QuoteItem) {
   const amount = item.qty * item.days * item.unit_price
-  if (item.real_expense === 1) return { gasto: 0, utilidad: amount, venta: amount }
   const u = amount * ((item.released_expense || 0) / 100)
+  // Interno (real_expense===1): no genera gasto; el monto + markup va completo a
+  // utilidad y venta — igual que calcItem() en la cotización.
+  if (item.real_expense === 1) return { gasto: 0, utilidad: amount + u, venta: amount + u }
   return { gasto: amount, utilidad: u, venta: amount + u }
 }
 
