@@ -38,6 +38,19 @@ type ProveedorResult = {
 
 type SearchResult = ClientResult | ProjectResult | EmpleadoResult | ProveedorResult
 
+// Construye un patrón regex insensible a acentos para el operador `imatch` (~*)
+// de Postgres. Así "Teran" encuentra "Terán" y "Terán" encuentra "Teran".
+// Se conservan solo letras/números/espacios para no romper el parser de `.or()`.
+function accentInsensitivePattern(q: string): string {
+  const groups: Record<string, string> = {
+    a: "[aáàäâã]", e: "[eéèëê]", i: "[iíìïî]",
+    o: "[oóòöôõ]", u: "[uúùüû]", n: "[nñ]", c: "[cç]",
+  }
+  const base = q.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  const clean = base.replace(/[^a-z0-9 ]/g, " ").trim()
+  return clean.replace(/[a-z]/g, (ch) => groups[ch] ?? ch)
+}
+
 export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter()
   const [query, setQuery] = useState("")
@@ -89,13 +102,14 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const pattern = `%${q}%`
+        const rx = accentInsensitivePattern(q)
+        if (!rx) { setResults([]); setLoading(false); return }
 
         // Clients first so we can use their IDs in the project-count query
         const { data: clients } = await supabase
           .from("clients")
           .select("id, name")
-          .ilike("name", pattern)
+          .or(`name.imatch.${rx}`)
           .limit(5)
 
         const clientIds = (clients || []).map((c: any) => c.id)
@@ -109,7 +123,7 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
           supabase
             .from("projects")
             .select("id, name, code, responsable, client_id, subfolder_id, clients(name), client_subfolders(name)")
-            .or(`name.ilike.${pattern},code.ilike.${pattern}`)
+            .or(`name.imatch.${rx},code.imatch.${rx}`)
             .limit(8),
           // Project counts per matched client
           clientIds.length > 0
@@ -118,12 +132,12 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
           supabase
             .from("employees")
             .select("id, nombre, apellido_paterno, apellido_materno, puesto, nickname")
-            .or(`nombre.ilike.${pattern},apellido_paterno.ilike.${pattern},apellido_materno.ilike.${pattern},nickname.ilike.${pattern}`)
+            .or(`nombre.imatch.${rx},apellido_paterno.imatch.${rx},apellido_materno.imatch.${rx},nickname.imatch.${rx}`)
             .limit(5),
           supabase
             .from("proveedores")
             .select("id, nombre, apellido, empresa, actividad")
-            .or(`nombre.ilike.${pattern},apellido.ilike.${pattern},empresa.ilike.${pattern}`)
+            .or(`nombre.imatch.${rx},apellido.imatch.${rx},empresa.imatch.${rx}`)
             .limit(5),
         ])
 
