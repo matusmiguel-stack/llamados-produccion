@@ -11,6 +11,7 @@ const EQUIPO_EMAILS = [
   "rodrigo@retrocasaproductora.com",
   "araceli@retrocasaproductora.com",
   "marco@retrocasaproductora.com",
+  "adriana@retrocasaproductora.com",
 ]
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
