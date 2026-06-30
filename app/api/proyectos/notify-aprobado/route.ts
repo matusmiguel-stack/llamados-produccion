@@ -14,7 +14,7 @@ const EQUIPO_EMAILS = [
   "adriana@retrocasaproductora.com",
 ]
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.retrocasaproductora.com"
 
 const EMPRESA_LABEL: Record<string, string> = {
   retro_studio: "Retro Studio",
