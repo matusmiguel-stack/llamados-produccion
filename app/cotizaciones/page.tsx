@@ -1171,13 +1171,6 @@ export default function CotizacionesPage() {
               <Field label="Nombre de la cotización">
                 <input value={quoteName} onChange={(e) => setQuoteName(e.target.value)} placeholder="Ej. Propuesta v1" style={inputStyle} />
               </Field>
-              <Field label="Estado">
-                <select value={status} onChange={(e) => setStatus(e.target.value as any)} style={inputStyle}>
-                  <option value="draft">Borrador</option>
-                  <option value="sent">Enviada</option>
-                  <option value="approved">Aprobada</option>
-                </select>
-              </Field>
               <Field label="Markup %">
                 <div style={{ position: "relative" }}>
                   <input

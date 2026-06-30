@@ -1114,11 +1114,7 @@ function QuotesPanel({
                 </p>
               </div>
               <span style={statusBadgeStyle(q.status)}>
-                {q.status === "draft"
-                  ? "Borrador"
-                  : q.status === "sent"
-                    ? "Enviada"
-                    : "Aprobada"}
+                {q.status === "approved" ? "APROBADO" : "DRAFT"}
               </span>
               <span style={quoteRowArrowStyle}>→</span>
             </button>
@@ -1325,11 +1321,7 @@ function QuoteModal({
             <h2 style={modalTitleStyle}>{quote.name}</h2>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
               <span style={statusBadgeStyle(quote.status)}>
-                {quote.status === "draft"
-                  ? "Borrador"
-                  : quote.status === "sent"
-                    ? "Enviada"
-                    : "Aprobada"}
+                {quote.status === "approved" ? "APROBADO" : "DRAFT"}
               </span>
               <span style={{ color: "#64748b", fontSize: 12 }}>
                 Markup {quote.markup_percentage}%
@@ -1900,14 +1892,14 @@ function statusBadgeStyle(
 ): React.CSSProperties {
   const map = {
     draft: {
-      bg: "rgba(148,163,184,0.10)",
-      border: "rgba(148,163,184,0.18)",
-      text: "#94a3b8",
+      bg: "rgba(249,115,22,0.12)",
+      border: "rgba(251,146,60,0.30)",
+      text: "#fdba74",
     },
     sent: {
-      bg: "rgba(14,165,233,0.12)",
-      border: "rgba(56,189,248,0.22)",
-      text: "#bae6fd",
+      bg: "rgba(249,115,22,0.12)",
+      border: "rgba(251,146,60,0.30)",
+      text: "#fdba74",
     },
     approved: {
       bg: "rgba(34,197,94,0.12)",
