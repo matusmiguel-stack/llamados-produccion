@@ -42,7 +42,7 @@ function getResend() {
 }
 
 const FROM = "Retro <news@retrocasaproductora.com>"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://llamados-produccion-51t3.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.retrocasaproductora.com"
 
 // Gente interna de Retro siempre con su nickname
 const dispName = (e: any) => (e?.nickname?.trim() || e?.nombre || "")
