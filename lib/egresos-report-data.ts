@@ -21,7 +21,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
   ])
 
   const { data: quotes } = await supabase
-    .from("quotes").select("id").eq("project_id", projectId).eq("released", true)
+    .from("quotes").select("id,markup_percentage").eq("project_id", projectId).eq("released", true)
 
   type Item = {
     id: string; seccion: string; concepto: string; proveedor: string; monto: number
@@ -30,15 +30,27 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
   }
   const items: Item[] = []
 
+  // Venta al cliente proyectada, calculada en vivo desde la cotización liberada
+  // (misma fórmula que la cotización y el panel: monto × (1 + markup/100) por
+  // cada ítem, incluidos los internos, más el markup general del proyecto).
+  // Antes se leía de ingresos.subtotal, que quedaba congelado al aprobar y no
+  // reflejaba cambios posteriores en la cotización.
+  let cobradoCalc = 0
+
   for (const quote of quotes || []) {
+    const markupPct = Number((quote as any).markup_percentage || 0)
+    let ventaQuote = 0
     const { data: sections } = await supabase
       .from("quote_sections").select("id,name").eq("quote_id", quote.id).order("order_index")
     for (const section of sections || []) {
       const { data: raw } = await supabase
         .from("quote_items")
-        .select("id,description,qty,days,unit_price,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,pago_estado,pago_modo")
+        .select("id,description,qty,days,unit_price,released_expense,actual_qty,actual_days,actual_unit_price,actual_supplier_id,actual_employee_id,pago_estado,pago_modo")
         .eq("section_id", section.id).order("order_index")
       for (const row of (raw as any[]) || []) {
+        // Proyección de venta de TODOS los ítems (no solo los que ya tienen real)
+        ventaQuote += (row.qty || 0) * (row.days || 0) * (row.unit_price || 0) * (1 + (row.released_expense || 0) / 100)
+
         const hasReal = row.actual_qty != null || row.actual_days != null || row.actual_unit_price != null
         if (!hasReal) continue
         const q = row.actual_qty        != null ? row.actual_qty        : Math.max(row.qty  || 0, 1)
@@ -74,6 +86,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
         })
       }
     }
+    cobradoCalc += ventaQuote * (1 + markupPct / 100)
   }
 
   // El responsable se guarda como nombre completo; mostrar su nickname.
@@ -95,7 +108,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     empresa: meta.empresa,
     cliente: (ingreso as any)?.cliente_agencia || "",
     responsable: nickOf(meta.responsable),
-    cobrado: Number(ingreso?.subtotal || 0),
+    cobrado: cobradoCalc > 0 ? Math.round(cobradoCalc * 100) / 100 : Number(ingreso?.subtotal || 0),
     items,
     facturas: (facturas as any[]) || [],
   }
