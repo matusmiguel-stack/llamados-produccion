@@ -33,8 +33,9 @@ export function mapMatchToPartido(match: Record<string, unknown>) {
     bandera_local: home.crest ?? '',
     equipo_visitante: away.name,
     bandera_visitante: away.crest ?? '',
-    goles_local: score?.fullTime?.home ?? null,
-    goles_visitante: score?.fullTime?.away ?? null,
+    // Usar regularTime si existe (eliminatorias con penales), si no fullTime
+    goles_local: score?.regularTime?.home ?? score?.fullTime?.home ?? null,
+    goles_visitante: score?.regularTime?.away ?? score?.fullTime?.away ?? null,
     estado,
   }
 }
