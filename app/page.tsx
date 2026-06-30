@@ -3359,6 +3359,7 @@ function openEditVacation() {
                       setJuntaNotas(selectedJunta.notas || "")
                       setJuntaLink(selectedJunta.link || "")
                       setJuntaAttendees(juntaAttendeeMap[selectedJunta.id] || [])
+                      setJuntaExternalEmails(selectedJunta.external_emails || [])
                       setEntryMode("junta")
                       setJuntaDetailsOpen(false)
                       setModalOpen(true)
