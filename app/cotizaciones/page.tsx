@@ -330,6 +330,20 @@ export default function CotizacionesPage() {
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
+  // Evitar que la rueda del mouse cambie el valor de los campos numéricos al
+  // scrollear sobre ellos: al hacer wheel sobre un input[type=number] enfocado
+  // le quitamos el foco, así la página scrollea sin alterar las cantidades.
+  useEffect(() => {
+    function onWheel(e: WheelEvent) {
+      const el = document.activeElement as HTMLElement | null
+      if (el instanceof HTMLInputElement && el.type === "number" && el === e.target) {
+        el.blur()
+      }
+    }
+    document.addEventListener("wheel", onWheel, { passive: true })
+    return () => document.removeEventListener("wheel", onWheel)
+  }, [])
+
   useEffect(() => {
     async function load() {
       const auth = await requireSessionProfile()
