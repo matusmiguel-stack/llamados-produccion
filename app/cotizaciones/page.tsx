@@ -929,6 +929,24 @@ export default function CotizacionesPage() {
       await supabase.from("projects").update({ empresa: aprobarEmpresa, responsable }).eq("id", projectId)
       setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, responsable } : p))
     }
+
+    // Avisar por correo al equipo + responsable que se aprobó el proyecto.
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      await fetch("/api/proyectos/notify-aprobado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          projectId,
+          projectCode,
+          projectName,
+          responsableNombre: responsable,
+          empresa: aprobarEmpresa,
+          costoSinIva: subtotal,
+        }),
+      })
+    } catch { /* el correo no debe bloquear la aprobación */ }
+
     setStatus("approved")
     setYaAprobado(true)
 

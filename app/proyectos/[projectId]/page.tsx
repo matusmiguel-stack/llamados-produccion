@@ -1284,6 +1284,24 @@ function QuoteModal({
     if (quote.project_id) {
       await supabase.from("projects").update({ empresa: aprobarEmpresa, responsable }).eq("id", quote.project_id)
     }
+
+    // Avisar por correo al equipo + responsable que se aprobó el proyecto.
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      await fetch("/api/proyectos/notify-aprobado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          projectId: quote.project_id,
+          projectCode: effectiveCode,
+          projectName,
+          responsableNombre: responsable,
+          empresa: aprobarEmpresa,
+          costoSinIva: total,
+        }),
+      })
+    } catch { /* el correo no debe bloquear la aprobación */ }
+
     setAproving(false)
     setYaAprobado(true)
     setShowAprobar(false)
