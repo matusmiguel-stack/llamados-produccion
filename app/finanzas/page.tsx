@@ -60,11 +60,22 @@ function fechaCorta(iso: string | null): string {
   return new Date(y, m - 1, day).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
 }
 
+function fechaViernes(iso: string): string {
+  const [y, m, day] = iso.split("T")[0].split("-").map(Number)
+  const s = new Date(y, m - 1, day).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function todayISO(): string {
+  return new Date().toLocaleDateString("sv")
+}
+
 export default function FinanzasPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [facturas, setFacturas] = useState<Factura[]>([])
   const [filter, setFilter] = useState<"todas" | "aceptada" | "pagada" | "rechazada" | "reembolso">("todas")
+  const [view, setView] = useState<"lista" | "viernes">("lista")
   const [search, setSearch] = useState("")
   const [working, setWorking] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -161,6 +172,35 @@ export default function FinanzasPage() {
   )
   const totalViernes = pagosEsteViernes.reduce((s, f) => s + Number(f.subtotal || 0), 0)
 
+  // Agrupar las facturas por pagar según su viernes de vencimiento (fecha_pago).
+  // fecha_pago ya viene redondeada a viernes desde la recepción de facturas.
+  const pagosPorViernes = useMemo(() => {
+    const hoy = todayISO()
+    const map = new Map<string, Factura[]>()
+    for (const f of facturas) {
+      if (f.status !== "aceptada" || !f.fecha_pago) continue
+      const k = f.fecha_pago.split("T")[0]
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(f)
+    }
+    return [...map.entries()]
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([fecha, fs]) => {
+        const total = fs.reduce((s, f) => s + Number(f.subtotal || 0), 0)
+        const provMap = new Map<string, { nombre: string; total: number; count: number; proyectos: Set<string> }>()
+        for (const f of fs) {
+          const key = provLabel(f)
+          if (!provMap.has(key)) provMap.set(key, { nombre: key, total: 0, count: 0, proyectos: new Set() })
+          const p = provMap.get(key)!
+          p.total += Number(f.subtotal || 0)
+          p.count += 1
+          p.proyectos.add(projLabel(f))
+        }
+        const proveedores = [...provMap.values()].sort((a, b) => b.total - a.total)
+        return { fecha, total, count: fs.length, proveedores, vencido: fecha < hoy }
+      })
+  }, [facturas])
+
   async function logout() {
     await supabase.auth.signOut()
     window.location.href = "/login"
@@ -209,6 +249,59 @@ export default function FinanzasPage() {
             <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada").length} facturas</p>
           </div>
         </div>
+
+        {/* Toggle de vista */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {(["lista", "viernes"] as const).map(v => (
+            <button key={v} onClick={() => setView(v)} style={filterBtnStyle(view === v)}>
+              {v === "lista" ? "📋 Lista" : "📅 Calendario de viernes"}
+            </button>
+          ))}
+        </div>
+
+        {view === "viernes" && (
+          pagosPorViernes.length === 0 ? (
+            <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
+              No hay pagos pendientes programados.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {pagosPorViernes.map(v => (
+                <div key={v.fecha} style={{ padding: "18px 20px", background: "rgba(255,255,255,0.03)", border: `1px solid ${v.vencido ? "rgba(248,113,113,0.30)" : "rgba(148,163,184,0.12)"}`, borderRadius: 14 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{fechaViernes(v.fecha)}</span>
+                        {v.vencido && (
+                          <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}>Atrasado</span>
+                        )}
+                      </div>
+                      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                        {v.proveedores.length} proveedor{v.proveedores.length !== 1 ? "es" : ""} · {v.count} factura{v.count !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace", color: v.vencido ? "#f87171" : "#fbbf24" }}>{fmtMx(v.total)}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {v.proveedores.map(p => (
+                      <div key={p.nombre} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>{p.nombre}</span>
+                          <span style={{ color: "#64748b", fontSize: 12, marginLeft: 8 }}>
+                            {[...p.proyectos].join(", ")}{p.count > 1 ? ` · ${p.count} facturas` : ""}
+                          </span>
+                        </div>
+                        <span style={{ color: "#cbd5e1", fontWeight: 700, fontFamily: "monospace", fontSize: 14 }}>{fmtMx(p.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {view === "lista" && (<>
 
         {/* Pagos este viernes */}
         {pagosEsteViernes.length > 0 && (
@@ -318,6 +411,8 @@ export default function FinanzasPage() {
             ))}
           </div>
         )}
+
+        </>)}
       </main>
     </div>
   )
