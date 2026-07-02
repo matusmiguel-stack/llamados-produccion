@@ -221,7 +221,7 @@ export default function IngresosPage() {
       estatus:          r.estatus,
       cliente_agencia:  r.cliente_agencia,
       responsable:      r.responsable || "",
-      proyecto:         r.proyecto,
+      proyecto:         proyectoLabel(r),
       numero_factura:   r.numero_factura || "",
       subtotal:         String(r.subtotal),
       iva:              String(r.iva),
@@ -233,6 +233,17 @@ export default function IngresosPage() {
     setShowModal(true)
   }
 
+  // Nombre del proyecto a mostrar: para ingresos vinculados se toma SIEMPRE del
+  // proyecto (código + nombre), así coincide con la sección de Proyectos y no
+  // depende de un texto que pueda quedar desactualizado.
+  function proyectoLabel(r: Ingreso): string {
+    if (r.project_id) {
+      const p = projects.find(x => x.id === r.project_id)
+      if (p) return p.code ? `${p.code} ${p.name}` : p.name
+    }
+    return r.proyecto
+  }
+
   // ── Save ────────────────────────────────────────────────────────────────────
   async function handleSave() {
     if (!form.cliente_agencia.trim() || !form.proyecto.trim()) {
@@ -240,13 +251,17 @@ export default function IngresosPage() {
       return
     }
     setSaving(true)
+    // Para ingresos vinculados, el nombre del proyecto se toma SIEMPRE del proyecto
+    // (código + nombre), nunca del texto editado — así no se puede cambiar el código.
+    const linkedForSave = editingId ? ingresos.find(r => r.id === editingId) : null
+    const proyectoFinal = linkedForSave?.project_id ? proyectoLabel(linkedForSave) : form.proyecto.trim()
     const payload = {
       empresa:          form.empresa,
       odc:              form.odc.trim() || null,
       estatus:          form.estatus,
       cliente_agencia:  form.cliente_agencia.trim(),
       responsable:      form.responsable.trim() || null,
-      proyecto:         form.proyecto.trim(),
+      proyecto:         proyectoFinal,
       numero_factura:   form.numero_factura.trim() || null,
       subtotal:         parseFloat(form.subtotal) || 0,
       iva:              parseFloat(form.iva) || 0,
@@ -341,6 +356,12 @@ export default function IngresosPage() {
   if (!profile) return null
 
   if (!profile) return <PageLoader />
+
+  // ¿El ingreso que se está editando está vinculado a un proyecto? Si lo está,
+  // el nombre/código del proyecto es de solo lectura para no romper el vínculo.
+  const editingIngreso = editingId ? ingresos.find(r => r.id === editingId) : null
+  const editingLinked = !!editingIngreso?.project_id
+
   return (
     <div style={layoutStyle}>
       <AppSidebar
@@ -506,12 +527,12 @@ export default function IngresosPage() {
                           <Link
                             href={`/proyectos/${r.project_id}`}
                             style={{ color: "#a78bfa", textDecoration: "none" }}
-                            title={r.proyecto}
+                            title={proyectoLabel(r)}
                           >
-                            {r.proyecto}
+                            {proyectoLabel(r)}
                           </Link>
                         ) : (
-                          r.proyecto
+                          proyectoLabel(r)
                         )}
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>{r.numero_factura || "—"}</td>
@@ -605,36 +626,54 @@ export default function IngresosPage() {
                 </FormField>
               </div>
 
-              {/* Row 3: Proyecto vinculado (auto-fill responsable) */}
-              <FormField label="Vincular a proyecto (opcional — auto-rellena responsable)">
-                <select
-                  style={inputStyle}
-                  value=""
-                  onChange={e => {
-                    const proj = projects.find(p => p.id === e.target.value)
-                    if (!proj) return
-                    const projLabel = proj.code ? `${proj.code} ${proj.name}` : proj.name
-                    setForm(f => ({
-                      ...f,
-                      proyecto:        f.proyecto || projLabel,
-                      cliente_agencia: f.cliente_agencia || proj.clientName,
-                      responsable:     proj.responsable || f.responsable,
-                    }))
-                  }}
-                >
-                  <option value="">— Seleccionar proyecto —</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.code ? `${p.code} ` : ""}{p.name}{p.clientName ? ` · ${p.clientName}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
+              {editingLinked ? (
+                /* Ingreso vinculado a un proyecto: nombre/código de solo lectura */
+                <FormField label="Proyecto (vinculado)">
+                  <input
+                    value={form.proyecto}
+                    readOnly
+                    disabled
+                    style={{ ...inputStyle, opacity: 0.7, cursor: "not-allowed" }}
+                  />
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                    El nombre se toma del proyecto vinculado. Para cambiar el código o el nombre,
+                    edítalo en la sección de Proyectos y aquí se actualiza solo.
+                  </p>
+                </FormField>
+              ) : (
+                <>
+                  {/* Row 3: Proyecto vinculado (auto-fill responsable) */}
+                  <FormField label="Vincular a proyecto (opcional — auto-rellena responsable)">
+                    <select
+                      style={inputStyle}
+                      value=""
+                      onChange={e => {
+                        const proj = projects.find(p => p.id === e.target.value)
+                        if (!proj) return
+                        const projLabel = proj.code ? `${proj.code} ${proj.name}` : proj.name
+                        setForm(f => ({
+                          ...f,
+                          proyecto:        f.proyecto || projLabel,
+                          cliente_agencia: f.cliente_agencia || proj.clientName,
+                          responsable:     proj.responsable || f.responsable,
+                        }))
+                      }}
+                    >
+                      <option value="">— Seleccionar proyecto —</option>
+                      {projects.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.code ? `${p.code} ` : ""}{p.name}{p.clientName ? ` · ${p.clientName}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
 
-              {/* Row 3b: Nombre del proyecto (texto libre) */}
-              <FormField label="Proyecto *">
-                <input value={form.proyecto} onChange={e => setForm(f => ({ ...f, proyecto: e.target.value }))} style={inputStyle} placeholder="ej. RS1126 - Hazle Caso a tu Negocio" />
-              </FormField>
+                  {/* Row 3b: Nombre del proyecto (texto libre) */}
+                  <FormField label="Proyecto *">
+                    <input value={form.proyecto} onChange={e => setForm(f => ({ ...f, proyecto: e.target.value }))} style={inputStyle} placeholder="ej. RS1126 - Hazle Caso a tu Negocio" />
+                  </FormField>
+                </>
+              )}
 
               {/* Row 4: ODC + Factura */}
               <div style={rowStyle}>
