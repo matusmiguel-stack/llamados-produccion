@@ -79,6 +79,8 @@ export default function ProyectosPage() {
   const [renameDescription, setRenameDescription] = useState("")
   const [moveTargetSubfolderId, setMoveTargetSubfolderId] = useState("")
   const [moveTargetClientId, setMoveTargetClientId] = useState("")
+  const [moveNewSubfolderName, setMoveNewSubfolderName] = useState("")
+  const [creatingMoveSubfolder, setCreatingMoveSubfolder] = useState(false)
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
 
@@ -365,11 +367,33 @@ export default function ProyectosPage() {
     const defaultClientId = selectedProject.client_id
     setMoveTargetClientId(defaultClientId)
     setMoveTargetSubfolderId(destSubfoldersFor(defaultClientId)[0]?.id || "")
+    setMoveNewSubfolderName("")
   }
 
   function handleMoveClientChange(clientId: string) {
     setMoveTargetClientId(clientId)
     setMoveTargetSubfolderId(destSubfoldersFor(clientId)[0]?.id || "")
+    setMoveNewSubfolderName("")
+  }
+
+  // Crear una subcarpeta en el cliente destino sin salir del panel de mover.
+  async function handleCreateMoveSubfolder() {
+    const name = moveNewSubfolderName.trim()
+    if (!name) { alert("Escribe un nombre para la subcarpeta"); return }
+    if (!moveTargetClientId) return
+    setCreatingMoveSubfolder(true)
+    const { data, error } = await supabase
+      .from("client_subfolders")
+      .insert({ client_id: moveTargetClientId, name })
+      .select("*")
+      .single()
+    setCreatingMoveSubfolder(false)
+    if (error) return alert(error.message)
+    if (data) {
+      setSubfolders((prev) => [...prev, data])
+      setMoveTargetSubfolderId(data.id)
+      setMoveNewSubfolderName("")
+    }
   }
 
   async function handleMoveProject() {
@@ -420,6 +444,7 @@ export default function ProyectosPage() {
     setShowMovePanel(false)
     setMoveTargetSubfolderId("")
     setMoveTargetClientId("")
+    setMoveNewSubfolderName("")
     setSelectedItem(null)
     await loadPage()
     goToSubfolder(targetSubfolder.client_id, targetSubfolder.id)
@@ -920,24 +945,39 @@ export default function ProyectosPage() {
                     </select>
                   </Field>
 
-                  <Field label="Mover a subcarpeta">
-                    <select
-                      value={moveTargetSubfolderId}
-                      onChange={(event) =>
-                        setMoveTargetSubfolderId(event.target.value)
-                      }
-                      style={selectStyle}
-                    >
-                      {moveDestinationSubfolders.length === 0 ? (
-                        <option value="">— Este cliente no tiene subcarpetas —</option>
-                      ) : (
-                        moveDestinationSubfolders.map((subfolder) => (
+                  <Field label={moveDestinationSubfolders.length === 0 ? "Crear subcarpeta destino" : "Mover a subcarpeta"}>
+                    {moveDestinationSubfolders.length === 0 ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                          value={moveNewSubfolderName}
+                          onChange={(event) => setMoveNewSubfolderName(event.target.value)}
+                          onKeyDown={(event) => { if (event.key === "Enter") handleCreateMoveSubfolder() }}
+                          placeholder="Nombre de la nueva subcarpeta"
+                          style={{ ...inputStyle, flex: 1 }}
+                        />
+                        <button
+                          onClick={handleCreateMoveSubfolder}
+                          disabled={creatingMoveSubfolder}
+                          style={secondaryButtonStyle}
+                        >
+                          {creatingMoveSubfolder ? "Creando…" : "+ Crear"}
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={moveTargetSubfolderId}
+                        onChange={(event) =>
+                          setMoveTargetSubfolderId(event.target.value)
+                        }
+                        style={selectStyle}
+                      >
+                        {moveDestinationSubfolders.map((subfolder) => (
                           <option key={subfolder.id} value={subfolder.id}>
                             {subfolder.name}
                           </option>
-                        ))
-                      )}
-                    </select>
+                        ))}
+                      </select>
+                    )}
                   </Field>
 
                   <div style={inlineFormActionsStyle}>
@@ -949,6 +989,7 @@ export default function ProyectosPage() {
                         setShowMovePanel(false)
                         setMoveTargetSubfolderId("")
                         setMoveTargetClientId("")
+                        setMoveNewSubfolderName("")
                       }}
                       style={secondaryButtonStyle}
                     >
