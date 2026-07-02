@@ -44,12 +44,41 @@ type EgresoRow = {
   section_name: string
 }
 
+type FacturaRow = {
+  id: string
+  subtotal: number | null
+  status: "aceptada" | "rechazada" | "pagada"
+  fecha_pago: string | null
+  paid_at: string | null
+  concepto: string | null
+  origen: string | null
+  forma_pago: string | null
+  motivo_rechazo: string | null
+  created_at: string
+  codigo_proyecto: string | null
+  project_name: string | null
+  project_code: string | null
+}
+
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—"
+  const [y, m, d] = iso.split("T")[0].split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
+}
+
+// Estatus de factura (mismos nombres/colores que la página de Finanzas)
+const FAC_STATUS: Record<string, { label: string; bg: string; border: string; text: string }> = {
+  aceptada:  { label: "Por pagar", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#fbbf24" },
+  pagada:    { label: "Pagada",    bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#34d399" },
+  rechazada: { label: "Rechazada", bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#f87171" },
 }
 
 function initials(nombre: string, apellido: string) {
@@ -89,6 +118,7 @@ export default function ProveedorDetailPage() {
   const [isMobile, setIsMobile]     = useState(false)
   const [proveedor, setProveedor]   = useState<Proveedor | null>(null)
   const [egresos, setEgresos]       = useState<EgresoRow[]>([])
+  const [facturas, setFacturas]     = useState<FacturaRow[]>([])
   const [provCatalog, setProvCatalog] = useState<ProvCatalog[]>([])
   const [empCatalog, setEmpCatalog]   = useState<EmpCatalog[]>([])
   const [loading, setLoading]       = useState(true)
@@ -130,6 +160,24 @@ export default function ProveedorDetailPage() {
       setEmpCatalog(emps || [])
 
       await loadEgresos(provs || [], emps || [])
+
+      // Facturas del proveedor (espejo de Finanzas) — RLS solo deja leerlas a
+      // admin/finanzas; para otros roles regresa vacío sin error.
+      if (["admin", "finanzas"].includes(auth.profile.role)) {
+        const { data: facs } = await supabase
+          .from("facturas")
+          .select("id, subtotal, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, projects(name, code)")
+          .eq("proveedor_id", proveedorId)
+          .order("created_at", { ascending: false })
+        setFacturas((facs || []).map((f: any) => ({
+          id: f.id, subtotal: f.subtotal, status: f.status,
+          fecha_pago: f.fecha_pago, paid_at: f.paid_at, concepto: f.concepto,
+          origen: f.origen, forma_pago: f.forma_pago, motivo_rechazo: f.motivo_rechazo,
+          created_at: f.created_at, codigo_proyecto: f.codigo_proyecto,
+          project_name: f.projects?.name ?? null, project_code: f.projects?.code ?? null,
+        })))
+      }
+
       setLoading(false)
     }
     load()
@@ -252,6 +300,10 @@ export default function ProveedorDetailPage() {
   const isAdmin = profile.role === "admin"
   // Finanzas solo consulta: no puede editar los egresos del proveedor.
   const canEdit = ["admin", "editor", "editor_premium"].includes(profile.role)
+  // Facturas: espejo de Finanzas (solo admin/finanzas pueden verlas).
+  const canSeeFacturas = ["admin", "finanzas"].includes(profile.role)
+  const totalFacturado = facturas.reduce((s, f) => s + Number(f.subtotal || 0), 0)
+  const totalPagadoFac = facturas.filter(f => f.status === "pagada").reduce((s, f) => s + Number(f.subtotal || 0), 0)
 
   const byProject: Record<string, { project_name: string; client_name: string; project_id: string; rows: EgresoRow[] }> = {}
   for (const e of egresos) {
@@ -444,6 +496,69 @@ export default function ProveedorDetailPage() {
               })
             )}
           </div>
+
+          {/* Facturas (espejo de Finanzas) */}
+          {canSeeFacturas && (
+            <div style={sectionStyle}>
+              <div style={sectionHeaderStyle}>
+                <p style={sectionTitleStyle}>Facturas</p>
+                <p style={sectionHintStyle}>Facturas recibidas de este proveedor y su estatus de pago — mismo dato que en Finanzas</p>
+              </div>
+
+              <div style={summaryRowStyle}>
+                <SummaryCard label="Total facturado" value={fmt(totalFacturado)} color="#a78bfa" />
+                <SummaryCard label="Pagado"          value={fmt(totalPagadoFac)} color="#34d399" />
+                <SummaryCard label="Facturas"        value={String(facturas.length)} color="#94a3b8" />
+              </div>
+
+              {facturas.length === 0 ? (
+                <div style={emptyStateStyle}>
+                  <p style={{ margin: 0, fontSize: 15, color: "#475569" }}>Sin facturas registradas</p>
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#334155" }}>Este proveedor aún no ha subido facturas al sistema.</p>
+                </div>
+              ) : (
+                <div style={tableWrapStyle}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr>
+                        {["Estatus", "Proyecto", "Concepto", "Monto", "Fecha de pago"].map((h, i) => (
+                          <th key={i} style={{ ...thStyle, textAlign: i === 3 ? "right" : "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {facturas.map((f, idx) => {
+                        const cfg = FAC_STATUS[f.status] || FAC_STATUS.aceptada
+                        const proyecto = f.project_code
+                          ? `${f.project_code} ${f.project_name ?? ""}`.trim()
+                          : (f.project_name || f.codigo_proyecto || "—")
+                        const fecha = f.status === "pagada"
+                          ? (f.paid_at ? `Pagada ${fmtDate(f.paid_at)}` : "Pagada")
+                          : f.status === "aceptada"
+                            ? fmtDate(f.fecha_pago)
+                            : "—"
+                        return (
+                          <tr key={f.id} style={{ background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
+                            <td style={tdStyle}>
+                              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.text }}>{cfg.label}</span>
+                              {f.origen && f.origen !== "proveedor" && <span style={{ marginLeft: 6, fontSize: 11, color: "#93c5fd" }}>{f.origen}</span>}
+                            </td>
+                            <td style={{ ...tdStyle, color: "#e2e8f0" }}>{proyecto}</td>
+                            <td style={{ ...tdStyle, color: "#cbd5e1", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {f.concepto || "—"}
+                              {f.status === "rechazada" && f.motivo_rechazo ? ` · ${f.motivo_rechazo}` : ""}
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc", fontWeight: 700 }}>{f.subtotal != null ? fmt(Number(f.subtotal)) : "—"}</td>
+                            <td style={{ ...tdStyle, color: f.status === "pagada" ? "#34d399" : "#94a3b8", whiteSpace: "nowrap" }}>{fecha}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </main>
