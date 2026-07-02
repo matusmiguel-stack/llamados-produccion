@@ -405,6 +405,18 @@ export default function ProyectosPage() {
 
     if (error) return alert(error.message)
 
+    // Si cambió de cliente, sincronizar el "cliente/agencia" de los ingresos
+    // vinculados a este proyecto con el nombre del cliente nuevo.
+    if (targetSubfolder.client_id !== selectedProject.client_id) {
+      const nuevoCliente = clients.find((c) => c.id === targetSubfolder.client_id)?.name
+      if (nuevoCliente) {
+        await supabase
+          .from("ingresos")
+          .update({ cliente_agencia: nuevoCliente, updated_at: new Date().toISOString() })
+          .eq("project_id", selectedProject.id)
+      }
+    }
+
     setShowMovePanel(false)
     setMoveTargetSubfolderId("")
     setMoveTargetClientId("")
