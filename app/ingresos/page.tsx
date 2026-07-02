@@ -558,15 +558,18 @@ export default function IngresosPage() {
                 {rows.map((r, i) => {
                   const cfg = ESTATUS[r.estatus]
                   const fechaRef = r.fecha_pago || r.fecha_aprox_pago
-                  const isOverdue = r.estatus !== "pagado" && !!fechaRef && fechaRef < today
+                  const isPaid = r.estatus === "pagado"
+                  const isOverdue = !isPaid && !!fechaRef && fechaRef < today
                   return (
                     <tr
                       key={r.id}
                       style={{
                         ...trStyle,
-                        background: isOverdue
-                          ? "rgba(239,68,68,0.07)"
-                          : i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
+                        background: isPaid
+                          ? "rgba(34,197,94,0.09)"
+                          : isOverdue
+                            ? "rgba(239,68,68,0.07)"
+                            : i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
                       }}
                     >
                       <td style={tdStyle}>
