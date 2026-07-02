@@ -37,7 +37,7 @@ export const navItems: { href: string; label: string; icon: NavIconType; roles?:
   { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "editor_premium", "productor"] },
   { href: "/postproduccion", label: "Post Producción", icon: "postpro", roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
   { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor", "editor_premium"] },
-  { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin"] },
+  { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
