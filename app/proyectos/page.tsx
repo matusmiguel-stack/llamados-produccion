@@ -78,6 +78,7 @@ export default function ProyectosPage() {
   const [renameName, setRenameName] = useState("")
   const [renameDescription, setRenameDescription] = useState("")
   const [moveTargetSubfolderId, setMoveTargetSubfolderId] = useState("")
+  const [moveTargetClientId, setMoveTargetClientId] = useState("")
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
 
@@ -116,17 +117,19 @@ export default function ProyectosPage() {
     return projects.find((project) => project.id === selectedItem.id) || null
   }, [projects, selectedItem])
 
+  // Subcarpetas del cliente destino elegido. Si el destino es el mismo cliente,
+  // se excluye la subcarpeta actual (no tiene sentido mover al mismo lugar).
   const moveDestinationSubfolders = useMemo(() => {
-    if (!selectedProject) return []
+    if (!selectedProject || !moveTargetClientId) return []
 
     return subfolders
       .filter(
         (subfolder) =>
-          subfolder.client_id === selectedProject.client_id &&
-          subfolder.id !== selectedProject.subfolder_id
+          subfolder.client_id === moveTargetClientId &&
+          !(moveTargetClientId === selectedProject.client_id && subfolder.id === selectedProject.subfolder_id)
       )
       .sort((a, b) => a.name.localeCompare(b.name, "es"))
-  }, [subfolders, selectedProject])
+  }, [subfolders, selectedProject, moveTargetClientId])
 
   useEffect(() => {
     function checkMobile() {
@@ -340,27 +343,40 @@ export default function ProyectosPage() {
     setRenameDescription(project?.description || "")
   }
 
+  // Subcarpetas de un cliente dado, excluyendo la actual si es el mismo cliente.
+  function destSubfoldersFor(clientId: string): Subfolder[] {
+    if (!selectedProject) return []
+    return subfolders
+      .filter(
+        (sf) =>
+          sf.client_id === clientId &&
+          !(clientId === selectedProject.client_id && sf.id === selectedProject.subfolder_id)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, "es"))
+  }
+
   function openMovePanel() {
     if (!selectedProject) return
-
-    if (moveDestinationSubfolders.length === 0) {
-      alert(
-        "Crea otra subcarpeta en este cliente para poder mover el proyecto."
-      )
-      return
-    }
 
     setShowCreatePanel(false)
     setShowRenamePanel(false)
     setShowMovePanel(true)
-    setMoveTargetSubfolderId(moveDestinationSubfolders[0].id)
+    // Por defecto, el cliente actual del proyecto
+    const defaultClientId = selectedProject.client_id
+    setMoveTargetClientId(defaultClientId)
+    setMoveTargetSubfolderId(destSubfoldersFor(defaultClientId)[0]?.id || "")
+  }
+
+  function handleMoveClientChange(clientId: string) {
+    setMoveTargetClientId(clientId)
+    setMoveTargetSubfolderId(destSubfoldersFor(clientId)[0]?.id || "")
   }
 
   async function handleMoveProject() {
     if (!selectedProject) return
 
     if (!moveTargetSubfolderId) {
-      alert("Selecciona la subcarpeta destino")
+      alert("Selecciona una subcarpeta destino. Si el cliente no tiene subcarpetas, crea una primero.")
       return
     }
 
@@ -373,11 +389,8 @@ export default function ProyectosPage() {
       (subfolder) => subfolder.id === moveTargetSubfolderId
     )
 
-    if (
-      !targetSubfolder ||
-      targetSubfolder.client_id !== selectedProject.client_id
-    ) {
-      alert("Solo puedes mover proyectos entre subcarpetas del mismo cliente")
+    if (!targetSubfolder) {
+      alert("La subcarpeta destino no es válida")
       return
     }
 
@@ -394,6 +407,7 @@ export default function ProyectosPage() {
 
     setShowMovePanel(false)
     setMoveTargetSubfolderId("")
+    setMoveTargetClientId("")
     setSelectedItem(null)
     await loadPage()
     goToSubfolder(targetSubfolder.client_id, targetSubfolder.id)
@@ -874,9 +888,26 @@ export default function ProyectosPage() {
                 <div
                   style={{
                     ...inlineFormGridStyle,
-                    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr auto",
                   }}
                 >
+                  <Field label="Cliente destino">
+                    <select
+                      value={moveTargetClientId}
+                      onChange={(event) => handleMoveClientChange(event.target.value)}
+                      style={selectStyle}
+                    >
+                      {[...clients]
+                        .sort((a, b) => a.name.localeCompare(b.name, "es"))
+                        .map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.name}
+                            {client.id === selectedProject.client_id ? " (actual)" : ""}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+
                   <Field label="Mover a subcarpeta">
                     <select
                       value={moveTargetSubfolderId}
@@ -885,11 +916,15 @@ export default function ProyectosPage() {
                       }
                       style={selectStyle}
                     >
-                      {moveDestinationSubfolders.map((subfolder) => (
-                        <option key={subfolder.id} value={subfolder.id}>
-                          {subfolder.name}
-                        </option>
-                      ))}
+                      {moveDestinationSubfolders.length === 0 ? (
+                        <option value="">— Este cliente no tiene subcarpetas —</option>
+                      ) : (
+                        moveDestinationSubfolders.map((subfolder) => (
+                          <option key={subfolder.id} value={subfolder.id}>
+                            {subfolder.name}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </Field>
 
@@ -901,6 +936,7 @@ export default function ProyectosPage() {
                       onClick={() => {
                         setShowMovePanel(false)
                         setMoveTargetSubfolderId("")
+                        setMoveTargetClientId("")
                       }}
                       style={secondaryButtonStyle}
                     >
