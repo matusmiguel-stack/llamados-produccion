@@ -84,7 +84,7 @@ export default function ProveedoresPage() {
 
     const myProfile = auth.profile
 
-    if (myProfile.role !== "admin" && myProfile.role !== "editor" && myProfile.role !== "editor_premium") {
+    if (!["admin", "editor", "editor_premium", "finanzas"].includes(myProfile.role)) {
       window.location.href = "/"
       return
     }
@@ -220,25 +220,27 @@ export default function ProveedoresPage() {
             </div>
           </header>
 
-          <section style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <p style={panelTitleStyle}>Nuevo proveedor</p>
-              <p style={panelHintStyle}>
-                Registra contactos externos y sus datos de contacto
-              </p>
-            </div>
+          {isAdmin && (
+            <section style={panelStyle}>
+              <div style={panelHeaderStyle}>
+                <p style={panelTitleStyle}>Nuevo proveedor</p>
+                <p style={panelHintStyle}>
+                  Registra contactos externos y sus datos de contacto
+                </p>
+              </div>
 
-            <ProveedorFormFields
-              values={form}
-              onChange={setForm}
-              isMobile={isMobile}
-              action={
-                <button onClick={createProveedor} style={primaryButtonStyle}>
-                  Agregar
-                </button>
-              }
-            />
-          </section>
+              <ProveedorFormFields
+                values={form}
+                onChange={setForm}
+                isMobile={isMobile}
+                action={
+                  <button onClick={createProveedor} style={primaryButtonStyle}>
+                    Agregar
+                  </button>
+                }
+              />
+            </section>
+          )}
 
           <section style={{ ...panelStyle, marginTop: 14 }}>
             <div style={panelHeaderStyle}>
@@ -344,15 +346,19 @@ export default function ProveedoresPage() {
                         <Link href={`/proveedores/${proveedor.id}`} style={secondaryButtonStyle}>
                           Ver perfil
                         </Link>
-                        <button onClick={() => startEdit(proveedor)} style={secondaryButtonStyle}>
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => deleteProveedor(proveedor.id, name)}
-                          style={dangerButtonStyle}
-                        >
-                          Borrar
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button onClick={() => startEdit(proveedor)} style={secondaryButtonStyle}>
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => deleteProveedor(proveedor.id, name)}
+                              style={dangerButtonStyle}
+                            >
+                              Borrar
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )

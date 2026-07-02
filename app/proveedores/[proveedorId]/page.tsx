@@ -109,7 +109,7 @@ export default function ProveedorDetailPage() {
     async function load() {
       const auth = await requireSessionProfile()
       if (!auth) return
-      if (!["admin", "editor", "editor_premium"].includes(auth.profile.role)) {
+      if (!["admin", "editor", "editor_premium", "finanzas"].includes(auth.profile.role)) {
         window.location.href = "/"; return
       }
       setProfile(auth.profile)
@@ -250,6 +250,8 @@ export default function ProveedorDetailPage() {
 
   const totalEgresos = egresos.reduce((s, e) => s + e.monto, 0)
   const isAdmin = profile.role === "admin"
+  // Finanzas solo consulta: no puede editar los egresos del proveedor.
+  const canEdit = ["admin", "editor", "editor_premium"].includes(profile.role)
 
   const byProject: Record<string, { project_name: string; client_name: string; project_id: string; rows: EgresoRow[] }> = {}
   for (const e of egresos) {
@@ -281,7 +283,7 @@ export default function ProveedorDetailPage() {
               {proveedor!.empresa && <p style={empresaStyle}>{proveedor!.empresa}</p>}
               <span style={activityBadgeStyle}>{proveedor!.actividad}</span>
             </div>
-            <Link href="/proveedores" style={editLinkStyle}>✎ Editar en directorio</Link>
+            {canEdit && <Link href="/proveedores" style={editLinkStyle}>✎ Editar en directorio</Link>}
           </div>
 
           {/* Info cards */}
@@ -304,7 +306,7 @@ export default function ProveedorDetailPage() {
           <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
               <p style={sectionTitleStyle}>Egresos asignados</p>
-              <p style={sectionHintStyle}>Todos los rubros liberados donde aparece este proveedor — editables desde aquí</p>
+              <p style={sectionHintStyle}>Todos los rubros liberados donde aparece este proveedor{canEdit ? " — editables desde aquí" : ""}</p>
             </div>
 
             {egresos.length === 0 ? (
@@ -418,7 +420,7 @@ export default function ProveedorDetailPage() {
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>{price != null ? fmt(price) : "—"}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 700, fontFamily: "monospace" }}>{fmt(row.monto)}</td>
                                 <td style={{ ...tdStyle, textAlign: "right" }}>
-                                  <button onClick={() => startEdit(row)} style={editBtnStyle}>✎ Editar</button>
+                                  {canEdit && <button onClick={() => startEdit(row)} style={editBtnStyle}>✎ Editar</button>}
                                 </td>
                               </tr>
                             )
