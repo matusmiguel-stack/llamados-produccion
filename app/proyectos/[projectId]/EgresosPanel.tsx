@@ -273,7 +273,7 @@ export function EgresosPanel({
   const fmt2 = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
   const proyectoLabel = projectCode ? `${projectCode} ${projectName}` : projectName
 
-  async function callBillingApi(proveedorId: string, billingItems: { monto: string }[]) {
+  async function callBillingApi(proveedorId: string, billingItems: { monto: string; concepto: string }[]) {
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch("/api/egresos/send-billing", {
       method: "POST",
@@ -301,7 +301,7 @@ export function EgresosPanel({
     if (!item.actual_supplier_id) return
     setSendingBilling(item.id)
     try {
-      const data = await callBillingApi(item.actual_supplier_id, [{ monto: fmt2(monto) }])
+      const data = await callBillingApi(item.actual_supplier_id, [{ monto: fmt2(monto), concepto: item.description }])
       await markBillingSent([item.id])
       alert(`✓ Instrucciones enviadas a ${data.sentTo}${data.cc ? `\nCopia a: ${data.cc}` : ""}`)
     } catch (err: any) {
@@ -313,7 +313,7 @@ export function EgresosPanel({
 
   async function sendAllBilling() {
     // Agrupar ítems de proveedores por actual_supplier_id
-    const provItems: Record<string, { id: string; itemIds: string[]; billingItems: { monto: string }[] }> = {}
+    const provItems: Record<string, { id: string; itemIds: string[]; billingItems: { monto: string; concepto: string }[] }> = {}
     for (const item of items) {
       if (item.supplierType !== "proveedor" || !item.actual_supplier_id) continue
       const monto = montoEgreso(item)
@@ -322,7 +322,7 @@ export function EgresosPanel({
         provItems[item.actual_supplier_id] = { id: item.actual_supplier_id, itemIds: [], billingItems: [] }
       }
       provItems[item.actual_supplier_id].itemIds.push(item.id)
-      provItems[item.actual_supplier_id].billingItems.push({ monto: fmt2(monto) })
+      provItems[item.actual_supplier_id].billingItems.push({ monto: fmt2(monto), concepto: item.description })
     }
     const provList = Object.values(provItems)
     if (provList.length === 0) { alert("No hay proveedores externos en este control de egresos."); return }

@@ -232,7 +232,10 @@ export async function POST(req: Request) {
       : `${prov.nombre} ${prov.apellido}`
     const saludoNombre = prov.empresa || `${prov.nombre} ${prov.apellido}`
     const actividad = prov.actividad || "Servicios"
-    const proveedorConcepto = `${actividad} — ${nombreLabel}`
+    // Concepto = lo capturado como Rubro/Concepto en el control de egresos
+    // (description de cada ítem). Fallback a la actividad del proveedor si no llega.
+    const conceptos = (items as any[]).map((it) => it.concepto).filter((c) => c && String(c).trim())
+    const proveedorConcepto = conceptos.length > 0 ? conceptos.join(" + ") : `${actividad} — ${nombreLabel}`
     const montoStr = items.map((it: any) => it.monto).join(" + ")
 
     // Separar código del nombre del proyecto para mostrarlos en dos líneas
