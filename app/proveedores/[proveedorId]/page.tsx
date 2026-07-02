@@ -120,6 +120,7 @@ export default function ProveedorDetailPage() {
   const [egresos, setEgresos]       = useState<EgresoRow[]>([])
   const [facturas, setFacturas]     = useState<FacturaRow[]>([])
   const [facFilter, setFacFilter]   = useState<"aceptada" | "pagada" | "rechazada">("aceptada")
+  const [payingId, setPayingId]     = useState<string | null>(null)
   const [provCatalog, setProvCatalog] = useState<ProvCatalog[]>([])
   const [empCatalog, setEmpCatalog]   = useState<EmpCatalog[]>([])
   const [loading, setLoading]       = useState(true)
@@ -233,6 +234,28 @@ export default function ProveedorDetailPage() {
       a.section_name.localeCompare(b.section_name)
     )
     setEgresos(rows)
+  }
+
+  // Marcar una factura como pagada — misma acción/endpoint que el módulo de
+  // Finanzas, así ambos quedan sincronizados (leen y escriben la misma tabla).
+  async function markFacturaPaid(f: FacturaRow) {
+    if (!confirm(`¿Marcar como pagada la factura por ${fmt(Number(f.subtotal || 0))}?\nSe le enviará un correo de confirmación al proveedor.`)) return
+    setPayingId(f.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/facturas/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ action: "mark-paid", facturaId: f.id }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || "Error")
+      setFacturas(prev => prev.map(x => x.id === f.id ? { ...x, status: "pagada", paid_at: new Date().toISOString() } : x))
+    } catch (err: any) {
+      alert("Error al marcar pago: " + err.message)
+    } finally {
+      setPayingId(null)
+    }
   }
 
   function startEdit(row: EgresoRow) {
@@ -563,7 +586,7 @@ export default function ProveedorDetailPage() {
                   <table style={tableStyle}>
                     <thead>
                       <tr>
-                        {["Estatus", "Proyecto", "Concepto", "Monto", "Fecha de pago"].map((h, i) => (
+                        {["Estatus", "Proyecto", "Concepto", "Monto", "Fecha de pago", ""].map((h, i) => (
                           <th key={i} style={{ ...thStyle, textAlign: i === 3 ? "right" : "left" }}>{h}</th>
                         ))}
                       </tr>
@@ -594,6 +617,21 @@ export default function ProveedorDetailPage() {
                             </td>
                             <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc", fontWeight: 700 }}>{f.subtotal != null ? fmt(Number(f.subtotal)) : "—"}</td>
                             <td style={{ ...tdStyle, color: f.status === "pagada" ? "#34d399" : vencida ? "#f87171" : "#94a3b8", whiteSpace: "nowrap", fontWeight: vencida ? 600 : undefined }}>{fecha}</td>
+                            <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
+                              {f.status === "aceptada" && (
+                                <button
+                                  onClick={() => markFacturaPaid(f)}
+                                  disabled={payingId === f.id}
+                                  style={{
+                                    padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                    cursor: payingId === f.id ? "not-allowed" : "pointer", opacity: payingId === f.id ? 0.6 : 1,
+                                    border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#fdba74",
+                                  }}
+                                >
+                                  {payingId === f.id ? "…" : "✓ Marcar Pago"}
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         )
                       })}
