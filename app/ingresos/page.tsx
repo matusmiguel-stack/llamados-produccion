@@ -2,10 +2,11 @@
 import { PageLoader } from "../../components/PageLoader"
 
 import Link from "next/link"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
+import { downloadIngresosTemplate, parseIngresosExcel } from "../../lib/ingresos-import"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,8 @@ export default function IngresosPage() {
   const [editingId, setEditingId]   = useState<string | null>(null)
   const [form, setForm]             = useState<IngresoForm>(emptyForm)
   const [saving, setSaving]         = useState(false)
+  const [importing, setImporting]   = useState(false)
+  const fileInputRef                = useRef<HTMLInputElement>(null)
 
   // ── Mobile detection ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -211,6 +214,30 @@ export default function IngresosPage() {
     setEditingId(null)
     setForm({ ...emptyForm, empresa: activeEmpresa })
     setShowModal(true)
+  }
+
+  // ── Importar desde Excel ──────────────────────────────────────────────────
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = "" // permitir re-subir el mismo archivo
+    if (!file) return
+    setImporting(true)
+    try {
+      const rows = await parseIngresosExcel(file)
+      if (!confirm(`Se importarán ${rows.length} ingreso${rows.length !== 1 ? "s" : ""}. ¿Continuar?`)) {
+        setImporting(false)
+        return
+      }
+      const payload = rows.map(r => ({ ...r, updated_at: new Date().toISOString() }))
+      const { error } = await supabase.from("ingresos").insert(payload)
+      if (error) throw error
+      alert(`✓ ${rows.length} ingreso${rows.length !== 1 ? "s" : ""} importado${rows.length !== 1 ? "s" : ""} correctamente.`)
+      loadPage()
+    } catch (err: any) {
+      alert("Error al importar: " + err.message)
+    } finally {
+      setImporting(false)
+    }
   }
 
   function openEdit(r: Ingreso) {
@@ -382,7 +409,22 @@ export default function IngresosPage() {
             <h1 style={pageTitleStyle}>Control de Ingresos</h1>
             <p style={pageSubStyle}>Proyectos aprobados · seguimiento financiero</p>
           </div>
-          <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={() => downloadIngresosTemplate()} style={secondaryBtnStyle} title="Descargar plantilla de Excel">
+              ⬇ Plantilla
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={secondaryBtnStyle} title="Importar ingresos desde Excel">
+              {importing ? "Importando…" : "⬆ Importar Excel"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportFile}
+              style={{ display: "none" }}
+            />
+            <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
+          </div>
         </div>
 
         {/* ── Global summary ── */}
@@ -838,6 +880,18 @@ const newBtnStyle: React.CSSProperties = {
   background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))",
   border: "1px solid rgba(167,139,250,0.3)",
   color: "#f8fafc",
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+}
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: 10,
+  background: "rgba(148,163,184,0.08)",
+  border: "1px solid rgba(148,163,184,0.22)",
+  color: "#cbd5e1",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
