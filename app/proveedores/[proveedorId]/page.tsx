@@ -547,7 +547,7 @@ export default function ProveedorDetailPage() {
               </div>
 
               {/* Filtros */}
-              <div style={{ display: "flex", gap: 8, margin: "0 0 14px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, margin: "18px 0 14px", flexWrap: "wrap" }}>
                 {([
                   ["aceptada", "Por pagar"],
                   ["pagada", "Pagadas"],
