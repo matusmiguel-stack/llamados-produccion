@@ -343,6 +343,29 @@ export default function IngresosPage() {
   )
 
   const rows = (() => {
+    // Orden por defecto (columna Cliente): compuesto en 3 niveles —
+    // 1) Cliente/Agencia alfabético, 2) Status (pagado → por cobrar → vencido),
+    // 3) Proyecto alfabético (RS de menor a mayor, comparación numérica).
+    if (sortKey === "cliente") {
+      const todayISO = new Date().toISOString().split("T")[0]
+      const statusRank = (r: Ingreso) => {
+        if (r.estatus === "pagado") return 0                 // pagado primero
+        const fechaRef = r.fecha_pago || r.fecha_aprox_pago
+        const overdue = !!fechaRef && fechaRef < todayISO
+        return overdue ? 2 : 1                               // vencido al final, por cobrar en medio
+      }
+      const dir = sortDir === "asc" ? 1 : -1
+      const cmp = (x: string | null, y: string | null) =>
+        String(x ?? "").localeCompare(String(y ?? ""), "es", { numeric: true, sensitivity: "base" })
+      return [...filteredRows].sort((a, b) => {
+        const c = cmp(a.cliente_agencia, b.cliente_agencia)
+        if (c !== 0) return c * dir
+        const s = statusRank(a) - statusRank(b)
+        if (s !== 0) return s
+        return cmp(a.proyecto, b.proyecto)
+      })
+    }
+
     if (!sortKey) return filteredRows
     const accessor = SORT_ACCESSORS[sortKey]
     if (!accessor) return filteredRows
