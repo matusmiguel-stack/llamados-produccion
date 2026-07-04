@@ -574,11 +574,11 @@ export default function IngresosPage() {
               <thead>
                 <tr>
                   {([
-                    ["Estatus","estatus"],["ODC","odc"],["Cliente / Agencia","cliente"],
-                    ["Resp.","responsable"],["Proyecto","proyecto"],["Factura","factura"],
+                    ["Estatus","estatus"],["Cliente / Agencia","cliente"],["Proyecto","proyecto"],
                     ["Subtotal","subtotal"],["IVA","iva"],["Total c/IVA","total"],
-                    ["Fecha Pago","fecha"],["Mes Cierre","mes"],["",null],
-                  ] as [string, string | null][]).map(([h, key]) => (
+                    ["Fecha Pago","fecha"],["Factura","factura"],["ODC","odc"],
+                    ["Resp.","responsable"],["Mes Cierre","mes"],["",null],
+                  ] as [string, string | null][]).map(([h, key], idx) => (
                     <th
                       key={h || "acciones"}
                       style={{
@@ -586,6 +586,7 @@ export default function IngresosPage() {
                         cursor: key ? "pointer" : "default",
                         userSelect: "none",
                         color: key && sortKey === key ? "#a78bfa" : thStyle.color,
+                        ...(idx <= 2 ? stickyStyle(idx, STICKY_HEADER_BG, true) : {}),
                       }}
                       onClick={key ? () => toggleSort(key) : undefined}
                       title={key ? "Ordenar" : undefined}
@@ -604,19 +605,10 @@ export default function IngresosPage() {
                   const fechaRef = r.fecha_pago || r.fecha_aprox_pago
                   const isPaid = r.estatus === "pagado"
                   const isOverdue = !isPaid && !!fechaRef && fechaRef < today
+                  const rowBg = isPaid ? "#0f211d" : isOverdue ? "#1d151a" : i % 2 === 0 ? "#0d1117" : "#11151b"
                   return (
-                    <tr
-                      key={r.id}
-                      style={{
-                        ...trStyle,
-                        background: isPaid
-                          ? "rgba(34,197,94,0.09)"
-                          : isOverdue
-                            ? "rgba(239,68,68,0.07)"
-                            : i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
-                      }}
-                    >
-                      <td style={tdStyle}>
+                    <tr key={r.id} style={{ ...trStyle, background: rowBg }}>
+                      <td style={{ ...tdStyle, ...stickyStyle(0, rowBg) }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <span style={estatusBadgeStyle(cfg)}>
                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block", marginRight: 5, flexShrink: 0 }} />
@@ -627,10 +619,8 @@ export default function IngresosPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
-                      <td style={{ ...tdStyle, fontWeight: 600, color: "#e2e8f0" }}>{r.cliente_agencia}</td>
-                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
-                      <td style={{ ...tdStyle, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.cliente_agencia}>{r.cliente_agencia}</td>
+                      <td style={{ ...tdStyle, ...stickyStyle(2, rowBg), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.project_id ? (
                           <Link
                             href={`/proyectos/${r.project_id}`}
@@ -643,7 +633,6 @@ export default function IngresosPage() {
                           proyectoLabel(r)
                         )}
                       </td>
-                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>{r.numero_factura || "—"}</td>
                       <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc", whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal)}
                       </td>
@@ -656,6 +645,9 @@ export default function IngresosPage() {
                       <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", whiteSpace: "nowrap", fontWeight: isOverdue ? 600 : undefined }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
+                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>{r.numero_factura || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
                       <td style={{ ...tdStyle, color: "#64748b", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
                       <td style={{ ...tdStyle, whiteSpace: "nowrap", textAlign: "right" }}>
                         {r.estatus !== "pagado" && (
@@ -674,7 +666,7 @@ export default function IngresosPage() {
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                  <td colSpan={6} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
+                  <td colSpan={3} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
                     {rows.length} registro{rows.length !== 1 ? "s" : ""}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f8fafc", paddingTop: 10, fontFamily: "monospace" }}>
@@ -686,7 +678,7 @@ export default function IngresosPage() {
                   <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#a78bfa", paddingTop: 10, fontFamily: "monospace" }}>
                     {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}
                   </td>
-                  <td colSpan={3} />
+                  <td colSpan={6} />
                 </tr>
               </tfoot>
             </table>
@@ -1095,10 +1087,28 @@ const tableWrapStyle: React.CSSProperties = {
   border: "1px solid rgba(148,163,184,0.10)",
 }
 
+// Columnas fijas (Estatus, Cliente, Proyecto) al hacer scroll horizontal.
+const STICKY_W = [150, 160, 220]
+const STICKY_LEFT = [0, 150, 310]
+const STICKY_HEADER_BG = "#14181e"
+function stickyStyle(idx: number, bg: string, header = false): React.CSSProperties {
+  return {
+    position: "sticky",
+    left: STICKY_LEFT[idx],
+    width: STICKY_W[idx],
+    minWidth: STICKY_W[idx],
+    maxWidth: STICKY_W[idx],
+    background: bg,
+    zIndex: header ? 5 : 2,
+    ...(idx === 2 ? { boxShadow: "1px 0 0 rgba(148,163,184,0.22)" } : {}),
+  }
+}
+
 const tableStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 1080,
-  borderCollapse: "collapse",
+  borderCollapse: "separate",
+  borderSpacing: 0,
   fontSize: 13,
   color: "#cbd5e1",
 }
