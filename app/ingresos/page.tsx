@@ -283,26 +283,26 @@ export default function IngresosPage() {
     // Para ingresos vinculados, el nombre del proyecto se toma SIEMPRE del proyecto
     // (código + nombre), nunca del texto editado — así no se puede cambiar el código.
     const linkedForSave = editingId ? ingresos.find(r => r.id === editingId) : null
-    const proyectoFinal = linkedForSave?.project_id ? proyectoLabel(linkedForSave) : form.proyecto.trim()
+    const linkedSave = !!linkedForSave?.project_id
+    const proyectoFinal = linkedSave ? proyectoLabel(linkedForSave!) : form.proyecto.trim()
+    // Campos comunes editables por admin (ligado o no).
+    const comun = {
+      empresa:          form.empresa,
+      odc:              form.odc.trim() || null,
+      estatus:          form.estatus,
+      cliente_agencia:  form.cliente_agencia.trim(),
+      numero_factura:   form.numero_factura.trim() || null,
+      fecha_aprox_pago: form.fecha_aprox_pago.trim() || null,
+      fecha_pago:       form.fecha_pago.trim() || null,
+      mes_cierre:       form.mes_cierre || null,
+      notas:            form.notas.trim() || null,
+      updated_at:       new Date().toISOString(),
+    }
     // El rol finanzas solo puede tocar estatus, ODC, factura, fechas y notas.
-    const payload = isAdmin
+    // Para ingresos LIGADOS, subtotal/IVA/responsable/proyecto los dicta la
+    // cotización aprobada (se sincronizan solos) — no se tocan desde aquí.
+    const payload = !isAdmin
       ? {
-          empresa:          form.empresa,
-          odc:              form.odc.trim() || null,
-          estatus:          form.estatus,
-          cliente_agencia:  form.cliente_agencia.trim(),
-          responsable:      form.responsable.trim() || null,
-          proyecto:         proyectoFinal,
-          numero_factura:   form.numero_factura.trim() || null,
-          subtotal:         parseFloat(form.subtotal) || 0,
-          iva:              parseFloat(form.iva) || 0,
-          fecha_aprox_pago: form.fecha_aprox_pago.trim() || null,
-          fecha_pago:       form.fecha_pago.trim() || null,
-          mes_cierre:       form.mes_cierre || null,
-          notas:            form.notas.trim() || null,
-          updated_at:       new Date().toISOString(),
-        }
-      : {
           odc:              form.odc.trim() || null,
           estatus:          form.estatus,
           numero_factura:   form.numero_factura.trim() || null,
@@ -312,6 +312,15 @@ export default function IngresosPage() {
           notas:            form.notas.trim() || null,
           updated_at:       new Date().toISOString(),
         }
+      : linkedSave
+        ? comun
+        : {
+            ...comun,
+            responsable: form.responsable.trim() || null,
+            proyecto:    proyectoFinal,
+            subtotal:    parseFloat(form.subtotal) || 0,
+            iva:         parseFloat(form.iva) || 0,
+          }
     if (editingId) {
       const { error } = await supabase.from("ingresos").update(payload as any).eq("id", editingId)
       if (error) { alert(error.message); setSaving(false); return }
@@ -449,6 +458,9 @@ export default function IngresosPage() {
   // Montos, nombres y códigos (empresa/cliente/proyecto/subtotal/IVA/responsable)
   // son de solo lectura — eso se edita desde la página del proyecto.
   const isAdmin = profile?.role === "admin"
+  // Campos que dicta la cotización aprobada (subtotal, IVA, responsable): solo
+  // lectura en ingresos ligados a un proyecto — se editan en la cotización.
+  const roQuoteFields = !isAdmin || editingLinked
 
   return (
     <div style={layoutStyle}>
@@ -756,7 +768,7 @@ export default function IngresosPage() {
                   <input value={form.cliente_agencia} onChange={e => setForm(f => ({ ...f, cliente_agencia: e.target.value }))} readOnly={!isAdmin} disabled={!isAdmin} style={isAdmin ? inputStyle : readOnlyInputStyle} placeholder="ej. Compartamos Banco" />
                 </FormField>
                 <FormField label="Responsable">
-                  <select value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))} disabled={!isAdmin} style={isAdmin ? inputStyle : readOnlyInputStyle}>
+                  <select value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))} disabled={roQuoteFields} style={roQuoteFields ? readOnlyInputStyle : inputStyle}>
                     <option value="">— Sin asignar —</option>
                     {/* Incluir el responsable actual aunque no esté en la lista de empleados */}
                     {form.responsable && !empleados.some(e => empFullName(e) === form.responsable) && (
@@ -777,10 +789,24 @@ export default function IngresosPage() {
                     style={readOnlyInputStyle}
                   />
                   {editingLinked && (
-                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
-                      El nombre se toma del proyecto vinculado. Para cambiar el código o el nombre,
-                      edítalo en la sección de Proyectos y aquí se actualiza solo.
-                    </p>
+                    <>
+                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                        El nombre, monto (subtotal/IVA) y responsable los dicta la cotización aprobada.
+                        Para editarlos a fondo, ve a la página del proyecto.
+                      </p>
+                      {isAdmin && editingIngreso?.project_id && (
+                        <a
+                          href={`/proyectos/${editingIngreso.project_id}`}
+                          style={{
+                            display: "inline-block", marginTop: 10, padding: "8px 14px", borderRadius: 9,
+                            border: "1px solid rgba(167,139,250,0.35)", background: "rgba(124,58,237,0.15)",
+                            color: "#c4b5fd", fontSize: 12, fontWeight: 600, textDecoration: "none",
+                          }}
+                        >
+                          Ir al proyecto →
+                        </a>
+                      )}
+                    </>
                   )}
                 </FormField>
               ) : (
@@ -835,9 +861,9 @@ export default function IngresosPage() {
                     type="number"
                     value={form.subtotal}
                     onChange={e => handleSubtotalChange(e.target.value)}
-                    readOnly={!isAdmin}
-                    disabled={!isAdmin}
-                    style={isAdmin ? inputStyle : readOnlyInputStyle}
+                    readOnly={roQuoteFields}
+                    disabled={roQuoteFields}
+                    style={roQuoteFields ? readOnlyInputStyle : inputStyle}
                     placeholder="0.00"
                     min={0}
                   />
@@ -847,9 +873,9 @@ export default function IngresosPage() {
                     type="number"
                     value={form.iva}
                     onChange={e => setForm(f => ({ ...f, iva: e.target.value }))}
-                    readOnly={!isAdmin}
-                    disabled={!isAdmin}
-                    style={isAdmin ? inputStyle : readOnlyInputStyle}
+                    readOnly={roQuoteFields}
+                    disabled={roQuoteFields}
+                    style={roQuoteFields ? readOnlyInputStyle : inputStyle}
                     placeholder="0.00"
                     min={0}
                   />
