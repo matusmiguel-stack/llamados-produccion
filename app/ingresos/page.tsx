@@ -166,6 +166,8 @@ export default function IngresosPage() {
   const [saving, setSaving]         = useState(false)
   const [importing, setImporting]   = useState(false)
   const fileInputRef                = useRef<HTMLInputElement>(null)
+  const [payModal, setPayModal]     = useState<{ id: string; label: string; fecha: string } | null>(null)
+  const [paying, setPaying]         = useState(false)
 
   // ── Mobile detection ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -333,6 +335,25 @@ export default function IngresosPage() {
   async function handleDelete(id: string) {
     if (!confirm("¿Eliminar este ingreso?")) return
     await supabase.from("ingresos").delete().eq("id", id)
+    loadPage()
+  }
+
+  // ── Marcar pago (cambia estatus a pagado + fecha de pago) ────────────────────
+  function openPayModal(r: Ingreso) {
+    setPayModal({ id: r.id, label: proyectoLabel(r), fecha: new Date().toLocaleDateString("sv") })
+  }
+
+  async function confirmarPago() {
+    if (!payModal) return
+    if (!payModal.fecha) { alert("Selecciona la fecha de pago."); return }
+    setPaying(true)
+    const { error } = await supabase
+      .from("ingresos")
+      .update({ estatus: "pagado", fecha_pago: payModal.fecha, updated_at: new Date().toISOString() })
+      .eq("id", payModal.id)
+    setPaying(false)
+    if (error) { alert(error.message); return }
+    setPayModal(null)
     loadPage()
   }
 
@@ -637,6 +658,11 @@ export default function IngresosPage() {
                       </td>
                       <td style={{ ...tdStyle, color: "#64748b", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
                       <td style={{ ...tdStyle, whiteSpace: "nowrap", textAlign: "right" }}>
+                        {r.estatus !== "pagado" && (
+                          <button onClick={() => openPayModal(r)} style={marcarPagoBtnStyle} title="Marcar como pagado">
+                            ✓ Marcar Pago
+                          </button>
+                        )}
                         <button onClick={() => openEdit(r)} style={actionBtnStyle}>✎</button>
                         {isAdmin && (
                           <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, color: "#f87171" }}>✕</button>
@@ -667,6 +693,40 @@ export default function IngresosPage() {
           </div>
         )}
       </main>
+
+      {/* ── Marcar pago modal ── */}
+      {payModal && (
+        <div style={overlayStyle} onClick={() => !paying && setPayModal(null)}>
+          <div style={{ ...modalStyle(isMobile), maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div style={modalHeaderStyle}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Marcar como pagado</h2>
+              <button onClick={() => setPayModal(null)} style={closeBtnStyle}>✕</button>
+            </div>
+            <div style={modalBodyStyle}>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+                {payModal.label}
+              </p>
+              <FormField label="Fecha de pago">
+                <input
+                  type="date"
+                  value={payModal.fecha}
+                  onChange={e => setPayModal(m => m ? { ...m, fecha: e.target.value } : m)}
+                  style={{ ...inputStyle, colorScheme: "dark" }}
+                  autoFocus
+                />
+              </FormField>
+              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                <button onClick={() => setPayModal(null)} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+                <button onClick={confirmarPago} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.4)", background: "rgba(16,185,129,0.15)", color: "#34d399", fontSize: 13, fontWeight: 700, cursor: paying ? "not-allowed" : "pointer", opacity: paying ? 0.6 : 1 }}>
+                  {paying ? "Guardando…" : "✓ Confirmar pago"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal ── */}
       {showModal && (
@@ -1087,6 +1147,19 @@ const actionBtnStyle: React.CSSProperties = {
   color: "#475569",
   cursor: "pointer",
   fontSize: 13,
+}
+
+const marcarPagoBtnStyle: React.CSSProperties = {
+  padding: "4px 10px",
+  marginRight: 8,
+  borderRadius: 7,
+  border: "1px solid rgba(52,211,153,0.35)",
+  background: "rgba(16,185,129,0.12)",
+  color: "#34d399",
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 }
 
 const emptyStyle: React.CSSProperties = {
