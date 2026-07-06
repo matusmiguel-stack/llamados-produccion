@@ -156,7 +156,7 @@ export async function overwriteTab(token: string, spreadsheetId: string, tab: Ta
         },
         {
           autoResizeDimensions: {
-            dimensions: { sheetId: tab.sheetId, dimension: "COLUMNS", startIndex: 0, endIndex: 6 },
+            dimensions: { sheetId: tab.sheetId, dimension: "COLUMNS", startIndex: 0, endIndex: 7 },
           },
         },
       ],

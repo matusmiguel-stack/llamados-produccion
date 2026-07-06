@@ -12,6 +12,7 @@ import {
   overwriteTab,
   tabUrl,
 } from "../../../../lib/google-sheets"
+import { ordenSemaforo, SEMAFORO_INFO, type Semaforo } from "../../../../lib/referencias-semaforo"
 
 const FUENTE_LABELS: Record<string, string> = {
   instagram: "Instagram", youtube: "YouTube", tiktok: "TikTok", vimeo: "Vimeo",
@@ -46,20 +47,29 @@ export async function POST(req: Request) {
 
     const { data: refs } = await admin
       .from("referencias")
-      .select("url,titulo,nota,fuente,created_at,profiles(full_name)")
+      .select("url,titulo,nota,fuente,semaforo,created_at,profiles(full_name)")
       .eq("proyecto_id", proyectoId)
       .order("created_at", { ascending: false })
 
+    // Mismo orden que la app: verdes → amarillas → sin calificar → rojas
+    const ordenadas = [...(refs || [])].sort(
+      (a: any, b: any) => ordenSemaforo(a.semaforo) - ordenSemaforo(b.semaforo)
+    )
+
     const rows: (string | number)[][] = [
-      ["Fecha", "Fuente", "Título", "Link", "Nota", "Subida por"],
-      ...(refs || []).map((r: any) => [
-        new Date(r.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Mexico_City" }),
-        FUENTE_LABELS[r.fuente] || "Web",
-        r.titulo || "",
-        r.url,
-        r.nota || "",
-        r.profiles?.full_name || "",
-      ]),
+      ["Semáforo", "Fecha", "Fuente", "Título", "Link", "Nota", "Subida por"],
+      ...ordenadas.map((r: any) => {
+        const sem = r.semaforo ? SEMAFORO_INFO[r.semaforo as Semaforo] : null
+        return [
+          sem ? `${sem.emoji} ${sem.label}` : "",
+          new Date(r.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Mexico_City" }),
+          FUENTE_LABELS[r.fuente] || "Web",
+          r.titulo || "",
+          r.url,
+          r.nota || "",
+          r.profiles?.full_name || "",
+        ]
+      }),
     ]
 
     const spreadsheetId = referenciasSpreadsheetId()

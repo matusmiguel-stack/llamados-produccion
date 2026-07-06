@@ -6,6 +6,7 @@ import { useParams } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
+import { puedeCalificar, ordenSemaforo, SEMAFORO_INFO, type Semaforo } from "../../../lib/referencias-semaforo"
 
 type Referencia = {
   id: string
@@ -13,6 +14,7 @@ type Referencia = {
   titulo: string | null
   nota: string | null
   fuente: string
+  semaforo: Semaforo | null
   created_by: string | null
   created_at: string
   autor: string
@@ -84,12 +86,13 @@ export default function ReferenciaProyectoPage() {
   async function loadReferencias() {
     const { data } = await supabase
       .from("referencias")
-      .select("id,url,titulo,nota,fuente,created_by,created_at,profiles(full_name)")
+      .select("id,url,titulo,nota,fuente,semaforo,created_by,created_at,profiles(full_name)")
       .eq("proyecto_id", proyectoId)
       .order("created_at", { ascending: false })
     setReferencias((data || []).map((r: any) => ({
       id: r.id, url: r.url, titulo: r.titulo, nota: r.nota,
-      fuente: r.fuente || "web", created_by: r.created_by, created_at: r.created_at,
+      fuente: r.fuente || "web", semaforo: r.semaforo || null,
+      created_by: r.created_by, created_at: r.created_at,
       autor: r.profiles?.full_name || "—",
     })))
   }
@@ -177,9 +180,38 @@ export default function ReferenciaProyectoPage() {
   const puedeBorrar = (r: Referencia) =>
     profile?.role === "admin" || r.created_by === user?.id
 
+  const soyCalificador = puedeCalificar(profile?.email)
+
+  // Califica (o quita la calificación si se repite el mismo color)
+  const [calificando, setCalificando] = useState<string | null>(null)
+  async function calificar(r: Referencia, color: Semaforo) {
+    if (calificando) return
+    const nuevo: Semaforo | null = r.semaforo === color ? null : color
+    setCalificando(r.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/referencias/rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ referenciaId: r.id, semaforo: nuevo }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error al calificar")
+      setReferencias(refs => refs.map(x => x.id === r.id ? { ...x, semaforo: nuevo } : x))
+      void syncDrive(false)
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setCalificando(null)
+    }
+  }
+
   // Chips de filtro: solo las fuentes presentes en este proyecto
   const fuentesPresentes = [...new Set(referencias.map(r => r.fuente))]
-  const visibles = filtro === "todas" ? referencias : referencias.filter(r => r.fuente === filtro)
+  // Orden por semáforo: verdes → amarillas → sin calificar → rojas
+  // (sort es estable: dentro de cada grupo se conserva "más recientes primero")
+  const visibles = (filtro === "todas" ? [...referencias] : referencias.filter(r => r.fuente === filtro))
+    .sort((a, b) => ordenSemaforo(a.semaforo) - ordenSemaforo(b.semaforo))
 
   if (!profile || loading) return <PageLoader />
 
@@ -303,10 +335,14 @@ export default function ReferenciaProyectoPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
                   {visibles.map(r => {
                     const info = fuenteInfo(r.fuente)
+                    const sem = r.semaforo ? SEMAFORO_INFO[r.semaforo] : null
                     let hostLabel = ""
                     try { hostLabel = new URL(r.url).hostname.replace(/^www\./, "") } catch {}
                     return (
-                      <div key={r.id} style={refCardStyle}>
+                      <div key={r.id} style={{
+                        ...refCardStyle,
+                        borderLeft: sem ? `3px solid ${sem.color}` : refCardStyle.border as string,
+                      }}>
                         <span style={{
                           ...fuenteBadgeStyle,
                           color: info.color,
@@ -328,8 +364,38 @@ export default function ReferenciaProyectoPage() {
                           )}
                           <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b" }}>
                             👤 {r.autor} · {fechaCorta(r.created_at)}
+                            {sem && !soyCalificador && (
+                              <span style={{ marginLeft: 8, color: sem.color, fontWeight: 600 }}>
+                                {sem.emoji} {sem.label}
+                              </span>
+                            )}
                           </p>
                         </div>
+                        {soyCalificador && (
+                          <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }} title="Calificar referencia">
+                            {(Object.keys(SEMAFORO_INFO) as Semaforo[]).map(color => {
+                              const activo = r.semaforo === color
+                              const c = SEMAFORO_INFO[color]
+                              return (
+                                <button
+                                  key={color}
+                                  onClick={() => calificar(r, color)}
+                                  disabled={calificando === r.id}
+                                  title={activo ? `Quitar ${c.label.toLowerCase()}` : c.label}
+                                  style={{
+                                    width: 22, height: 22, borderRadius: "50%", cursor: "pointer",
+                                    padding: 0, lineHeight: 1, fontSize: 12,
+                                    background: activo ? `${c.color}33` : "transparent",
+                                    border: activo ? `2px solid ${c.color}` : "1px solid rgba(148,163,184,0.25)",
+                                    opacity: activo ? 1 : 0.45,
+                                  }}
+                                >
+                                  {c.emoji}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
                         {puedeBorrar(r) && (
                           <button onClick={() => deleteReferencia(r)} title="Borrar referencia" style={deleteBtnStyle}>🗑</button>
                         )}
