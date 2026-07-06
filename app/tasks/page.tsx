@@ -8,13 +8,18 @@ import { DatePickerField } from "../../components/DatePickerField"
 
 type Task = {
   id: string
+  user_id: string
   title: string
   due_date: string
   due_time: string | null
   completed: boolean
   completed_at: string | null
+  completed_by: string | null
   created_at: string
+  shares: string[] // ids de usuarios con quienes está compartida
 }
+
+type AppUser = { id: string; full_name: string | null; email: string }
 
 function getLocalToday() {
   const d = new Date()
@@ -63,10 +68,15 @@ export default function TasksPage() {
   const [newTitle, setNewTitle] = useState("")
   const [newDate, setNewDate] = useState(getLocalToday())
   const [newTime, setNewTime] = useState("")
+  const [newShares, setNewShares] = useState<string[]>([])
+  const [showNewShares, setShowNewShares] = useState(false)
 
   const [editTitle, setEditTitle] = useState("")
   const [editDate, setEditDate] = useState("")
   const [editTime, setEditTime] = useState("")
+  const [editShares, setEditShares] = useState<string[]>([])
+
+  const [appUsers, setAppUsers] = useState<AppUser[]>([])
 
   const [showCompleted, setShowCompleted] = useState(false)
 
@@ -82,16 +92,28 @@ export default function TasksPage() {
     if (!auth) return
     setUser(auth.session.user)
     setProfile(auth.profile)
+    const { data: profs } = await supabase
+      .from("profiles").select("id,full_name,email").order("full_name")
+    setAppUsers(profs || [])
     await loadTasks()
   }
 
   async function loadTasks() {
     const { data } = await supabase
       .from("user_tasks")
-      .select("*")
+      .select("*, user_task_shares(user_id)")
       .order("due_date")
       .order("due_time", { nullsFirst: true })
-    setTasks(data || [])
+    setTasks((data || []).map((t: any) => ({
+      ...t,
+      shares: (t.user_task_shares || []).map((s: any) => s.user_id),
+    })))
+  }
+
+  const nameOf = (id: string | null): string => {
+    if (!id) return "—"
+    const u = appUsers.find(x => x.id === id)
+    return u?.full_name || u?.email?.split("@")[0] || "—"
   }
 
   useEffect(() => { loadPage() }, [])
@@ -103,16 +125,23 @@ export default function TasksPage() {
 
   async function createTask() {
     if (!newTitle.trim()) return
-    const { error } = await supabase.from("user_tasks").insert({
+    const { data: created, error } = await supabase.from("user_tasks").insert({
       user_id: user.id,
       title: newTitle.trim(),
       due_date: newDate,
       due_time: newTime || null,
-    })
+    }).select("id").single()
     if (error) return alert(error.message)
+    if (created && newShares.length > 0) {
+      const { error: shareErr } = await supabase.from("user_task_shares")
+        .insert(newShares.map(uid => ({ task_id: created.id, user_id: uid })))
+      if (shareErr) alert(`La tarea se creó pero no se pudo compartir: ${shareErr.message}`)
+    }
     setNewTitle("")
     setNewDate(getLocalToday())
     setNewTime("")
+    setNewShares([])
+    setShowNewShares(false)
     await loadTasks()
   }
 
@@ -121,6 +150,7 @@ export default function TasksPage() {
     const { error } = await supabase.from("user_tasks").update({
       completed: !task.completed,
       completed_at: !task.completed ? now : null,
+      completed_by: !task.completed ? user.id : null,
     }).eq("id", task.id)
     if (error) return alert(error.message)
     await loadTasks()
@@ -138,6 +168,7 @@ export default function TasksPage() {
     setEditTitle(task.title)
     setEditDate(task.due_date)
     setEditTime(task.due_time?.slice(0, 5) || "")
+    setEditShares(task.shares)
   }
 
   async function saveEdit(id: string) {
@@ -148,6 +179,20 @@ export default function TasksPage() {
       due_time: editTime || null,
     }).eq("id", id)
     if (error) return alert(error.message)
+    // Sincronizar con quiénes está compartida (solo el dueño puede editar)
+    const original = tasks.find(t => t.id === id)
+    if (original && original.user_id === user.id) {
+      const antes = new Set(original.shares)
+      const despues = new Set(editShares)
+      const quitar = original.shares.filter(x => !despues.has(x))
+      const agregar = editShares.filter(x => !antes.has(x))
+      if (quitar.length > 0) {
+        await supabase.from("user_task_shares").delete().eq("task_id", id).in("user_id", quitar)
+      }
+      if (agregar.length > 0) {
+        await supabase.from("user_task_shares").insert(agregar.map(uid => ({ task_id: id, user_id: uid })))
+      }
+    }
     setEditingId(null)
     await loadTasks()
   }
@@ -178,7 +223,7 @@ export default function TasksPage() {
             Mis Tareas
           </h1>
           <p style={{ fontSize: 13, color: "#64748b", marginBottom: 28 }}>
-            Solo vos podés ver estas tareas
+            Tus tareas privadas y las que te comparten 👥
           </p>
 
           {/* Nueva tarea */}
@@ -203,6 +248,19 @@ export default function TasksPage() {
                   style={{ ...inputStyle, flex: 1, minWidth: 110 }}
                 />
               </div>
+              <button onClick={() => setShowNewShares(!showNewShares)} style={{ ...ghostButtonStyle, textAlign: "left" }}>
+                👥 {newShares.length > 0
+                  ? `Compartida con ${newShares.map(nameOf).join(", ")}`
+                  : "Compartir con… (opcional)"}
+              </button>
+              {showNewShares && (
+                <SharePicker
+                  users={appUsers}
+                  selfId={user?.id}
+                  selected={newShares}
+                  onToggle={id => setNewShares(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])}
+                />
+              )}
               <button onClick={createTask} style={primaryButtonStyle}>
                 Agregar tarea
               </button>
@@ -221,6 +279,12 @@ export default function TasksPage() {
                     key={task.id}
                     task={task}
                     editing={editingId === task.id}
+                    esMia={task.user_id === user?.id}
+                    ownerName={nameOf(task.user_id)}
+                    sharedNames={task.shares.map(nameOf)}
+                    completedByName={nameOf(task.completed_by)}
+                    users={appUsers} selfId={user?.id}
+                    editShares={editShares} setEditShares={setEditShares}
                     editTitle={editTitle} setEditTitle={setEditTitle}
                     editDate={editDate} setEditDate={setEditDate}
                     editTime={editTime} setEditTime={setEditTime}
@@ -250,6 +314,12 @@ export default function TasksPage() {
                     key={task.id}
                     task={task}
                     editing={editingId === task.id}
+                    esMia={task.user_id === user?.id}
+                    ownerName={nameOf(task.user_id)}
+                    sharedNames={task.shares.map(nameOf)}
+                    completedByName={nameOf(task.completed_by)}
+                    users={appUsers} selfId={user?.id}
+                    editShares={editShares} setEditShares={setEditShares}
                     editTitle={editTitle} setEditTitle={setEditTitle}
                     editDate={editDate} setEditDate={setEditDate}
                     editTime={editTime} setEditTime={setEditTime}
@@ -282,6 +352,12 @@ export default function TasksPage() {
                         key={task.id}
                         task={task}
                         editing={false}
+                        esMia={task.user_id === user?.id}
+                        ownerName={nameOf(task.user_id)}
+                        sharedNames={task.shares.map(nameOf)}
+                        completedByName={nameOf(task.completed_by)}
+                        users={appUsers} selfId={user?.id}
+                        editShares={[]} setEditShares={() => {}}
                         editTitle="" setEditTitle={() => {}}
                         editDate="" setEditDate={() => {}}
                         editTime="" setEditTime={() => {}}
@@ -304,17 +380,50 @@ export default function TasksPage() {
   )
 }
 
+function SharePicker({ users, selfId, selected, onToggle }: {
+  users: AppUser[]; selfId: string | undefined
+  selected: string[]; onToggle: (id: string) => void
+}) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {users.filter(u => u.id !== selfId).map(u => {
+        const active = selected.includes(u.id)
+        return (
+          <button
+            key={u.id}
+            onClick={() => onToggle(u.id)}
+            style={{
+              padding: "4px 10px", borderRadius: 999, cursor: "pointer",
+              fontSize: 12, fontWeight: 600,
+              border: active ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(148,163,184,0.2)",
+              background: active ? "rgba(124,58,237,0.18)" : "transparent",
+              color: active ? "#c4b5fd" : "#94a3b8",
+            }}
+          >
+            {active ? "✓ " : ""}{u.full_name || u.email.split("@")[0]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function TaskRow({
   task, editing, overdue,
+  esMia, ownerName, sharedNames, completedByName,
   editTitle, setEditTitle,
   editDate, setEditDate,
   editTime, setEditTime,
+  users, selfId, editShares, setEditShares,
   onToggle, onEdit, onSave, onCancel, onDelete,
 }: {
   task: Task; editing: boolean; overdue: boolean
+  esMia: boolean; ownerName: string; sharedNames: string[]; completedByName: string
   editTitle: string; setEditTitle: (v: string) => void
   editDate: string; setEditDate: (v: string) => void
   editTime: string; setEditTime: (v: string) => void
+  users: AppUser[]; selfId: string | undefined
+  editShares: string[]; setEditShares: (fn: (prev: string[]) => string[]) => void
   onToggle: () => void; onEdit: () => void; onSave: () => void
   onCancel: () => void; onDelete: () => void
 }) {
@@ -329,6 +438,13 @@ function TaskRow({
             </div>
             <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
           </div>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>👥 Compartir con:</p>
+          <SharePicker
+            users={users}
+            selfId={selfId}
+            selected={editShares}
+            onToggle={id => setEditShares(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])}
+          />
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={onSave} style={primaryButtonStyle}>Guardar</button>
             <button onClick={onCancel} style={ghostButtonStyle}>Cancelar</button>
@@ -349,12 +465,25 @@ function TaskRow({
         </p>
         <p style={{ fontSize: 12, color: overdue ? "#f87171" : "#64748b", margin: "2px 0 0" }}>
           {overdue ? "⚠ " : ""}{formatDueLabel(task)}
+          {!esMia && (
+            <span style={{ color: "#38bdf8" }}> · 👥 de {ownerName}</span>
+          )}
+          {esMia && sharedNames.length > 0 && (
+            <span style={{ color: "#a78bfa" }} title={sharedNames.join(", ")}>
+              {" "}· 👥 con {sharedNames.length === 1 ? sharedNames[0] : `${sharedNames.length} personas`}
+            </span>
+          )}
+          {task.completed && task.completed_by && (
+            <span style={{ color: "#34d399" }}> · ✓ por {completedByName}</span>
+          )}
         </p>
       </div>
-      {!task.completed && (
+      {!task.completed && esMia && (
         <button onClick={onEdit} style={iconButtonStyle} title="Editar">✏</button>
       )}
-      <button onClick={onDelete} style={{ ...iconButtonStyle, color: "#f87171" }} title="Borrar">×</button>
+      {esMia && (
+        <button onClick={onDelete} style={{ ...iconButtonStyle, color: "#f87171" }} title="Borrar">×</button>
+      )}
     </div>
   )
 }
