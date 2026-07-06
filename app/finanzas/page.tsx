@@ -18,6 +18,7 @@ type Factura = {
   uuid_fiscal: string | null
   xml_path: string | null
   pdf_path: string | null
+  comprobante_path: string | null
   created_at: string
   concepto: string | null
   origen: "proveedor" | "anticipo" | "comprobacion" | "reembolso" | null
@@ -114,16 +115,40 @@ export default function FinanzasPage() {
     setLoading(false)
   }
 
-  async function markPaid(factura: Factura) {
-    if (!confirm(`¿Marcar como pagada la factura de ${provLabel(factura)} por ${fmtMx(Number(factura.subtotal || 0))}?\nSe le enviará un correo de confirmación al proveedor.`)) return
+  // Modal de pago: pide el comprobante del banco (obligatorio) antes de marcar
+  const [payModal, setPayModal] = useState<Factura | null>(null)
+  const [payFile, setPayFile] = useState<File | null>(null)
+
+  function markPaid(factura: Factura) {
+    setPayFile(null)
+    setPayModal(factura)
+  }
+
+  async function confirmMarkPaid() {
+    if (!payModal) return
+    if (!payFile) { alert("Sube el comprobante de pago del banco (PDF o JPG)"); return }
+    const factura = payModal
     setWorking(factura.id)
     try {
-      const res = await authedFetch({ action: "mark-paid", facturaId: factura.id })
+      const { data: { session } } = await supabase.auth.getSession()
+      const fd = new FormData()
+      fd.append("action", "mark-paid")
+      fd.append("facturaId", factura.id)
+      fd.append("comprobante", payFile)
+      const res = await fetch("/api/facturas/admin", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        body: fd,
+      })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error")
       setFacturas(prev => prev.map(f =>
-        f.id === factura.id ? { ...f, status: "pagada" as const, paid_at: new Date().toISOString() } : f
+        f.id === factura.id
+          ? { ...f, status: "pagada" as const, paid_at: new Date().toISOString(), comprobante_path: data.comprobante_path || null }
+          : f
       ))
+      setPayModal(null)
+      setPayFile(null)
     } catch (err: any) {
       alert("Error: " + err.message)
     } finally {
@@ -399,6 +424,9 @@ export default function FinanzasPage() {
                       {f.pdf_path && (
                         <button onClick={() => download(f.pdf_path!)} style={miniBtnStyle}>⬇ PDF</button>
                       )}
+                      {f.comprobante_path && (
+                        <button onClick={() => download(f.comprobante_path!)} style={miniBtnStyle} title="Comprobante de pago del banco">📎 Comprobante</button>
+                      )}
                       {f.status === "aceptada" && (
                         <button onClick={() => markPaid(f)} disabled={working === f.id} style={payBtnStyle(working === f.id)}>
                           {working === f.id ? "..." : "✓ Marcar Pago"}
@@ -413,6 +441,41 @@ export default function FinanzasPage() {
         )}
 
         </>)}
+
+        {/* Modal: comprobante obligatorio para marcar pagada */}
+        {payModal && (
+          <div style={modalBackdropStyle} onClick={() => working ? null : setPayModal(null)}>
+            <div style={modalPanelStyle} onClick={e => e.stopPropagation()}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+                Marcar pago — {provLabel(payModal)}
+              </p>
+              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
+                {projLabel(payModal)} · <span style={{ fontFamily: "monospace", color: "#e2e8f0", fontWeight: 700 }}>{fmtMx(Number(payModal.subtotal || 0))}</span>
+              </p>
+              <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
+                Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                onChange={e => setPayFile(e.target.files?.[0] || null)}
+                style={{ fontSize: 12, color: "#94a3b8", width: "100%" }}
+              />
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                PDF o JPG. Queda guardado y vinculado a esta transacción. Al confirmar se
+                le envía el correo de pago al proveedor.
+              </p>
+              <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+                <button onClick={() => setPayModal(null)} disabled={working === payModal.id} style={modalCancelBtnStyle}>
+                  Cancelar
+                </button>
+                <button onClick={confirmMarkPaid} disabled={working === payModal.id || !payFile} style={{ ...payBtnStyle(working === payModal.id), opacity: !payFile ? 0.5 : 1 }}>
+                  {working === payModal.id ? "Guardando…" : "✓ Confirmar pago"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
@@ -463,6 +526,25 @@ function statusBadgeStyle(status: string): React.CSSProperties {
     padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
     background: c.bg, border: `1px solid ${c.border}`, color: c.text,
   }
+}
+
+const modalBackdropStyle: React.CSSProperties = {
+  position: "fixed", inset: 0, zIndex: 10000,
+  background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
+  display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+}
+
+const modalPanelStyle: React.CSSProperties = {
+  width: "100%", maxWidth: 440,
+  background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
+  borderRadius: 14, padding: 22,
+  boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+}
+
+const modalCancelBtnStyle: React.CSSProperties = {
+  padding: "8px 16px", borderRadius: 8, cursor: "pointer",
+  border: "1px solid rgba(148,163,184,0.2)", background: "transparent",
+  color: "#94a3b8", fontSize: 13, fontWeight: 600,
 }
 
 const miniBtnStyle: React.CSSProperties = {
