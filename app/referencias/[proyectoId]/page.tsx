@@ -66,7 +66,7 @@ export default function ReferenciaProyectoPage() {
   const [proyecto, setProyecto] = useState<{ nombre: string; descripcion: string | null } | null>(null)
   const [referencias, setReferencias] = useState<Referencia[]>([])
   const [filtro, setFiltro] = useState<string>("todas")
-  const [driveSheetId, setDriveSheetId] = useState<string | null>(null)
+  const [driveUrl, setDriveUrl] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
 
   const [newUrl, setNewUrl] = useState("")
@@ -103,11 +103,11 @@ export default function ReferenciaProyectoPage() {
       setProfile(auth.profile)
       const { data: proj } = await supabase
         .from("referencia_proyectos")
-        .select("nombre,descripcion,drive_sheet_id")
+        .select("nombre,descripcion,drive_url")
         .eq("id", proyectoId)
         .maybeSingle()
       setProyecto(proj)
-      setDriveSheetId(proj?.drive_sheet_id || null)
+      setDriveUrl(proj?.drive_url || null)
       await loadReferencias()
       setLoading(false)
     })()
@@ -122,7 +122,7 @@ export default function ReferenciaProyectoPage() {
   // Sincroniza la lista a la hoja de Google Sheets del Drive compartido.
   // manual=false: en silencio tras agregar/borrar (si aún no hay hoja, no crea).
   async function syncDrive(manual: boolean) {
-    if (!manual && !driveSheetId) return
+    if (!manual && !driveUrl) return
     if (manual) setSyncing(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -133,7 +133,7 @@ export default function ReferenciaProyectoPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Error al sincronizar")
-      setDriveSheetId(data.sheetId)
+      setDriveUrl(data.url)
       if (manual) window.open(data.url, "_blank", "noopener")
     } catch (err: any) {
       if (manual) alert(err.message)
@@ -211,9 +211,9 @@ export default function ReferenciaProyectoPage() {
                   {proyecto.nombre}
                 </h1>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  {driveSheetId && (
+                  {driveUrl && (
                     <a
-                      href={`https://docs.google.com/spreadsheets/d/${driveSheetId}`}
+                      href={driveUrl}
                       target="_blank" rel="noopener noreferrer"
                       style={driveBtnStyle}
                     >
@@ -223,10 +223,10 @@ export default function ReferenciaProyectoPage() {
                   <button
                     onClick={() => syncDrive(true)}
                     disabled={syncing}
-                    title={driveSheetId ? "Volver a sincronizar la hoja del Drive" : "Crear la hoja en el Drive compartido"}
+                    title={driveUrl ? "Volver a sincronizar la hoja del Drive" : "Crear la pestaña en la hoja compartida del Drive"}
                     style={{ ...driveBtnStyle, opacity: syncing ? 0.6 : 1, cursor: "pointer" }}
                   >
-                    {syncing ? "Sincronizando…" : driveSheetId ? "↻ Sincronizar" : "🔗 Vincular a Drive"}
+                    {syncing ? "Sincronizando…" : driveUrl ? "↻ Sincronizar" : "🔗 Vincular a Drive"}
                   </button>
                 </div>
               </div>

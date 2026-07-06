@@ -1,21 +1,24 @@
-// Cliente mínimo de Google Sheets/Drive con cuenta de servicio, sin
-// dependencias: firma el JWT RS256 con el crypto de Node.
-// Solo para uso en el servidor (API routes).
+// Cliente mínimo de Google Sheets con cuenta de servicio, sin dependencias:
+// firma el JWT RS256 con el crypto de Node. Solo para uso en el servidor.
+//
+// Las cuentas de servicio no tienen cuota de almacenamiento en Drive, así que
+// NO pueden crear archivos ("storage quota has been exceeded"). Por eso la app
+// escribe pestañas dentro de UNA hoja de cálculo ya existente, creada por un
+// humano y compartida con la cuenta de servicio (env GOOGLE_REFERENCIAS_SPREADSHEET_ID).
 import crypto from "crypto"
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token"
-const SCOPES = [
-  "https://www.googleapis.com/auth/spreadsheets",
-  "https://www.googleapis.com/auth/drive",
-]
+const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 export function googleDriveConfigured(): boolean {
   return !!(
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
     process.env.GOOGLE_SERVICE_ACCOUNT_KEY &&
-    process.env.GOOGLE_DRIVE_REFERENCIAS_FOLDER_ID
+    process.env.GOOGLE_REFERENCIAS_SPREADSHEET_ID
   )
 }
+
+export const referenciasSpreadsheetId = () => process.env.GOOGLE_REFERENCIAS_SPREADSHEET_ID!
 
 export async function getGoogleAccessToken(): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!
@@ -52,59 +55,84 @@ export async function getGoogleAccessToken(): Promise<string> {
   return data.access_token
 }
 
-// Crea una hoja de cálculo dentro de la carpeta compartida. Devuelve su id.
-export async function createSpreadsheetInFolder(token: string, name: string): Promise<string> {
-  const folderId = process.env.GOOGLE_DRIVE_REFERENCIAS_FOLDER_ID!
-  const res = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
+type Tab = { sheetId: number; title: string }
+
+async function sheetsFetch(token: string, path: string, init?: RequestInit): Promise<any> {
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init?.headers || {}) },
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = data.error?.message || `HTTP ${res.status}`
+    if (res.status === 404) {
+      throw new Error("No se encontró la hoja de cálculo. Verifica GOOGLE_REFERENCIAS_SPREADSHEET_ID y que esté compartida con la cuenta de servicio.")
+    }
+    if (res.status === 403) {
+      throw new Error(`Sin permiso para escribir en la hoja. Compártela (o su carpeta) con la cuenta de servicio como Editor. Detalle: ${msg}`)
+    }
+    throw new Error(msg)
+  }
+  return data
+}
+
+// Título de pestaña válido: sin caracteres prohibidos y máx. 90 caracteres.
+export function sanitizeTabTitle(name: string): string {
+  const clean = name.replace(/[\[\]\*\/\\\?:]/g, " ").replace(/\s+/g, " ").trim()
+  return (clean || "Proyecto").slice(0, 90)
+}
+
+export async function getTabs(token: string, spreadsheetId: string): Promise<Tab[]> {
+  const data = await sheetsFetch(token, `${spreadsheetId}?fields=sheets.properties(sheetId,title)`)
+  return (data.sheets || []).map((s: any) => ({ sheetId: s.properties.sheetId, title: s.properties.title }))
+}
+
+function uniqueTitle(base: string, existing: Tab[]): string {
+  const taken = new Set(existing.map(t => t.title.toLowerCase()))
+  if (!taken.has(base.toLowerCase())) return base
+  for (let i = 2; i < 100; i++) {
+    const candidate = `${base} (${i})`
+    if (!taken.has(candidate.toLowerCase())) return candidate
+  }
+  return `${base} ${Date.now()}`
+}
+
+// Crea la pestaña del proyecto y devuelve su gid.
+export async function addTab(token: string, spreadsheetId: string, title: string, existing: Tab[]): Promise<Tab> {
+  const finalTitle = uniqueTitle(title, existing)
+  const data = await sheetsFetch(token, `${spreadsheetId}:batchUpdate`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: finalTitle } } }] }),
+  })
+  const props = data.replies?.[0]?.addSheet?.properties
+  return { sheetId: props.sheetId, title: props.title }
+}
+
+export async function renameTab(token: string, spreadsheetId: string, tab: Tab, title: string, existing: Tab[]): Promise<Tab> {
+  const finalTitle = uniqueTitle(title, existing.filter(t => t.sheetId !== tab.sheetId))
+  await sheetsFetch(token, `${spreadsheetId}:batchUpdate`, {
+    method: "POST",
     body: JSON.stringify({
-      name,
-      mimeType: "application/vnd.google-apps.spreadsheet",
-      parents: [folderId],
+      requests: [{
+        updateSheetProperties: {
+          properties: { sheetId: tab.sheetId, title: finalTitle },
+          fields: "title",
+        },
+      }],
     }),
   })
-  const data = await res.json()
-  if (!res.ok || !data.id) {
-    throw new Error(`No se pudo crear la hoja en Drive: ${data.error?.message || res.status}`)
-  }
-  return data.id
+  return { ...tab, title: finalTitle }
 }
 
-// Renombra el archivo en Drive (por si el proyecto cambió de nombre).
-export async function renameDriveFile(token: string, fileId: string, name: string): Promise<void> {
-  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  }).catch(() => {})
-}
-
-// Reemplaza todo el contenido de la primera pestaña con las filas dadas.
-// Devuelve false si la hoja ya no existe en Drive (404) para poder recrearla.
-export async function overwriteSheet(token: string, spreadsheetId: string, rows: (string | number)[][]): Promise<boolean> {
-  const clearRes = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:Z100000:clear`,
-    { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-  )
-  if (clearRes.status === 404) return false
-  if (!clearRes.ok) {
-    const err = await clearRes.json().catch(() => ({}))
-    throw new Error(`No se pudo limpiar la hoja: ${err.error?.message || clearRes.status}`)
-  }
-
-  const updateRes = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1?valueInputOption=RAW`,
-    {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ values: rows }),
-    }
-  )
-  if (!updateRes.ok) {
-    const err = await updateRes.json().catch(() => ({}))
-    throw new Error(`No se pudo escribir la hoja: ${err.error?.message || updateRes.status}`)
-  }
+// Reemplaza todo el contenido de la pestaña con las filas dadas.
+export async function overwriteTab(token: string, spreadsheetId: string, tab: Tab, rows: (string | number)[][]): Promise<void> {
+  // Rango A1 con el título entre comillas simples (las internas se duplican)
+  const range = encodeURIComponent(`'${tab.title.replace(/'/g, "''")}'!A1:Z100000`)
+  await sheetsFetch(token, `${spreadsheetId}/values/${range}:clear`, { method: "POST" })
+  await sheetsFetch(token, `${spreadsheetId}/values/${encodeURIComponent(`'${tab.title.replace(/'/g, "''")}'!A1`)}?valueInputOption=RAW`, {
+    method: "PUT",
+    body: JSON.stringify({ values: rows }),
+  })
 
   // Formato: encabezado en negritas y congelado + columnas ajustadas.
   // Si falla no pasa nada, los datos ya quedaron.
@@ -115,27 +143,26 @@ export async function overwriteSheet(token: string, spreadsheetId: string, rows:
       requests: [
         {
           repeatCell: {
-            range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
+            range: { sheetId: tab.sheetId, startRowIndex: 0, endRowIndex: 1 },
             cell: { userEnteredFormat: { textFormat: { bold: true } } },
             fields: "userEnteredFormat.textFormat.bold",
           },
         },
         {
           updateSheetProperties: {
-            properties: { sheetId: 0, gridProperties: { frozenRowCount: 1 } },
+            properties: { sheetId: tab.sheetId, gridProperties: { frozenRowCount: 1 } },
             fields: "gridProperties.frozenRowCount",
           },
         },
         {
           autoResizeDimensions: {
-            dimensions: { sheetId: 0, dimension: "COLUMNS", startIndex: 0, endIndex: 6 },
+            dimensions: { sheetId: tab.sheetId, dimension: "COLUMNS", startIndex: 0, endIndex: 6 },
           },
         },
       ],
     }),
   }).catch(() => {})
-
-  return true
 }
 
-export const spreadsheetUrl = (id: string) => `https://docs.google.com/spreadsheets/d/${id}`
+export const tabUrl = (spreadsheetId: string, gid: number) =>
+  `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${gid}`

@@ -3,11 +3,14 @@ import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiUser } from "../../../../lib/api-auth"
 import {
   googleDriveConfigured,
+  referenciasSpreadsheetId,
   getGoogleAccessToken,
-  createSpreadsheetInFolder,
-  renameDriveFile,
-  overwriteSheet,
-  spreadsheetUrl,
+  sanitizeTabTitle,
+  getTabs,
+  addTab,
+  renameTab,
+  overwriteTab,
+  tabUrl,
 } from "../../../../lib/google-sheets"
 
 const FUENTE_LABELS: Record<string, string> = {
@@ -15,15 +18,16 @@ const FUENTE_LABELS: Record<string, string> = {
   pinterest: "Pinterest", behance: "Behance", drive: "Drive", x: "X", web: "Web",
 }
 
-// POST { proyectoId } → sincroniza el proyecto de referencias a su hoja de
-// Google Sheets en el Drive compartido (la crea si no existe).
+// POST { proyectoId } → sincroniza el proyecto de referencias a su pestaña en
+// la hoja compartida del Drive (la crea si no existe). Cada proyecto es una
+// pestaña de la misma hoja de cálculo (env GOOGLE_REFERENCIAS_SPREADSHEET_ID).
 export async function POST(req: Request) {
   const user = await verifyApiUser(req)
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   if (!googleDriveConfigured()) {
     return NextResponse.json(
-      { error: "El Drive no está configurado todavía. Faltan las variables GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_KEY y GOOGLE_DRIVE_REFERENCIAS_FOLDER_ID." },
+      { error: "El Drive no está configurado todavía. Faltan las variables GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_KEY y GOOGLE_REFERENCIAS_SPREADSHEET_ID." },
       { status: 501 }
     )
   }
@@ -35,7 +39,7 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
     const { data: proyecto } = await admin
       .from("referencia_proyectos")
-      .select("id,nombre,descripcion,drive_sheet_id")
+      .select("id,nombre,drive_sheet_id,drive_url")
       .eq("id", proyectoId)
       .maybeSingle()
     if (!proyecto) return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 })
@@ -58,26 +62,30 @@ export async function POST(req: Request) {
       ]),
     ]
 
+    const spreadsheetId = referenciasSpreadsheetId()
     const token = await getGoogleAccessToken()
-    const nombreArchivo = `Referencias — ${proyecto.nombre}`
-    let sheetId: string | null = proyecto.drive_sheet_id
+    const titulo = sanitizeTabTitle(proyecto.nombre)
 
-    // Escribir; si la hoja fue borrada del Drive, crear una nueva y reintentar.
-    let escrito = false
-    if (sheetId) {
-      escrito = await overwriteSheet(token, sheetId, rows)
-      if (escrito) await renameDriveFile(token, sheetId, nombreArchivo)
-    }
-    if (!escrito) {
-      sheetId = await createSpreadsheetInFolder(token, nombreArchivo)
-      await overwriteSheet(token, sheetId, rows)
+    // Buscar la pestaña del proyecto por su gid guardado; crearla si no está.
+    const tabs = await getTabs(token, spreadsheetId)
+    const gidGuardado = proyecto.drive_sheet_id != null ? Number(proyecto.drive_sheet_id) : null
+    let tab = tabs.find(t => t.sheetId === gidGuardado) || null
+    if (!tab) {
+      tab = await addTab(token, spreadsheetId, titulo, tabs)
+    } else if (tab.title !== titulo) {
+      tab = await renameTab(token, spreadsheetId, tab, titulo, tabs)
     }
 
-    if (sheetId !== proyecto.drive_sheet_id) {
-      await admin.from("referencia_proyectos").update({ drive_sheet_id: sheetId }).eq("id", proyectoId)
+    await overwriteTab(token, spreadsheetId, tab, rows)
+
+    const url = tabUrl(spreadsheetId, tab.sheetId)
+    if (String(tab.sheetId) !== proyecto.drive_sheet_id || url !== proyecto.drive_url) {
+      await admin.from("referencia_proyectos")
+        .update({ drive_sheet_id: String(tab.sheetId), drive_url: url })
+        .eq("id", proyectoId)
     }
 
-    return NextResponse.json({ ok: true, sheetId, url: spreadsheetUrl(sheetId!) })
+    return NextResponse.json({ ok: true, url })
   } catch (err: any) {
     console.error("[referencias-sync] error:", err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
