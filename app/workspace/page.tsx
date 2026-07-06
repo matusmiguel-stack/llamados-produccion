@@ -91,6 +91,20 @@ export default function WorkspacePage() {
     setActiveId(t.id)
   }
 
+  // Navega la pestaña ACTIVA a otra sección (mismo iframe, sin abrir pestañas).
+  // Solo el botón "+" abre pestañas nuevas.
+  function navigateActiveTab(href: string) {
+    const iframe = iframeRefs.current[activeId]
+    const win = iframe?.contentWindow
+    if (win) {
+      try {
+        win.location.href = href
+        return
+      } catch { /* si el iframe no responde, caer a abrir pestaña */ }
+    }
+    openTab(href)
+  }
+
   function closeTab(id: string) {
     setTabs((prev) => {
       const idx = prev.findIndex((t) => t.id === id)
@@ -140,7 +154,7 @@ export default function WorkspacePage() {
 
         <nav style={{ display: "grid", gap: 2, overflowY: "auto", flex: 1, alignContent: "start" }}>
           {wsNav.map((it) => (
-            <button key={it.href} onClick={() => openTab(it.href)} style={navBtnStyle} title={`Abrir ${it.label} en una pestaña`}>
+            <button key={it.href} onClick={() => navigateActiveTab(it.href)} style={navBtnStyle} title={`Ir a ${it.label} en la pestaña actual`}>
               <span style={{ display: "inline-flex", color: "#94a3b8" }}><NavIcon type={it.icon} /></span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.label}</span>
             </button>
@@ -148,7 +162,7 @@ export default function WorkspacePage() {
         </nav>
 
         <div style={{ borderTop: "1px solid rgba(148,163,184,0.10)", paddingTop: 10, marginTop: 8, display: "grid", gap: 4 }}>
-          <button onClick={() => openTab("/perfil")} style={navBtnStyle}>
+          <button onClick={() => navigateActiveTab("/perfil")} style={navBtnStyle}>
             <span style={{ display: "inline-flex", color: "#94a3b8" }}><NavIcon type="tasks" /></span>
             <span>Mi perfil</span>
           </button>
