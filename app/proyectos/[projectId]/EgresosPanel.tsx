@@ -101,8 +101,8 @@ export function EgresosPanel({
   // Hoy CDMX (YYYY-MM-DD) para detectar pagos vencidos
   const hoyMx = new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" })
 
-  // Estatus de pago de un egreso: { label, color }
-  function egresoStatus(item: EgresoItem): { label: string; color: string } {
+  // Estatus de pago de un egreso: { label, color, fecha? }
+  function egresoStatus(item: EgresoItem): { label: string; color: string; fecha?: string } {
     const GRIS = "#94a3b8", NARANJA = "#fb923c", VERDE = "#34d399", ROJO = "#f87171"
     if (item.pago_estado === "pagado") return { label: "Pagado", color: VERDE }
     const monto = montoEgreso(item)
@@ -113,9 +113,13 @@ export function EgresosPanel({
         f.origen !== "anticipo" && f.origen !== "comprobacion" && f.origen !== "reembolso" &&
         Math.abs(Number(f.subtotal || 0) - monto) < 1.5)
     if (fac?.status === "pagada") return { label: "Pagado", color: VERDE }
-    if (fac?.fecha_pago) {
-      const vencida = String(fac.fecha_pago).split("T")[0] < hoyMx
-      return vencida ? { label: "Vencido", color: ROJO } : { label: "Programado", color: NARANJA }
+    // Fecha programada: de la factura vinculada, o la copiada al egreso por el
+    // trigger (visible aun para roles que no pueden leer facturas).
+    const fechaProg = fac?.fecha_pago || item.pago_fecha
+    if (fechaProg) {
+      const f = String(fechaProg).split("T")[0]
+      const vencida = f < hoyMx
+      return vencida ? { label: "Vencido", color: ROJO, fecha: f } : { label: "Programado", color: NARANJA, fecha: f }
     }
     return { label: "Sin fecha", color: GRIS }
   }
@@ -658,13 +662,18 @@ export function EgresosPanel({
                           {(() => {
                             const st = egresoStatus(item)
                             return (
-                              <span style={{
-                                display: "inline-flex", alignItems: "center", gap: 5,
-                                padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
-                                color: st.color, background: `${st.color}1f`, border: `1px solid ${st.color}55`,
-                              }}>
-                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} />
-                                {st.label}
+                              <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                                <span style={{
+                                  display: "inline-flex", alignItems: "center", gap: 5,
+                                  padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+                                  color: st.color, background: `${st.color}1f`, border: `1px solid ${st.color}55`,
+                                }}>
+                                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} />
+                                  {st.label}
+                                </span>
+                                {st.fecha && (
+                                  <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>📅 {fechaCorta(st.fecha)}</span>
+                                )}
                               </span>
                             )
                           })()}
