@@ -14,6 +14,7 @@ type RefProyecto = {
   created_at: string
   creador: string
   total: number
+  drive_url: string | null
 }
 
 export default function ReferenciasPage() {
@@ -38,13 +39,14 @@ export default function ReferenciasPage() {
   async function loadProyectos() {
     const { data } = await supabase
       .from("referencia_proyectos")
-      .select("id,nombre,descripcion,created_by,created_at,profiles(full_name),referencias(count)")
+      .select("id,nombre,descripcion,created_by,created_at,drive_url,profiles(full_name),referencias(count)")
       .order("created_at", { ascending: false })
     setProyectos((data || []).map((p: any) => ({
       id: p.id, nombre: p.nombre, descripcion: p.descripcion,
       created_by: p.created_by, created_at: p.created_at,
       creador: p.profiles?.full_name || "—",
       total: p.referencias?.[0]?.count ?? 0,
+      drive_url: p.drive_url || null,
     })))
   }
 
@@ -89,6 +91,43 @@ export default function ReferenciasPage() {
 
   const puedeBorrar = (p: RefProyecto) =>
     profile?.role === "admin" || p.created_by === user?.id
+
+  // ── Editar nombre/descripción de una carpeta ──────────────────────────────
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editNombre, setEditNombre] = useState("")
+  const [editDescripcion, setEditDescripcion] = useState("")
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  function startEdit(p: RefProyecto) {
+    setEditingId(p.id)
+    setEditNombre(p.nombre)
+    setEditDescripcion(p.descripcion || "")
+  }
+
+  async function saveEdit(p: RefProyecto) {
+    const nombre = editNombre.trim()
+    if (!nombre || savingEdit) return
+    setSavingEdit(true)
+    const { error } = await supabase
+      .from("referencia_proyectos")
+      .update({ nombre, descripcion: editDescripcion.trim() || null })
+      .eq("id", p.id)
+    setSavingEdit(false)
+    if (error) return alert(error.message)
+    setEditingId(null)
+    await loadProyectos()
+    // Si ya está vinculada al Drive, renombrar también su pestaña
+    if (p.drive_url && nombre !== p.nombre) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        void fetch("/api/referencias/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ proyectoId: p.id }),
+        })
+      } catch { /* la app ya quedó bien; el Drive se corrige en el siguiente sync */ }
+    }
+  }
 
   if (!profile || loading) return <PageLoader />
 
@@ -148,37 +187,75 @@ export default function ReferenciasPage() {
               display: "grid", gap: 14, marginTop: 24,
               gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(270px, 1fr))",
             }}>
-              {proyectos.map(p => (
-                <div key={p.id} style={cardStyle}>
-                  <Link href={`/referencias/${p.id}`} style={{ textDecoration: "none", flex: 1, display: "block" }}>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f1f5f9", wordBreak: "break-word" }}>
-                      {p.nombre}
-                    </p>
-                    {p.descripcion && (
-                      <p style={{ margin: "6px 0 0", fontSize: 12, color: "#94a3b8", lineHeight: 1.5, wordBreak: "break-word" }}>
-                        {p.descripcion}
-                      </p>
-                    )}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-                      <span style={countBadgeStyle}>
-                        🔗 {p.total} referencia{p.total === 1 ? "" : "s"}
-                      </span>
-                      <span style={{ fontSize: 11, color: "#475569" }}>
-                        por {p.creador}
-                      </span>
+              {proyectos.map(p => {
+                if (editingId === p.id) {
+                  return (
+                    <div key={p.id} style={{ ...cardStyle, flexDirection: "column", alignItems: "stretch", border: "1px solid rgba(167,139,250,0.35)" }}>
+                      <input
+                        value={editNombre}
+                        onChange={e => setEditNombre(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && saveEdit(p)}
+                        placeholder="Nombre del proyecto…"
+                        autoFocus
+                        style={inputStyle}
+                      />
+                      <input
+                        value={editDescripcion}
+                        onChange={e => setEditDescripcion(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && saveEdit(p)}
+                        placeholder="Descripción (opcional)"
+                        style={{ ...inputStyle, marginTop: 8 }}
+                      />
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <button onClick={() => saveEdit(p)} disabled={savingEdit} style={primaryButtonStyle}>
+                          {savingEdit ? "…" : "✓ Guardar"}
+                        </button>
+                        <button onClick={() => setEditingId(null)} style={cancelBtnStyle}>✕ Cancelar</button>
+                      </div>
                     </div>
-                  </Link>
-                  {puedeBorrar(p) && (
-                    <button
-                      onClick={() => deleteProyecto(p)}
-                      title="Borrar proyecto"
-                      style={deleteBtnStyle}
-                    >
-                      🗑
-                    </button>
-                  )}
-                </div>
-              ))}
+                  )
+                }
+                return (
+                  <div key={p.id} style={cardStyle}>
+                    <Link href={`/referencias/${p.id}`} style={{ textDecoration: "none", flex: 1, display: "block" }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f1f5f9", wordBreak: "break-word" }}>
+                        {p.nombre}
+                      </p>
+                      {p.descripcion && (
+                        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#94a3b8", lineHeight: 1.5, wordBreak: "break-word" }}>
+                          {p.descripcion}
+                        </p>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                        <span style={countBadgeStyle}>
+                          🔗 {p.total} referencia{p.total === 1 ? "" : "s"}
+                        </span>
+                        <span style={{ fontSize: 11, color: "#475569" }}>
+                          por {p.creador}
+                        </span>
+                      </div>
+                    </Link>
+                    {puedeBorrar(p) && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                        <button
+                          onClick={() => startEdit(p)}
+                          title="Editar nombre y descripción"
+                          style={deleteBtnStyle}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={() => deleteProyecto(p)}
+                          title="Borrar proyecto"
+                          style={deleteBtnStyle}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -231,4 +308,10 @@ const countBadgeStyle: React.CSSProperties = {
 const deleteBtnStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer",
   color: "#64748b", fontSize: 14, padding: 4, flexShrink: 0,
+}
+const cancelBtnStyle: React.CSSProperties = {
+  background: "transparent",
+  border: "1px solid rgba(148,163,184,0.2)",
+  borderRadius: 8, padding: "8px 16px",
+  color: "#94a3b8", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
