@@ -66,6 +66,8 @@ export default function ReferenciaProyectoPage() {
   const [proyecto, setProyecto] = useState<{ nombre: string; descripcion: string | null } | null>(null)
   const [referencias, setReferencias] = useState<Referencia[]>([])
   const [filtro, setFiltro] = useState<string>("todas")
+  const [driveSheetId, setDriveSheetId] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   const [newUrl, setNewUrl] = useState("")
   const [newTitulo, setNewTitulo] = useState("")
@@ -101,10 +103,11 @@ export default function ReferenciaProyectoPage() {
       setProfile(auth.profile)
       const { data: proj } = await supabase
         .from("referencia_proyectos")
-        .select("nombre,descripcion")
+        .select("nombre,descripcion,drive_sheet_id")
         .eq("id", proyectoId)
         .maybeSingle()
       setProyecto(proj)
+      setDriveSheetId(proj?.drive_sheet_id || null)
       await loadReferencias()
       setLoading(false)
     })()
@@ -114,6 +117,29 @@ export default function ReferenciaProyectoPage() {
   async function logout() {
     await supabase.auth.signOut()
     window.location.href = "/login"
+  }
+
+  // Sincroniza la lista a la hoja de Google Sheets del Drive compartido.
+  // manual=false: en silencio tras agregar/borrar (si aún no hay hoja, no crea).
+  async function syncDrive(manual: boolean) {
+    if (!manual && !driveSheetId) return
+    if (manual) setSyncing(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/referencias/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ proyectoId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error al sincronizar")
+      setDriveSheetId(data.sheetId)
+      if (manual) window.open(data.url, "_blank", "noopener")
+    } catch (err: any) {
+      if (manual) alert(err.message)
+    } finally {
+      if (manual) setSyncing(false)
+    }
   }
 
   async function addReferencia() {
@@ -137,6 +163,7 @@ export default function ReferenciaProyectoPage() {
     setNewTitulo("")
     setNewNota("")
     await loadReferencias()
+    void syncDrive(false)
   }
 
   async function deleteReferencia(r: Referencia) {
@@ -144,6 +171,7 @@ export default function ReferenciaProyectoPage() {
     const { error } = await supabase.from("referencias").delete().eq("id", r.id)
     if (error) return alert(error.message)
     await loadReferencias()
+    void syncDrive(false)
   }
 
   const puedeBorrar = (r: Referencia) =>
@@ -178,9 +206,30 @@ export default function ReferenciaProyectoPage() {
             <p style={{ color: "#64748b", marginTop: 24 }}>Este proyecto de referencias no existe (o fue borrado).</p>
           ) : (
             <>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: "10px 0 4px" }}>
-                {proyecto.nombre}
-              </h1>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "10px 0 4px" }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>
+                  {proyecto.nombre}
+                </h1>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {driveSheetId && (
+                    <a
+                      href={`https://docs.google.com/spreadsheets/d/${driveSheetId}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={driveBtnStyle}
+                    >
+                      📄 Ver en Drive
+                    </a>
+                  )}
+                  <button
+                    onClick={() => syncDrive(true)}
+                    disabled={syncing}
+                    title={driveSheetId ? "Volver a sincronizar la hoja del Drive" : "Crear la hoja en el Drive compartido"}
+                    style={{ ...driveBtnStyle, opacity: syncing ? 0.6 : 1, cursor: "pointer" }}
+                  >
+                    {syncing ? "Sincronizando…" : driveSheetId ? "↻ Sincronizar" : "🔗 Vincular a Drive"}
+                  </button>
+                </div>
+              </div>
               <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>
                 {proyecto.descripcion || "Referencias del proyecto"}
               </p>
@@ -338,6 +387,14 @@ const fuenteBadgeStyle: React.CSSProperties = {
 const deleteBtnStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer",
   color: "#64748b", fontSize: 14, padding: 4, flexShrink: 0,
+}
+const driveBtnStyle: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: 5,
+  padding: "6px 12px", borderRadius: 8,
+  fontSize: 12, fontWeight: 600, textDecoration: "none",
+  background: "rgba(52,211,153,0.10)",
+  border: "1px solid rgba(52,211,153,0.28)",
+  color: "#6ee7b7",
 }
 const chipStyle = (active: boolean, color: string): React.CSSProperties => ({
   padding: "5px 12px", borderRadius: 999, cursor: "pointer",
