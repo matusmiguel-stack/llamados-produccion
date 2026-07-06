@@ -17,7 +17,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks" | "workspace"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks" | "workspace" | "referencias"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -42,6 +42,7 @@ export const navItems: { href: string; label: string; icon: NavIconType; roles?:
   { href: "/flujo",       label: "Flujo de Caja", icon: "ingresos",  roles: ["admin", "finanzas"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
+  { href: "/referencias", label: "Referencias",  icon: "referencias" },
   { href: "/tasks",       label: "Mis Tareas",   icon: "tasks" },
 ]
 
@@ -307,6 +308,15 @@ export function NavIcon({
         <path d="M2 11h20" stroke="currentColor" strokeWidth="1.6" />
         <path d="M7 7V3M17 7V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         <path d="M7 3l2 4M12 3l2 4M17 3l2 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (type === "referencias") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
