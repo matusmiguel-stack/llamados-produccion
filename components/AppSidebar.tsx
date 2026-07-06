@@ -39,6 +39,7 @@ export const navItems: { href: string; label: string; icon: NavIconType; roles?:
   { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor", "editor_premium", "finanzas"] },
   { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
+  { href: "/flujo",       label: "Flujo de Caja", icon: "ingresos",  roles: ["admin", "finanzas"] },
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
   { href: "/tasks",       label: "Mis Tareas",   icon: "tasks" },
