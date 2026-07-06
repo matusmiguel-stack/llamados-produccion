@@ -56,6 +56,7 @@ type FacturaRow = {
   motivo_rechazo: string | null
   created_at: string
   codigo_proyecto: string | null
+  comprobante_path: string | null
   project_name: string | null
   project_code: string | null
 }
@@ -168,7 +169,7 @@ export default function ProveedorDetailPage() {
       if (["admin", "finanzas"].includes(auth.profile.role)) {
         const { data: facs } = await supabase
           .from("facturas")
-          .select("id, subtotal, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, projects(name, code)")
+          .select("id, subtotal, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, projects(name, code)")
           .eq("proveedor_id", proveedorId)
           .order("created_at", { ascending: false })
         setFacturas((facs || []).map((f: any) => ({
@@ -176,6 +177,7 @@ export default function ProveedorDetailPage() {
           fecha_pago: f.fecha_pago, paid_at: f.paid_at, concepto: f.concepto,
           origen: f.origen, forma_pago: f.forma_pago, motivo_rechazo: f.motivo_rechazo,
           created_at: f.created_at, codigo_proyecto: f.codigo_proyecto,
+          comprobante_path: f.comprobante_path ?? null,
           project_name: f.projects?.name ?? null, project_code: f.projects?.code ?? null,
         })))
       }
@@ -237,24 +239,59 @@ export default function ProveedorDetailPage() {
   }
 
   // Marcar una factura como pagada — misma acción/endpoint que el módulo de
-  // Finanzas, así ambos quedan sincronizados (leen y escriben la misma tabla).
-  async function markFacturaPaid(f: FacturaRow) {
-    if (!confirm(`¿Marcar como pagada la factura por ${fmt(Number(f.subtotal || 0))}?\nSe le enviará un correo de confirmación al proveedor.`)) return
+  // Finanzas (comprobante del banco obligatorio), así ambos quedan sincronizados.
+  const [payModalFac, setPayModalFac] = useState<FacturaRow | null>(null)
+  const [payFile, setPayFile] = useState<File | null>(null)
+
+  function markFacturaPaid(f: FacturaRow) {
+    setPayFile(null)
+    setPayModalFac(f)
+  }
+
+  async function confirmMarkFacturaPaid() {
+    if (!payModalFac) return
+    if (!payFile) { alert("Sube el comprobante de pago del banco (PDF o JPG)"); return }
+    const f = payModalFac
     setPayingId(f.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const fd = new FormData()
+      fd.append("action", "mark-paid")
+      fd.append("facturaId", f.id)
+      fd.append("comprobante", payFile)
+      const res = await fetch("/api/facturas/admin", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || "Error")
+      setFacturas(prev => prev.map(x => x.id === f.id
+        ? { ...x, status: "pagada", paid_at: new Date().toISOString(), comprobante_path: data.comprobante_path || null }
+        : x))
+      setPayModalFac(null)
+      setPayFile(null)
+    } catch (err: any) {
+      alert("Error al marcar pago: " + err.message)
+    } finally {
+      setPayingId(null)
+    }
+  }
+
+  // Descargar el comprobante de pago (link firmado del storage)
+  async function downloadComprobante(path: string) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch("/api/facturas/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ action: "mark-paid", facturaId: f.id }),
+        body: JSON.stringify({ action: "download", path }),
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error")
-      setFacturas(prev => prev.map(x => x.id === f.id ? { ...x, status: "pagada", paid_at: new Date().toISOString() } : x))
+      window.open(data.url, "_blank")
     } catch (err: any) {
-      alert("Error al marcar pago: " + err.message)
-    } finally {
-      setPayingId(null)
+      alert("Error al descargar: " + err.message)
     }
   }
 
@@ -631,6 +668,18 @@ export default function ProveedorDetailPage() {
                                   {payingId === f.id ? "…" : "✓ Marcar Pago"}
                                 </button>
                               )}
+                              {f.comprobante_path && (
+                                <button
+                                  onClick={() => downloadComprobante(f.comprobante_path!)}
+                                  title="Descargar comprobante de pago"
+                                  style={{
+                                    marginLeft: 6, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                    border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.10)", color: "#6ee7b7",
+                                  }}
+                                >
+                                  📎
+                                </button>
+                              )}
                             </td>
                           </tr>
                         )
@@ -643,6 +692,72 @@ export default function ProveedorDetailPage() {
           )}
 
         </div>
+
+        {/* Modal: comprobante obligatorio para marcar pagada */}
+        {payModalFac && (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 10000,
+              background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
+              display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+            }}
+            onClick={() => payingId ? null : setPayModalFac(null)}
+          >
+            <div
+              style={{
+                width: "100%", maxWidth: 440,
+                background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
+                borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+                Marcar pago{payModalFac.concepto ? ` — ${payModalFac.concepto}` : ""}
+              </p>
+              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
+                Monto: <span style={{ fontFamily: "monospace", color: "#e2e8f0", fontWeight: 700 }}>{fmt(Number(payModalFac.subtotal || 0))}</span>
+              </p>
+              <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
+                Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                onChange={e => setPayFile(e.target.files?.[0] || null)}
+                style={{ fontSize: 12, color: "#94a3b8", width: "100%" }}
+              />
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                PDF o JPG. Queda guardado y vinculado a esta transacción. Al confirmar se
+                le envía el correo de pago al proveedor.
+              </p>
+              <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setPayModalFac(null)}
+                  disabled={payingId === payModalFac.id}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, cursor: "pointer",
+                    border: "1px solid rgba(148,163,184,0.2)", background: "transparent",
+                    color: "#94a3b8", fontSize: 13, fontWeight: 600,
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmMarkFacturaPaid}
+                  disabled={payingId === payModalFac.id || !payFile}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    cursor: payingId === payModalFac.id || !payFile ? "not-allowed" : "pointer",
+                    opacity: !payFile ? 0.5 : 1,
+                    border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.14)", color: "#34d399",
+                  }}
+                >
+                  {payingId === payModalFac.id ? "Guardando…" : "✓ Confirmar pago"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
