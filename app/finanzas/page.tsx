@@ -4,6 +4,7 @@ import { PageLoader } from "../../components/PageLoader"
 import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
+import { uploadComprobante } from "../../lib/upload-comprobante"
 import { AppSidebar } from "../../components/AppSidebar"
 
 type Factura = {
@@ -130,16 +131,9 @@ export default function FinanzasPage() {
     const factura = payModal
     setWorking(factura.id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const fd = new FormData()
-      fd.append("action", "mark-paid")
-      fd.append("facturaId", factura.id)
-      fd.append("comprobante", payFile)
-      const res = await fetch("/api/facturas/admin", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-        body: fd,
-      })
+      // Subida directa a Storage (los archivos grandes truenan si pasan por la API)
+      const comprobantePath = await uploadComprobante(payFile, factura.codigo_proyecto || factura.projects?.code || null)
+      const res = await authedFetch({ action: "mark-paid", facturaId: factura.id, comprobantePath })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error")
       setFacturas(prev => prev.map(f =>

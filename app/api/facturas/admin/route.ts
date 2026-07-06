@@ -50,6 +50,7 @@ export async function POST(req: Request) {
 
   let action: string, facturaId: string | null = null, path: string | null = null
   let comprobante: File | null = null
+  let comprobantePathParam: string | null = null
   const contentType = req.headers.get("content-type") || ""
   if (contentType.includes("multipart/form-data")) {
     const fd = await req.formData()
@@ -58,7 +59,9 @@ export async function POST(req: Request) {
     const file = fd.get("comprobante")
     comprobante = file instanceof File && file.size > 0 ? file : null
   } else {
-    ({ action, facturaId, path } = await req.json())
+    const body = await req.json()
+    ;({ action, facturaId, path } = body)
+    comprobantePathParam = body.comprobantePath ? String(body.comprobantePath) : null
   }
 
   if (action === "download" && path) {
@@ -80,24 +83,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Solo se pueden marcar como pagadas las facturas aceptadas" }, { status: 400 })
     }
 
-    // Comprobante de pago del banco: obligatorio para marcar pagada
-    if (!comprobante) {
+    // Comprobante de pago del banco: obligatorio para marcar pagada.
+    // Llega como ruta de Storage (subida directa con URL firmada — los
+    // archivos grandes truenan si viajan por Vercel) o como archivo chico.
+    let comprobantePath: string
+    if (comprobantePathParam) {
+      const { error: checkErr } = await auth.admin.storage
+        .from("facturas").createSignedUrl(comprobantePathParam, 60)
+      if (checkErr) {
+        return NextResponse.json({ error: "El comprobante no se encontró en el storage; vuelve a subirlo" }, { status: 400 })
+      }
+      comprobantePath = comprobantePathParam
+    } else if (comprobante) {
+      if (!COMPROBANTE_TYPES[comprobante.type]) {
+        return NextResponse.json({ error: "El comprobante debe ser PDF, JPG o PNG" }, { status: 400 })
+      }
+      const safeName = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, "_")
+      const folder = factura.codigo_proyecto || "sin-codigo"
+      const compUpload = await auth.admin.storage
+        .from("facturas")
+        .upload(`${folder}/comprobante-${Date.now()}-${safeName(comprobante.name)}`,
+          Buffer.from(await comprobante.arrayBuffer()), { contentType: comprobante.type })
+      if (compUpload.error) {
+        return NextResponse.json({ error: `No se pudo guardar el comprobante: ${compUpload.error.message}` }, { status: 500 })
+      }
+      comprobantePath = compUpload.data.path
+    } else {
       return NextResponse.json({ error: "Sube el comprobante de pago del banco (PDF o JPG) para marcar la factura como pagada" }, { status: 400 })
     }
-    if (!COMPROBANTE_TYPES[comprobante.type]) {
-      return NextResponse.json({ error: "El comprobante debe ser PDF, JPG o PNG" }, { status: 400 })
-    }
-
-    const safeName = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const folder = factura.codigo_proyecto || "sin-codigo"
-    const compUpload = await auth.admin.storage
-      .from("facturas")
-      .upload(`${folder}/comprobante-${Date.now()}-${safeName(comprobante.name)}`,
-        Buffer.from(await comprobante.arrayBuffer()), { contentType: comprobante.type })
-    if (compUpload.error) {
-      return NextResponse.json({ error: `No se pudo guardar el comprobante: ${compUpload.error.message}` }, { status: 500 })
-    }
-    const comprobantePath = compUpload.data.path
 
     const { error: updErr } = await auth.admin
       .from("facturas")

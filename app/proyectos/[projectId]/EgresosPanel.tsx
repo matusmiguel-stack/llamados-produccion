@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
+import { uploadComprobante } from "../../../lib/upload-comprobante"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,6 +384,8 @@ export function EgresosPanel({
     }
     setPaying(true)
     try {
+      // Subida directa a Storage (los archivos grandes truenan si pasan por la API)
+      const comprobantePath = await uploadComprobante(payComprobante, projectCode || null)
       const { data: { session } } = await supabase.auth.getSession()
       const fd = new FormData()
       fd.append("itemId", item.id)
@@ -401,7 +404,7 @@ export function EgresosPanel({
         fd.append("xml", payXml)
         fd.append("pdf", payPdf)
       }
-      fd.append("comprobante", payComprobante)
+      fd.append("comprobantePath", comprobantePath)
       const res = await fetch("/api/egresos/pay", {
         method: "POST",
         headers: { Authorization: `Bearer ${session?.access_token}` },

@@ -41,6 +41,9 @@ export async function POST(req: Request) {
     const pdfFile = form.get("pdf") as File | null
     const compRaw = form.get("comprobante")
     const compFile = compRaw instanceof File && compRaw.size > 0 ? compRaw : null
+    // Ruta del comprobante ya subido a Storage con URL firmada (los archivos
+    // grandes no pueden viajar por Vercel: corta requests > 4.5 MB)
+    const compPathParam = String(form.get("comprobantePath") || "").trim() || null
 
     if (!itemId || !tipo || !monto || monto <= 0) {
       return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 })
@@ -56,10 +59,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Para anticipo, el XML y el PDF de la factura son obligatorios" }, { status: 400 })
     }
     // Comprobante de pago del banco — obligatorio para ambos tipos.
-    if (!compFile) {
+    if (!compFile && !compPathParam) {
       return NextResponse.json({ error: "Sube el comprobante de pago del banco (PDF o JPG)" }, { status: 400 })
     }
-    if (!["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(compFile.type)) {
+    if (compFile && !["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(compFile.type)) {
       return NextResponse.json({ error: "El comprobante debe ser PDF, JPG o PNG" }, { status: 400 })
     }
 
@@ -87,12 +90,21 @@ export async function POST(req: Request) {
     }
 
     // Comprobante de pago del banco (obligatorio, validado arriba)
-    const compUp = await admin.storage.from("facturas")
-      .upload(`${folder}/comprobante-${stamp}-${safe(compFile.name)}`, Buffer.from(await compFile.arrayBuffer()), { contentType: compFile.type })
-    if (compUp.error) {
-      return NextResponse.json({ error: `No se pudo guardar el comprobante: ${compUp.error.message}` }, { status: 500 })
+    let comprobantePath: string
+    if (compPathParam) {
+      const { error: checkErr } = await admin.storage.from("facturas").createSignedUrl(compPathParam, 60)
+      if (checkErr) {
+        return NextResponse.json({ error: "El comprobante no se encontró en el storage; vuelve a subirlo" }, { status: 400 })
+      }
+      comprobantePath = compPathParam
+    } else {
+      const compUp = await admin.storage.from("facturas")
+        .upload(`${folder}/comprobante-${stamp}-${safe(compFile!.name)}`, Buffer.from(await compFile!.arrayBuffer()), { contentType: compFile!.type })
+      if (compUp.error) {
+        return NextResponse.json({ error: `No se pudo guardar el comprobante: ${compUp.error.message}` }, { status: 500 })
+      }
+      comprobantePath = compUp.data.path
     }
-    const comprobantePath = compUp.data.path
 
     // Crear el registro en facturas como pago realizado
     const { data: factura, error: facErr } = await admin

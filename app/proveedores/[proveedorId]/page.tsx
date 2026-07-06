@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
+import { uploadComprobante } from "../../../lib/upload-comprobante"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { PageLoader } from "../../../components/PageLoader"
 
@@ -254,15 +255,13 @@ export default function ProveedorDetailPage() {
     const f = payModalFac
     setPayingId(f.id)
     try {
+      // Subida directa a Storage (los archivos grandes truenan si pasan por la API)
+      const comprobantePath = await uploadComprobante(payFile, f.codigo_proyecto || f.project_code)
       const { data: { session } } = await supabase.auth.getSession()
-      const fd = new FormData()
-      fd.append("action", "mark-paid")
-      fd.append("facturaId", f.id)
-      fd.append("comprobante", payFile)
       const res = await fetch("/api/facturas/admin", {
         method: "POST",
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-        body: fd,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ action: "mark-paid", facturaId: f.id, comprobantePath }),
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || "Error")
