@@ -39,6 +39,8 @@ export async function POST(req: Request) {
     const fechaPago = String(form.get("fechaPago") || "").trim()
     const xmlFile = form.get("xml") as File | null
     const pdfFile = form.get("pdf") as File | null
+    const compRaw = form.get("comprobante")
+    const compFile = compRaw instanceof File && compRaw.size > 0 ? compRaw : null
 
     if (!itemId || !tipo || !monto || monto <= 0) {
       return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 })
@@ -53,6 +55,13 @@ export async function POST(req: Request) {
     if (tipo === "anticipo" && (!xmlFile || !pdfFile)) {
       return NextResponse.json({ error: "Para anticipo, el XML y el PDF de la factura son obligatorios" }, { status: 400 })
     }
+    // Comprobante de pago del banco — obligatorio para ambos tipos.
+    if (!compFile) {
+      return NextResponse.json({ error: "Sube el comprobante de pago del banco (PDF o JPG)" }, { status: 400 })
+    }
+    if (!["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(compFile.type)) {
+      return NextResponse.json({ error: "El comprobante debe ser PDF, JPG o PNG" }, { status: 400 })
+    }
 
     // Email del proveedor (para el registro en facturas)
     let proveedorEmail: string | null = null
@@ -61,13 +70,14 @@ export async function POST(req: Request) {
       proveedorEmail = prov?.email || null
     }
 
-    // Subir archivos (solo anticipo)
+    // Subir archivos
+    const stamp = Date.now()
+    const safe = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, "_")
+    const folder = codigoProyecto || projectId || "sin-codigo"
+
     let xmlPath: string | null = null
     let pdfPath: string | null = null
     if (tipo === "anticipo" && xmlFile && pdfFile) {
-      const stamp = Date.now()
-      const safe = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, "_")
-      const folder = codigoProyecto || projectId || "sin-codigo"
       const xmlUp = await admin.storage.from("facturas")
         .upload(`${folder}/anticipo-${stamp}-${safe(xmlFile.name)}`, Buffer.from(await xmlFile.arrayBuffer()), { contentType: "text/xml" })
       if (!xmlUp.error) xmlPath = xmlUp.data.path
@@ -75,6 +85,14 @@ export async function POST(req: Request) {
         .upload(`${folder}/anticipo-${stamp}-${safe(pdfFile.name)}`, Buffer.from(await pdfFile.arrayBuffer()), { contentType: "application/pdf" })
       if (!pdfUp.error) pdfPath = pdfUp.data.path
     }
+
+    // Comprobante de pago del banco (obligatorio, validado arriba)
+    const compUp = await admin.storage.from("facturas")
+      .upload(`${folder}/comprobante-${stamp}-${safe(compFile.name)}`, Buffer.from(await compFile.arrayBuffer()), { contentType: compFile.type })
+    if (compUp.error) {
+      return NextResponse.json({ error: `No se pudo guardar el comprobante: ${compUp.error.message}` }, { status: 500 })
+    }
+    const comprobantePath = compUp.data.path
 
     // Crear el registro en facturas como pago realizado
     const { data: factura, error: facErr } = await admin
@@ -94,6 +112,7 @@ export async function POST(req: Request) {
         paid_at: new Date(fechaPago + "T12:00:00").toISOString(),
         xml_path: xmlPath,
         pdf_path: pdfPath,
+        comprobante_path: comprobantePath,
       })
       .select("id")
       .single()

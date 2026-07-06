@@ -128,6 +128,7 @@ export function EgresosPanel({
   const [payModal, setPayModal] = useState<{ item: EgresoItem; tipo: "anticipo" | "comprobacion" } | null>(null)
   const [payXml, setPayXml] = useState<File | null>(null)
   const [payPdf, setPayPdf] = useState<File | null>(null)
+  const [payComprobante, setPayComprobante] = useState<File | null>(null)
   const [payMonto, setPayMonto] = useState("")
   const [payForma, setPayForma] = useState("")
   const [payFecha, setPayFecha] = useState("")
@@ -357,6 +358,7 @@ export function EgresosPanel({
     setPayModal({ item, tipo })
     setPayXml(null)
     setPayPdf(null)
+    setPayComprobante(null)
     setPayForma("")
     setPayFecha(hoyMx)
     setPayMonto(String(montoEgreso(item)))
@@ -373,6 +375,10 @@ export function EgresosPanel({
     if (!payFecha) { alert("Indica la fecha en que se realizó el pago"); return }
     if (tipo === "anticipo" && (!payXml || !payPdf)) {
       alert("Para anticipo debes subir el XML y el PDF de la factura")
+      return
+    }
+    if (!payComprobante) {
+      alert("Sube el comprobante de pago del banco (PDF o JPG)")
       return
     }
     setPaying(true)
@@ -395,6 +401,7 @@ export function EgresosPanel({
         fd.append("xml", payXml)
         fd.append("pdf", payPdf)
       }
+      fd.append("comprobante", payComprobante)
       const res = await fetch("/api/egresos/pay", {
         method: "POST",
         headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -810,6 +817,17 @@ export function EgresosPanel({
                 <input type="file" accept=".pdf,application/pdf" onChange={(e) => setPayPdf(e.target.files?.[0] || null)} style={payFileStyle} />
               </>
             )}
+
+            <label style={{ ...payLabelStyle, marginTop: 14 }}>Comprobante de pago del banco *</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              onChange={(e) => setPayComprobante(e.target.files?.[0] || null)}
+              style={payFileStyle}
+            />
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+              PDF o JPG. Queda guardado y vinculado a esta transacción.
+            </p>
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setPayModal(null)} disabled={paying} style={payCancelStyle}>Cancelar</button>
