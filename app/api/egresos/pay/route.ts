@@ -116,6 +116,7 @@ export async function POST(req: Request) {
         codigo_proyecto: codigoProyecto,
         concepto: concepto || null,
         subtotal: monto,
+        total: monto, // pago interno: el monto capturado es el que sale de caja
         status: "pagada",
         origen: tipo,
         forma_pago: formaPago,
@@ -177,6 +178,7 @@ export async function POST(req: Request) {
           codigo_proyecto: codigoProyecto,
           concepto: `Reembolso — ${concepto || ""}`.trim(),
           subtotal: reembolso,
+          total: reembolso,
           status: "aceptada",      // por pagar
           origen: "reembolso",
           fecha_pago: todayISO(),

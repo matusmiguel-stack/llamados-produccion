@@ -12,6 +12,7 @@ type Factura = {
   proveedor_email: string | null
   codigo_proyecto: string | null
   subtotal: number | null
+  total: number | null
   status: "aceptada" | "rechazada" | "pagada"
   motivo_rechazo: string | null
   fecha_pago: string | null
@@ -37,6 +38,10 @@ const ORIGEN_LABEL: Record<string, string> = {
 
 const fmtMx = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
+
+// Monto final a pagar: total neto de impuestos del CFDI (IVA − retenciones).
+// Fallback al subtotal para registros sin total.
+const montoPagar = (f: Factura) => Number(f.total ?? f.subtotal ?? 0)
 
 function provLabel(f: Factura) {
   if (!f.proveedores) return f.proveedor_email || "—"
@@ -186,10 +191,10 @@ export default function FinanzasPage() {
   }, [facturas, filter, search])
 
   const totalPorPagar = useMemo(
-    () => facturas.filter(f => f.status === "aceptada").reduce((s, f) => s + Number(f.subtotal || 0), 0),
+    () => facturas.filter(f => f.status === "aceptada").reduce((s, f) => s + montoPagar(f), 0),
     [facturas]
   )
-  const totalViernes = pagosEsteViernes.reduce((s, f) => s + Number(f.subtotal || 0), 0)
+  const totalViernes = pagosEsteViernes.reduce((s, f) => s + montoPagar(f), 0)
 
   // Agrupar las facturas por pagar según su viernes de vencimiento (fecha_pago).
   // fecha_pago ya viene redondeada a viernes desde la recepción de facturas.
@@ -205,13 +210,13 @@ export default function FinanzasPage() {
     return [...map.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
       .map(([fecha, fs]) => {
-        const total = fs.reduce((s, f) => s + Number(f.subtotal || 0), 0)
+        const total = fs.reduce((s, f) => s + montoPagar(f), 0)
         const provMap = new Map<string, { nombre: string; total: number; count: number; proyectos: Set<string> }>()
         for (const f of fs) {
           const key = provLabel(f)
           if (!provMap.has(key)) provMap.set(key, { nombre: key, total: 0, count: 0, proyectos: new Set() })
           const p = provMap.get(key)!
-          p.total += Number(f.subtotal || 0)
+          p.total += montoPagar(f)
           p.count += 1
           p.proyectos.add(projLabel(f))
         }
@@ -263,7 +268,7 @@ export default function FinanzasPage() {
           <div style={cardStyle("#34d399")}>
             <p style={cardLabelStyle}>Pagadas</p>
             <p style={{ ...cardValueStyle, color: "#34d399" }}>
-              {fmtMx(facturas.filter(f => f.status === "pagada").reduce((s, f) => s + Number(f.subtotal || 0), 0))}
+              {fmtMx(facturas.filter(f => f.status === "pagada").reduce((s, f) => s + montoPagar(f), 0))}
             </p>
             <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada").length} facturas</p>
           </div>
@@ -337,7 +342,7 @@ export default function FinanzasPage() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "monospace", fontSize: 14 }}>
-                      {fmtMx(Number(f.subtotal || 0))}
+                      {fmtMx(montoPagar(f))}
                     </span>
                     <button
                       onClick={() => markPaid(f)}
@@ -406,9 +411,9 @@ export default function FinanzasPage() {
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                    {f.subtotal != null && (
-                      <span style={{ color: "#e2e8f0", fontWeight: 700, fontFamily: "monospace", fontSize: 15 }}>
-                        {fmtMx(Number(f.subtotal))}
+                    {(f.total != null || f.subtotal != null) && (
+                      <span style={{ color: "#e2e8f0", fontWeight: 700, fontFamily: "monospace", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
+                        {fmtMx(montoPagar(f))}
                       </span>
                     )}
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -444,7 +449,7 @@ export default function FinanzasPage() {
                 Marcar pago — {provLabel(payModal)}
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
-                {projLabel(payModal)} · <span style={{ fontFamily: "monospace", color: "#e2e8f0", fontWeight: 700 }}>{fmtMx(Number(payModal.subtotal || 0))}</span>
+                {projLabel(payModal)} · <span style={{ fontFamily: "monospace", color: "#e2e8f0", fontWeight: 700 }}>{fmtMx(montoPagar(payModal))}</span>
               </p>
               <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
                 Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>

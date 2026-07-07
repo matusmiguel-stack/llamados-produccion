@@ -180,6 +180,15 @@ function parseSubtotal(xml: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+// Monto final a pagar del CFDI: Comprobante@Total = SubTotal + IVA trasladado
+// − retenciones (ISR/IVA). Correcto tanto para factura como para honorarios.
+function parseTotal(xml: string): number | null {
+  const m = xml.match(/<(?:cfdi:)?Comprobante[^>]*\sTotal="([\d.]+)"/i)
+  if (!m) return null
+  const n = parseFloat(m[1])
+  return Number.isFinite(n) ? n : null
+}
+
 function parseReceptorRfc(xml: string): string | null {
   const m = xml.match(/<(?:cfdi:)?Receptor[^>]*\sRfc="([A-Z0-9&Ñ]{12,13})"/i)
   return m ? m[1].toUpperCase() : null
@@ -304,8 +313,9 @@ export async function POST(req: Request) {
       )
     }
 
-    // 5. Extraer subtotal del CFDI
+    // 5. Extraer subtotal y total (neto de impuestos) del CFDI
     const subtotal = parseSubtotal(xmlText)
+    const totalCfdi = parseTotal(xmlText)
     if (subtotal == null) {
       return rechazar(
         "No pudimos leer el subtotal de tu factura. Asegúrate de subir el archivo XML del CFDI (no el PDF renombrado).",
@@ -451,7 +461,7 @@ export async function POST(req: Request) {
     // 9. Registrar factura aceptada (vinculada a su egreso)
     await admin.from("facturas").insert({
       proveedor_id: prov.id, project_id: project.id, proveedor_email: email,
-      codigo_proyecto: codigo, subtotal, status: "aceptada",
+      codigo_proyecto: codigo, subtotal, total: totalCfdi ?? subtotal, status: "aceptada",
       fecha_pago: fechaISO(fechaPago), xml_path: xmlPath, pdf_path: pdfPath,
       uuid_fiscal: uuidFiscal, quote_item_id: quoteItemId,
     })
