@@ -418,15 +418,17 @@ export default function ProveedorDetailPage() {
               value={new Date(proveedor!.created_at).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })} />
           </div>
 
-          {/* Summary */}
-          <div style={summaryRowStyle}>
+          {/* Resumen de egresos — con `order: 1` se muestra DESPUÉS de las
+              facturas (que van primero por pedido), aunque en el DOM siga aquí. */}
+          <div style={{ ...summaryRowStyle, order: 1 }}>
             <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#f87171" big />
             <SummaryCard label="Proyectos"      value={String(Object.keys(byProject).length)} color="#94a3b8" />
             <SummaryCard label="Ítems"          value={String(egresos.length)} color="#94a3b8" />
           </div>
 
-          {/* Egresos */}
-          <div style={sectionStyle}>
+          {/* Egresos — `order: 1` lo pone después de la sección de Facturas
+              (el contenedor es grid, así que las facturas quedan primero). */}
+          <div style={{ ...sectionStyle, order: 1 }}>
             <div style={sectionHeaderStyle}>
               <p style={sectionTitleStyle}>Egresos asignados</p>
               <p style={sectionHintStyle}>Todos los rubros liberados donde aparece este proveedor{canEdit ? " — editables desde aquí" : ""}</p>
