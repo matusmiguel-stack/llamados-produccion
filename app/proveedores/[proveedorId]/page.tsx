@@ -48,6 +48,7 @@ type EgresoRow = {
 type FacturaRow = {
   id: string
   subtotal: number | null
+  total: number | null
   status: "aceptada" | "rechazada" | "pagada"
   fecha_pago: string | null
   paid_at: string | null
@@ -122,6 +123,10 @@ export default function ProveedorDetailPage() {
   const [egresos, setEgresos]       = useState<EgresoRow[]>([])
   const [facturas, setFacturas]     = useState<FacturaRow[]>([])
   const [facFilter, setFacFilter]   = useState<"aceptada" | "pagada" | "rechazada">("aceptada")
+  // Pestañas Facturas/Egresos, contacto colapsado y proyectos plegados en egresos
+  const [activeTab, setActiveTab]   = useState<"facturas" | "egresos">("facturas")
+  const [showContacto, setShowContacto] = useState(false)
+  const [colProj, setColProj]       = useState<Record<string, boolean>>({})
   const [payingId, setPayingId]     = useState<string | null>(null)
   const [provCatalog, setProvCatalog] = useState<ProvCatalog[]>([])
   const [empCatalog, setEmpCatalog]   = useState<EmpCatalog[]>([])
@@ -170,11 +175,11 @@ export default function ProveedorDetailPage() {
       if (["admin", "finanzas"].includes(auth.profile.role)) {
         const { data: facs } = await supabase
           .from("facturas")
-          .select("id, subtotal, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, projects(name, code)")
+          .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, projects(name, code)")
           .eq("proveedor_id", proveedorId)
           .order("created_at", { ascending: false })
         setFacturas((facs || []).map((f: any) => ({
-          id: f.id, subtotal: f.subtotal, status: f.status,
+          id: f.id, subtotal: f.subtotal, total: f.total ?? null, status: f.status,
           fecha_pago: f.fecha_pago, paid_at: f.paid_at, concepto: f.concepto,
           origen: f.origen, forma_pago: f.forma_pago, motivo_rechazo: f.motivo_rechazo,
           created_at: f.created_at, codigo_proyecto: f.codigo_proyecto,
@@ -363,12 +368,14 @@ export default function ProveedorDetailPage() {
   // Facturas: espejo de Finanzas (solo admin/finanzas pueden verlas).
   const canSeeFacturas = ["admin", "finanzas"].includes(profile.role)
   const hoyISO = new Date().toLocaleDateString("sv")
-  // Total facturado = facturas metidas (por pagar + pagadas), SIN las rechazadas.
-  const totalFacturado = facturas.filter(f => f.status !== "rechazada").reduce((s, f) => s + Number(f.subtotal || 0), 0)
+  // Monto a pagar: total neto de impuestos del CFDI (mismo criterio que Finanzas).
+  const montoPagar = (f: FacturaRow) => Number(f.total ?? f.subtotal ?? 0)
   // Total por pagar = solo las que faltan por pagar (aceptadas, aún no pagadas).
-  const totalPorPagar = facturas.filter(f => f.status === "aceptada").reduce((s, f) => s + Number(f.subtotal || 0), 0)
+  const totalPorPagar = facturas.filter(f => f.status === "aceptada").reduce((s, f) => s + montoPagar(f), 0)
   // Total vencido = por pagar cuyo plazo (fecha_pago) ya pasó.
-  const totalVencido = facturas.filter(f => f.status === "aceptada" && f.fecha_pago && f.fecha_pago < hoyISO).reduce((s, f) => s + Number(f.subtotal || 0), 0)
+  const vencidas = facturas.filter(f => f.status === "aceptada" && f.fecha_pago && f.fecha_pago < hoyISO)
+  const totalVencido = vencidas.reduce((s, f) => s + montoPagar(f), 0)
+  const totalPagado = facturas.filter(f => f.status === "pagada").reduce((s, f) => s + montoPagar(f), 0)
   const facCounts = {
     aceptada:  facturas.filter(f => f.status === "aceptada").length,
     pagada:    facturas.filter(f => f.status === "pagada").length,
@@ -409,26 +416,57 @@ export default function ProveedorDetailPage() {
             {canEdit && <Link href="/proveedores" style={editLinkStyle}>✎ Editar en directorio</Link>}
           </div>
 
-          {/* Info cards */}
-          <div style={infoGridStyle}>
-            <InfoCard icon="📧" label="Email"     value={proveedor!.email    || "—"} />
-            <InfoCard icon="📱" label="Teléfono"  value={proveedor!.telefono || "—"} />
-            <InfoCard icon="💼" label="Actividad" value={proveedor!.actividad} />
-            <InfoCard icon="📅" label="Alta"
-              value={new Date(proveedor!.created_at).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })} />
+          {/* Datos de contacto — colapsados para despejar la vista */}
+          <div>
+            <button onClick={() => setShowContacto(v => !v)} style={contactToggleStyle}>
+              {showContacto ? "▾" : "▸"} Datos de contacto
+            </button>
+            {showContacto && (
+              <div style={{ ...infoGridStyle, marginTop: 10 }}>
+                <InfoCard icon="📧" label="Email"     value={proveedor!.email    || "—"} />
+                <InfoCard icon="📱" label="Teléfono"  value={proveedor!.telefono || "—"} />
+                <InfoCard icon="💼" label="Actividad" value={proveedor!.actividad} />
+                <InfoCard icon="📅" label="Alta"
+                  value={new Date(proveedor!.created_at).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })} />
+              </div>
+            )}
           </div>
 
-          {/* Resumen de egresos — con `order: 1` se muestra DESPUÉS de las
-              facturas (que van primero por pedido), aunque en el DOM siga aquí. */}
-          <div style={{ ...summaryRowStyle, order: 1 }}>
-            <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#f87171" big />
-            <SummaryCard label="Proyectos"      value={String(Object.keys(byProject).length)} color="#94a3b8" />
-            <SummaryCard label="Ítems"          value={String(egresos.length)} color="#94a3b8" />
-          </div>
+          {/* Resumen único — lo urgente primero */}
+          {canSeeFacturas ? (
+            <div style={summaryRowStyle}>
+              <SummaryCard label="Por pagar" value={fmt(totalPorPagar)} color="#fbbf24"
+                hint={`${facCounts.aceptada} factura${facCounts.aceptada === 1 ? "" : "s"}`} />
+              <SummaryCard label="Vencido" value={fmt(totalVencido)} color="#f87171"
+                hint={vencidas.length === 0 ? "nada vencido" : `${vencidas.length} factura${vencidas.length === 1 ? "" : "s"}`} />
+              <SummaryCard label="Pagado" value={fmt(totalPagado)} color="#34d399"
+                hint={`${facCounts.pagada} pago${facCounts.pagada === 1 ? "" : "s"}`} />
+              <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#94a3b8"
+                hint={`${egresos.length} rubro${egresos.length === 1 ? "" : "s"} · ${Object.keys(byProject).length} proyecto${Object.keys(byProject).length === 1 ? "" : "s"}`} />
+            </div>
+          ) : (
+            <div style={summaryRowStyle}>
+              <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#f87171" big />
+              <SummaryCard label="Proyectos"      value={String(Object.keys(byProject).length)} color="#94a3b8" />
+              <SummaryCard label="Ítems"          value={String(egresos.length)} color="#94a3b8" />
+            </div>
+          )}
 
-          {/* Egresos — `order: 1` lo pone después de la sección de Facturas
-              (el contenedor es grid, así que las facturas quedan primero). */}
-          <div style={{ ...sectionStyle, order: 1 }}>
+          {/* Pestañas: Facturas / Egresos (una cosa a la vez) */}
+          {canSeeFacturas && (
+            <div style={tabBarStyle}>
+              <button onClick={() => setActiveTab("facturas")} style={tabBtnStyle(activeTab === "facturas")}>
+                🧾 Facturas ({facturas.length})
+              </button>
+              <button onClick={() => setActiveTab("egresos")} style={tabBtnStyle(activeTab === "egresos")}>
+                📋 Egresos ({egresos.length})
+              </button>
+            </div>
+          )}
+
+          {/* Egresos — visible en su pestaña (o siempre, para roles sin facturas) */}
+          {(!canSeeFacturas || activeTab === "egresos") && (
+          <div style={sectionStyle}>
             <div style={sectionHeaderStyle}>
               <p style={sectionTitleStyle}>Egresos asignados</p>
               <p style={sectionHintStyle}>Todos los rubros liberados donde aparece este proveedor{canEdit ? " — editables desde aquí" : ""}</p>
@@ -444,14 +482,21 @@ export default function ProveedorDetailPage() {
                 const projectTotal = rows.reduce((s, r) => s + r.monto, 0)
                 return (
                   <div key={pid} style={{ marginBottom: 20 }}>
-                    <div style={projectHeaderStyle}>
+                    <div
+                      style={{ ...projectHeaderStyle, cursor: "pointer" }}
+                      onClick={() => setColProj(prev => ({ ...prev, [pid]: !prev[pid] }))}
+                      title={colProj[pid] ? "Mostrar rubros" : "Ocultar rubros"}
+                    >
                       <div>
-                        <Link href={`/proyectos/${pid}`} style={projectNameLinkStyle}>{project_name}</Link>
+                        <span style={{ color: "#64748b", fontSize: 12, marginRight: 8 }}>{colProj[pid] ? "▸" : "▾"}</span>
+                        <Link href={`/proyectos/${pid}`} style={projectNameLinkStyle} onClick={e => e.stopPropagation()}>{project_name}</Link>
                         <span style={clientNameStyle}> · {client_name}</span>
+                        <span style={{ color: "#475569", fontSize: 11, marginLeft: 8 }}>({rows.length} rubro{rows.length === 1 ? "" : "s"})</span>
                       </div>
                       <span style={projectTotalStyle}>{fmt(projectTotal)}</span>
                     </div>
 
+                    {!colProj[pid] && (
                     <div style={tableWrapStyle}>
                       <table style={tableStyle}>
                         <thead>
@@ -564,26 +609,17 @@ export default function ProveedorDetailPage() {
                         </tfoot>
                       </table>
                     </div>
+                    )}
                   </div>
                 )
               })
             )}
           </div>
+          )}
 
-          {/* Facturas (espejo de Finanzas) */}
-          {canSeeFacturas && (
+          {/* Facturas — visible en su pestaña (solo admin/finanzas) */}
+          {canSeeFacturas && activeTab === "facturas" && (
             <div style={sectionStyle}>
-              <div style={sectionHeaderStyle}>
-                <p style={sectionTitleStyle}>Facturas</p>
-                <p style={sectionHintStyle}>Facturas recibidas de este proveedor y su estatus de pago — mismo dato que en Finanzas</p>
-              </div>
-
-              <div style={summaryRowStyle}>
-                <SummaryCard label="Total facturado" value={fmt(totalFacturado)} color="#a78bfa" />
-                <SummaryCard label="Total por pagar" value={fmt(totalPorPagar)} color="#fbbf24" />
-                <SummaryCard label="Total vencido"   value={fmt(totalVencido)} color="#f87171" />
-              </div>
-
               {/* Filtros */}
               <div style={{ display: "flex", gap: 8, margin: "18px 0 14px", flexWrap: "wrap" }}>
                 {([
@@ -620,73 +656,77 @@ export default function ProveedorDetailPage() {
                   </p>
                 </div>
               ) : (
-                <div style={tableWrapStyle}>
-                  <table style={tableStyle}>
-                    <thead>
-                      <tr>
-                        {["Estatus", "Proyecto", "Concepto", "Monto", "Fecha de pago", ""].map((h, i) => (
-                          <th key={i} style={{ ...thStyle, textAlign: i === 3 ? "right" : "left" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {facturasFiltradas.map((f, idx) => {
-                        const cfg = FAC_STATUS[f.status] || FAC_STATUS.aceptada
-                        const proyecto = f.project_code
-                          ? `${f.project_code} ${f.project_name ?? ""}`.trim()
-                          : (f.project_name || f.codigo_proyecto || "—")
-                        const vencida = f.status === "aceptada" && !!f.fecha_pago && f.fecha_pago < hoyISO
-                        const fecha = f.status === "pagada"
-                          ? (f.paid_at ? `Pagada ${fmtDate(f.paid_at)}` : "Pagada")
-                          : f.status === "aceptada"
-                            ? fmtDate(f.fecha_pago)
-                            : "—"
-                        return (
-                          <tr key={f.id} style={{ background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
-                            <td style={tdStyle}>
-                              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.text }}>{cfg.label}</span>
-                              {vencida && <span style={{ marginLeft: 6, padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}>Vencida</span>}
-                              {f.origen && f.origen !== "proveedor" && <span style={{ marginLeft: 6, fontSize: 11, color: "#93c5fd" }}>{f.origen}</span>}
-                            </td>
-                            <td style={{ ...tdStyle, color: "#e2e8f0" }}>{proyecto}</td>
-                            <td style={{ ...tdStyle, color: "#cbd5e1", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {f.concepto || "—"}
-                              {f.status === "rechazada" && f.motivo_rechazo ? ` · ${f.motivo_rechazo}` : ""}
-                            </td>
-                            <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc", fontWeight: 700 }}>{f.subtotal != null ? fmt(Number(f.subtotal)) : "—"}</td>
-                            <td style={{ ...tdStyle, color: f.status === "pagada" ? "#34d399" : vencida ? "#f87171" : "#94a3b8", whiteSpace: "nowrap", fontWeight: vencida ? 600 : undefined }}>{fecha}</td>
-                            <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
-                              {f.status === "aceptada" && (
-                                <button
-                                  onClick={() => markFacturaPaid(f)}
-                                  disabled={payingId === f.id}
-                                  style={{
-                                    padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                    cursor: payingId === f.id ? "not-allowed" : "pointer", opacity: payingId === f.id ? 0.6 : 1,
-                                    border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#fdba74",
-                                  }}
-                                >
-                                  {payingId === f.id ? "…" : "✓ Marcar Pago"}
-                                </button>
-                              )}
-                              {f.comprobante_path && (
-                                <button
-                                  onClick={() => downloadComprobante(f.comprobante_path!)}
-                                  title="Descargar comprobante de pago"
-                                  style={{
-                                    marginLeft: 6, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                                    border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.10)", color: "#6ee7b7",
-                                  }}
-                                >
-                                  📎
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {facturasFiltradas.map(f => {
+                    const proyecto = f.project_code
+                      ? `${f.project_code} ${f.project_name ?? ""}`.trim()
+                      : (f.project_name || f.codigo_proyecto || "—")
+                    const vencida = f.status === "aceptada" && !!f.fecha_pago && f.fecha_pago < hoyISO
+                    const pagar = montoPagar(f)
+                    const sub = Number(f.subtotal ?? 0)
+                    return (
+                      <div key={f.id} style={{
+                        display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+                        padding: "13px 16px", borderRadius: 12,
+                        background: "rgba(255,255,255,0.03)",
+                        border: vencida ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(148,163,184,0.10)",
+                        opacity: f.status === "pagada" ? 0.78 : 1,
+                      }}>
+                        <div style={{ flex: 1, minWidth: 220 }}>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#e2e8f0", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            {f.concepto || "Factura"}
+                            {vencida && <span style={facPillStyle("#f87171")}>Vencida</span>}
+                            {f.status === "pagada" && <span style={facPillStyle("#34d399")}>✓ Pagada{f.paid_at ? ` ${fmtDate(f.paid_at)}` : ""}</span>}
+                            {f.status === "rechazada" && <span style={facPillStyle("#f87171")}>Rechazada</span>}
+                            {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 400 }}>{f.origen}</span>}
+                          </p>
+                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                            {proyecto}
+                            {f.status === "aceptada" && f.fecha_pago && (
+                              <> · {vencida ? "venció el" : "pago programado"}{" "}
+                              <span style={{ color: vencida ? "#f87171" : "#fbbf24", fontWeight: 600 }}>{fmtDate(f.fecha_pago)}</span></>
+                            )}
+                            {f.status === "rechazada" && f.motivo_rechazo && <> · {f.motivo_rechazo}</>}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: vencida ? "#f87171" : "#f8fafc" }}>
+                            {pagar > 0 ? fmt(pagar) : "—"}
+                          </p>
+                          {pagar > 0 && sub > 0 && Math.abs(pagar - sub) > 0.01 && (
+                            <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>{fmt(sub)} + imp.</p>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          {f.status === "aceptada" && (
+                            <button
+                              onClick={() => markFacturaPaid(f)}
+                              disabled={payingId === f.id}
+                              style={{
+                                padding: "6px 13px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                cursor: payingId === f.id ? "not-allowed" : "pointer", opacity: payingId === f.id ? 0.6 : 1,
+                                border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#fdba74",
+                              }}
+                            >
+                              {payingId === f.id ? "…" : "✓ Marcar Pago"}
+                            </button>
+                          )}
+                          {f.comprobante_path && (
+                            <button
+                              onClick={() => downloadComprobante(f.comprobante_path!)}
+                              title="Descargar comprobante de pago"
+                              style={{
+                                padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.10)", color: "#6ee7b7",
+                              }}
+                            >
+                              📎
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -898,11 +938,12 @@ function InfoCard({ icon, label, value }: { icon: string; label: string; value: 
   )
 }
 
-function SummaryCard({ label, value, color, big }: { label: string; value: string; color: string; big?: boolean }) {
+function SummaryCard({ label, value, color, big, hint }: { label: string; value: string; color: string; big?: boolean; hint?: string }) {
   return (
     <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", flex: big ? "1.5 1 0" : "1 1 0", minWidth: 0, boxShadow: `0 0 0 1px ${color}22` }}>
       <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
       <p style={{ margin: "6px 0 0", color, fontSize: big ? 22 : 20, fontWeight: 700, fontFamily: "monospace" }}>{value}</p>
+      {hint && <p style={{ margin: "4px 0 0", color: "#475569", fontSize: 11 }}>{hint}</p>}
     </div>
   )
 }
@@ -912,6 +953,27 @@ function SummaryCard({ label, value, color, big }: { label: string; value: strin
 const appShellStyle: React.CSSProperties = { display: "flex", minHeight: "100vh" }
 const mainStyle: React.CSSProperties     = { flex: 1, minWidth: 0 }
 const pageContainerStyle: React.CSSProperties = { maxWidth: 1200, margin: "0 auto", display: "grid", gap: 18 }
+
+// ── Pestañas y elementos del rediseño ─────────────────────────────────────────
+const tabBarStyle: React.CSSProperties = {
+  display: "flex", gap: 2,
+  borderBottom: "1px solid rgba(148,163,184,0.15)",
+}
+const tabBtnStyle = (active: boolean): React.CSSProperties => ({
+  padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+  background: "transparent", border: "none",
+  color: active ? "#f1f5f9" : "#64748b",
+  borderBottom: active ? "2px solid #7c3aed" : "2px solid transparent",
+  marginBottom: -1,
+})
+const contactToggleStyle: React.CSSProperties = {
+  background: "transparent", border: "none", cursor: "pointer", padding: 0,
+  color: "#64748b", fontSize: 12, fontWeight: 600,
+}
+const facPillStyle = (color: string): React.CSSProperties => ({
+  padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
+  background: `${color}1f`, border: `1px solid ${color}55`, color,
+})
 
 const backBtnStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", width: "fit-content",
