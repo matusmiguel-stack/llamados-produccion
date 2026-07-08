@@ -273,6 +273,17 @@ export default function IngresosPage() {
     return r.proyecto
   }
 
+  // Cliente a mostrar: para ingresos vinculados se toma SIEMPRE de la carpeta
+  // del cliente en Proyectos (un trigger en la BD también lo mantiene escrito
+  // en cliente_agencia, pero así se refleja al instante sin recargar).
+  function clienteLabel(r: Ingreso): string {
+    if (r.project_id) {
+      const p = projects.find(x => x.id === r.project_id)
+      if (p?.clientName) return p.clientName
+    }
+    return r.cliente_agencia
+  }
+
   // ── Save ────────────────────────────────────────────────────────────────────
   async function handleSave() {
     if (!form.cliente_agencia.trim() || !form.proyecto.trim()) {
@@ -285,12 +296,12 @@ export default function IngresosPage() {
     const linkedForSave = editingId ? ingresos.find(r => r.id === editingId) : null
     const linkedSave = !!linkedForSave?.project_id
     const proyectoFinal = linkedSave ? proyectoLabel(linkedForSave!) : form.proyecto.trim()
-    // Campos comunes editables por admin (ligado o no).
+    // Campos comunes editables por admin (ligado o no). El cliente NO va aquí:
+    // en ingresos ligados lo dicta la carpeta del cliente (trigger en la BD).
     const comun = {
       empresa:          form.empresa,
       odc:              form.odc.trim() || null,
       estatus:          form.estatus,
-      cliente_agencia:  form.cliente_agencia.trim(),
       numero_factura:   form.numero_factura.trim() || null,
       fecha_aprox_pago: form.fecha_aprox_pago.trim() || null,
       fecha_pago:       form.fecha_pago.trim() || null,
@@ -316,6 +327,7 @@ export default function IngresosPage() {
         ? comun
         : {
             ...comun,
+            cliente_agencia: form.cliente_agencia.trim(),
             responsable: form.responsable.trim() || null,
             proyecto:    proyectoFinal,
             subtotal:    parseFloat(form.subtotal) || 0,
@@ -631,7 +643,7 @@ export default function IngresosPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.cliente_agencia}>{r.cliente_agencia}</td>
+                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={clienteLabel(r)}>{clienteLabel(r)}</td>
                       <td style={{ ...tdStyle, ...stickyStyle(2, rowBg), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.project_id ? (
                           <Link
@@ -765,7 +777,20 @@ export default function IngresosPage() {
               {/* Row 2: Cliente + Responsable */}
               <div style={rowStyle}>
                 <FormField label="Cliente / Agencia *">
-                  <input value={form.cliente_agencia} onChange={e => setForm(f => ({ ...f, cliente_agencia: e.target.value }))} readOnly={!isAdmin} disabled={!isAdmin} style={isAdmin ? inputStyle : readOnlyInputStyle} placeholder="ej. Compartamos Banco" />
+                  <input
+                    value={form.cliente_agencia}
+                    onChange={e => setForm(f => ({ ...f, cliente_agencia: e.target.value }))}
+                    readOnly={!isAdmin || editingLinked}
+                    disabled={!isAdmin || editingLinked}
+                    style={isAdmin && !editingLinked ? inputStyle : readOnlyInputStyle}
+                    placeholder="ej. Compartamos Banco"
+                    title={editingLinked ? "Vinculado a la carpeta del cliente en Proyectos" : undefined}
+                  />
+                  {editingLinked && (
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                      🔗 Vinculado a la carpeta del cliente — se renombra desde Proyectos.
+                    </p>
+                  )}
                 </FormField>
                 <FormField label="Responsable">
                   <select value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))} disabled={roQuoteFields} style={roQuoteFields ? readOnlyInputStyle : inputStyle}>
