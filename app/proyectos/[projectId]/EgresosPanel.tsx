@@ -70,6 +70,7 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
 
 export function EgresosPanel({
   projectId, isMobile, projectName, projectCode, empresa, projectResponsable,
+  gastosInternos = false,
 }: {
   projectId: string
   isMobile: boolean
@@ -77,6 +78,7 @@ export function EgresosPanel({
   projectCode: string | null
   empresa: "retro_studio" | "retro_films" | null
   projectResponsable: string | null
+  gastosInternos?: boolean
 }) {
   const [loading, setLoading]       = useState(true)
   const [items, setItems]           = useState<EgresoItem[]>([])
@@ -85,6 +87,13 @@ export function EgresosPanel({
   const [editingId, setEditingId]   = useState<string | null>(null)
   const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "" })
   const [saving, setSaving]         = useState(false)
+  // Alta de gasto interno (solo en proyectos de gastos internos)
+  const [internalSectionId, setInternalSectionId] = useState<string | null>(null)
+  const [addOpen, setAddOpen]       = useState(false)
+  const [addDesc, setAddDesc]       = useState("")
+  const [addContact, setAddContact] = useState("")
+  const [addMonto, setAddMonto]     = useState("")
+  const [adding, setAdding]         = useState(false)
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
   const [sendingAll, setSendingAll]  = useState(false)
 
@@ -162,6 +171,9 @@ export function EgresosPanel({
           .eq("quote_id", quote.id).order("order_index", { ascending: true })
         if (!sections) continue
 
+        // En gastos internos hay una sola sección: es el destino de los altas.
+        if (gastosInternos && !internalSectionId) setInternalSectionId(sections[0].id)
+
         for (const section of sections) {
           const { data: raw } = await supabase
             .from("quote_items")
@@ -235,6 +247,52 @@ export function EgresosPanel({
   }
 
   function cancelEdit() { setEditingId(null) }
+
+  // ── Gastos internos: alta y borrado directo (sin cotización) ────────────────
+  async function addGastoInterno() {
+    const desc = addDesc.trim()
+    const monto = parseFloat(addMonto)
+    if (!desc) { alert("Escribe la descripción del gasto"); return }
+    if (!monto || monto <= 0) { alert("Indica el monto del gasto"); return }
+    if (!internalSectionId) { alert("No se encontró la sección de gastos; recarga la página"); return }
+    let actual_supplier_id: string | null = null
+    let actual_employee_id: string | null = null
+    if (addContact.startsWith("prov:")) actual_supplier_id = addContact.slice(5)
+    else if (addContact.startsWith("emp:")) actual_employee_id = addContact.slice(4)
+
+    setAdding(true)
+    try {
+      // Colocar al final de la sección
+      const { data: ord } = await supabase
+        .from("quote_items").select("order_index").eq("section_id", internalSectionId)
+      const maxOrder = Math.max(0, ...((ord || []).map((r: any) => r.order_index || 0)))
+      const { error } = await supabase.from("quote_items").insert({
+        section_id: internalSectionId,
+        description: desc,
+        qty: 1, days: 1, unit_price: 0,
+        released_expense: 0, real_expense: 0,
+        is_extra: true,
+        order_index: maxOrder + 1,
+        actual_qty: 1, actual_days: 1, actual_unit_price: monto,
+        actual_supplier_id, actual_employee_id,
+      })
+      if (error) throw error
+      setAddDesc(""); setAddContact(""); setAddMonto(""); setAddOpen(false)
+      await load()
+    } catch (err: any) {
+      alert("Error al agregar el gasto: " + err.message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  async function deleteGasto(item: EgresoItem) {
+    if (item.pago_estado === "pagado") { alert("Este gasto ya está pagado; no se puede borrar."); return }
+    if (!confirm(`¿Borrar el gasto "${item.description}"?`)) return
+    const { error } = await supabase.from("quote_items").delete().eq("id", item.id)
+    if (error) { alert("Error al borrar: " + error.message); return }
+    setItems(prev => prev.filter(it => it.id !== item.id))
+  }
 
   async function saveEdit(itemId: string) {
     setSaving(true)
@@ -473,15 +531,79 @@ export function EgresosPanel({
 
   if (loading) return <p style={{ color: "#64748b", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
 
+  // Formulario para dar de alta un gasto interno (solo en proyectos internos)
+  const addGastoUI = gastosInternos ? (
+    <div style={{ border: "1px solid rgba(52,211,153,0.25)", borderRadius: 12, background: "rgba(52,211,153,0.04)", padding: addOpen ? 16 : 0 }}>
+      {!addOpen ? (
+        <button
+          onClick={() => setAddOpen(true)}
+          style={{ width: "100%", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
+            background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.30)",
+            color: "#6ee7b7", fontSize: 14, fontWeight: 700 }}
+        >
+          ➕ Agregar gasto
+        </button>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#6ee7b7" }}>Nuevo gasto interno</p>
+          <input
+            value={addDesc}
+            onChange={e => setAddDesc(e.target.value)}
+            placeholder="Descripción del gasto (ej. Papelería oficina)"
+            style={addInputStyle}
+          />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <div style={{ flex: 2, minWidth: 200 }}>
+              <SupplierCombobox
+                value={addContact}
+                onChange={setAddContact}
+                proveedores={proveedores}
+                employees={employees}
+              />
+            </div>
+            <input
+              type="number"
+              value={addMonto}
+              onChange={e => setAddMonto(e.target.value)}
+              placeholder="Monto $"
+              style={{ ...addInputStyle, flex: 1, minWidth: 120 }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={addGastoInterno} disabled={adding}
+              style={{ padding: "9px 18px", borderRadius: 8, cursor: adding ? "not-allowed" : "pointer",
+                background: "rgba(52,211,153,0.18)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399", fontSize: 13, fontWeight: 700, opacity: adding ? 0.6 : 1 }}>
+              {adding ? "Guardando…" : "✓ Agregar"}
+            </button>
+            <button onClick={() => { setAddOpen(false); setAddDesc(""); setAddContact(""); setAddMonto("") }}
+              style={{ padding: "9px 16px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px solid rgba(148,163,184,0.2)", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>
+              Cancelar
+            </button>
+          </div>
+          <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
+            Asigna un proveedor si quieres poder mandarle a facturar este gasto. El monto es el gasto real (sin IVA).
+          </p>
+        </div>
+      )}
+    </div>
+  ) : null
+
   if (items.length === 0) return (
-    <div style={{ textAlign: "center", padding: "48px 0", color: "#475569" }}>
-      <p style={{ fontSize: 15, marginBottom: 8 }}>No hay egresos registrados en este proyecto.</p>
-      <p style={{ fontSize: 12, color: "#334155" }}>Captura costos reales en la página de liberación.</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {addGastoUI}
+      <div style={{ textAlign: "center", padding: "36px 0", color: "#475569" }}>
+        <p style={{ fontSize: 15, marginBottom: 8 }}>No hay {gastosInternos ? "gastos" : "egresos"} registrados en este proyecto.</p>
+        <p style={{ fontSize: 12, color: "#334155" }}>
+          {gastosInternos ? "Usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
+        </p>
+      </div>
     </div>
   )
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+      {addGastoUI}
 
       {/* Summary cards + Facturar todos */}
       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12 }}>
@@ -730,6 +852,9 @@ export function EgresosPanel({
                                 </button>
                               )}
                               <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
+                              {gastosInternos && item.pago_estado !== "pagado" && (
+                                <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#f87171", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -902,6 +1027,11 @@ const actionStackStyle: React.CSSProperties = {
   width: "100%", maxWidth: 160, margin: "0 auto",
 }
 
+const addInputStyle: React.CSSProperties = {
+  width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.25)", background: "rgba(255,255,255,0.05)",
+  color: "#f1f5f9", fontSize: 14, outline: "none",
+}
 const actionGridStyle: React.CSSProperties = {
   display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, alignItems: "start",
   minWidth: 280,

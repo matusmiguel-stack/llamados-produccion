@@ -21,6 +21,7 @@ type Project = {
   description: string | null
   responsable: string | null
   empresa?: "retro_studio" | "retro_films" | null
+  gastos_internos?: boolean | null
 }
 
 type Quote = {
@@ -201,10 +202,14 @@ export default function ProjectDetailPage() {
     }
   }
 
-  // Productor solo puede ver y editar la Matriz
-  const visibleModules = isProductor
-    ? projectModules.filter((m) => m.id === "matriz")
-    : projectModules
+  // Proyecto de gastos internos: solo se meten egresos, nada de cotización ni
+  // matriz. Todos (incluidos productores) ven únicamente Control de egresos.
+  const esGastosInternos = !!project?.gastos_internos
+  const visibleModules = esGastosInternos
+    ? projectModules.filter((m) => m.id === "egresos")
+    : isProductor
+      ? projectModules.filter((m) => m.id === "matriz")
+      : projectModules
 
   const activeModuleData = useMemo(
     () =>
@@ -440,9 +445,9 @@ export default function ProjectDetailPage() {
             <div
               style={{
                 ...moduleGridStyle,
-                gridTemplateColumns: isMobile
+                gridTemplateColumns: isMobile || visibleModules.length === 1
                   ? "1fr"
-                  : isProductor ? "1fr" : "repeat(3, 1fr)",
+                  : "repeat(3, 1fr)",
               }}
             >
               {visibleModules.map((module) => {
@@ -681,6 +686,7 @@ export default function ProjectDetailPage() {
                 projectCode={project?.code ?? null}
                 empresa={projectEmpresa}
                 projectResponsable={project?.responsable ?? null}
+                gastosInternos={esGastosInternos}
               />
             </div>
           </div>
