@@ -1,4 +1,5 @@
 import "./globals.css"
+import { ToastOverride } from "../components/ToastOverride"
 
 export const metadata = {
   title: "Llamados Retro",
@@ -28,7 +29,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <ToastOverride />
+        {children}
+      </body>
     </html>
   )
 }
