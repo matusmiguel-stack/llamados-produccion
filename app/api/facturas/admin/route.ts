@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const { data: facturas, error } = await auth.admin
     .from("facturas")
     .select(`
-      id, proveedor_email, codigo_proyecto, subtotal, total, status, motivo_rechazo,
+      id, proveedor_id, project_id, proveedor_email, codigo_proyecto, subtotal, total, status, motivo_rechazo,
       fecha_pago, paid_at, uuid_fiscal, xml_path, pdf_path, comprobante_path, created_at,
       concepto, origen, forma_pago,
       proveedores ( nombre, apellido, empresa ),

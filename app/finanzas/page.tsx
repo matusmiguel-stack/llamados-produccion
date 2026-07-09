@@ -1,7 +1,8 @@
 "use client"
 import { PageLoader } from "../../components/PageLoader"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { uploadComprobante } from "../../lib/upload-comprobante"
@@ -9,6 +10,8 @@ import { AppSidebar } from "../../components/AppSidebar"
 
 type Factura = {
   id: string
+  proveedor_id: string | null
+  project_id: string | null
   proveedor_email: string | null
   codigo_proyecto: string | null
   subtotal: number | null
@@ -54,11 +57,36 @@ function projLabel(f: Factura) {
   return f.codigo_proyecto || "—"
 }
 
+// Proveedor como hipervínculo a su ficha (si tenemos su id)
+function ProvLink({ f }: { f: Factura }) {
+  const label = provLabel(f)
+  if (f.proveedor_id) {
+    return <Link href={`/proveedores/${f.proveedor_id}`} style={provLinkStyle} title={`Ver proveedor: ${label}`}>{label}</Link>
+  }
+  return <span style={{ color: "#e2e8f0" }}>{label}</span>
+}
+
+// Proyecto como hipervínculo a su ficha (si tenemos su id)
+function ProjLink({ f }: { f: Factura }) {
+  const label = projLabel(f)
+  if (f.project_id) {
+    return <Link href={`/proyectos/${f.project_id}`} style={projLinkStyle} title={`Ver proyecto: ${label}`}>{label}</Link>
+  }
+  return <span style={{ color: "#64748b" }}>{label}</span>
+}
+
 function nextFridayISO(): string {
   const now = new Date()
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   while (d.getDay() !== 5) d.setDate(d.getDate() + 1)
   return d.toLocaleDateString("sv")
+}
+
+function addDaysISO(iso: string, n: number): string {
+  const [y, m, d] = iso.split("T")[0].split("-").map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  return dt.toLocaleDateString("sv")
 }
 
 function fechaCorta(iso: string | null): string {
@@ -77,6 +105,75 @@ function todayISO(): string {
   return new Date().toLocaleDateString("sv")
 }
 
+// ── Mini calendario para saltar a un viernes específico ─────────────────────────
+function MiniCalendar({ value, onPick, highlight }: {
+  value: string
+  onPick: (iso: string) => void
+  highlight: Set<string>
+}) {
+  const [vy, setVy] = useState(() => Number(value.split("-")[0]))
+  const [vm, setVm] = useState(() => Number(value.split("-")[1]) - 1)
+
+  const first = new Date(vy, vm, 1)
+  const startDay = first.getDay()
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate()
+  const monthName = first.toLocaleDateString("es-MX", { month: "long", year: "numeric" })
+
+  const cells: (number | null)[] = []
+  for (let i = 0; i < startDay; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  const iso = (d: number) => new Date(vy, vm, d).toLocaleDateString("sv")
+  function prevMonth() {
+    if (vm === 0) { setVy(vy - 1); setVm(11) } else setVm(vm - 1)
+  }
+  function nextMonth() {
+    if (vm === 11) { setVy(vy + 1); setVm(0) } else setVm(vm + 1)
+  }
+
+  return (
+    <div style={calPopupStyle} onClick={e => e.stopPropagation()}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <button onClick={prevMonth} style={calNavBtn}>‹</button>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", textTransform: "capitalize" }}>{monthName}</span>
+        <button onClick={nextMonth} style={calNavBtn}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
+        {["D", "L", "M", "M", "J", "V", "S"].map((w, i) => (
+          <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#475569", padding: "2px 0" }}>{w}</div>
+        ))}
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} />
+          const dateISO = iso(d)
+          const isFriday = new Date(vy, vm, d).getDay() === 5
+          const isSelected = dateISO === value
+          const hasPago = highlight.has(dateISO)
+          return (
+            <button
+              key={i}
+              disabled={!isFriday}
+              onClick={() => onPick(dateISO)}
+              style={{
+                position: "relative", aspectRatio: "1", padding: 0,
+                border: isSelected ? "1px solid rgba(6,182,212,0.6)" : "1px solid transparent",
+                borderRadius: 8,
+                background: isSelected ? "rgba(6,182,212,0.18)" : isFriday ? "rgba(148,163,184,0.06)" : "transparent",
+                color: !isFriday ? "#334155" : isSelected ? "#67e8f9" : "#cbd5e1",
+                fontSize: 12, fontWeight: isFriday ? 600 : 400,
+                cursor: isFriday ? "pointer" : "default",
+              }}
+            >
+              {d}
+              {hasPago && <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: 999, background: "#fbbf24" }} />}
+            </button>
+          )
+        })}
+      </div>
+      <p style={{ margin: "10px 0 0", fontSize: 10, color: "#475569", textAlign: "center" }}>Solo se pueden elegir viernes · ● = con pagos</p>
+    </div>
+  )
+}
+
 export default function FinanzasPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -84,9 +181,16 @@ export default function FinanzasPage() {
   const [filter, setFilter] = useState<"todas" | "aceptada" | "pagada" | "rechazada" | "reembolso">("todas")
   const [view, setView] = useState<"lista" | "viernes">("lista")
   const [search, setSearch] = useState("")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
   const [working, setWorking] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Estado del calendario de viernes
+  const [selViernes, setSelViernes] = useState<string | null>(null)
+  const [calOpen, setCalOpen] = useState(false)
+  const calWrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function checkMobile() { setIsMobile(window.innerWidth < 768) }
@@ -96,6 +200,16 @@ export default function FinanzasPage() {
   }, [])
 
   useEffect(() => { loadPage() }, [])
+
+  // Cerrar el mini-calendario al hacer clic fuera
+  useEffect(() => {
+    if (!calOpen) return
+    function onDoc(e: MouseEvent) {
+      if (calWrapRef.current && !calWrapRef.current.contains(e.target as Node)) setCalOpen(false)
+    }
+    document.addEventListener("mousedown", onDoc)
+    return () => document.removeEventListener("mousedown", onDoc)
+  }, [calOpen])
 
   async function authedFetch(body?: any) {
     const { data: { session } } = await supabase.auth.getSession()
@@ -177,6 +291,8 @@ export default function FinanzasPage() {
     let list = facturas
     if (filter === "reembolso") list = list.filter(f => f.origen === "reembolso")
     else if (filter !== "todas") list = list.filter(f => f.status === filter)
+    if (dateFrom) list = list.filter(f => f.created_at.split("T")[0] >= dateFrom)
+    if (dateTo) list = list.filter(f => f.created_at.split("T")[0] <= dateTo)
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter(f =>
@@ -188,7 +304,7 @@ export default function FinanzasPage() {
       )
     }
     return list
-  }, [facturas, filter, search])
+  }, [facturas, filter, search, dateFrom, dateTo])
 
   const totalPorPagar = useMemo(
     () => facturas.filter(f => f.status === "aceptada").reduce((s, f) => s + montoPagar(f), 0),
@@ -196,10 +312,8 @@ export default function FinanzasPage() {
   )
   const totalViernes = pagosEsteViernes.reduce((s, f) => s + montoPagar(f), 0)
 
-  // Agrupar las facturas por pagar según su viernes de vencimiento (fecha_pago).
-  // fecha_pago ya viene redondeada a viernes desde la recepción de facturas.
-  const pagosPorViernes = useMemo(() => {
-    const hoy = todayISO()
+  // Facturas por pagar agrupadas por su viernes de vencimiento (fecha_pago).
+  const pagosViernesMap = useMemo(() => {
     const map = new Map<string, Factura[]>()
     for (const f of facturas) {
       if (f.status !== "aceptada" || !f.fecha_pago) continue
@@ -207,23 +321,33 @@ export default function FinanzasPage() {
       if (!map.has(k)) map.set(k, [])
       map.get(k)!.push(f)
     }
-    return [...map.entries()]
-      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(([fecha, fs]) => {
-        const total = fs.reduce((s, f) => s + montoPagar(f), 0)
-        const provMap = new Map<string, { nombre: string; total: number; count: number; proyectos: Set<string> }>()
-        for (const f of fs) {
-          const key = provLabel(f)
-          if (!provMap.has(key)) provMap.set(key, { nombre: key, total: 0, count: 0, proyectos: new Set() })
-          const p = provMap.get(key)!
-          p.total += montoPagar(f)
-          p.count += 1
-          p.proyectos.add(projLabel(f))
-        }
-        const proveedores = [...provMap.values()].sort((a, b) => b.total - a.total)
-        return { fecha, total, count: fs.length, proveedores, vencido: fecha < hoy }
-      })
+    return map
   }, [facturas])
+
+  const viernesList = useMemo(() => {
+    const hoy = todayISO()
+    return [...pagosViernesMap.entries()]
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([fecha, fs]) => ({
+        fecha,
+        total: fs.reduce((s, f) => s + montoPagar(f), 0),
+        count: fs.length,
+        vencido: fecha < hoy,
+      }))
+  }, [pagosViernesMap])
+
+  const fridaysWithPagos = useMemo(() => new Set(viernesList.map(v => v.fecha)), [viernesList])
+
+  // Viernes seleccionado: por defecto el primer viernes con pagos (o el próximo)
+  const selectedViernes = selViernes ?? (viernesList[0]?.fecha ?? viernes)
+  const selFacturas = useMemo(
+    () => (pagosViernesMap.get(selectedViernes) || []).slice().sort((a, b) => montoPagar(b) - montoPagar(a)),
+    [pagosViernesMap, selectedViernes]
+  )
+  const selTotal = selFacturas.reduce((s, f) => s + montoPagar(f), 0)
+  const selVencido = selectedViernes < todayISO()
+
+  function goViernes(iso: string) { setSelViernes(iso); setCalOpen(false) }
 
   async function logout() {
     await supabase.auth.signOut()
@@ -283,48 +407,107 @@ export default function FinanzasPage() {
           ))}
         </div>
 
+        {/* ── Vista: calendario de viernes (uno a la vez, con todo el detalle) ── */}
         {view === "viernes" && (
-          pagosPorViernes.length === 0 ? (
-            <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
-              No hay pagos pendientes programados.
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {pagosPorViernes.map(v => (
-                <div key={v.fecha} style={{ padding: "18px 20px", background: "rgba(255,255,255,0.03)", border: `1px solid ${v.vencido ? "rgba(248,113,113,0.30)" : "rgba(148,163,184,0.12)"}`, borderRadius: 14 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{fechaViernes(v.fecha)}</span>
-                        {v.vencido && (
-                          <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}>Atrasado</span>
+          <div>
+            {/* Navegación entre viernes */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 16 }}>
+              <button onClick={() => setSelViernes(addDaysISO(selectedViernes, -7))} style={navArrowStyle} title="Viernes anterior">←</button>
+
+              <div ref={calWrapRef} style={{ position: "relative" }}>
+                <button onClick={() => setCalOpen(o => !o)} style={dateJumpBtnStyle} title="Saltar a un viernes específico">
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{fechaViernes(selectedViernes)}</span>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>📅</span>
+                </button>
+                {calOpen && (
+                  <MiniCalendar value={selectedViernes} onPick={goViernes} highlight={fridaysWithPagos} />
+                )}
+              </div>
+
+              <button onClick={() => setSelViernes(addDaysISO(selectedViernes, 7))} style={navArrowStyle} title="Viernes siguiente">→</button>
+            </div>
+
+            {/* Chips de acceso rápido a viernes con pagos */}
+            {viernesList.length > 0 && (
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, marginBottom: 18 }}>
+                {viernesList.map(v => {
+                  const active = v.fecha === selectedViernes
+                  return (
+                    <button key={v.fecha} onClick={() => setSelViernes(v.fecha)} style={chipStyle(active, v.vencido)}>
+                      <span style={{ fontWeight: 700 }}>{fechaCorta(v.fecha)}</span>
+                      <span style={{ opacity: 0.85, marginLeft: 6 }}>{fmtMx(v.total)}</span>
+                      {v.vencido && <span style={{ marginLeft: 6, fontSize: 9 }}>⚠</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Encabezado del viernes seleccionado */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14, padding: "14px 18px", background: selVencido && selFacturas.length ? "rgba(248,113,113,0.07)" : "rgba(245,158,11,0.06)", border: `1px solid ${selVencido && selFacturas.length ? "rgba(248,113,113,0.28)" : "rgba(245,158,11,0.22)"}`, borderRadius: 14 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#cbd5e1", textTransform: "uppercase", letterSpacing: 0.6 }}>A liberar</span>
+                  {selVencido && selFacturas.length > 0 && (
+                    <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}>Atrasado</span>
+                  )}
+                </div>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                  {selFacturas.length} factura{selFacturas.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", color: selVencido && selFacturas.length ? "#f87171" : "#fbbf24" }}>{fmtMx(selTotal)}</span>
+            </div>
+
+            {/* Detalle completo de cada factura de este viernes */}
+            {selFacturas.length === 0 ? (
+              <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
+                No hay pagos programados para este viernes.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {selFacturas.map(f => (
+                  <div key={f.id} style={{ padding: "16px 18px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 15, fontWeight: 600 }}><ProvLink f={f} /></span>
+                          {f.origen && f.origen !== "proveedor" && (
+                            <span style={origenBadgeStyle}>{ORIGEN_LABEL[f.origen]}</span>
+                          )}
+                        </div>
+                        {f.concepto && (
+                          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
+                        )}
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                          <ProjLink f={f} />
+                          {f.forma_pago && <> · <span style={{ color: "#93c5fd" }}>Pago: {f.forma_pago}</span></>}
+                        </p>
+                        {f.uuid_fiscal && (
+                          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#475569", fontFamily: "monospace" }}>UUID: {f.uuid_fiscal}</p>
                         )}
                       </div>
-                      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-                        {v.proveedores.length} proveedor{v.proveedores.length !== 1 ? "es" : ""} · {v.count} factura{v.count !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace", color: v.vencido ? "#f87171" : "#fbbf24" }}>{fmtMx(v.total)}</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {v.proveedores.map(p => (
-                      <div key={p.nombre} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", paddingTop: 8, borderTop: "1px solid rgba(148,163,184,0.08)" }}>
-                        <div style={{ minWidth: 0 }}>
-                          <span style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>{p.nombre}</span>
-                          <span style={{ color: "#64748b", fontSize: 12, marginLeft: 8 }}>
-                            {[...p.proyectos].join(", ")}{p.count > 1 ? ` · ${p.count} facturas` : ""}
-                          </span>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                        <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "monospace", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
+                          {fmtMx(montoPagar(f))}
+                        </span>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          {f.xml_path && <button onClick={() => download(f.xml_path!)} style={miniBtnStyle}>⬇ XML</button>}
+                          {f.pdf_path && <button onClick={() => download(f.pdf_path!)} style={miniBtnStyle}>⬇ PDF</button>}
+                          <button onClick={() => markPaid(f)} disabled={working === f.id} style={payBtnStyle(working === f.id)}>
+                            {working === f.id ? "..." : "✓ Marcar Pago"}
+                          </button>
                         </div>
-                        <span style={{ color: "#cbd5e1", fontWeight: 700, fontFamily: "monospace", fontSize: 14 }}>{fmtMx(p.total)}</span>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
+        {/* ── Vista: lista ── */}
         {view === "lista" && (<>
 
         {/* Pagos este viernes */}
@@ -337,8 +520,8 @@ export default function FinanzasPage() {
               {pagosEsteViernes.map(f => (
                 <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                   <div>
-                    <span style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>{provLabel(f)}</span>
-                    <span style={{ color: "#64748b", fontSize: 12, marginLeft: 8 }}>{projLabel(f)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}><ProvLink f={f} /></span>
+                    <span style={{ fontSize: 12, marginLeft: 8 }}><ProjLink f={f} /></span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "monospace", fontSize: 14 }}>
@@ -358,25 +541,39 @@ export default function FinanzasPage() {
           </div>
         )}
 
-        {/* Filtros */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          {(["todas", "aceptada", "pagada", "reembolso", "rechazada"] as const).map(s => (
-            <button key={s} onClick={() => setFilter(s)} style={filterBtnStyle(filter === s)}>
-              {s === "todas" ? "Todas" : s === "aceptada" ? "Por pagar" : s === "pagada" ? "Pagadas" : s === "reembolso" ? "Reembolsos" : "Rechazadas"}
-            </button>
-          ))}
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar proveedor, proyecto, UUID..."
-            style={{ marginLeft: "auto", padding: "8px 12px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 8, color: "#e2e8f0", fontSize: 13, outline: "none", width: isMobile ? "100%" : 260 }}
-          />
+        {/* Toolbar: filtros + rango de fechas + búsqueda */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {(["todas", "aceptada", "pagada", "reembolso", "rechazada"] as const).map(s => (
+              <button key={s} onClick={() => setFilter(s)} style={filterBtnStyle(filter === s)}>
+                {s === "todas" ? "Todas" : s === "aceptada" ? "Por pagar" : s === "pagada" ? "Pagadas" : s === "reembolso" ? "Reembolsos" : "Rechazadas"}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "rgba(2,6,23,0.35)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
+              <span style={dateLabelStyle}>Del</span>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} max={dateTo || undefined} style={dateInputStyle} />
+              <span style={dateLabelStyle}>al</span>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} min={dateFrom || undefined} style={dateInputStyle} />
+              {(dateFrom || dateTo) && (
+                <button onClick={() => { setDateFrom(""); setDateTo("") }} style={clearDateBtnStyle} title="Limpiar rango de fechas">✕</button>
+              )}
+            </div>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar proveedor, proyecto, UUID..."
+              style={{ marginLeft: isMobile ? 0 : "auto", padding: "8px 12px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 8, color: "#e2e8f0", fontSize: 13, outline: "none", width: isMobile ? "100%" : 260 }}
+            />
+          </div>
         </div>
 
         {/* Lista */}
         {filtered.length === 0 ? (
           <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
-            No hay facturas {filter !== "todas" ? "con ese estatus" : "todavía"}.
+            No hay facturas {filter !== "todas" || dateFrom || dateTo ? "con esos filtros" : "todavía"}.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -385,7 +582,7 @@ export default function FinanzasPage() {
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600 }}>{provLabel(f)}</span>
+                      <span style={{ fontSize: 15, fontWeight: 600 }}><ProvLink f={f} /></span>
                       <span style={statusBadgeStyle(f.status)}>
                         {f.status === "aceptada" ? "Por pagar" : f.status === "pagada" ? "Pagada" : "Rechazada"}
                       </span>
@@ -397,7 +594,7 @@ export default function FinanzasPage() {
                       <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
                     )}
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-                      {projLabel(f)} · Registrada {fechaCorta(f.created_at)}
+                      <ProjLink f={f} /> · Registrada {fechaCorta(f.created_at)}
                       {f.status === "aceptada" && f.fecha_pago && <> · <span style={{ color: "#fbbf24" }}>Pago: {fechaCorta(f.fecha_pago)}</span></>}
                       {f.status === "pagada" && f.paid_at && <> · <span style={{ color: "#34d399" }}>Pagada {fechaCorta(f.paid_at)}</span></>}
                       {f.forma_pago && <> · <span style={{ color: "#93c5fd" }}>Pago: {f.forma_pago}</span></>}
@@ -482,6 +679,9 @@ export default function FinanzasPage() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
+const provLinkStyle: React.CSSProperties = { color: "#7dd3fc", textDecoration: "none", fontWeight: 600 }
+const projLinkStyle: React.CSSProperties = { color: "#a78bfa", textDecoration: "none" }
+
 function cardStyle(accent: string): React.CSSProperties {
   return {
     padding: "16px 20px",
@@ -525,6 +725,57 @@ function statusBadgeStyle(status: string): React.CSSProperties {
     padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
     background: c.bg, border: `1px solid ${c.border}`, color: c.text,
   }
+}
+
+// Navegación de viernes
+const navArrowStyle: React.CSSProperties = {
+  width: 38, height: 38, borderRadius: 10, cursor: "pointer",
+  border: "1px solid rgba(148,163,184,0.2)", background: "rgba(148,163,184,0.06)",
+  color: "#cbd5e1", fontSize: 18, fontWeight: 700, lineHeight: 1,
+  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+}
+
+const dateJumpBtnStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 12, cursor: "pointer",
+  border: "1px solid rgba(148,163,184,0.2)", background: "rgba(255,255,255,0.03)",
+}
+
+function chipStyle(active: boolean, vencido: boolean): React.CSSProperties {
+  return {
+    flexShrink: 0, padding: "7px 12px", borderRadius: 999, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
+    border: active
+      ? "1px solid rgba(6,182,212,0.5)"
+      : vencido ? "1px solid rgba(248,113,113,0.3)" : "1px solid rgba(148,163,184,0.18)",
+    background: active ? "rgba(6,182,212,0.14)" : "transparent",
+    color: active ? "#67e8f9" : vencido ? "#f87171" : "#94a3b8",
+  }
+}
+
+// Mini-calendario
+const calPopupStyle: React.CSSProperties = {
+  position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", zIndex: 50,
+  width: 268, padding: 14, background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.2)",
+  borderRadius: 14, boxShadow: "0 20px 48px rgba(0,0,0,0.5)",
+}
+
+const calNavBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 8, cursor: "pointer",
+  border: "1px solid rgba(148,163,184,0.18)", background: "transparent",
+  color: "#cbd5e1", fontSize: 16, fontWeight: 700, lineHeight: 1,
+}
+
+// Rango de fechas
+const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#64748b" }
+
+const dateInputStyle: React.CSSProperties = {
+  padding: "6px 8px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)",
+  borderRadius: 8, color: "#e2e8f0", fontSize: 12, outline: "none", colorScheme: "dark",
+}
+
+const clearDateBtnStyle: React.CSSProperties = {
+  width: 24, height: 24, borderRadius: 6, cursor: "pointer",
+  border: "1px solid rgba(148,163,184,0.18)", background: "transparent",
+  color: "#94a3b8", fontSize: 12, lineHeight: 1,
 }
 
 const modalBackdropStyle: React.CSSProperties = {
