@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Semáforo inválido" }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = createAdminClient(user.id)
   const { error } = await admin
     .from("referencias")
     .update({ semaforo: semaforo ?? null })

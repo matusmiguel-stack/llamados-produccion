@@ -9,7 +9,9 @@ const CC_EMAILS = ["finanzas@retrocasaproductora.com", "miguel@retrocasaproducto
 async function requireFinanzasRole(req: Request) {
   const user = await verifyApiUser(req)
   if (!user) return null
-  const admin = createAdminClient()
+  // admin client con el actor: atribuye los movimientos (marcar pago, etc.)
+  // al usuario real en el historial de auditoría.
+  const admin = createAdminClient(user.id)
   const { data: profile } = await admin
     .from("profiles").select("role").eq("id", user.id).single()
   if (!profile || !["admin", "finanzas"].includes(profile.role)) return null

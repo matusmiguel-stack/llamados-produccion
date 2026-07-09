@@ -38,7 +38,14 @@ security definer
 set search_path = public
 as $$
 declare
-  v_actor uuid := coalesce(auth.uid(), nullif(current_setting('app.actor_id', true), '')::uuid);
+  -- Actor: 1) auth.uid() en escrituras directas del usuario;
+  --        2) header X-Actor-Id que fijan las API routes con service-role;
+  --        3) GUC app.actor_id como respaldo manual.
+  v_actor uuid := coalesce(
+    auth.uid(),
+    nullif((nullif(current_setting('request.headers', true), '')::json ->> 'x-actor-id'), '')::uuid,
+    nullif(current_setting('app.actor_id', true), '')::uuid
+  );
   v_email text;
   v_name  text;
   v_new   jsonb;

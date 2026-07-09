@@ -7,7 +7,8 @@ const STAFF_ROLES = ["admin", "editor", "editor_premium"]
 async function requireStaff(req: Request) {
   const user = await verifyApiUser(req)
   if (!user) return null
-  const admin = createAdminClient()
+  // admin client con el actor → atribuye los egresos al usuario en la auditoría
+  const admin = createAdminClient(user.id)
   const { data: profile } = await admin
     .from("profiles").select("role").eq("id", user.id).single()
   if (!profile || !STAFF_ROLES.includes(profile.role)) return null
