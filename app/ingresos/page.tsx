@@ -309,30 +309,31 @@ export default function IngresosPage() {
       notas:            form.notas.trim() || null,
       updated_at:       new Date().toISOString(),
     }
-    // El rol finanzas solo puede tocar estatus, ODC, factura, fechas y notas.
-    // Para ingresos LIGADOS, subtotal/IVA/responsable/proyecto los dicta la
-    // cotización aprobada (se sincronizan solos) — no se tocan desde aquí.
-    const payload = !isAdmin
-      ? {
-          odc:              form.odc.trim() || null,
-          estatus:          form.estatus,
-          numero_factura:   form.numero_factura.trim() || null,
-          fecha_aprox_pago: form.fecha_aprox_pago.trim() || null,
-          fecha_pago:       form.fecha_pago.trim() || null,
-          mes_cierre:       form.mes_cierre || null,
-          notas:            form.notas.trim() || null,
-          updated_at:       new Date().toISOString(),
+    // Solo campos operativos (estatus, ODC, factura, fechas, notas) — es lo
+    // único editable en ingresos LIGADOS, cuyos montos/nombres dicta la
+    // cotización aprobada.
+    const operativos = {
+      odc:              form.odc.trim() || null,
+      estatus:          form.estatus,
+      numero_factura:   form.numero_factura.trim() || null,
+      fecha_aprox_pago: form.fecha_aprox_pago.trim() || null,
+      fecha_pago:       form.fecha_pago.trim() || null,
+      mes_cierre:       form.mes_cierre || null,
+      notas:            form.notas.trim() || null,
+      updated_at:       new Date().toISOString(),
+    }
+    // Ligado: admin puede tocar empresa (se sincroniza al proyecto), finanzas
+    // solo lo operativo. Manual (sin proyecto): admin y finanzas capturan todo.
+    const payload = linkedSave
+      ? (isAdmin ? comun : operativos)
+      : {
+          ...comun,
+          cliente_agencia: form.cliente_agencia.trim(),
+          responsable: form.responsable.trim() || null,
+          proyecto:    proyectoFinal,
+          subtotal:    parseFloat(form.subtotal) || 0,
+          iva:         parseFloat(form.iva) || 0,
         }
-      : linkedSave
-        ? comun
-        : {
-            ...comun,
-            cliente_agencia: form.cliente_agencia.trim(),
-            responsable: form.responsable.trim() || null,
-            proyecto:    proyectoFinal,
-            subtotal:    parseFloat(form.subtotal) || 0,
-            iva:         parseFloat(form.iva) || 0,
-          }
     if (editingId) {
       const { error } = await supabase.from("ingresos").update(payload as any).eq("id", editingId)
       if (error) { alert(error.message); setSaving(false); return }
@@ -466,13 +467,13 @@ export default function IngresosPage() {
   const editingIngreso = editingId ? ingresos.find(r => r.id === editingId) : null
   const editingLinked = !!editingIngreso?.project_id
 
-  // El rol finanzas solo puede editar estatus, ODC, factura, fechas y notas.
-  // Montos, nombres y códigos (empresa/cliente/proyecto/subtotal/IVA/responsable)
-  // son de solo lectura — eso se edita desde la página del proyecto.
+  // La página solo la abren admin y finanzas. Ambos pueden capturar y editar
+  // ingresos MANUALES (sin proyecto). Los ligados a un proyecto tienen sus
+  // montos/nombres dictados por la cotización aprobada → solo lectura aquí.
   const isAdmin = profile?.role === "admin"
-  // Campos que dicta la cotización aprobada (subtotal, IVA, responsable): solo
-  // lectura en ingresos ligados a un proyecto — se editan en la cotización.
-  const roQuoteFields = !isAdmin || editingLinked
+  // Campos financieros/nombres: de solo lectura únicamente en ingresos ligados
+  // a un proyecto; en los manuales se editan desde aquí.
+  const roQuoteFields = editingLinked
 
   return (
     <div style={layoutStyle}>
@@ -494,24 +495,27 @@ export default function IngresosPage() {
             <h1 style={pageTitleStyle}>Control de Ingresos</h1>
             <p style={pageSubStyle}>Proyectos aprobados · seguimiento financiero</p>
           </div>
-          {isAdmin && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => downloadIngresosTemplate()} style={secondaryBtnStyle} title="Descargar plantilla de Excel">
-                ⬇ Plantilla
-              </button>
-              <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={secondaryBtnStyle} title="Importar ingresos desde Excel">
-                {importing ? "Importando…" : "⬆ Importar Excel"}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleImportFile}
-                style={{ display: "none" }}
-              />
-              <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
-            </div>
-          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {isAdmin && (
+              <>
+                <button onClick={() => downloadIngresosTemplate()} style={secondaryBtnStyle} title="Descargar plantilla de Excel">
+                  ⬇ Plantilla
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={secondaryBtnStyle} title="Importar ingresos desde Excel">
+                  {importing ? "Importando…" : "⬆ Importar Excel"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleImportFile}
+                  style={{ display: "none" }}
+                />
+              </>
+            )}
+            {/* Admin y finanzas pueden capturar ingresos manuales (sin proyecto) */}
+            <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
+          </div>
         </div>
 
         {/* ── Global summary ── */}
@@ -680,7 +684,8 @@ export default function IngresosPage() {
                           </button>
                         )}
                         <button onClick={() => openEdit(r)} style={actionBtnStyle}>✎</button>
-                        {isAdmin && (
+                        {/* Borrar: admin cualquiera; finanzas solo ingresos manuales (sin proyecto) */}
+                        {(isAdmin || !r.project_id) && (
                           <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, color: "#f87171" }}>✕</button>
                         )}
                       </td>
@@ -760,7 +765,7 @@ export default function IngresosPage() {
               {/* Row 1: Empresa + Estatus */}
               <div style={rowStyle}>
                 <FormField label="Empresa">
-                  <select value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value as Empresa }))} disabled={!isAdmin} style={isAdmin ? inputStyle : readOnlyInputStyle}>
+                  <select value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value as Empresa }))} disabled={editingLinked && !isAdmin} style={editingLinked && !isAdmin ? readOnlyInputStyle : inputStyle}>
                     <option value="retro_studio">Retro Studio</option>
                     <option value="retro_films">Retro Films</option>
                   </select>
@@ -780,9 +785,9 @@ export default function IngresosPage() {
                   <input
                     value={form.cliente_agencia}
                     onChange={e => setForm(f => ({ ...f, cliente_agencia: e.target.value }))}
-                    readOnly={!isAdmin || editingLinked}
-                    disabled={!isAdmin || editingLinked}
-                    style={isAdmin && !editingLinked ? inputStyle : readOnlyInputStyle}
+                    readOnly={editingLinked}
+                    disabled={editingLinked}
+                    style={editingLinked ? readOnlyInputStyle : inputStyle}
                     placeholder="ej. Compartamos Banco"
                     title={editingLinked ? "Vinculado a la carpeta del cliente en Proyectos" : undefined}
                   />
@@ -804,9 +809,9 @@ export default function IngresosPage() {
                 </FormField>
               </div>
 
-              {(editingLinked || !isAdmin) ? (
-                /* Nombre/código de solo lectura (proyecto vinculado o rol finanzas) */
-                <FormField label={editingLinked ? "Proyecto (vinculado)" : "Proyecto"}>
+              {editingLinked ? (
+                /* Nombre/código de solo lectura (proyecto vinculado) */
+                <FormField label="Proyecto (vinculado)">
                   <input
                     value={form.proyecto}
                     readOnly
