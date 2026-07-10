@@ -201,7 +201,7 @@ function drawCoverPage(
   // ── Header image ─────────────────────────────────────────────────────────────
   const headerH = 52
   if (headerImg) {
-    doc.addImage(headerImg, "PNG", 0, 0, pageW, headerH)
+    doc.addImage(headerImg, "JPEG", 0, 0, pageW, headerH)
   } else {
     doc.setFillColor(15, 23, 42)
     doc.rect(0, 0, pageW, headerH, "F")
@@ -402,7 +402,7 @@ function drawCoverPage(
   const footerTotalH = 19.5   // 1.5mm accent line + 18mm bar
   const footerY = pageH - footerTotalH
   if (footerImg) {
-    doc.addImage(footerImg, "PNG", 0, footerY, pageW, footerTotalH)
+    doc.addImage(footerImg, "JPEG", 0, footerY, pageW, footerTotalH)
   } else {
     doc.setFillColor(99, 102, 241)
     doc.rect(0, footerY, pageW, 1.5, "F")
@@ -436,9 +436,9 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
 
   // Cargar imágenes
   const [headerCover, headerDetail, footer] = await Promise.all([
-    fetchImageBase64("/pdf-header-cover.png"),
-    fetchImageBase64("/pdf-header-detail.png"),
-    fetchImageBase64("/pdf-footer.png"),
+    fetchImageBase64("/pdf-header-cover.jpg"),
+    fetchImageBase64("/pdf-header-detail.jpg"),
+    fetchImageBase64("/pdf-footer.jpg"),
   ])
 
   // ── Página 1: Carátula ───────────────────────────────────────────────────────
@@ -461,7 +461,7 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
   // ── Encabezado del detalle (imagen limpia, sin texto encima) ─────────────────
   const detailHeaderH = 30
   if (headerDetail.dataUrl) {
-    doc.addImage(headerDetail.dataUrl, "PNG", 0, 0, pageW, detailHeaderH)
+    doc.addImage(headerDetail.dataUrl, "JPEG", 0, 0, pageW, detailHeaderH)
   } else {
     doc.setFillColor(15, 23, 42)
     doc.rect(0, 0, pageW, detailHeaderH, "F")

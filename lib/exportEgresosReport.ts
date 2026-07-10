@@ -69,10 +69,10 @@ export async function exportEgresosReport(data: EgresosReportData): Promise<void
   const proyectoLabel = data.projectCode ? `${data.projectCode} ${data.projectName}` : data.projectName
 
   // ── Encabezado (imagen) con título centrado ──────────────────────────────────
-  const headerImg = await fetchImageBase64("/pdf-header-detail.png")
+  const headerImg = await fetchImageBase64("/pdf-header-detail.jpg")
   const headerH = 34
   if (headerImg) {
-    doc.addImage(headerImg, "PNG", 0, 0, pageW, headerH)
+    doc.addImage(headerImg, "JPEG", 0, 0, pageW, headerH)
   } else {
     doc.setFillColor(15, 23, 42)
     doc.rect(0, 0, pageW, headerH, "F")

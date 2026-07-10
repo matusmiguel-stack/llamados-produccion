@@ -253,7 +253,7 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   // ── Header: altura FIJA según la proporción real de la imagen (a ancho
   // completo). Antes el alto se escalaba con el contenido pero el ancho no, y
   // por eso se deformaba. Con getImageProperties se adapta a cualquier imagen.
-  const headerDataUrl = await fetchImageBase64("/pdf-header-detail.png")
+  const headerDataUrl = await fetchImageBase64("/pdf-header-detail.jpg")
   let headerImgH = 30
   if (headerDataUrl) {
     try {
@@ -282,7 +282,7 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
 
   // ── Header image ────────────────────────────────────────────────
   if (headerDataUrl) {
-    doc.addImage(headerDataUrl, "PNG", 0, 0, PAGE_W, headerImgH)
+    doc.addImage(headerDataUrl, "JPEG", 0, 0, PAGE_W, headerImgH)
   } else {
     setBg(doc, C_BG_HEADER)
     doc.rect(0, 0, PAGE_W, headerImgH, "F")
