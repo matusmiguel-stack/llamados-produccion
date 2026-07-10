@@ -467,8 +467,15 @@ export function HojaLlamadoPanel({
       setHoja({ id: "", ...defaultHoja(projectId) })
     }
     setLoading(false)
-    // Auto-sync crew silently on mount
-    syncCrewFromLiberacion(currentCrew, true)
+    // Sembrar el crew desde la liberación SOLO la primera vez (cuando aún no
+    // hay crew guardado). Si ya existe crew guardado, respetar exactamente lo
+    // que el usuario dejó (orden del drag-and-drop, nombres editados, horarios,
+    // etc.). Para traer cambios nuevos de la liberación está el botón
+    // "⟳ Actualizar crew", que es una acción explícita del usuario.
+    const crewHasData = currentCrew.some(
+      (r) => (r.puesto && r.puesto.trim()) || (r.nombre && r.nombre.trim())
+    )
+    if (!crewHasData) syncCrewFromLiberacion(currentCrew, true)
   }, [projectId, syncCrewFromLiberacion])
 
   useEffect(() => {
