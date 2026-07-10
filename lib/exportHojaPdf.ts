@@ -398,9 +398,12 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
       const colW = (W - gap) / 2
       const half = Math.ceil(crewRows.length / 2)
       const cols2 = (cw: number) => [
-        { header: "#",      width: cw*0.06, align: "center" as const },
-        { header: "Puesto", width: cw*0.30 },
-        { header: "Nombre", width: cw*0.28 },
+        // "#" con ancho suficiente para números de 2 dígitos: si es muy angosto,
+        // splitTextToSize parte "10" en ["1","0"] y con maxLines=1 se pierde el 2º
+        // dígito (la 2ª columna mostraba "1" en vez de 10, 11, 12…).
+        { header: "#",      width: cw*0.08, align: "center" as const },
+        { header: "Puesto", width: cw*0.29 },
+        { header: "Nombre", width: cw*0.27 },
         { header: "RETRO",  width: cw*0.12, align: "center" as const, bgHex: "#4c1d95" },
         { header: "LOC.",   width: cw*0.12, align: "center" as const, bgHex: "#0c4a6e" },
         { header: "PICK.",  width: cw*0.12, align: "center" as const, bgHex: "#064e3b" },
