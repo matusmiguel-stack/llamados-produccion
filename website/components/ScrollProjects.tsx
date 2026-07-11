@@ -125,11 +125,11 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
                            style={{ opacity: isHovered ? 0 : 1 }} />
                   }
 
-                  {/* Vimeo iframe: pre-mounted when panel is active so it's already playing on hover */}
-                  {isOn && v.id && (
+                  {/* Vimeo iframe: siempre montado (todos los videos buffereando desde carga) */}
+                  {v.id && (
                     <iframe
                       className={styles.vimeoBg}
-                      src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0`}
+                      src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
                       allow="autoplay"
                       style={{ opacity: isHovered ? 1 : 0 }}
                     />
