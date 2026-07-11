@@ -1,3 +1,4 @@
+import { getShowcaseVideos } from "@/lib/vimeo"
 import ScrollProjects from "@/components/ScrollProjects"
 
 export const metadata = {
@@ -5,6 +6,7 @@ export const metadata = {
   description: "Catálogo de proyectos de producción audiovisual",
 }
 
-export default function ProyectosPage() {
-  return <ScrollProjects />
+export default async function ProyectosPage() {
+  const videos = await getShowcaseVideos()
+  return <ScrollProjects videos={videos} />
 }

@@ -1,0 +1,51 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.frame {
+  width: min(92vw, 1100px);
+  aspect-ratio: 16 / 9;
+  position: relative;
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 3px;
+}
+
+.close {
+  position: fixed;
+  top: 22px;
+  right: 28px;
+  background: none;
+  border: none;
+  color: rgba(232, 228, 220, 0.5);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 6px;
+  transition: color 0.2s;
+  line-height: 1;
+}
+.close:hover { color: rgba(232, 228, 220, 0.95); }
