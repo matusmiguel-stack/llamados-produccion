@@ -5,144 +5,249 @@ import VideoModal from "./VideoModal"
 import styles from "./ScrollProjects.module.css"
 import type { VimeoVideo } from "@/lib/vimeo"
 
-export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
-  const outerRef  = useRef<HTMLDivElement>(null)
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+/* Numeral romano para el contador (I, II, III…) */
+function roman(n: number): string {
+  const map: [number, string][] = [
+    [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+  ]
+  let out = ""
+  for (const [v, s] of map) while (n >= v) { out += s; n -= v }
+  return out
+}
 
-  const [progresses, setProgresses] = useState<number[]>(() =>
-    videos.map((_, i) => (i === 0 ? 1 : 0))
+/* Distancia envuelta más corta en un loop de N slots → [-N/2, N/2) */
+function wrapDist(d: number, n: number): number {
+  d = ((d % n) + n) % n
+  if (d >= n / 2) d -= n
+  return d
+}
+
+type Phase = "moving" | "visible" | "idle"
+
+const TRAVEL_VH  = 230   // recorrido vertical de cada item (en vh) por slot
+const PARALLAX   = 0.9   // el título contra-viaja a 0.9 → velocidad neta 0.1x
+const LERP       = 0.075 // factor de suavizado del scroll virtual
+const SNAP_MS    = 150   // sin input durante esto → snap al proyecto más cercano
+const IDLE_MS    = 1300  // sin input durante esto → se esconde el UI
+
+export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
+  const N = videos.length
+
+  const stageRef  = useRef<HTMLElement>(null)
+  const itemRefs  = useRef<(HTMLDivElement | null)[]>([])
+  const titleRefs = useRef<(HTMLDivElement | null)[]>([])
+  const lineRef   = useRef<HTMLDivElement>(null)
+
+  const targetRef  = useRef(0)
+  const currentRef = useRef(0)
+  const lastInput  = useRef(Date.now())
+  const phaseRef   = useRef<Phase>("visible")
+  const activeRef  = useRef(0)
+  const touchY     = useRef<number | null>(null)
+
+  const [active, setActive] = useState(0)
+  const [phase,  setPhase]  = useState<Phase>("visible")
+  const [modal,  setModal]  = useState<string | null>(null)
+  // Iframes montados: ventana alrededor del activo, acumulativa (una vez cargado, se queda)
+  const [mounted, setMounted] = useState<Set<number>>(
+    () => new Set(Array.from({ length: Math.min(3, N) }, (_, i) => i).concat(N > 3 ? [N - 1] : []))
   )
-  const [activeIdx,  setActiveIdx]  = useState(0)
-  const [showInfo,   setShowInfo]   = useState(false)
-  const [modal,      setModal]      = useState<string | null>(null)
 
   useEffect(() => {
-    const outer = outerRef.current
-    if (!outer) return
+    const stage = stageRef.current
+    if (!stage || N < 1) return
 
-    function onScroll() {
-      if (!outer) return
-      const rect    = outer.getBoundingClientRect()
-      const scrolled = Math.max(0, -rect.top)
-      const total   = outer.offsetHeight - window.innerHeight
-      if (total <= 0 || videos.length <= 1) return
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-      const segH = total / (videos.length - 1)
-
-      const next = videos.map((_, i) => {
-        if (i === 0) return 1
-        return Math.min(1, Math.max(0, (scrolled - (i - 1) * segH) / segH))
-      })
-
-      setProgresses(next)
-
-      // Topmost card that has started entering
-      let ai = 0
-      next.forEach((p, i) => { if (p > 0) ai = i })
-      setActiveIdx(ai)
-
-      // Show info, hide 900 ms after scroll stops
-      setShowInfo(true)
-      if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => setShowInfo(false), 900)
+    function onWheel(e: WheelEvent) {
+      lastInput.current = Date.now()
+      let t = targetRef.current + e.deltaY * 0.0011
+      // no permitir vuelos de más de 3 proyectos de golpe
+      t = Math.max(currentRef.current - 3, Math.min(currentRef.current + 3, t))
+      targetRef.current = t
     }
 
-    window.addEventListener("scroll", onScroll, { passive: true })
+    function onTouchStart(e: TouchEvent) { touchY.current = e.touches[0].clientY }
+    function onTouchMove(e: TouchEvent) {
+      if (touchY.current === null) return
+      e.preventDefault()
+      lastInput.current = Date.now()
+      const y = e.touches[0].clientY
+      targetRef.current += (touchY.current - y) / (window.innerHeight * 0.85)
+      touchY.current = y
+    }
+    function onTouchEnd() { touchY.current = null }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        lastInput.current = Date.now()
+        targetRef.current = Math.round(currentRef.current) + 1
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        lastInput.current = Date.now()
+        targetRef.current = Math.round(currentRef.current) - 1
+      }
+    }
+
+    stage.addEventListener("wheel", onWheel, { passive: true })
+    stage.addEventListener("touchstart", onTouchStart, { passive: true })
+    stage.addEventListener("touchmove", onTouchMove, { passive: false })
+    stage.addEventListener("touchend", onTouchEnd)
+    window.addEventListener("keydown", onKey)
+
+    let raf = 0
+    function tick() {
+      const now = Date.now()
+
+      // Snap: si no hay input reciente, asentarse en el proyecto más cercano
+      if (now - lastInput.current > SNAP_MS && touchY.current === null) {
+        targetRef.current = Math.round(targetRef.current)
+      }
+
+      // Lerp del scroll virtual
+      const c0 = currentRef.current
+      const t  = targetRef.current
+      currentRef.current = reduced ? t : c0 + (t - c0) * LERP
+      const c = currentRef.current
+
+      const cur = ((c % N) + N) % N
+
+      // Transformaciones por item: la estructura vuela, el título flota (parallax)
+      for (let i = 0; i < N; i++) {
+        const el = itemRefs.current[i]
+        const ti = titleRefs.current[i]
+        if (!el || !ti) continue
+        const d = wrapDist(i - cur, N)
+        if (Math.abs(d) > 1.25) {
+          el.style.visibility = "hidden"
+          continue
+        }
+        el.style.visibility = "visible"
+        el.style.transform = `translate3d(0, ${d * TRAVEL_VH}vh, 0)`
+        ti.style.transform = `translate3d(0, ${-d * TRAVEL_VH * PARALLAX}vh, 0)`
+        const op = Math.max(0, Math.min(1, 1 - (Math.abs(d) - 0.1) / 0.28))
+        ti.style.opacity = String(op)
+      }
+
+      // Línea de progreso global (0→1 a través del set)
+      if (lineRef.current) {
+        lineRef.current.style.transform = `scaleY(${N > 1 ? cur / (N - 0) : 1})`
+      }
+
+      // Índice activo → crossfade del visor
+      const ai = ((Math.round(c) % N) + N) % N
+      if (ai !== activeRef.current) {
+        activeRef.current = ai
+        setActive(ai)
+        setMounted(prev => {
+          const add = [-1, 0, 1, 2].map(k => ((ai + k) % N + N) % N).filter(x => !prev.has(x))
+          if (add.length === 0) return prev
+          const next = new Set(prev)
+          add.forEach(x => next.add(x))
+          return next
+        })
+      }
+
+      // Fase: moviéndose / UI visible / idle (UI escondido, video limpio)
+      const moving = Math.abs(t - c) > 0.015
+      const ph: Phase = moving ? "moving" : now - lastInput.current > IDLE_MS ? "idle" : "visible"
+      if (ph !== phaseRef.current) {
+        phaseRef.current = ph
+        setPhase(ph)
+      }
+
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+
     return () => {
-      window.removeEventListener("scroll", onScroll)
-      if (timerRef.current) clearTimeout(timerRef.current)
+      cancelAnimationFrame(raf)
+      stage.removeEventListener("wheel", onWheel)
+      stage.removeEventListener("touchstart", onTouchStart)
+      stage.removeEventListener("touchmove", onTouchMove)
+      stage.removeEventListener("touchend", onTouchEnd)
+      window.removeEventListener("keydown", onKey)
     }
-  }, [videos.length])
+  }, [N])
+
+  function openActive() {
+    const v = videos[activeRef.current]
+    if (v?.id && phaseRef.current !== "moving") setModal(v.id)
+  }
+
+  const av = videos[active]
 
   return (
     <>
-      <div
-        ref={outerRef}
-        className={styles.outer}
-        style={{ height: `${videos.length * 150 + 100}vh` }}
+      <section
+        ref={stageRef}
+        className={`${styles.stage} ${styles["ph_" + phase] ?? ""}`}
+        onClick={openActive}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openActive() } }}
+        tabIndex={0}
+        role="button"
+        aria-label={`Proyecto ${active + 1} de ${N}: ${av?.title ?? ""}. Enter para ver con sonido, flechas para navegar.`}
+        data-cursor="play"
       >
-        <div className={styles.stage}>
-          {videos.map((v, i) => {
-            const p        = progresses[i]
-            const isActive = i === activeIdx
+        {/* ── Visor: videos fullscreen con crossfade ── */}
+        <div className={styles.visor}>
+          {videos.map((v, i) => (
+            <figure
+              key={v.id || i}
+              className={styles.figure}
+              style={{ opacity: i === active ? 1 : 0 }}
+            >
+              {v.thumbnail && (
+                <div className={styles.poster} style={{ backgroundImage: `url(${v.thumbnail})` }} />
+              )}
+              {v.id && mounted.has(i) && (
+                <iframe
+                  className={styles.frame}
+                  src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
+                  allow="autoplay"
+                  tabIndex={-1}
+                  aria-hidden
+                />
+              )}
+            </figure>
+          ))}
+          <div className={styles.overlay} />
+        </div>
 
-            // clip-path: top inset shrinks 100→0 (card grows upward from bottom)
-            // side insets also shrink for a "portal opening" feel
-            const clipT    = (1 - p) * 100
-            const clipS    = (1 - p) * 6
+        {/* ── UI: se esconde en idle ── */}
+        <div className={styles.ui}>
+          {/* Riel de progreso con numeral romano */}
+          <div className={styles.rail}>
+            <span className={styles.roman} key={active}>{roman(active + 1)}</span>
+            <div className={styles.railLine}>
+              <div ref={lineRef} className={styles.railFill} />
+            </div>
+          </div>
 
-            return (
+          {/* Metadata fija del proyecto activo */}
+          <div className={styles.meta} key={`m${active}`}>
+            <span>{av?.year}</span>
+            <span className={styles.metaDur}>{av?.duration}</span>
+          </div>
+
+          {/* Títulos voladores con parallax */}
+          <div className={styles.items}>
+            {videos.map((v, i) => (
               <div
                 key={v.id || i}
-                className={styles.card}
-                style={{
-                  zIndex:    i + 1,
-                  clipPath:  p >= 1
-                    ? "none"
-                    : `inset(${clipT}% ${clipS}% 0 ${clipS}%)`,
-                }}
-                onClick={() => v.id && setModal(v.id)}
-                data-cursor={v.id ? "play" : undefined}
+                ref={el => { itemRefs.current[i] = el }}
+                className={styles.item}
               >
-                {/* ── Media ── */}
-                <div className={styles.media}>
-                  {/* Thumbnail with parallax shift */}
-                  {v.thumbnail ? (
-                    <div
-                      className={styles.thumb}
-                      style={{
-                        backgroundImage: `url(${v.thumbnail})`,
-                        transform: `translateY(${(1 - p) * 14}%)`,
-                      }}
-                    />
-                  ) : (
-                    <div
-                      className={`${styles.thumb} ${styles[v.gradient as keyof typeof styles] ?? styles.g0}`}
-                      style={{ transform: `translateY(${(1 - p) * 14}%)` }}
-                    />
-                  )}
-
-                  {/* Vimeo iframe — always mounted so it buffers immediately */}
-                  {v.id && (
-                    <iframe
-                      className={styles.iframe}
-                      src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
-                      allow="autoplay"
-                      style={{ opacity: isActive ? 1 : 0 }}
-                    />
-                  )}
-                </div>
-
-                {/* ── Gradient shade ── */}
-                <div className={styles.shade} />
-
-                {/* ── Info overlay — visible during scroll, fades when idle ── */}
                 <div
-                  className={styles.info}
-                  style={{ opacity: isActive && showInfo ? 1 : 0 }}
+                  ref={el => { titleRefs.current[i] = el }}
+                  className={styles.itemInner}
                 >
-                  <div className={styles.infoTop}>
-                    <span className={styles.counter}>
-                      {String(i + 1).padStart(2, "0")}
-                      <span className={styles.counterSep}> / </span>
-                      {String(videos.length).padStart(2, "0")}
-                    </span>
-                    <span className={styles.dur}>{v.duration}</span>
-                  </div>
-
-                  <div className={styles.infoBot}>
-                    {v.year && <span className={styles.year}>{v.year}</span>}
-                    <h2 className={styles.title}>{v.title}</h2>
-                    {v.id && (
-                      <span className={styles.cta}>Ver proyecto ↗</span>
-                    )}
-                  </div>
+                  <h2 className={styles.title}>“{v.title}”</h2>
                 </div>
               </div>
-            )
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
       {modal && <VideoModal videoId={modal} onClose={() => setModal(null)} />}
     </>

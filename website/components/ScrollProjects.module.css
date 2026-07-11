@@ -1,156 +1,203 @@
-/* ── Scroll outer ── */
-.outer {
-  position: relative;
-}
-
-/* ── Sticky stage (full viewport) ── */
+/* ══════════════════════════════════════
+   STAGE — experiencia fija 100dvh (sin scroll nativo, estilo depoluxe)
+══════════════════════════════════════ */
 .stage {
-  position: sticky;
-  top: 0;
+  position: relative;
   height: 100dvh;
+  width: 100vw;
   overflow: hidden;
   background: var(--bg);
+  overscroll-behavior: none;
+  outline: none;
+}
+.stage:focus-visible {
+  outline: 2px dashed rgba(232, 228, 220, 0.4);
+  outline-offset: -2px;
 }
 
-/* ── Individual card ── */
-.card {
+/* ══════════════════════════════════════
+   VISOR — stack de videos fullscreen con crossfade
+══════════════════════════════════════ */
+.visor {
   position: absolute;
   inset: 0;
-  cursor: pointer;
-  will-change: clip-path;
+  transform: scale(1);
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* Mientras te mueves el video se encoge sutilmente…
+   al pararte crece a pantalla completa */
+.ph_moving .visor { transform: scale(0.955); }
 
-/* ── Media container (overflow hidden for parallax) ── */
-.media {
+.figure {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  margin: 0;
+  transition: opacity 0.4s ease;
 }
 
-/* ── Thumbnail (slightly taller for parallax room) ── */
-.thumb {
+.poster {
   position: absolute;
-  inset: -14% 0;
+  inset: 0;
   background-size: cover;
   background-position: center;
-  will-change: transform;
 }
 
-/* ── Vimeo iframe ── */
-.iframe {
+/* iframe 16:9 que cubre el viewport completo (cover) */
+.frame {
   position: absolute;
-  top: -10%;
-  left: 0;
-  width: 100%;
-  height: 120%;
+  top: 50%;
+  left: 50%;
+  width: max(100vw, 177.78dvh);
+  height: max(100dvh, 56.25vw);
+  transform: translate(-50%, -50%);
   border: none;
   pointer-events: none;
-  transition: opacity 0.5s ease;
 }
 
-/* ── Bottom gradient ── */
-.shade {
+/* Overlay oscuro: 14% con UI visible, 25% en movimiento, 0 en idle */
+.overlay {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(to top,
-      rgba(6, 6, 8, 0.92)  0%,
-      rgba(6, 6, 8, 0.42)  35%,
-      rgba(6, 6, 8, 0.08)  65%,
-      transparent          100%),
-    linear-gradient(to bottom,
-      rgba(6, 6, 8, 0.5)  0%,
-      transparent          18%);
+  background: #000;
+  opacity: 0.14;
+  transition: opacity 0.7s ease;
   pointer-events: none;
-  z-index: 2;
+}
+.ph_moving .overlay { opacity: 0.28; }
+.ph_idle   .overlay { opacity: 0; }
+
+/* ══════════════════════════════════════
+   UI — todo se desvanece en idle
+══════════════════════════════════════ */
+.ui {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.ph_idle .ui { opacity: 0; }
+
+/* ── Riel de progreso vertical con numeral romano (izquierda) ── */
+.rail {
+  position: absolute;
+  left: clamp(20px, 3.4vw, 48px);
+  top: 50%;
+  transform: translateY(-50%);
+  height: 38vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  z-index: 4;
 }
 
-/* ── Info overlay ── */
-.info {
+.roman {
+  font-family: var(--fd);
+  font-style: italic;
+  font-size: clamp(14px, 1.5vw, 22px);
+  letter-spacing: 0.02em;
+  color: var(--fg);
+  animation: romanIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes romanIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.railLine {
+  flex: 1;
+  width: 1px;
+  background: rgba(232, 228, 220, 0.22);
+  overflow: hidden;
+  position: relative;
+}
+.railFill {
+  position: absolute;
+  inset: 0;
+  background: var(--red);
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+/* ── Metadata fija (derecha, centro) ── */
+.meta {
+  position: absolute;
+  right: clamp(20px, 3.4vw, 48px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  z-index: 4;
+  animation: romanIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.meta span {
+  font-family: var(--fd);
+  font-size: clamp(12px, 1.2vw, 17px);
+  letter-spacing: 0.01em;
+  color: rgba(232, 228, 220, 0.85);
+}
+.metaDur {
+  font-family: var(--fm) !important;
+  font-size: clamp(9px, 0.9vw, 11px) !important;
+  letter-spacing: 0.18em !important;
+  color: rgba(232, 228, 220, 0.4) !important;
+}
+
+/* ── Items voladores ── */
+.items {
   position: absolute;
   inset: 0;
   z-index: 3;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 28px 52px 52px;
-  pointer-events: none;
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.infoTop {
+/* El contenedor vuela rápido (230vh por slot) */
+.item {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  visibility: hidden;
+}
+
+/* El título contra-viaja a 0.9 → flota lento mientras la estructura vuela */
+.itemInner {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.counter {
-  font-family: var(--fm);
-  font-size: 9px;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: rgba(232, 228, 220, 0.55);
-}
-.counterSep {
-  color: rgba(232, 228, 220, 0.2);
-  margin: 0 3px;
-}
-
-.dur {
-  font-family: var(--fm);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  color: rgba(232, 228, 220, 0.3);
-}
-
-.infoBot {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.year {
-  font-family: var(--fm);
-  font-size: 9px;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: var(--red);
+  justify-content: center;
+  will-change: transform, opacity;
+  opacity: 0;
 }
 
 .title {
   font-family: var(--fd);
   font-style: italic;
   font-weight: 400;
-  font-size: clamp(32px, 5.5vw, 84px);
-  line-height: 1.0;
-  letter-spacing: -0.03em;
+  font-size: clamp(30px, 5.2vw, 78px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   color: var(--fg);
+  text-align: center;
+  max-width: 78vw;
+  text-wrap: balance;
 }
 
-.cta {
-  font-family: var(--fm);
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(232, 228, 220, 0.38);
-  margin-top: 4px;
+/* ══════════════════════════════════════
+   Mobile
+══════════════════════════════════════ */
+@media (max-width: 640px) {
+  .rail  { height: 30vh; }
+  .title { max-width: 86vw; font-size: clamp(26px, 8vw, 44px); }
+  .meta  { top: auto; bottom: 40px; transform: none; flex-direction: row; gap: 14px; align-items: baseline; }
 }
 
-/* ── Gradient presets (fallback when no thumbnail) ── */
-.g0 { background:
-  radial-gradient(ellipse 65% 65% at 42% 38%, rgba(185, 55, 220, 0.7) 0%, transparent 58%),
-  linear-gradient(155deg, #1a0825 0%, #0d0418 100%); }
-.g1 { background:
-  radial-gradient(ellipse 65% 65% at 50% 38%, rgba(230, 155, 40, 0.7) 0%, transparent 54%),
-  linear-gradient(155deg, #1c1004 0%, #0a0600 100%); }
-.g2 { background:
-  radial-gradient(ellipse 65% 65% at 48% 44%, rgba(40, 175, 110, 0.65) 0%, transparent 56%),
-  linear-gradient(150deg, #051009 0%, #020806 100%); }
-.g3 { background:
-  radial-gradient(ellipse 55% 75% at 52% 28%, rgba(35, 75, 245, 0.75) 0%, transparent 54%),
-  radial-gradient(ellipse 38% 48% at 22% 72%, rgba(208, 52, 44, 0.3) 0%, transparent 46%),
-  linear-gradient(140deg, #050620 0%, #030410 100%); }
-.g4 { background:
-  radial-gradient(ellipse 62% 62% at 46% 38%, rgba(210, 52, 44, 0.75) 0%, transparent 54%),
-  radial-gradient(ellipse 32% 32% at 82% 22%, rgba(245, 120, 60, 0.25) 0%, transparent 48%),
-  linear-gradient(148deg, #1c0505 0%, #100303 100%); }
+/* ══════════════════════════════════════
+   Reduced motion
+══════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .visor, .overlay, .ui, .figure { transition: none; }
+  .roman, .meta { animation: none; }
+}
