@@ -1,139 +1,97 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import styles from "./Nav.module.css"
+
+const LINKS = [
+  { href: "/proyectos", label: "Proyectos" },
+  { href: "/films",     label: "Films"      },
+  { href: "/live",      label: "Live"        },
+  { href: "/nosotros",  label: "Nosotros"    },
+]
 
 export default function Nav() {
   const pathname = usePathname()
-  const isHome = pathname === "/"
-  const [visible, setVisible] = useState(!isHome)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [open, setOpen] = useState(false)
 
+  // Lock body scroll when overlay is open
   useEffect(() => {
-    if (!isHome) {
-      setVisible(true)
-      return
-    }
+    document.body.style.overflow = open ? "hidden" : ""
+    return () => { document.body.style.overflow = "" }
+  }, [open])
 
-    // On home: show briefly on mount, then hide after 2s
-    setVisible(true)
-    timerRef.current = setTimeout(() => setVisible(false), 2000)
+  // Close on route change
+  useEffect(() => { setOpen(false) }, [pathname])
 
-    function onScroll() {
-      // Show nav when user scrolls down (not on home since home is 100vh)
-      setVisible(window.scrollY > 40)
-    }
-
-    function onMouseMove(e: MouseEvent) {
-      if (e.clientY < 80) {
-        setVisible(true)
-        if (timerRef.current) clearTimeout(timerRef.current)
-        timerRef.current = setTimeout(() => {
-          if (window.scrollY < 40) setVisible(false)
-        }, 1800)
-      }
-    }
-
-    window.addEventListener("scroll", onScroll, { passive: true })
-    window.addEventListener("mousemove", onMouseMove)
-
-    return () => {
-      window.removeEventListener("scroll", onScroll)
-      window.removeEventListener("mousemove", onMouseMove)
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [isHome])
-
-  // Re-evaluate when pathname changes
+  // Close on Escape
   useEffect(() => {
-    if (!isHome) setVisible(true)
-  }, [pathname, isHome])
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false) }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   return (
-    <nav
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 40px",
-        background: isHome
-          ? "rgba(6, 6, 8, 0.55)"
-          : "rgba(6, 6, 8, 0.72)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(232, 228, 220, 0.06)",
-        transform: visible ? "translateY(0)" : "translateY(-100%)",
-        opacity: visible ? 1 : 0,
-        transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease",
-        pointerEvents: visible ? "auto" : "none",
-      }}
-    >
-      <Link
-        href="/"
-        style={{
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          fontStyle: "italic",
-          fontSize: 16,
-          letterSpacing: "0.04em",
-          color: "var(--fg)",
-        }}
-      >
-        Retro Casa
-      </Link>
+    <>
+      {/* ── Persistent top bar ── */}
+      <div className={`${styles.bar} ${open ? styles.barOpen : ""}`}>
+        <Link href="/" className={styles.logo} onClick={() => setOpen(false)}>
+          Retro Casa
+        </Link>
 
-      <ul style={{ display: "flex", gap: 28, listStyle: "none" }}>
-        {[
-          { href: "/proyectos", label: "Proyectos" },
-          { href: "/films", label: "Films" },
-          { href: "/live", label: "Live" },
-          { href: "/nosotros", label: "Nosotros" },
-        ].map(({ href, label }) => (
-          <li key={href}>
+        <button
+          className={`${styles.hamburger} ${open ? styles.hamburgerOpen : ""}`}
+          onClick={() => setOpen(v => !v)}
+          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={open}
+        >
+          <span /><span /><span />
+        </button>
+      </div>
+
+      {/* ── Fullscreen overlay ── */}
+      <div
+        className={`${styles.overlay} ${open ? styles.overlayOpen : ""}`}
+        aria-hidden={!open}
+        aria-modal={open}
+        role="dialog"
+      >
+        <div className={styles.scanLines} aria-hidden />
+
+        <nav className={styles.menu}>
+          {LINKS.map(({ href, label }, i) => (
             <Link
+              key={href}
               href={href}
-              style={{
-                fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
-                fontSize: 9,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: pathname === href ? "var(--fg)" : "var(--fg2)",
-                position: "relative",
-                paddingBottom: 2,
-                borderBottom: pathname === href
-                  ? "1px solid var(--red)"
-                  : "1px solid transparent",
-                transition: "color 0.25s, border-color 0.25s",
-              }}
+              className={`${styles.menuItem} ${pathname === href ? styles.menuItemActive : ""}`}
+              style={{ transitionDelay: open ? `${0.08 + i * 0.07}s` : "0s" }}
+              onClick={() => setOpen(false)}
             >
-              {label}
+              <span className={styles.menuText}>{label}</span>
+              <span className={styles.menuArrow}>↗</span>
             </Link>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </nav>
 
-      <Link
-        href="/nosotros#contacto"
-        style={{
-          fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
-          fontSize: 9,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          background: "var(--red)",
-          color: "#fff",
-          border: "none",
-          padding: "8px 20px",
-          borderRadius: 2,
-          cursor: "pointer",
-        }}
-      >
-        Contacto
-      </Link>
-    </nav>
+        <footer className={styles.menuFoot}>
+          <div className={styles.footLeft}>
+            <span>Casa productora</span>
+            <span>Ciudad de México</span>
+          </div>
+          <div className={styles.footRight}>
+            <a href="https://instagram.com/retrocasaproductora" target="_blank" rel="noopener noreferrer">
+              Instagram
+            </a>
+            <a href="https://vimeo.com" target="_blank" rel="noopener noreferrer">
+              Vimeo
+            </a>
+            <Link href="/nosotros" className={styles.footCta} onClick={() => setOpen(false)}>
+              Contacto
+            </Link>
+          </div>
+        </footer>
+      </div>
+    </>
   )
 }

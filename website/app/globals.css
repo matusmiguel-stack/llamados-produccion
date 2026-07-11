@@ -23,6 +23,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  *, *::before, *::after { cursor: none !important; }
+}
+
 a { text-decoration: none; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {

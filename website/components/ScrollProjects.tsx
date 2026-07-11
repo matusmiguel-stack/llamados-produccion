@@ -115,7 +115,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
                   onMouseEnter={() => setHovered(i)}
                   onMouseLeave={() => setHovered(null)}
                   onClick={() => v.id && setModal(v.id)}
-                  style={{ cursor: v.id ? "pointer" : "default" }}
+                  data-cursor={v.id ? "play" : undefined}
                 >
                   {/* Static bg: thumbnail or gradient — fades out on hover */}
                   {v.thumbnail
