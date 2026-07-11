@@ -117,20 +117,25 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
                   onClick={() => v.id && setModal(v.id)}
                   style={{ cursor: v.id ? "pointer" : "default" }}
                 >
-                  {/* Background: Vimeo muted preview on hover, thumbnail/gradient otherwise */}
-                  {isHovered && v.id
-                    ? (
-                      <iframe
-                        className={styles.vimeoBg}
-                        src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&loop=1&byline=0&title=0`}
-                        allow="autoplay"
-                      />
-                    ) : v.thumbnail
-                      ? <div className={styles.panelBg} style={{ backgroundImage: `url(${v.thumbnail})` }} />
-                      : <div className={`${styles.panelBg} ${styles[v.gradient]}`} />
+                  {/* Static bg: thumbnail or gradient — fades out on hover */}
+                  {v.thumbnail
+                    ? <div className={styles.panelBg}
+                           style={{ backgroundImage: `url(${v.thumbnail})`, opacity: isHovered ? 0 : 1 }} />
+                    : <div className={`${styles.panelBg} ${styles[v.gradient]}`}
+                           style={{ opacity: isHovered ? 0 : 1 }} />
                   }
 
-                  {/* Hover play icon */}
+                  {/* Vimeo iframe: pre-mounted when panel is active so it's already playing on hover */}
+                  {isOn && v.id && (
+                    <iframe
+                      className={styles.vimeoBg}
+                      src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0`}
+                      allow="autoplay"
+                      style={{ opacity: isHovered ? 1 : 0 }}
+                    />
+                  )}
+
+                  {/* Hover play hint */}
                   {isHovered && v.id && (
                     <div className={styles.playHint}>
                       <div className={styles.playIcon}>▶</div>

@@ -269,6 +269,7 @@
   inset: -8%;
   background-size: cover;
   background-position: center;
+  transition: opacity 0.45s ease;
 }
 .panelOn .panelBg {
   animation: pvPlay 10s ease-in-out infinite alternate;
@@ -286,8 +287,8 @@
   height: 100%;
   border: none;
   pointer-events: none;
-  /* Scale up to avoid black bars on 16:9 */
   transform: scale(1.06);
+  transition: opacity 0.45s ease;
 }
 
 /* Play hint overlay shown on hover */
