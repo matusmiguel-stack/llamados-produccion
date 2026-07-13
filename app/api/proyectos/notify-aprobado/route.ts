@@ -32,12 +32,13 @@ function fmtMx(n: number) {
 function buildHtml(params: {
   codigo: string
   nombre: string
+  cliente: string
   responsable: string
   empresaLabel: string
   costo: string
   projectUrl: string
 }) {
-  const { codigo, nombre, responsable, empresaLabel, costo, projectUrl } = params
+  const { codigo, nombre, cliente, responsable, empresaLabel, costo, projectUrl } = params
   const row = (label: string, value: string, mono = false) => `
               <tr>
                 <td style="padding:12px 18px;border-bottom:1px solid #e2e8f0;width:42%;">
@@ -71,6 +72,7 @@ function buildHtml(params: {
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;overflow:hidden;">
               ${row("Código de proyecto", codigo, true)}
               ${row("Nombre", nombre)}
+              ${row("Cliente", cliente)}
               ${row("Responsable", responsable)}
               ${row("Empresa", empresaLabel)}
               <tr>
@@ -116,12 +118,27 @@ export async function POST(req: Request) {
       projectId,
       projectCode,
       projectName,
+      clientName,
       responsableNombre,
       empresa,
       costoSinIva,
     } = await req.json()
 
     const admin = createAdminClient()
+
+    // Cliente: usar el que venga en el body o resolverlo desde el proyecto
+    // (projects.client_id → clients.name), para que el correo aclare de qué
+    // cliente es el proyecto aprobado.
+    let cliente: string | null = clientName || null
+    if (!cliente && projectId) {
+      const { data: proj } = await admin
+        .from("projects").select("client_id").eq("id", projectId).single()
+      if (proj?.client_id) {
+        const { data: cli } = await admin
+          .from("clients").select("name").eq("id", proj.client_id).single()
+        cliente = cli?.name ?? null
+      }
+    }
 
     // Email del responsable — buscar por nombre en employees (flexible: con y sin apellido materno)
     let responsableEmail: string | null = null
@@ -149,6 +166,7 @@ export async function POST(req: Request) {
     const html = buildHtml({
       codigo: projectCode || "—",
       nombre: projectName || "—",
+      cliente: cliente || "—",
       responsable: responsableNombre || "—",
       empresaLabel,
       costo: fmtMx(costoNum),
