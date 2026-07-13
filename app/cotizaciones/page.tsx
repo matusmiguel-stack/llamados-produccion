@@ -968,9 +968,8 @@ export default function CotizacionesPage() {
     window.location.href = profile?.role === "admin" ? "/ingresos" : "/proyectos"
   }
 
-  async function handleExportPdf() {
-    const { exportQuotePdf } = await import("../../lib/exportQuotePdf")
-
+  // Construye la data de la cotización (misma que usan el PDF y el Excel).
+  function buildQuoteData(): QuotePDFData {
     const clientName = clients.find((c) => c.id === clientId)?.name || "—"
     const projectName = projects.find((p) => p.id === projectId)?.name || "—"
     const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" }).format(new Date())
@@ -1009,7 +1008,7 @@ export default function CotizacionesPage() {
       }
     })
 
-    const pdfData: QuotePDFData = {
+    return {
       quoteName: quoteName || "Cotización",
       atencion,
       clientName,
@@ -1021,8 +1020,20 @@ export default function CotizacionesPage() {
       visibleMarkupPct: parseFloat(markupGeneral) || 0,
       entregables: entregables.trim() || undefined,
     }
+  }
 
-    await exportQuotePdf(pdfData)
+  async function handleExportPdf() {
+    const { exportQuotePdf } = await import("../../lib/exportQuotePdf")
+    await exportQuotePdf(buildQuoteData())
+  }
+
+  async function handleExportExcel() {
+    try {
+      const { exportQuoteXlsx } = await import("../../lib/exportQuoteXlsx")
+      await exportQuoteXlsx(buildQuoteData())
+    } catch (err: any) {
+      alert("Error al generar Excel: " + (err?.message || err))
+    }
   }
 
   async function logout() {
@@ -1347,6 +1358,9 @@ export default function CotizacionesPage() {
                   </button>
                   <button onClick={handleExportPdf} style={pdfButtonStyle}>
                     ↓ Exportar PDF
+                  </button>
+                  <button onClick={handleExportExcel} style={excelButtonStyle}>
+                    ↓ Exportar Excel
                   </button>
                   {editQuoteId && (
                     <button onClick={handleDuplicar} disabled={duplicating} style={duplicarBtnStyle}>
@@ -2036,6 +2050,18 @@ const pdfButtonStyle: React.CSSProperties = {
   background: "transparent",
   color: "#94a3b8",
   border: "1px solid rgba(148,163,184,0.22)",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
+}
+
+const excelButtonStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 20px",
+  background: "rgba(22,163,74,0.12)",
+  color: "#4ade80",
+  border: "1px solid rgba(34,197,94,0.28)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
