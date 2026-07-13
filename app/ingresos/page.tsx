@@ -334,9 +334,15 @@ export default function IngresosPage() {
           subtotal:    parseFloat(form.subtotal) || 0,
           iva:         parseFloat(form.iva) || 0,
         }
+    // Si el estatus pasa a "pagado" desde este formulario, también hay que
+    // avisar por correo (igual que el botón "Marcar como pagado"). Solo cuando
+    // hay transición real a pagado, para no reenviar al editar uno ya pagado.
+    let paidIngresoId: string | null = null
     if (editingId) {
+      const prevEstatus = ingresos.find(r => r.id === editingId)?.estatus
       const { error } = await supabase.from("ingresos").update(payload as any).eq("id", editingId)
       if (error) { alert(error.message); setSaving(false); return }
+      if (form.estatus === "pagado" && prevEstatus !== "pagado") paidIngresoId = editingId
       // Mantener sincronizada la empresa con el proyecto vinculado: la información
       // general del evento lee project.empresa, así que sin esto el cambio de
       // empresa aquí no se reflejaba en el proyecto. (Solo admin cambia empresa.)
@@ -345,11 +351,13 @@ export default function IngresosPage() {
         await supabase.from("projects").update({ empresa: form.empresa }).eq("id", linkedProjectId)
       }
     } else {
-      const { error } = await supabase.from("ingresos").insert(payload as any)
+      const { data, error } = await supabase.from("ingresos").insert(payload as any).select("id").single()
       if (error) { alert(error.message); setSaving(false); return }
+      if (form.estatus === "pagado" && data?.id) paidIngresoId = data.id
     }
     setSaving(false)
     setShowModal(false)
+    if (paidIngresoId) await notifyIngresoPaid(paidIngresoId)
     loadPage()
   }
 
@@ -365,6 +373,28 @@ export default function IngresosPage() {
     setPayModal({ id: r.id, label: proyectoLabel(r), fecha: new Date().toLocaleDateString("sv") })
   }
 
+  // Avisa por correo al equipo que un ingreso se marcó como pagado.
+  // No bloquea la UX, pero SÍ avisa si el correo falla (antes se tragaba el
+  // error en silencio y no había forma de saber que no se envió).
+  async function notifyIngresoPaid(ingresoId: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/ingresos/notify-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ ingresoId }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        console.error("[notify-paid] no se envió:", res.status, data?.error)
+        alert("El pago se guardó, pero el correo de aviso no se pudo enviar: " + (data?.error || `error ${res.status}`))
+      }
+    } catch (err: any) {
+      console.error("[notify-paid] error de red:", err?.message)
+      alert("El pago se guardó, pero no se pudo contactar al servicio de correo.")
+    }
+  }
+
   async function confirmarPago() {
     if (!payModal) return
     if (!payModal.fecha) { alert("Selecciona la fecha de pago."); return }
@@ -376,15 +406,7 @@ export default function IngresosPage() {
     setPaying(false)
     if (error) { alert(error.message); return }
 
-    // Avisar por correo al equipo que se pagó este ingreso (no bloquea la UX).
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      await fetch("/api/ingresos/notify-paid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ ingresoId: payModal.id }),
-      })
-    } catch { /* el correo no debe bloquear el marcado de pago */ }
+    await notifyIngresoPaid(payModal.id)
 
     setPayModal(null)
     loadPage()
