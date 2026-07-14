@@ -136,6 +136,7 @@ export function AppSidebar({
       )}
 
       <aside
+        className="app-sidebar"
         style={{
           ...sidebarStyle,
           position: isMobile ? "fixed" : "sticky",
