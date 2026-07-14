@@ -5,6 +5,12 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { GlobalSearch } from "./GlobalSearch"
+import { supabase } from "../lib/supabase"
+
+function getLocalToday() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
 
 type AppSidebarProps = {
   profile: any
@@ -65,6 +71,34 @@ export function AppSidebar({
   useEffect(() => {
     try { setEmbedded(window.self !== window.top) } catch { setEmbedded(true) }
   }, [])
+
+  // Tareas vencidas del usuario (propias + compartidas, vía RLS) → alarma roja
+  // junto a "Mis Tareas". Se recalcula al montar y al cambiar de ruta.
+  const [overdueTasks, setOverdueTasks] = useState(0)
+  useEffect(() => {
+    let cancel = false
+    ;(async () => {
+      const today = getLocalToday()
+      const { data } = await supabase
+        .from("user_tasks")
+        .select("due_date, due_time, completed")
+        .eq("completed", false)
+        .lte("due_date", today)
+      if (cancel) return
+      const now = new Date()
+      const count = (data || []).filter((t: any) => {
+        if (t.due_date < today) return true
+        if (t.due_date === today && t.due_time) {
+          const [h, m] = String(t.due_time).split(":").map(Number)
+          return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m)
+        }
+        return false
+      }).length
+      setOverdueTasks(count)
+    })()
+    return () => { cancel = true }
+  }, [pathname])
+
   const email = profile?.email || user?.email || "..."
   const displayName = profile?.full_name || email.split("@")[0] || "Usuario"
   const role = profile?.role || "viewer"
@@ -157,6 +191,13 @@ export function AppSidebar({
                   >
                     <span style={navIconWrapStyle(active)}>
                       <NavIcon type={item.icon} />
+                      {item.href === "/tasks" && overdueTasks > 0 && (
+                        <span
+                          style={taskAlertDotStyle}
+                          title={`${overdueTasks} tarea${overdueTasks !== 1 ? "s" : ""} vencida${overdueTasks !== 1 ? "s" : ""}`}
+                          aria-label={`${overdueTasks} tareas vencidas`}
+                        />
+                      )}
                     </span>
                     <span style={navLabelStyle}>{item.label}</span>
                     {active && <span style={activeIndicatorStyle} />}
@@ -459,6 +500,7 @@ const activeNavItemStyle: React.CSSProperties = {
 }
 
 const navIconWrapStyle = (active: boolean): React.CSSProperties => ({
+  position: "relative",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -469,6 +511,21 @@ const navIconWrapStyle = (active: boolean): React.CSSProperties => ({
   background: active ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.03)",
   flexShrink: 0,
 })
+
+// Alarma roja de tareas vencidas — pequeño círculo en la esquina superior
+// izquierda del ícono de "Mis Tareas".
+const taskAlertDotStyle: React.CSSProperties = {
+  position: "absolute",
+  top: -2,
+  left: -2,
+  width: 9,
+  height: 9,
+  borderRadius: 999,
+  background: "#ef4444",
+  border: "1.5px solid #0a0e1a",
+  boxShadow: "0 0 6px rgba(239,68,68,0.9)",
+  animation: "pulse-alert 1.6s ease-in-out infinite",
+}
 
 const navLabelStyle: React.CSSProperties = {
   flex: 1,
