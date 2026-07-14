@@ -111,6 +111,10 @@ export function AppSidebar({
           width: isMobile ? 272 : 232,
           zIndex: 9999,
           transition: "left 0.22s ease",
+          // Permite hacer scroll dentro del menú cuando no cabe (p. ej. en móvil
+          // no se alcanzaba el último ítem "Mis Tareas").
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         <div style={sidebarTopStyle}>

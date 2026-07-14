@@ -647,7 +647,7 @@ export default function IngresosPage() {
                         cursor: key ? "pointer" : "default",
                         userSelect: "none",
                         color: key && sortKey === key ? "#a78bfa" : thStyle.color,
-                        ...(idx <= 2 ? stickyStyle(idx, STICKY_HEADER_BG, true) : {}),
+                        ...(idx <= 2 ? stickyStyle(idx, STICKY_HEADER_BG, true, isMobile) : {}),
                       }}
                       onClick={key ? () => toggleSort(key) : undefined}
                       title={key ? "Ordenar" : undefined}
@@ -669,7 +669,7 @@ export default function IngresosPage() {
                   const rowBg = isPaid ? "#0f211d" : isOverdue ? "#1d151a" : i % 2 === 0 ? "#0d1117" : "#11151b"
                   return (
                     <tr key={r.id} style={{ ...trStyle, background: rowBg }}>
-                      <td style={{ ...tdStyle, ...stickyStyle(0, rowBg) }}>
+                      <td style={{ ...tdStyle, ...stickyStyle(0, rowBg, false, isMobile) }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <span style={estatusBadgeStyle(cfg)}>
                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block", marginRight: 5, flexShrink: 0 }} />
@@ -680,8 +680,8 @@ export default function IngresosPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={clienteLabel(r)}>{clienteLabel(r)}</td>
-                      <td style={{ ...tdStyle, ...stickyStyle(2, rowBg), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg, false, isMobile), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={clienteLabel(r)}>{clienteLabel(r)}</td>
+                      <td style={{ ...tdStyle, ...stickyStyle(2, rowBg, false, isMobile), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.project_id ? (
                           <Link
                             href={`/proyectos/${r.project_id}`}
@@ -1180,7 +1180,16 @@ const tableWrapStyle: React.CSSProperties = {
 const STICKY_W = [150, 160, 220]
 const STICKY_LEFT = [0, 150, 310]
 const STICKY_HEADER_BG = "#14181e"
-function stickyStyle(idx: number, bg: string, header = false): React.CSSProperties {
+function stickyStyle(idx: number, bg: string, header = false, isMobile = false): React.CSSProperties {
+  // En móvil NO anclamos las primeras columnas: dejarlas fijas impide navegar
+  // bien la tabla horizontalmente. Se conservan los anchos, pero sin sticky.
+  if (isMobile) {
+    return {
+      width: STICKY_W[idx],
+      minWidth: STICKY_W[idx],
+      maxWidth: STICKY_W[idx],
+    }
+  }
   return {
     position: "sticky",
     left: STICKY_LEFT[idx],
