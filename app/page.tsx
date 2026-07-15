@@ -209,6 +209,8 @@ export default function Home() {
   const [juntaTitulo, setJuntaTitulo] = useState("")
   const [juntaNotas, setJuntaNotas] = useState("")
   const [juntaLink, setJuntaLink] = useState("")
+  const [juntaDireccion, setJuntaDireccion] = useState("")
+  const [juntaMapsLink, setJuntaMapsLink] = useState("")
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
   const [juntaExternalEmails, setJuntaExternalEmails] = useState<string[]>([])
   const [juntaEmailInput, setJuntaEmailInput] = useState("")
@@ -822,6 +824,8 @@ export default function Home() {
     setJuntaTitulo("")
     setJuntaNotas("")
     setJuntaLink("")
+    setJuntaDireccion("")
+    setJuntaMapsLink("")
     setJuntaAttendees([])
     setJuntaExternalEmails([])
     setJuntaEmailInput("")
@@ -1394,6 +1398,8 @@ function openEditVacation() {
       hora_fin:    juntaEndTime   || null,
       notas:       juntaNotas.trim() || null,
       link:        juntaLink.trim()  || null,
+      direccion:   juntaDireccion.trim() || null,
+      maps_link:   juntaMapsLink.trim()  || null,
       external_emails: finalExternalEmails.length > 0 ? finalExternalEmails : null,
       created_by:  user?.id || null,
       updated_at:  new Date().toISOString(),
@@ -2417,6 +2423,30 @@ function openEditVacation() {
                       />
                     </div>
 
+                    {/* Dirección */}
+                    <div>
+                      <label style={formModalLabelStyle}>Dirección (opcional)</label>
+                      <input
+                        type="text"
+                        value={juntaDireccion}
+                        onChange={(e) => setJuntaDireccion(e.target.value)}
+                        style={formModalInputStyle}
+                        placeholder="Calle, número, colonia..."
+                      />
+                    </div>
+
+                    {/* Liga Google Maps */}
+                    <div>
+                      <label style={formModalLabelStyle}>Liga de Google Maps (opcional)</label>
+                      <input
+                        type="url"
+                        value={juntaMapsLink}
+                        onChange={(e) => setJuntaMapsLink(e.target.value)}
+                        style={formModalInputStyle}
+                        placeholder="https://maps.google.com/... o https://maps.app.goo.gl/..."
+                      />
+                    </div>
+
                     {/* Notas */}
                     <div>
                       <label style={formModalLabelStyle}>Notas (opcional)</label>
@@ -3297,6 +3327,38 @@ function openEditVacation() {
                     </div>
                   )}
 
+                  {selectedJunta.direccion && (
+                    <FormModalPreviewField label="Dirección" value={selectedJunta.direccion} multiline />
+                  )}
+
+                  {selectedJunta.maps_link && (
+                    <div>
+                      <p style={formModalLabelStyle}>Ubicación</p>
+                      <a
+                        href={selectedJunta.maps_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "7px 14px",
+                          borderRadius: 8,
+                          background: "rgba(16,185,129,0.12)",
+                          border: "1px solid rgba(16,185,129,0.30)",
+                          color: "#6ee7b7",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          textDecoration: "none",
+                          marginTop: 4,
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        📍 Ver en Google Maps
+                      </a>
+                    </div>
+                  )}
+
                   {selectedJunta.notas && (
                     <FormModalPreviewField label="Notas" value={selectedJunta.notas} multiline />
                   )}
@@ -3358,6 +3420,8 @@ function openEditVacation() {
                       setJuntaEndTime(selectedJunta.hora_fin || "")
                       setJuntaNotas(selectedJunta.notas || "")
                       setJuntaLink(selectedJunta.link || "")
+                      setJuntaDireccion(selectedJunta.direccion || "")
+                      setJuntaMapsLink(selectedJunta.maps_link || "")
                       setJuntaAttendees(juntaAttendeeMap[selectedJunta.id] || [])
                       setJuntaExternalEmails(selectedJunta.external_emails || [])
                       setEntryMode("junta")

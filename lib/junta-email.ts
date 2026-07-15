@@ -20,6 +20,8 @@ function generateICS(junta: {
   hora_fin?: string | null
   notas?: string | null
   link?: string | null
+  direccion?: string | null
+  maps_link?: string | null
 }): string {
   const stamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
 
@@ -33,6 +35,16 @@ function generateICS(junta: {
     ? `DTEND;TZID=America/Mexico_City:${dtDate}T${endTime.replace(":", "")}00`
     : `DTEND;VALUE=DATE:${dtDate}`
 
+  // LOCATION: dirección física si existe, si no la liga de reunión
+  const location = junta.direccion || junta.maps_link || junta.link
+  const escapeIcs = (s: string) => s.replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;")
+
+  const descParts: string[] = []
+  if (junta.notas) descParts.push(junta.notas)
+  if (junta.maps_link) descParts.push(`Ubicación (Google Maps): ${junta.maps_link}`)
+  if (junta.link) descParts.push(`Liga de reunión: ${junta.link}`)
+  const description = descParts.join("\n")
+
   const icsLines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -45,10 +57,8 @@ function generateICS(junta: {
     dtStart,
     dtEnd,
     `SUMMARY:${junta.titulo ? `${junta.tipo}: ${junta.titulo}` : junta.tipo} — Retro Casa Productora`,
-    junta.link ? `LOCATION:${junta.link}` : null,
-    junta.notas
-      ? `DESCRIPTION:${junta.notas.replace(/\n/g, "\\n").replace(/,/g, "\\,")}`
-      : null,
+    location ? `LOCATION:${escapeIcs(location)}` : null,
+    description ? `DESCRIPTION:${escapeIcs(description)}` : null,
     "END:VEVENT",
     "END:VCALENDAR",
   ]
@@ -68,6 +78,8 @@ function buildEmailHtml(junta: {
   hora_fin?: string | null
   notas?: string | null
   link?: string | null
+  direccion?: string | null
+  maps_link?: string | null
 }): string {
   const emoji = junta.tipo === "Brief" ? "📋" : junta.tipo === "PPM" ? "🎬" : "🤝"
   const headline = junta.titulo || junta.tipo
@@ -116,6 +128,22 @@ function buildEmailHtml(junta: {
                   <p style="margin:4px 0 0;color:#f8fafc;font-size:16px;font-weight:600;">${horaLabel}</p>
                 </td>
               </tr>
+              ${junta.direccion ? `
+              <tr><td style="height:10px;"></td></tr>
+              <tr>
+                <td style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:10px;border-left:3px solid #34d399;">
+                  <p style="margin:0;color:#64748b;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Dirección</p>
+                  <p style="margin:4px 0 0;color:#f8fafc;font-size:16px;font-weight:600;">${junta.direccion.replace(/\n/g, "<br>")}</p>
+                  ${junta.maps_link ? `<p style="margin:8px 0 0;"><a href="${junta.maps_link}" style="color:#34d399;text-decoration:none;font-size:13px;font-weight:600;">📍 Ver en Google Maps</a></p>` : ""}
+                </td>
+              </tr>` : junta.maps_link ? `
+              <tr><td style="height:10px;"></td></tr>
+              <tr>
+                <td style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:10px;border-left:3px solid #34d399;">
+                  <p style="margin:0;color:#64748b;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Ubicación</p>
+                  <p style="margin:8px 0 0;"><a href="${junta.maps_link}" style="color:#34d399;text-decoration:none;font-size:14px;font-weight:600;">📍 Ver en Google Maps</a></p>
+                </td>
+              </tr>` : ""}
               ${junta.link ? `
               <tr><td style="height:10px;"></td></tr>
               <tr>
@@ -166,6 +194,8 @@ export async function sendJuntaInvites(params: {
     hora_fin?: string | null
     notas?: string | null
     link?: string | null
+    direccion?: string | null
+    maps_link?: string | null
     external_emails?: string[] | null
   }
   attendeeEmployeeIds: string[]
