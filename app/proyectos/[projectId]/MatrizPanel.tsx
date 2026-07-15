@@ -8,6 +8,8 @@ import { supabase } from "../../../lib/supabase"
 type MatrizData = {
   id?: string
   project_id: string
+  // Nombre de esta matriz (un proyecto puede tener varias)
+  nombre: string
   // Generales
   nombre_proyecto: string
   cliente: string
@@ -39,6 +41,7 @@ type MatrizData = {
 function emptyMatriz(projectId: string): MatrizData {
   return {
     project_id: projectId,
+    nombre: "",
     nombre_proyecto: "",
     cliente: "",
     director: "",
@@ -353,12 +356,23 @@ export function MatrizPanel({
   projectName: string
   clientName: string
 }) {
+  const [matrices, setMatrices] = useState<MatrizData[]>([])
+  // id de la matriz activa, o "new" cuando es un borrador aún no guardado
+  const [activeId, setActiveId] = useState<string>("new")
   const [draft, setDraft] = useState<MatrizData>(emptyMatriz(projectId))
-  const [saved, setSaved] = useState<MatrizData>(emptyMatriz(projectId))
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [exists, setExists] = useState(false)
+
+  const isNew = activeId === "new"
+
+  function newPrefilled(nombre: string): MatrizData {
+    const m = emptyMatriz(projectId)
+    m.nombre = nombre
+    m.nombre_proyecto = projectName
+    m.cliente = clientName
+    return m
+  }
 
   useEffect(() => {
     async function load() {
@@ -366,28 +380,47 @@ export function MatrizPanel({
         .from("project_matrices")
         .select("*")
         .eq("project_id", projectId)
-        .maybeSingle()
+        .order("created_at", { ascending: true })
 
-      if (data) {
-        setDraft(data)
-        setSaved(data)
-        setExists(true)
+      if (data && data.length > 0) {
+        setMatrices(data)
+        setActiveId(data[0].id)
+        setDraft(data[0])
         setEditing(false)
       } else {
-        const prefilled = emptyMatriz(projectId)
-        prefilled.nombre_proyecto = projectName
-        prefilled.cliente = clientName
-        setDraft(prefilled)
-        setSaved(prefilled)
+        setMatrices([])
+        setActiveId("new")
+        setDraft(newPrefilled("Matriz 1"))
         setEditing(true)
       }
       setLoading(false)
     }
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, projectName, clientName])
 
   function onChange(key: keyof MatrizData, value: string) {
     setDraft((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function confirmDiscard(): boolean {
+    if (!editing) return true
+    return window.confirm("Tienes cambios sin guardar. ¿Descartarlos?")
+  }
+
+  function switchTo(m: MatrizData) {
+    if (m.id === activeId) return
+    if (!confirmDiscard()) return
+    setActiveId(m.id!)
+    setDraft(m)
+    setEditing(false)
+  }
+
+  function handleAdd() {
+    if (!confirmDiscard()) return
+    setActiveId("new")
+    setDraft(newPrefilled(`Matriz ${matrices.length + 1}`))
+    setEditing(true)
   }
 
   async function handleSave() {
@@ -395,23 +428,32 @@ export function MatrizPanel({
     try {
       const payload = {
         ...draft,
+        nombre: draft.nombre.trim() || `Matriz ${matrices.length + 1}`,
         project_id: projectId,
         updated_at: new Date().toISOString(),
       }
-      if (exists) {
-        const { error } = await supabase
+      if (isNew) {
+        delete payload.id
+        const { data, error } = await supabase
           .from("project_matrices")
-          .update(payload)
-          .eq("project_id", projectId)
+          .insert(payload)
+          .select()
+          .single()
         if (error) throw error
+        setMatrices((prev) => [...prev, data])
+        setActiveId(data.id)
+        setDraft(data)
       } else {
         const { error } = await supabase
           .from("project_matrices")
-          .insert(payload)
+          .update(payload)
+          .eq("id", draft.id!)
         if (error) throw error
-        setExists(true)
+        setMatrices((prev) =>
+          prev.map((m) => (m.id === draft.id ? { ...payload } : m))
+        )
+        setDraft({ ...payload })
       }
-      setSaved({ ...draft })
       setEditing(false)
     } catch (err: any) {
       alert("Error al guardar: " + err.message)
@@ -421,8 +463,46 @@ export function MatrizPanel({
   }
 
   function handleCancel() {
-    setDraft(saved)
-    setEditing(false)
+    if (isNew) {
+      // Cancelar un borrador nuevo regresa a la primera matriz existente
+      if (matrices.length === 0) return
+      setActiveId(matrices[0].id!)
+      setDraft(matrices[0])
+      setEditing(false)
+    } else {
+      const saved = matrices.find((m) => m.id === activeId)
+      if (saved) setDraft(saved)
+      setEditing(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (isNew) return
+    const nombre = draft.nombre || "esta matriz"
+    if (!window.confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from("project_matrices")
+        .delete()
+        .eq("id", draft.id!)
+      if (error) throw error
+      const remaining = matrices.filter((m) => m.id !== draft.id)
+      setMatrices(remaining)
+      if (remaining.length > 0) {
+        setActiveId(remaining[0].id!)
+        setDraft(remaining[0])
+        setEditing(false)
+      } else {
+        setActiveId("new")
+        setDraft(newPrefilled("Matriz 1"))
+        setEditing(true)
+      }
+    } catch (err: any) {
+      alert("Error al eliminar: " + err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -438,6 +518,39 @@ export function MatrizPanel({
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      {/* ── Tabs de matrices ───────────────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        {matrices.map((m, i) => {
+          const active = m.id === activeId
+          return (
+            <button
+              key={m.id}
+              onClick={() => switchTo(m)}
+              style={active ? tabActiveStyle : tabStyle}
+            >
+              {(active ? draft.nombre : m.nombre) || `Matriz ${i + 1}`}
+            </button>
+          )
+        })}
+        {isNew && (
+          <button style={tabActiveStyle}>
+            {draft.nombre || "Nueva matriz"}
+          </button>
+        )}
+        {!isNew && (
+          <button onClick={handleAdd} style={addTabStyle}>
+            + Agregar matriz
+          </button>
+        )}
+      </div>
+
       {/* ── Panel header ───────────────────── */}
       <div
         style={{
@@ -449,20 +562,40 @@ export function MatrizPanel({
           borderBottom: "1px solid rgba(148,163,184,0.10)",
         }}
       >
-        <div>
-          <p style={{ margin: 0, color: "#f8fafc", fontSize: 15, fontWeight: 600 }}>
-            Matriz de proyecto
-          </p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing ? (
+            <input
+              type="text"
+              value={draft.nombre}
+              onChange={(e) => onChange("nombre", e.target.value)}
+              placeholder="Nombre de la matriz"
+              style={{
+                ...inputStyle,
+                maxWidth: 320,
+                fontSize: 15,
+                fontWeight: 600,
+              }}
+            />
+          ) : (
+            <p style={{ margin: 0, color: "#f8fafc", fontSize: 15, fontWeight: 600 }}>
+              {draft.nombre || "Matriz de proyecto"}
+            </p>
+          )}
           <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
-            {exists
-              ? "Información general, recursos y entregables del proyecto"
-              : "Sin datos aún — llena el formulario y guarda"}
+            {isNew
+              ? "Sin datos aún — llena el formulario y guarda"
+              : "Información general, recursos y entregables del proyecto"}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           {editing ? (
             <>
-              {exists && (
+              {!isNew && (
+                <button onClick={handleDelete} disabled={saving} style={deleteBtnStyle}>
+                  Eliminar
+                </button>
+              )}
+              {(!isNew || matrices.length > 0) && (
                 <button onClick={handleCancel} style={cancelBtnStyle}>
                   Cancelar
                 </button>
@@ -643,6 +776,48 @@ const matrixDocStyle: React.CSSProperties = {
   background: "rgba(8,12,28,0.82)",
   backdropFilter: "blur(14px)",
   boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+}
+
+const tabStyle: React.CSSProperties = {
+  padding: "7px 16px",
+  borderRadius: 999,
+  border: "1px solid rgba(148,163,184,0.20)",
+  background: "rgba(255,255,255,0.03)",
+  color: "#94a3b8",
+  cursor: "pointer",
+  fontSize: 12.5,
+  fontWeight: 600,
+  maxWidth: 220,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+}
+
+const tabActiveStyle: React.CSSProperties = {
+  ...tabStyle,
+  border: "1px solid rgba(99,102,241,0.55)",
+  background: "rgba(99,102,241,0.16)",
+  color: "#c7d2fe",
+  cursor: "default",
+}
+
+const addTabStyle: React.CSSProperties = {
+  ...tabStyle,
+  border: "1px dashed rgba(52,211,153,0.40)",
+  background: "rgba(52,211,153,0.06)",
+  color: "#34d399",
+}
+
+const deleteBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(248,113,113,0.30)",
+  background: "rgba(248,113,113,0.08)",
+  color: "#f87171",
+  cursor: "pointer",
+  fontSize: 13,
 }
 
 const saveBtnStyle: React.CSSProperties = {
