@@ -59,6 +59,8 @@ type FacturaRow = {
   created_at: string
   codigo_proyecto: string | null
   comprobante_path: string | null
+  xml_path: string | null
+  pdf_path: string | null
   project_name: string | null
   project_code: string | null
 }
@@ -175,7 +177,7 @@ export default function ProveedorDetailPage() {
       if (["admin", "finanzas"].includes(auth.profile.role)) {
         const { data: facs } = await supabase
           .from("facturas")
-          .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, projects(name, code)")
+          .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, xml_path, pdf_path, projects(name, code)")
           .eq("proveedor_id", proveedorId)
           .order("created_at", { ascending: false })
         setFacturas((facs || []).map((f: any) => ({
@@ -184,6 +186,7 @@ export default function ProveedorDetailPage() {
           origen: f.origen, forma_pago: f.forma_pago, motivo_rechazo: f.motivo_rechazo,
           created_at: f.created_at, codigo_proyecto: f.codigo_proyecto,
           comprobante_path: f.comprobante_path ?? null,
+          xml_path: f.xml_path ?? null, pdf_path: f.pdf_path ?? null,
           project_name: f.projects?.name ?? null, project_code: f.projects?.code ?? null,
         })))
       }
@@ -282,8 +285,8 @@ export default function ProveedorDetailPage() {
     }
   }
 
-  // Descargar el comprobante de pago (link firmado del storage)
-  async function downloadComprobante(path: string) {
+  // Descargar un archivo de la factura (PDF, XML o comprobante) — link firmado del storage
+  async function downloadFile(path: string) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch("/api/facturas/admin", {
@@ -711,9 +714,27 @@ export default function ProveedorDetailPage() {
                               {payingId === f.id ? "…" : "✓ Marcar Pago"}
                             </button>
                           )}
+                          {f.pdf_path && (
+                            <button
+                              onClick={() => downloadFile(f.pdf_path!)}
+                              title="Descargar PDF de la factura"
+                              style={facFileBtnStyle("#f87171")}
+                            >
+                              ⬇ PDF
+                            </button>
+                          )}
+                          {f.xml_path && (
+                            <button
+                              onClick={() => downloadFile(f.xml_path!)}
+                              title="Descargar XML de la factura"
+                              style={facFileBtnStyle("#38bdf8")}
+                            >
+                              ⬇ XML
+                            </button>
+                          )}
                           {f.comprobante_path && (
                             <button
-                              onClick={() => downloadComprobante(f.comprobante_path!)}
+                              onClick={() => downloadFile(f.comprobante_path!)}
                               title="Descargar comprobante de pago"
                               style={{
                                 padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
@@ -973,6 +994,13 @@ const contactToggleStyle: React.CSSProperties = {
 const facPillStyle = (color: string): React.CSSProperties => ({
   padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
   background: `${color}1f`, border: `1px solid ${color}55`, color,
+})
+
+// Botón para descargar un archivo de la factura (PDF / XML)
+const facFileBtnStyle = (color: string): React.CSSProperties => ({
+  padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+  cursor: "pointer", whiteSpace: "nowrap",
+  background: `${color}1a`, border: `1px solid ${color}59`, color,
 })
 
 const backBtnStyle: React.CSSProperties = {
