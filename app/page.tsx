@@ -5,6 +5,7 @@ import Select from "react-select"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
+import multiMonthPlugin from "@fullcalendar/multimonth"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 import { requireSessionProfile } from "../lib/session-profile"
@@ -121,6 +122,11 @@ function resolveShootProjectId(
   return (
     scopedProjects.find((project) => project.name === shoot.project)?.id || ""
   )
+}
+
+// Vistas que dibujan la cuadrícula de mes (mes suelto y meses apilados)
+function isMonthGridView(viewType: string) {
+  return viewType === "dayGridMonth" || viewType === "multiMonthStack"
 }
 
 export default function Home() {
@@ -315,7 +321,7 @@ export default function Home() {
       if (!isDayNumberTarget(event.target)) return
 
       const calendarApi = calendarRef.current?.getApi()
-      if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
+      if (!calendarApi || !isMonthGridView(calendarApi.view.type)) return
 
       const dayCell = (event.target as HTMLElement).closest(".fc-daygrid-day")
       const dateStr = dayCell?.getAttribute("data-date")
@@ -2085,18 +2091,32 @@ function openEditVacation() {
             >
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                plugins={[dayGridPlugin, timeGridPlugin, multiMonthPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
                 headerToolbar={{
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridMonth,timeGridWeek,timeGridDay",
+                  right: "multiMonthStack,dayGridMonth,timeGridWeek,timeGridDay",
                 }}
                 height="auto"
                 views={{
                   dayGridMonth: {
                     dayMaxEvents: false,
                     fixedWeekCount: false,
+                  },
+                  // Meses apilados uno debajo de otro: se scrollea del cierre de un
+                  // mes al arranque del siguiente. Las flechitas avanzan de mes en mes.
+                  multiMonthStack: {
+                    type: "multiMonth",
+                    // Los demás botones usan los textos por defecto de FullCalendar (en inglés)
+                    buttonText: "months",
+                    duration: { months: 3 },
+                    dateIncrement: { months: 1 },
+                    multiMonthMaxColumns: 1,
+                    multiMonthMinWidth: 1,
+                    fixedWeekCount: false,
+                    showNonCurrentDates: false,
+                    dayMaxEvents: false,
                   },
                 }}
                 events={events}
@@ -2109,7 +2129,7 @@ function openEditVacation() {
                 dateClick={(info) => {
                   // Picarle al número del día siempre navega a la vista diaria
                   if (
-                    info.view.type === "dayGridMonth" &&
+                    isMonthGridView(info.view.type) &&
                     (info.jsEvent?.target as HTMLElement | null)?.closest(".fc-daygrid-day-number")
                   ) {
                     calendarRef.current?.getApi().changeView("timeGridDay", info.dateStr)
