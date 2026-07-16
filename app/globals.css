@@ -379,18 +379,20 @@ input[type="number"] {
   50%       { opacity: 0.55; box-shadow: 0 0 2px rgba(239,68,68,0.6); }
 }
 
-/* Scrollbar fino y elegante para el menú lateral */
-.app-sidebar {
-  scrollbar-width: thin;                                  /* Firefox */
+/* Scrollbar fino y elegante — aplicado a toda la app
+   (nació en el menú lateral, ahora es global). */
+html {
+  scrollbar-width: thin;                                  /* Firefox — se hereda a los hijos */
   scrollbar-color: rgba(148, 163, 184, 0.28) transparent; /* thumb / track */
 }
-.app-sidebar::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 8px;
+  height: 8px; /* scrolls horizontales (tablas, etc.) */
 }
-.app-sidebar::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: transparent;
 }
-.app-sidebar::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   /* El borde transparente + background-clip deja el pulgar delgado y con aire */
   background: rgba(148, 163, 184, 0.24);
   border: 2px solid transparent;
@@ -398,7 +400,10 @@ input[type="number"] {
   border-radius: 999px;
   transition: background 0.15s ease;
 }
-.app-sidebar::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background: rgba(167, 139, 250, 0.55); /* acento violeta al pasar el cursor */
   background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
