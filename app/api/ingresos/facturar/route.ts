@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     const { data: ingreso, error: findErr } = await auth.admin
       .from("ingresos")
-      .select("id, proyecto, estatus, subtotal, iva, empresa, cliente_agencia, responsable, mes_cierre, created_at")
+      .select("id, proyecto, estatus, subtotal, iva, empresa, cliente_agencia, responsable, mes_cierre, created_at, project_id, liquidacion_project_id")
       .eq("id", ingresoId)
       .single()
     if (findErr || !ingreso) {
@@ -162,6 +162,9 @@ export async function POST(req: Request) {
         cliente_agencia: ingreso.cliente_agencia,
         responsable: ingreso.responsable,
         proyecto: nombreRem,
+        // Hipervínculo al proyecto de origen (o el heredado, si esto ya es una
+        // Liquidación encadenada). NO es project_id: la línea sigue siendo manual.
+        liquidacion_project_id: ingreso.project_id ?? ingreso.liquidacion_project_id ?? null,
         subtotal: subtotalRem,
         iva: ivaRem,
         estatus: "en_produccion",

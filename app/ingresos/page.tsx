@@ -38,6 +38,9 @@ type Ingreso = {
   created_at: string
   project_id: string | null
   quote_id: string | null
+  // Proyecto de origen de una línea "… - Liquidación": solo para el hipervínculo,
+  // la línea sigue siendo un ingreso manual (editable por finanzas).
+  liquidacion_project_id: string | null
 }
 
 type IngresoForm = {
@@ -786,9 +789,9 @@ export default function IngresosPage() {
                       </td>
                       <td style={{ ...tdStyle, ...stickyStyle(1, rowBg, false, isMobile), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={clienteLabel(r)}>{clienteLabel(r)}</td>
                       <td style={{ ...tdStyle, ...stickyStyle(2, rowBg, false, isMobile), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {r.project_id ? (
+                        {(r.project_id || r.liquidacion_project_id) ? (
                           <Link
-                            href={`/proyectos/${r.project_id}`}
+                            href={`/proyectos/${r.project_id || r.liquidacion_project_id}`}
                             style={{ color: "#a78bfa", textDecoration: "none" }}
                             title={proyectoLabel(r)}
                           >
