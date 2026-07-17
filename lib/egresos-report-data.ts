@@ -21,7 +21,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
   ])
 
   const { data: quotes } = await supabase
-    .from("quotes").select("id,markup_percentage").eq("project_id", projectId).eq("released", true)
+    .from("quotes").select("id,markup_percentage,financiamiento_percentage").eq("project_id", projectId).eq("released", true)
 
   type Item = {
     id: string; seccion: string; concepto: string; proveedor: string; monto: number
@@ -38,7 +38,8 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
   let cobradoCalc = 0
 
   for (const quote of quotes || []) {
-    const markupPct = Number((quote as any).markup_percentage || 0)
+    // Financiamiento actúa igual que el markup general: % sobre toda la cotización
+    const markupPct = Number((quote as any).markup_percentage || 0) + Number((quote as any).financiamiento_percentage || 0)
     let ventaQuote = 0
     const { data: sections } = await supabase
       .from("quote_sections").select("id,name").eq("quote_id", quote.id).order("order_index")

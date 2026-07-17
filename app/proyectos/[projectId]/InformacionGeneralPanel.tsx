@@ -28,6 +28,7 @@ type Quote = {
   name: string
   status: string
   markup_percentage: number
+  financiamiento_percentage: number | null
   released: boolean | null
   actual_extra_expenses: number | null
 }
@@ -188,7 +189,7 @@ export function InformacionGeneralPanel({
   const loadFinancials = useCallback(async () => {
     const { data: qs } = await supabase
       .from("quotes")
-      .select("id,name,status,markup_percentage,released,actual_extra_expenses")
+      .select("id,name,status,markup_percentage,financiamiento_percentage,released,actual_extra_expenses")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
     setQuotes((qs || []) as Quote[])
@@ -231,8 +232,8 @@ export function InformacionGeneralPanel({
         realGasto += realItemGasto(item)
       }
     }
-    // Aplicar markup general del proyecto sobre el subtotal de venta
-    const markupPct = releasedQuote.markup_percentage || 0
+    // Aplicar markup general + financiamiento del proyecto sobre el subtotal de venta
+    const markupPct = (releasedQuote.markup_percentage || 0) + (releasedQuote.financiamiento_percentage || 0)
     const markupAmt = libVenta * (markupPct / 100)
     const libVentaFinal = libVenta + markupAmt
     libUtilidad += markupAmt
@@ -302,7 +303,7 @@ export function InformacionGeneralPanel({
 
       {/* ── Edit modal ── */}
       {showEdit && (
-        <div style={editOverlayStyle} onClick={() => !editSaving && setShowEdit(false)}>
+        <div style={editOverlayStyle}>
           <div style={editModalStyle} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>Editar información del proyecto</h3>
 

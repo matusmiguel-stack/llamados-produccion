@@ -29,6 +29,7 @@ export interface QuotePDFData {
   rubros: QuoteRubroPDF[]
   globalFinancials: { gasto: number; utilidad: number; venta: number }
   visibleMarkupPct: number  // markup global mostrado al cliente (quote.markup_percentage)
+  visibleFinanciamientoPct?: number // financiamiento global (quote.financiamiento_percentage)
   entregables?: string
 }
 
@@ -51,7 +52,7 @@ export interface DBQuoteSection {
 }
 
 export interface DBQuoteDetail {
-  quote: { name: string; status: string; markup_percentage: number; atencion?: string; entregables?: string }
+  quote: { name: string; status: string; markup_percentage: number; financiamiento_percentage?: number; atencion?: string; entregables?: string }
   sections: DBQuoteSection[]
 }
 
@@ -129,6 +130,7 @@ export async function exportQuotePdfFromDetail(
     rubros,
     globalFinancials,
     visibleMarkupPct: detail.quote.markup_percentage,
+    visibleFinanciamientoPct: detail.quote.financiamiento_percentage || 0,
     entregables: detail.quote.entregables,
   })
 }
@@ -313,7 +315,8 @@ function drawCoverPage(
   // ── Sección inferior: términos (izq) + totales (der) ─────────────────────────
   const clientSubtotal = data.globalFinancials.venta
   const markupAmt = clientSubtotal * ((data.visibleMarkupPct || 0) / 100)
-  const totalBeforeIva = clientSubtotal + markupAmt
+  const financiamientoAmt = clientSubtotal * ((data.visibleFinanciamientoPct || 0) / 100)
+  const totalBeforeIva = clientSubtotal + markupAmt + financiamientoAmt
 
   const rightStartX = pageW - mR - 78
   let ry = y
@@ -338,6 +341,19 @@ function drawCoverPage(
     doc.setFontSize(8.5)
     doc.setTextColor(30, 41, 59)
     doc.text(fmt(markupAmt), pageW - mR, ry, { align: "right" })
+    ry += 7.5
+  }
+
+  // Financiamiento: solo sale si se capturó un porcentaje
+  if ((data.visibleFinanciamientoPct || 0) > 0) {
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8.5)
+    doc.setTextColor(71, 85, 105)
+    doc.text(`Financiamiento (${data.visibleFinanciamientoPct}%)`, rightStartX, ry)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(8.5)
+    doc.setTextColor(30, 41, 59)
+    doc.text(fmt(financiamientoAmt), pageW - mR, ry, { align: "right" })
     ry += 7.5
   }
 
@@ -560,12 +576,16 @@ export async function exportQuotePdf(data: QuotePDFData): Promise<void> {
 
   const subtotal = data.globalFinancials.venta
   const markupAmt = subtotal * ((data.visibleMarkupPct || 0) / 100)
-  const totalBeforeIva = subtotal + markupAmt
+  const financiamientoAmt = subtotal * ((data.visibleFinanciamientoPct || 0) / 100)
+  const totalBeforeIva = subtotal + markupAmt + financiamientoAmt
 
   const summaryBody: (string | number)[][] = [
     ["Subtotal", fmt(subtotal)],
     ...(data.visibleMarkupPct > 0
       ? [[`Markup (${data.visibleMarkupPct}%)`, fmt(markupAmt)]]
+      : []),
+    ...((data.visibleFinanciamientoPct || 0) > 0
+      ? [[`Financiamiento (${data.visibleFinanciamientoPct}%)`, fmt(financiamientoAmt)]]
       : []),
     ["Total antes de IVA", fmt(totalBeforeIva)],
   ]

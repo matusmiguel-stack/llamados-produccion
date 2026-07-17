@@ -178,6 +178,7 @@ function buildQuoteSnapshot(s: {
   atencion: string
   entregables: string
   markupGeneral: string
+  financiamientoGeneral: string
   commissionPct: string
   commissionMarkup: string
   status: string
@@ -213,6 +214,8 @@ export default function CotizacionesPage() {
   const [commissionPct, setCommissionPct] = useState("30")
   const [commissionMarkup, setCommissionMarkup] = useState("0")
   const [markupGeneral, setMarkupGeneral] = useState("0")
+  // Financiamiento: % global sobre toda la cotización, gemelo del markup visible
+  const [financiamientoGeneral, setFinanciamientoGeneral] = useState("0")
   const [entregables, setEntregables] = useState("")
 
   // Inline creation state
@@ -378,7 +381,7 @@ export default function CotizacionesPage() {
 
       const { data: quote, error: qErr } = await supabase
         .from("quotes")
-        .select("id, name, status, project_id, atencion, markup_percentage, entregables")
+        .select("id, name, status, project_id, atencion, markup_percentage, financiamiento_percentage, entregables")
         .eq("id", qid)
         .single()
       if (qErr || !quote) { alert("Cotización no encontrada"); return }
@@ -388,6 +391,7 @@ export default function CotizacionesPage() {
       setAtencion(quote.atencion || "")
       setStatus(quote.status)
       setMarkupGeneral(String(quote.markup_percentage || 0))
+      setFinanciamientoGeneral(String(quote.financiamiento_percentage || 0))
       setEntregables(quote.entregables || "")
       if (loadedProj) {
         suppressClientReset.current = true
@@ -479,6 +483,7 @@ export default function CotizacionesPage() {
         atencion: quote.atencion || "",
         entregables: quote.entregables || "",
         markupGeneral: String(quote.markup_percentage || 0),
+        financiamientoGeneral: String(quote.financiamiento_percentage || 0),
         commissionPct: newCommPct,
         commissionMarkup: newCommMarkup,
         status: quote.status,
@@ -521,6 +526,7 @@ export default function CotizacionesPage() {
       if (payload.atencion !== undefined) setAtencion(payload.atencion)
       if (payload.entregables !== undefined) setEntregables(payload.entregables)
       if (payload.markupGeneral !== undefined) setMarkupGeneral(payload.markupGeneral)
+      if (payload.financiamientoGeneral !== undefined) setFinanciamientoGeneral(payload.financiamientoGeneral)
       if (payload.commissionPct !== undefined) setCommissionPct(payload.commissionPct)
       if (payload.commissionMarkup !== undefined) setCommissionMarkup(payload.commissionMarkup)
       if (payload.status !== undefined) setStatus(payload.status)
@@ -551,7 +557,7 @@ export default function CotizacionesPage() {
   useEffect(() => {
     if (!liveChannel.current) return
     if (!initialLoadDone.current) return // no broadcast hasta que la carga inicial esté lista
-    const payload = { values, extras, quoteName, atencion, entregables, markupGeneral, commissionPct, commissionMarkup, status }
+    const payload = { values, extras, quoteName, atencion, entregables, markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status }
     const json = JSON.stringify(payload)
     if (json === lastSyncJson.current) return // sin cambios reales (o viene de remoto)
     if (broadcastTimer.current) clearTimeout(broadcastTimer.current)
@@ -559,7 +565,7 @@ export default function CotizacionesPage() {
       lastSyncJson.current = json
       liveChannel.current?.send({ type: "broadcast", event: "state", payload })
     }, 250)
-  }, [values, extras, quoteName, atencion, entregables, markupGeneral, commissionPct, commissionMarkup, status])
+  }, [values, extras, quoteName, atencion, entregables, markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status])
 
   async function handleCreateClient() {
     if (!newClientName.trim()) return
@@ -637,7 +643,7 @@ export default function CotizacionesPage() {
         // ── Modo edición ───────────────────────────────────────────────────
         const { error: updErr } = await supabase
           .from("quotes")
-          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status, markup_percentage: parseFloat(markupGeneral) || 0, entregables: entregables.trim() || null })
+          .update({ project_id: projectId, name: quoteName.trim(), atencion: atencion.trim() || null, status, markup_percentage: parseFloat(markupGeneral) || 0, financiamiento_percentage: parseFloat(financiamientoGeneral) || 0, entregables: entregables.trim() || null })
           .eq("id", editQuoteId)
         if (updErr) throw updErr
 
@@ -692,6 +698,7 @@ export default function CotizacionesPage() {
             atencion: atencion.trim() || null,
             status,
             markup_percentage: parseFloat(markupGeneral) || 0,
+            financiamiento_percentage: parseFloat(financiamientoGeneral) || 0,
             entregables: entregables.trim() || null,
             created_by: profile.id,
           })
@@ -789,7 +796,7 @@ export default function CotizacionesPage() {
   handleSaveRef.current = handleSave
   liveSnapshotRef.current = buildQuoteSnapshot({
     values, extras, quoteName, atencion, entregables,
-    markupGeneral, commissionPct, commissionMarkup, status, projectId, clientId,
+    markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status, projectId, clientId,
   })
 
   // ── Autosave cada 60 s cuando hay una cotización activa ────────────────────
@@ -828,7 +835,7 @@ export default function CotizacionesPage() {
       // Leer la cotización original con sus secciones e ítems
       const { data: orig } = await supabase
         .from("quotes")
-        .select("name, project_id, atencion, markup_percentage, entregables")
+        .select("name, project_id, atencion, markup_percentage, financiamiento_percentage, entregables")
         .eq("id", editQuoteId).single()
       if (!orig) throw new Error("No se encontró la cotización")
 
@@ -840,6 +847,7 @@ export default function CotizacionesPage() {
           atencion: orig.atencion,
           status: "draft",
           markup_percentage: orig.markup_percentage,
+          financiamiento_percentage: orig.financiamiento_percentage,
           entregables: orig.entregables,
           created_by: profile.id,
         })
@@ -895,8 +903,9 @@ export default function CotizacionesPage() {
     const selectedProject = projects.find((p) => p.id === projectId)
     const clientName  = clients.find((c) => c.id === clientId)?.name || "—"
     const projectName = selectedProject?.name || ""
-    // Subtotal = precio de venta + markup general (lo que realmente se cobra al cliente)
-    const markupPct   = parseFloat(markupGeneral) || 0
+    // Subtotal = precio de venta + markup general + financiamiento (lo que
+    // realmente se cobra al cliente)
+    const markupPct   = (parseFloat(markupGeneral) || 0) + (parseFloat(financiamientoGeneral) || 0)
     const subtotal    = Math.round(globalFinancials.venta * (1 + markupPct / 100) * 100) / 100
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
     const responsable = aprobarResponsable || selectedProject?.responsable || null
@@ -1018,6 +1027,7 @@ export default function CotizacionesPage() {
       rubros,
       globalFinancials,
       visibleMarkupPct: parseFloat(markupGeneral) || 0,
+      visibleFinanciamientoPct: parseFloat(financiamientoGeneral) || 0,
       entregables: entregables.trim() || undefined,
     }
   }
@@ -1196,6 +1206,20 @@ export default function CotizacionesPage() {
                   <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 13, pointerEvents: "none" }}>%</span>
                 </div>
               </Field>
+              <Field label="Financiamiento %">
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={financiamientoGeneral}
+                    onChange={(e) => setFinanciamientoGeneral(e.target.value)}
+                    style={{ ...inputStyle, paddingRight: 28 }}
+                    placeholder="0"
+                  />
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 13, pointerEvents: "none" }}>%</span>
+                </div>
+              </Field>
             </div>
           </section>
 
@@ -1326,10 +1350,17 @@ export default function CotizacionesPage() {
                     color="#fbbf24"
                   />
                 )}
+                {(parseFloat(financiamientoGeneral) || 0) > 0 && (
+                  <TotalBlock
+                    label={`Financiamiento (${financiamientoGeneral}%)`}
+                    value={fmt(globalFinancials.venta * ((parseFloat(financiamientoGeneral) || 0) / 100))}
+                    color="#38bdf8"
+                  />
+                )}
                 <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
                 <TotalBlock
                   label="Total al cliente"
-                  value={fmt(globalFinancials.venta * (1 + (parseFloat(markupGeneral) || 0) / 100))}
+                  value={fmt(globalFinancials.venta * (1 + ((parseFloat(markupGeneral) || 0) + (parseFloat(financiamientoGeneral) || 0)) / 100))}
                   color="#f0abfc"
                   large
                 />
@@ -1392,7 +1423,7 @@ export default function CotizacionesPage() {
 
       {/* ── Aprobar proyecto modal ── */}
       {showAprobarModal && (
-        <div style={aprobarOverlayStyle} onClick={() => !aproving && setShowAprobarModal(false)}>
+        <div style={aprobarOverlayStyle}>
           <div style={aprobarModalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
             <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>
@@ -1404,7 +1435,7 @@ export default function CotizacionesPage() {
 
             {/* Resumen */}
             {(() => {
-              const mkPct = parseFloat(markupGeneral) || 0
+              const mkPct = (parseFloat(markupGeneral) || 0) + (parseFloat(financiamientoGeneral) || 0)
               const sub   = Math.round(globalFinancials.venta * (1 + mkPct / 100) * 100) / 100
               const iva   = Math.round(sub * 0.16 * 100) / 100
               return (

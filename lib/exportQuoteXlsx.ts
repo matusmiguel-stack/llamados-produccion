@@ -56,11 +56,15 @@ export async function exportQuoteXlsx(data: QuotePDFData): Promise<void> {
   // ── Totales (igual que el PDF: sin IVA) ───────────────────────────────────────
   const subtotal = data.globalFinancials.venta
   const markupAmt = subtotal * ((data.visibleMarkupPct || 0) / 100)
-  const totalBeforeIva = subtotal + markupAmt
+  const financiamientoAmt = subtotal * ((data.visibleFinanciamientoPct || 0) / 100)
+  const totalBeforeIva = subtotal + markupAmt + financiamientoAmt
 
   rows.push(["", "", "", "Subtotal", round2(subtotal)])
   if ((data.visibleMarkupPct || 0) > 0) {
     rows.push(["", "", "", `Markup (${data.visibleMarkupPct}%)`, round2(markupAmt)])
+  }
+  if ((data.visibleFinanciamientoPct || 0) > 0) {
+    rows.push(["", "", "", `Financiamiento (${data.visibleFinanciamientoPct}%)`, round2(financiamientoAmt)])
   }
   rows.push(["", "", "", "Total antes de IVA", round2(totalBeforeIva)])
 

@@ -62,6 +62,7 @@ type Quote = {
   name: string
   status: string
   markup_percentage: number
+  financiamiento_percentage: number | null
   atencion: string | null
   released: boolean | null
   actual_extra_expenses: number | null
@@ -438,8 +439,8 @@ export default function LiberarPage() {
       }
     }
 
-    // Aplicar markup general del proyecto sobre el subtotal de venta
-    const markupPct = quote?.markup_percentage || 0
+    // Aplicar markup general + financiamiento del proyecto sobre el subtotal de venta
+    const markupPct = (quote?.markup_percentage || 0) + (quote?.financiamiento_percentage || 0)
     const markupAmt = libVenta * (markupPct / 100)
     const libVentaFinal = libVenta + markupAmt
     libUtilidad += markupAmt

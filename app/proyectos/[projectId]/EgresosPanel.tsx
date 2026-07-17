@@ -889,7 +889,7 @@ export function EgresosPanel({
 
       {/* Modal de pago (anticipo / comprobación) */}
       {payModal && (
-        <div style={payOverlayStyle} onClick={() => !paying && setPayModal(null)}>
+        <div style={payOverlayStyle}>
           <div style={payPanelStyle} onClick={(e) => e.stopPropagation()}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: payModal.tipo === "anticipo" ? "#34d399" : "#fbbf24" }}>
               {payModal.tipo === "anticipo" ? "Pagar anticipo" : "Pagar comprobación"}

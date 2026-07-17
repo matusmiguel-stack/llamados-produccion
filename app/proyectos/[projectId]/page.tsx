@@ -30,6 +30,7 @@ type Quote = {
   name: string
   status: "draft" | "sent" | "approved"
   markup_percentage: number
+  financiamiento_percentage: number | null
   atencion: string | null
   created_at: string
   released: boolean | null
@@ -784,8 +785,8 @@ function PresupuestoPanel({
         realGasto += realItemGastoForBudget(item)
       }
     }
-    // Aplicar markup general del proyecto sobre el subtotal de venta
-    const markupPct = releasedQuote.markup_percentage || 0
+    // Aplicar markup general + financiamiento del proyecto sobre el subtotal de venta
+    const markupPct = (releasedQuote.markup_percentage || 0) + (releasedQuote.financiamiento_percentage || 0)
     const markupAmt = libVenta * (markupPct / 100)
     const libVentaFinal = libVenta + markupAmt
     libUtilidad += markupAmt
@@ -1099,6 +1100,7 @@ function QuotesPanel({
                     year: "numeric",
                   })}{" "}
                   · Markup {q.markup_percentage}%
+                  {(q.financiamiento_percentage || 0) > 0 ? ` · Financiamiento ${q.financiamiento_percentage}%` : ""}
                 </p>
               </div>
               <span style={statusBadgeStyle(q.status)}>
@@ -1155,7 +1157,8 @@ function QuoteModal({
   const { quote, sections } = detail
   const subtotal = quoteSubtotal(sections)
   const markupAmt = subtotal * (quote.markup_percentage / 100)
-  const total = subtotal + markupAmt
+  const financiamientoAmt = subtotal * ((quote.financiamiento_percentage || 0) / 100)
+  const total = subtotal + markupAmt + financiamientoAmt
 
   // Verificar si este proyecto ya tiene un ingreso registrado
   useEffect(() => {
@@ -1176,7 +1179,7 @@ function QuoteModal({
       const { exportQuotePdfFromDetail } = await import("../../../lib/exportQuotePdf")
       await exportQuotePdfFromDetail(
         {
-          quote: { name: quote.name, status: quote.status, markup_percentage: quote.markup_percentage, atencion: quote.atencion ?? "" },
+          quote: { name: quote.name, status: quote.status, markup_percentage: quote.markup_percentage, financiamiento_percentage: quote.financiamiento_percentage || 0, atencion: quote.atencion ?? "" },
           sections: sections.map((s) => ({
             name: s.name,
             order_index: s.order_index,
@@ -1313,6 +1316,7 @@ function QuoteModal({
               </span>
               <span style={{ color: "#64748b", fontSize: 12 }}>
                 Markup {quote.markup_percentage}%
+                {(quote.financiamiento_percentage || 0) > 0 ? ` · Financiamiento ${quote.financiamiento_percentage}%` : ""}
               </span>
             </div>
           </div>
@@ -1589,6 +1593,16 @@ function QuoteModal({
                 {fmt(markupAmt)}
               </span>
             </div>
+            {(quote.financiamiento_percentage || 0) > 0 && (
+              <div style={modalTotalRowStyle}>
+                <span style={{ color: "#64748b", fontSize: 13 }}>
+                  Financiamiento ({quote.financiamiento_percentage}%)
+                </span>
+                <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
+                  {fmt(financiamientoAmt)}
+                </span>
+              </div>
+            )}
             <div
               style={{
                 ...modalTotalRowStyle,
