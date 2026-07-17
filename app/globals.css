@@ -63,37 +63,21 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-dayGridMonth-view .fc-scroller,
-.calendar-shell .fc-dayGridMonth-view .fc-scroller-liquid-absolute,
-.calendar-shell .fc-multiMonthStack-view .fc-scroller,
-.calendar-shell .fc-multiMonthStack-view .fc-scroller-liquid-absolute {
+.calendar-shell .fc-dayGridMonth-view .fc-scroller-liquid-absolute {
   overflow: visible !important;
   position: static !important;
   height: auto !important;
 }
 
-.calendar-shell .fc-dayGridMonth-view .fc-scrollgrid,
-.calendar-shell .fc-multiMonthStack-view .fc-scrollgrid {
+.calendar-shell .fc-dayGridMonth-view .fc-scrollgrid {
   overflow: visible;
 }
 
-/* Meses apilados: separar cada mes y darle un título legible */
-.calendar-shell .fc-multiMonthStack-view .fc-multimonth-month {
-  padding-bottom: 26px;
-}
-
-/* El plugin le pone al mes una altura inline = ancho / aspectRatio, pensada para
-   mosaicos de varias columnas. A una sola columna eso estira las filas a ~175px;
-   con auto vuelven al min-height de 72px, igual que la vista de mes normal. */
-.calendar-shell .fc-multiMonthStack-view .fc-multimonth-daygrid-table {
-  height: auto !important;
-}
-
-.calendar-shell .fc-multiMonthStack-view .fc-multimonth-title {
-  padding: 14px 0 10px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #c4b5fd;
-  text-align: left;
+/* Botón "months" activo (es un customButton, FullCalendar no le pone la clase) */
+.calendar-shell-stacked .fc-stackMonths-button {
+  background: rgba(124, 58, 237, 0.85) !important;
+  border-color: rgba(124, 58, 237, 0.9) !important;
+  color: #fff !important;
 }
 
 .calendar-shell .fc-daygrid-more-link {

@@ -5,7 +5,6 @@ import Select from "react-select"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
-import multiMonthPlugin from "@fullcalendar/multimonth"
 import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../lib/supabase"
 import { requireSessionProfile } from "../lib/session-profile"
@@ -124,9 +123,11 @@ function resolveShootProjectId(
   )
 }
 
-// Vistas que dibujan la cuadrícula de mes (mes suelto y meses apilados)
-function isMonthGridView(viewType: string) {
-  return viewType === "dayGridMonth" || viewType === "multiMonthStack"
+// Cuántos meses extra se apilan debajo del mes actual al activar "months"
+const STACK_OFFSETS = [1, 2]
+
+function monthTitle(d: Date) {
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" })
 }
 
 export default function Home() {
@@ -136,6 +137,12 @@ export default function Home() {
   const calendarRef = useRef<FullCalendar>(null)
   const dayNumberNavRef = useRef(false)
   const icsInputRef = useRef<HTMLInputElement>(null)
+
+  // Vista de meses apilados: se dibuja como varios dayGridMonth uno debajo de
+  // otro para que las filas crezcan y se vean TODOS los eventos.
+  const [stackedMonths, setStackedMonths] = useState(false)
+  const [calViewType, setCalViewType] = useState("dayGridMonth")
+  const [calMonthStart, setCalMonthStart] = useState<Date | null>(null)
 
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
@@ -321,7 +328,7 @@ export default function Home() {
       if (!isDayNumberTarget(event.target)) return
 
       const calendarApi = calendarRef.current?.getApi()
-      if (!calendarApi || !isMonthGridView(calendarApi.view.type)) return
+      if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
 
       const dayCell = (event.target as HTMLElement).closest(".fc-daygrid-day")
       const dateStr = dayCell?.getAttribute("data-date")
@@ -2083,7 +2090,11 @@ function openEditVacation() {
 
             <div
               ref={calendarShellRef}
-              className={isMobile ? "calendar-shell calendar-shell-mobile" : "calendar-shell"}
+              className={[
+                "calendar-shell",
+                isMobile ? "calendar-shell-mobile" : "",
+                stackedMonths ? "calendar-shell-stacked" : "",
+              ].filter(Boolean).join(" ")}
               style={{
                 ...calendarShellStyle,
                 ...(isMobile ? calendarShellMobileStyle : {}),
@@ -2091,12 +2102,19 @@ function openEditVacation() {
             >
               <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, multiMonthPlugin, interactionPlugin]}
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
+                customButtons={{
+                  stackMonths: {
+                    // Los demás botones usan los textos por defecto de FullCalendar (en inglés)
+                    text: "months",
+                    click: () => setStackedMonths((v) => !v),
+                  },
+                }}
                 headerToolbar={{
                   left: "prev,next today",
                   center: "title",
-                  right: "multiMonthStack,dayGridMonth,timeGridWeek,timeGridDay",
+                  right: "stackMonths,dayGridMonth,timeGridWeek,timeGridDay",
                 }}
                 height="auto"
                 views={{
@@ -2104,20 +2122,10 @@ function openEditVacation() {
                     dayMaxEvents: false,
                     fixedWeekCount: false,
                   },
-                  // Meses apilados uno debajo de otro: se scrollea del cierre de un
-                  // mes al arranque del siguiente. Las flechitas avanzan de mes en mes.
-                  multiMonthStack: {
-                    type: "multiMonth",
-                    // Los demás botones usan los textos por defecto de FullCalendar (en inglés)
-                    buttonText: "months",
-                    duration: { months: 3 },
-                    dateIncrement: { months: 1 },
-                    multiMonthMaxColumns: 1,
-                    multiMonthMinWidth: 1,
-                    fixedWeekCount: false,
-                    showNonCurrentDates: false,
-                    dayMaxEvents: false,
-                  },
+                }}
+                datesSet={(info) => {
+                  setCalViewType(info.view.type)
+                  setCalMonthStart(info.view.currentStart)
                 }}
                 events={events}
                 selectable={canJunta}
@@ -2129,7 +2137,7 @@ function openEditVacation() {
                 dateClick={(info) => {
                   // Picarle al número del día siempre navega a la vista diaria
                   if (
-                    isMonthGridView(info.view.type) &&
+                    info.view.type === "dayGridMonth" &&
                     (info.jsEvent?.target as HTMLElement | null)?.closest(".fc-daygrid-day-number")
                   ) {
                     calendarRef.current?.getApi().changeView("timeGridDay", info.dateStr)
@@ -2151,6 +2159,35 @@ function openEditVacation() {
                 eventResize={updateEventDate}
                 eventDisplay="block"
               />
+
+              {/* Meses siguientes apilados debajo. Son la misma vista de mes, así
+                  que las filas crecen y se ven todos los eventos. Picarle al número
+                  del día abre la vista diaria vía el handler del shell. */}
+              {stackedMonths && calViewType === "dayGridMonth" && calMonthStart &&
+                STACK_OFFSETS.map((offset) => {
+                  const d = new Date(calMonthStart.getFullYear(), calMonthStart.getMonth() + offset, 1)
+                  return (
+                    <div key={`${d.getFullYear()}-${d.getMonth()}`} style={{ marginTop: 24 }}>
+                      <p style={stackedMonthTitleStyle}>{monthTitle(d)}</p>
+                      <FullCalendar
+                        plugins={[dayGridPlugin, interactionPlugin]}
+                        initialView="dayGridMonth"
+                        initialDate={d}
+                        headerToolbar={false}
+                        height="auto"
+                        dayMaxEvents={false}
+                        fixedWeekCount={false}
+                        events={events}
+                        editable={canEdit}
+                        eventResizableFromStart={canEdit}
+                        eventClick={handleEventClick}
+                        eventDrop={updateEventDate}
+                        eventResize={updateEventDate}
+                        eventDisplay="block"
+                      />
+                    </div>
+                  )
+                })}
             </div>
           </section>
         </div>
@@ -4590,6 +4627,13 @@ const ghostButtonStyle: React.CSSProperties = {
   fontSize: 12,
   whiteSpace: "nowrap",
   height: 32,
+}
+
+const stackedMonthTitleStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  color: "#c4b5fd",
+  fontSize: 15,
+  fontWeight: 700,
 }
 
 const overlayStyle: React.CSSProperties = {
