@@ -763,7 +763,6 @@ export default function ProveedorDetailPage() {
               background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
               display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
             }}
-            onClick={() => payingId ? null : setPayModalFac(null)}
           >
             <div
               style={{

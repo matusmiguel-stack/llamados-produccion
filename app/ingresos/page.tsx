@@ -750,7 +750,7 @@ export default function IngresosPage() {
 
       {/* ── Marcar pago modal ── */}
       {payModal && (
-        <div style={overlayStyle} onClick={() => !paying && setPayModal(null)}>
+        <div style={overlayStyle}>
           <div style={{ ...modalStyle(isMobile), maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Marcar como pagado</h2>
@@ -784,7 +784,7 @@ export default function IngresosPage() {
 
       {/* ── Modal ── */}
       {showModal && (
-        <div style={overlayStyle} onClick={() => setShowModal(false)}>
+        <div style={overlayStyle}>
           <div style={modalStyle(isMobile)} onClick={e => e.stopPropagation()}>
             {/* header */}
             <div style={modalHeaderStyle}>

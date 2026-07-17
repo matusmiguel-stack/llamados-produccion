@@ -387,7 +387,7 @@ export default function PostproduccionPage() {
 
       {/* ── Modal crear/editar ── */}
       {modalOpen && (
-        <div style={overlayStyle} onClick={() => { setModalOpen(false); resetForm() }}>
+        <div style={overlayStyle}>
           <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
             <div style={panelHeaderStyle}>
               <h2 style={panelTitleStyle}>{selectedEntrega ? "Editar entrega" : "Nueva entrega"}</h2>
@@ -579,7 +579,7 @@ export default function PostproduccionPage() {
 
       {/* ── Modal detalle ── */}
       {detailsOpen && selectedEntrega && (
-        <div style={overlayStyle} onClick={() => { setDetailsOpen(false); setSelectedEntrega(null) }}>
+        <div style={overlayStyle}>
           <div style={{ ...panelStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <div style={panelHeaderStyle}>
               <div>

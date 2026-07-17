@@ -179,15 +179,6 @@ export function ShootFormModal({
     loadData()
   }, [initialProjectId])
 
-  // ── Close on Escape ──────────────────────────────────────────────────────
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !showAddClient) onClose()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [onClose, showAddClient])
-
   // ── Derived options ──────────────────────────────────────────────────────
   const subfolderOptions = useMemo(
     () => (!clientId ? [] : allSubfolders.filter((sf) => sf.client_id === clientId)),
@@ -394,7 +385,7 @@ export function ShootFormModal({
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div style={overlayStyle}>
       <div
         style={{
           ...modalStyle,

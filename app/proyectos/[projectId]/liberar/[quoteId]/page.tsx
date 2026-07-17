@@ -1329,7 +1329,6 @@ export default function LiberarPage() {
         <div
           className="modal-overlay"
           style={addProvOverlayStyle}
-          onClick={() => setShowAddProv(false)}
         >
           <div
             className="modal-panel"

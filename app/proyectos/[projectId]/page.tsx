@@ -226,20 +226,6 @@ export default function ProjectDetailPage() {
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setShowMatriz(false)
-        setShowHoja(false)
-        setShowGeneral(false)
-        setShowEgresos(false)
-        setSelectedQuote(null)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
-
   async function loadPage() {
     const auth = await requireSessionProfile()
     if (!auth) return
@@ -563,7 +549,6 @@ export default function ProjectDetailPage() {
         <div
           className="modal-overlay"
           style={modalOverlayStyle}
-          onClick={() => setShowGeneral(false)}
         >
           <div
             className="modal-panel"
@@ -611,7 +596,6 @@ export default function ProjectDetailPage() {
         <div
           className="modal-overlay"
           style={modalOverlayStyle}
-          onClick={() => setShowHoja(false)}
         >
           <div
             className="modal-panel"
@@ -652,7 +636,6 @@ export default function ProjectDetailPage() {
         <div
           className="modal-overlay"
           style={modalOverlayStyle}
-          onClick={() => setShowEgresos(false)}
         >
           <div
             className="modal-panel"
@@ -698,7 +681,6 @@ export default function ProjectDetailPage() {
         <div
           className="modal-overlay"
           style={modalOverlayStyle}
-          onClick={() => setShowMatriz(false)}
         >
           <div
             className="modal-panel"
@@ -1315,7 +1297,7 @@ function QuoteModal({
     : "2fr 56px 56px 100px 100px 100px 1fr 100px"
 
   return (
-    <div style={modalOverlayStyle} onClick={onClose}>
+    <div style={modalOverlayStyle}>
       <div
         style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : 1000 }}
         onClick={(e) => e.stopPropagation()}
@@ -1634,7 +1616,6 @@ function QuoteModal({
       {showAprobar && (
         <div
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-          onClick={() => !aproving && setShowAprobar(false)}
         >
           <div
             style={{ background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 20, boxShadow: "0 32px 80px rgba(0,0,0,0.6)", padding: "28px 28px 24px", width: "100%", maxWidth: 400 }}

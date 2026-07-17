@@ -597,7 +597,7 @@ export default function FlujoPage() {
 
       {/* ── Modal movimiento manual ── */}
       {showMovModal && (
-        <div style={overlayStyle} onClick={() => !saving && setShowMovModal(false)}>
+        <div style={overlayStyle}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
             <h2 style={modalTitleStyle}>Nuevo movimiento</h2>
             <div style={{ display: "flex", gap: 10 }}>
@@ -635,7 +635,7 @@ export default function FlujoPage() {
 
       {/* ── Modal gasto fijo ── */}
       {showFijoModal && (
-        <div style={overlayStyle} onClick={() => !saving && setShowFijoModal(false)}>
+        <div style={overlayStyle}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
             <h2 style={modalTitleStyle}>Nuevo gasto fijo</h2>
             <div style={{ display: "flex", gap: 10 }}>

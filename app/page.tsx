@@ -3243,7 +3243,7 @@ function openEditVacation() {
           }
 
           return (
-            <div style={overlayStyle} className="modal-overlay" onClick={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }}>
+            <div style={overlayStyle} className="modal-overlay">
               <div style={{ ...formModalStyle, maxWidth: 360, borderRadius: 16 }} onClick={(e) => e.stopPropagation()}>
                 <div style={formModalHeaderStyle}>
                   <div>
@@ -3468,7 +3468,7 @@ function openEditVacation() {
         )}
 
         {ensayoDetailsOpen && selectedEnsayo && (
-          <div style={overlayStyle} className="modal-overlay" onClick={() => { setEnsayoDetailsOpen(false); setSelectedEnsayo(null) }}>
+          <div style={overlayStyle} className="modal-overlay">
             <div
               style={{ ...formModalStyle, maxWidth: 400, borderRadius: 16 }}
               onClick={(e) => e.stopPropagation()}
@@ -3721,7 +3721,6 @@ function openEditVacation() {
             background: "rgba(2,6,23,0.72)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
-          onClick={() => { setShowDupePicker(false); setDupeDate("") }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -3820,7 +3819,6 @@ function openEditVacation() {
             background: "rgba(2,6,23,0.80)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
-          onClick={() => setShowAddSubfolder(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -3907,7 +3905,6 @@ function openEditVacation() {
             background: "rgba(2,6,23,0.80)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
-          onClick={() => setShowAddProject(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -3994,7 +3991,6 @@ function openEditVacation() {
             background: "rgba(2,6,23,0.80)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
-          onClick={() => setShowAddClient(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}

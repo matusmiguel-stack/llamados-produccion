@@ -334,7 +334,7 @@ export default function ActividadPage() {
 
         {/* Modal de detalle */}
         {detail && (
-          <div style={modalBackdropStyle} onClick={() => setDetail(null)}>
+          <div style={modalBackdropStyle}>
             <div style={modalPanelStyle} onClick={e => e.stopPropagation()}>
               <DetailContent detail={detail} loading={detailLoading} />
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
