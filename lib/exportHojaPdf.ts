@@ -1,4 +1,7 @@
-import jsPDF from "jspdf"
+// Import nombrado: es idéntico al default en el build de navegador, pero además
+// funciona en Node (el build CJS no tiene default), lo que permite probar la
+// generación del PDF fuera de la app.
+import { jsPDF } from "jspdf"
 
 // ─── Types (mirror HojaLlamadoPanel) ─────────────────────────────────────────
 
@@ -60,16 +63,21 @@ export type HojaPDFData = {
   notas_produccion: string
 }
 
-// ─── Constants (base dimensions at scale=1) ───────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_W = 215.9
 const PAGE_H = 279.4
 const MARGIN = 10
 const CONTENT_W = PAGE_W - MARGIN * 2
 
-// Si el crew supera este número de filas, se divide en 2 columnas (mitad y
-// mitad) para reducir la altura y que todo quede más grande en la hoja.
-const CREW_SPLIT_THRESHOLD = 16
+// El contenido NO se encoge para caber en una hoja: el texto va siempre al
+// tamaño normal y cuando ya no cabe se abre otra página tamaño carta. Este es
+// el límite inferior de contenido (deja espacio para el pie de página).
+const BOTTOM_LIMIT = PAGE_H - MARGIN - 8
+
+// Tope de líneas por celda: alto a propósito — equivale a "no cortar nada",
+// solo protege contra un texto absurdamente largo.
+const MAX_CELL_LINES = 60
 
 const C_BG_HEADER   = "#1a0a3e"
 const C_PURPLE      = "#7c3aed"
@@ -97,47 +105,62 @@ function formatDate(s: string): string {
   return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`
 }
 
-// Draw table — all base dimensions are pre-scaled by caller
+// Si lo que sigue no cabe antes del pie de página, abre una página nueva.
+function ensureSpace(doc: jsPDF, y: number, needed: number): number {
+  if (y + needed <= BOTTOM_LIMIT) return y
+  doc.addPage()
+  return MARGIN
+}
+
+// Draw table with page breaks: cada fila crece según sus líneas y si una fila
+// ya no cabe, se abre otra página repitiendo los encabezados de la tabla.
 function drawTable(
   doc: jsPDF,
   x: number, y: number,
   tableW: number,
   cols: { header: string; width: number; align?: "left"|"center"|"right"; bgHex?: string }[],
   rows: string[][],
-  scale: number,
   rowH = 6.5,
-  maxLines = 1,   // máximo de líneas por celda; si >1, las filas crecen para no cortar texto
 ): number {
-  const headerH = 6 * scale
-  const baseRH  = rowH * scale
-  const fs      = 8.5 * scale   // +2 pts para legibilidad (las filas tienen holgura)
-  const lineH   = 3.4 * scale
+  const headerH = 6
+  const fs      = 8.5
+  const lineH   = 3.4
 
-  let cx = x
-  setBg(doc, "#334155")
-  setDraw(doc, C_BORDER)
-  doc.setLineWidth(0.1)
-
-  for (const col of cols) {
-    setBg(doc, col.bgHex || "#334155")
-    doc.rect(cx, y, col.width, headerH, "F")
-    setColor(doc, "#ffffff")
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(fs)
-    const tx = col.align === "center" ? cx + col.width/2 : col.align === "right" ? cx + col.width - 1.5*scale : cx + 1.5*scale
-    doc.text(col.header, tx, y + headerH/2 + 2*scale, { align: col.align || "left" })
-    cx += col.width
+  const drawHeader = (yy: number): number => {
+    let cx = x
+    setDraw(doc, C_BORDER)
+    doc.setLineWidth(0.1)
+    for (const col of cols) {
+      setBg(doc, col.bgHex || "#334155")
+      doc.rect(cx, yy, col.width, headerH, "F")
+      setColor(doc, "#ffffff")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(fs)
+      const tx = col.align === "center" ? cx + col.width/2 : col.align === "right" ? cx + col.width - 1.5 : cx + 1.5
+      doc.text(col.header, tx, yy + headerH/2 + 2, { align: col.align || "left" })
+      cx += col.width
+    }
+    return yy + headerH
   }
-  y += headerH
+
+  y = ensureSpace(doc, y, headerH + rowH)
+  y = drawHeader(y)
 
   for (let ri = 0; ri < rows.length; ri++) {
-    // Envolver cada celda hasta maxLines y calcular el alto de la fila.
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(fs)
+    // Envolver cada celda a su ancho: el texto completo, sin cortar.
     const cellLines = cols.map((col, ci) =>
-      doc.splitTextToSize(rows[ri][ci] || "", col.width - 3*scale).slice(0, maxLines))
+      doc.splitTextToSize(rows[ri][ci] || "", col.width - 3).slice(0, MAX_CELL_LINES))
     const nLines = Math.max(1, ...cellLines.map((l) => l.length))
-    const rH = nLines <= 1 ? baseRH : Math.max(baseRH, nLines * lineH + 2.4 * scale)
+    const rH = nLines <= 1 ? rowH : Math.max(rowH, nLines * lineH + 2.4)
 
-    cx = x
+    if (y + rH > BOTTOM_LIMIT) {
+      doc.addPage()
+      y = drawHeader(MARGIN)
+    }
+
+    let cx = x
     setBg(doc, ri % 2 === 0 ? C_ROW : C_ROW_ALT)
     doc.rect(x, y, tableW, rH, "F")
     setDraw(doc, C_BORDER)
@@ -150,9 +173,9 @@ function drawTable(
       setColor(doc, C_TEXT)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(fs)
-      const tx = col.align === "center" ? cx + col.width/2 : col.align === "right" ? cx + col.width - 1.5*scale : cx + 1.5*scale
+      const tx = col.align === "center" ? cx + col.width/2 : col.align === "right" ? cx + col.width - 1.5 : cx + 1.5
       if (lines.length <= 1) {
-        doc.text(lines[0] || "", tx, y + rH/2 + 1.8*scale, { align: col.align || "left" })
+        doc.text(lines[0] || "", tx, y + rH/2 + 1.8, { align: col.align || "left" })
       } else {
         for (let li = 0; li < lines.length; li++) {
           doc.text(lines[li], tx, y + lineH + li*lineH, { align: col.align || "left" })
@@ -165,67 +188,68 @@ function drawTable(
   return y
 }
 
-function sectionBar(doc: jsPDF, x: number, y: number, w: number, title: string, scale: number): number {
-  const h = 5.5 * scale
+function sectionBar(doc: jsPDF, x: number, y: number, w: number, title: string): number {
+  const h = 5.5
   setBg(doc, C_PURPLE)
   doc.rect(x, y, w, h, "F")
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(9.5 * scale)
-  doc.text(title.toUpperCase(), x + 2*scale, y + 3.8*scale)
+  doc.setFontSize(9.5)
+  doc.text(title.toUpperCase(), x + 2, y + 3.8)
   return y + h
 }
 
-function kv(doc: jsPDF, x: number, y: number, w: number, label: string, value: string, scale: number, h = 9) {
-  const sh = h * scale
+function kv(doc: jsPDF, x: number, y: number, w: number, label: string, value: string, h = 9) {
   setBg(doc, "#f1f5f9")
   setDraw(doc, C_BORDER)
   doc.setLineWidth(0.1)
-  doc.rect(x, y, w, sh, "FD")
+  doc.rect(x, y, w, h, "FD")
 
   setColor(doc, C_MUTED)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(7 * scale)
-  doc.text(label.toUpperCase(), x + 1.5*scale, y + 3*scale)
+  doc.setFontSize(7)
+  doc.text(label.toUpperCase(), x + 1.5, y + 3)
 
   setColor(doc, C_TEXT)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(9.5 * scale)
-  const lines = doc.splitTextToSize(value || "—", w - 3*scale)
-  doc.text(lines[0] || "—", x + 1.5*scale, y + 6.5*scale)
+  doc.setFontSize(9.5)
+  const lines = doc.splitTextToSize(value || "—", w - 3)
+  doc.text(lines[0] || "—", x + 1.5, y + 6.5)
 }
 
-// ─── Height estimator (base, scale=1) ────────────────────────────────────────
+// Fila de cajas etiqueta+texto (Necesidades / Logística): la altura crece con
+// el texto más largo de la fila para que nada se corte.
+function boxRow(
+  doc: jsPDF,
+  x: number, y: number, W: number,
+  items: { label: string; value: string }[],
+): number {
+  const boxW  = W / items.length
+  const lineH = 3.6
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  const linesPerBox = items.map((it) =>
+    doc.splitTextToSize(it.value || "—", boxW - 3).slice(0, MAX_CELL_LINES))
+  const maxLines = Math.max(1, ...linesPerBox.map((l) => l.length))
+  const boxH = 7.5 + maxLines * lineH + 1.5
 
-function estimateTotalHeight(data: HojaPDFData): number {
-  const dirs      = data.direcciones.length > 0 ? data.direcciones : [{ nombre: "", url: "" }]
-  const locRows   = data.locaciones.filter((r) => r.locacion || r.accion)
-  const castRows  = data.cast_list.filter((r) => r.nombre)
-  const crewRows  = data.crew.filter((r) => r.nombre || r.puesto)
-  const hasNeeds  = [data.arte_needs, data.makeup_needs, data.vestuario_needs, data.efectos_needs].some(Boolean)
-  const hasLog    = !!(data.vehiculos || data.equipo_especial || data.notas_produccion)
-
-  let h = 0
-  h += 30          // header image
-  h += 4           // gap after header
-  h += 8 + 2       // info strip
-  h += 9           // KV row: avanzada/client/ready/director/productor
-  h += dirs.length * 9   // direcciones
-  h += 9           // clima row
-  h += 3           // gap
-
-  if (locRows.length > 0)  h += 5.5 + 1 + 6 + locRows.length  * 6.5 + 3
-  if (castRows.length > 0) h += 5.5 + 1 + 6 + castRows.length * 6.5 + 3
-  if (crewRows.length > 0) {
-    // En 2 columnas la altura es la de la columna más larga (la mitad).
-    const crewLines = crewRows.length > CREW_SPLIT_THRESHOLD ? Math.ceil(crewRows.length / 2) : crewRows.length
-    h += 5.5 + 1 + 6 + crewLines * 6.5 + 3
+  y = ensureSpace(doc, y, boxH)
+  for (let i = 0; i < items.length; i++) {
+    const nx = x + i * boxW
+    setBg(doc, i % 2 === 0 ? C_ROW : C_ROW_ALT)
+    setDraw(doc, C_BORDER)
+    doc.setLineWidth(0.1)
+    doc.rect(nx, y, boxW, boxH, "FD")
+    setColor(doc, C_MUTED)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(8)
+    doc.text(items[i].label.toUpperCase(), nx + 1.5, y + 3.5)
+    setColor(doc, C_TEXT)
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(9)
+    doc.text(linesPerBox[i], nx + 1.5, y + 7.5)
   }
-  if (hasNeeds)            h += 5.5 + 1 + 22 + 3
-  if (hasLog)              h += 5.5 + 1 + 18 + 3
-
-  h += MARGIN + 4 + 3  // footer
-  return h
+  return y + boxH
 }
 
 // ─── Fetch image ──────────────────────────────────────────────────────────────
@@ -251,8 +275,7 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   const W = CONTENT_W
 
   // ── Header: altura FIJA según la proporción real de la imagen (a ancho
-  // completo). Antes el alto se escalaba con el contenido pero el ancho no, y
-  // por eso se deformaba. Con getImageProperties se adapta a cualquier imagen.
+  // completo, solo en la primera página).
   const headerDataUrl = await fetchImageBase64("/pdf-header-detail.jpg")
   let headerImgH = 30
   if (headerDataUrl) {
@@ -261,22 +284,6 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
       if (p?.width && p?.height) headerImgH = PAGE_W * (p.height / p.width)
     } catch { headerImgH = 30 }
   }
-
-  // Medir cuántas líneas extra ocupan las notas del cast (se miden a escala 1 →
-  // sobreestima un poco, lo cual es seguro: el contenido nunca se desborda).
-  const CAST_NOTES_MAX_LINES = 5
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5)
-  let castExtraLines = 0
-  const castNotesW = W * 0.28 - 3
-  for (const r of data.cast_list.filter((r) => r.nombre)) {
-    const n = Math.min(CAST_NOTES_MAX_LINES, doc.splitTextToSize(r.notas || "", castNotesW).length || 1)
-    castExtraLines += Math.max(0, n - 1)
-  }
-
-  // Escala SOLO del contenido (el header va a tamaño fijo, no se escala).
-  const contentBaseH = estimateTotalHeight(data) - 30 + castExtraLines * 3.4
-  const scale = Math.min(1, (PAGE_H - 2 - headerImgH) / contentBaseH)
-  const s = (n: number) => n * scale
 
   let y = 0
 
@@ -292,7 +299,7 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
     doc.text("RETRO CASA PRODUCTORA", x + 3, 12)
   }
 
-  // Día X / Y — tamaño fijo (el header no se escala)
+  // Día X / Y
   const centerX = PAGE_W / 2
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
@@ -303,53 +310,62 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   doc.setFontSize(8)
   doc.text(`de ${data.dia_total}`, centerX, headerImgH/2 + 6, { align: "center" })
 
-  y = headerImgH + s(4)
+  y = headerImgH + 4
 
   // ── Info strip ──────────────────────────────────────────────────
   setBg(doc, "#7c3aed")
-  doc.rect(x, y, W, s(8), "F")
+  doc.rect(x, y, W, 8, "F")
   setColor(doc, "#ede9fe")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(s(10))
-  doc.text(formatDate(data.fecha_rodaje) || "Fecha no definida", x + s(3), y + s(5))
+  doc.setFontSize(10)
+  doc.text(formatDate(data.fecha_rodaje) || "Fecha no definida", x + 3, y + 5)
   setColor(doc, "#ffffff")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(s(11))
-  doc.text(data.titulo || "Sin título", x + W/2, y + s(5), { align: "center" })
+  doc.setFontSize(11)
+  doc.text(data.titulo || "Sin título", x + W/2, y + 5, { align: "center" })
 
-  y += s(10)
+  y += 10
 
   // ── KV grid ─────────────────────────────────────────────────────
   const kvH  = 9
   const col5 = W / 5
-  kv(doc, x,            y, col5, "Avanzada",       data.avanzada,       scale, kvH)
-  kv(doc, x + col5,     y, col5, "Client on loc",  data.client_on_loc,  scale, kvH)
-  kv(doc, x + col5*2,   y, col5, "Ready to shoot", data.ready_to_shoot, scale, kvH)
-  kv(doc, x + col5*3,   y, col5, "Director",       data.director,       scale, kvH)
-  kv(doc, x + col5*4,   y, col5, "Productor",      data.productor,      scale, kvH)
-  y += s(kvH)
+  kv(doc, x,            y, col5, "Avanzada",       data.avanzada,       kvH)
+  kv(doc, x + col5,     y, col5, "Client on loc",  data.client_on_loc,  kvH)
+  kv(doc, x + col5*2,   y, col5, "Ready to shoot", data.ready_to_shoot, kvH)
+  kv(doc, x + col5*3,   y, col5, "Director",       data.director,       kvH)
+  kv(doc, x + col5*4,   y, col5, "Productor",      data.productor,      kvH)
+  y += kvH
 
   const dirs = data.direcciones.length > 0 ? data.direcciones : [{ nombre: "", url: "" }]
   const locW = W * 0.62
   const urlW = W - locW
   for (const dir of dirs) {
-    kv(doc, x,        y, locW, "Locación",   dir.nombre, scale, kvH)
-    kv(doc, x + locW, y, urlW, "URL / Maps", dir.url,    scale, kvH)
-    y += s(kvH)
+    y = ensureSpace(doc, y, kvH)
+    kv(doc, x,        y, locW, "Locación",   dir.nombre, kvH)
+    kv(doc, x + locW, y, urlW, "URL / Maps", dir.url,    kvH)
+    y += kvH
   }
 
+  y = ensureSpace(doc, y, kvH)
   const col4 = W / 4
-  kv(doc, x,            y, col4, "Amanecer",     data.amanecer,  scale, kvH)
-  kv(doc, x + col4,     y, col4, "Atardecer",    data.atardecer, scale, kvH)
-  kv(doc, x + col4*2,   y, col4, "Clima",        data.clima,     scale, kvH)
-  kv(doc, x + col4*3,   y, col4, "Prob. lluvia", data.lluvia,    scale, kvH)
-  y += s(kvH) + s(3)
+  kv(doc, x,            y, col4, "Amanecer",     data.amanecer,  kvH)
+  kv(doc, x + col4,     y, col4, "Atardecer",    data.atardecer, kvH)
+  kv(doc, x + col4*2,   y, col4, "Clima",        data.clima,     kvH)
+  kv(doc, x + col4*3,   y, col4, "Prob. lluvia", data.lluvia,    kvH)
+  y += kvH + 3
+
+  // Una sección nunca deja su barra huérfana al fondo: si no cabe la barra
+  // más un par de filas, todo arranca en la página siguiente.
+  const startSection = (title: string): void => {
+    y = ensureSpace(doc, y, 5.5 + 1 + 6 + 2 * 6.5)
+    y = sectionBar(doc, x, y, W, title)
+    y += 1
+  }
 
   // ── Locaciones ──────────────────────────────────────────────────
   const locRows = data.locaciones.filter((r) => r.locacion || r.accion)
   if (locRows.length > 0) {
-    y = sectionBar(doc, x, y, W, "Locaciones", scale)
-    y += s(1)
+    startSection("Locaciones")
     const locCols = [
       { header: "Locación",        width: W*0.25 },
       { header: "Cap.",            width: W*0.07, align: "center" as const },
@@ -358,15 +374,14 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
       { header: "Pág.",            width: W*0.07, align: "center" as const },
       { header: "Notas",           width: W*0.20 },
     ]
-    y = drawTable(doc, x, y, W, locCols, locRows.map((r) => [r.locacion, r.cap, r.horario, r.accion, r.pag, r.notas]), scale)
-    y += s(3)
+    y = drawTable(doc, x, y, W, locCols, locRows.map((r) => [r.locacion, r.cap, r.horario, r.accion, r.pag, r.notas]))
+    y += 3
   }
 
   // ── Cast ────────────────────────────────────────────────────────
   const castRows = data.cast_list.filter((r) => r.nombre)
   if (castRows.length > 0) {
-    y = sectionBar(doc, x, y, W, "Cast", scale)
-    y += s(1)
+    startSection("Cast")
     const castCols = [
       { header: "#",         width: W*0.04, align: "center" as const },
       { header: "Nombre",    width: W*0.16 },
@@ -380,56 +395,27 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
       { header: "Notas",     width: W*0.28 },
     ]
     y = drawTable(doc, x, y, W, castCols,
-      castRows.map((r, i) => [r.num||String(i+1), r.nombre, r.on_loc, r.makeup, r.hairdress, r.wardrobe, r.on_set, r.ensayo, r.toma, r.notas]),
-      scale, 6.5, CAST_NOTES_MAX_LINES)
-    y += s(3)
+      castRows.map((r, i) => [r.num||String(i+1), r.nombre, r.on_loc, r.makeup, r.hairdress, r.wardrobe, r.on_set, r.ensayo, r.toma, r.notas]))
+    y += 3
   }
 
-  // ── Crew ────────────────────────────────────────────────────────
+  // ── Crew: SIEMPRE a una sola columna, con notas y sin cortar nombres.
+  // Si el crew es largo, la tabla continúa en la(s) siguiente(s) página(s).
   const crewRows = data.crew.filter((r) => r.nombre || r.puesto)
   if (crewRows.length > 0) {
-    y = sectionBar(doc, x, y, W, "Crew List", scale)
-    y += s(1)
-
-    if (crewRows.length > CREW_SPLIT_THRESHOLD) {
-      // Crew largo → 2 columnas (mitad izquierda / mitad derecha) para ganar
-      // altura. Se omite "Notas" por espacio; las 3 horas (RETRO/LOC/PICK) sí.
-      const gap  = 4
-      const colW = (W - gap) / 2
-      const half = Math.ceil(crewRows.length / 2)
-      const cols2 = (cw: number) => [
-        // "#" con ancho suficiente para números de 2 dígitos: si es muy angosto,
-        // splitTextToSize parte "10" en ["1","0"] y con maxLines=1 se pierde el 2º
-        // dígito (la 2ª columna mostraba "1" en vez de 10, 11, 12…).
-        { header: "#",      width: cw*0.08, align: "center" as const },
-        { header: "Puesto", width: cw*0.29 },
-        { header: "Nombre", width: cw*0.27 },
-        { header: "RETRO",  width: cw*0.12, align: "center" as const, bgHex: "#4c1d95" },
-        { header: "LOC.",   width: cw*0.12, align: "center" as const, bgHex: "#0c4a6e" },
-        { header: "PICK.",  width: cw*0.12, align: "center" as const, bgHex: "#064e3b" },
-      ]
-      const toRow = (r: CrewRowPDF, n: number) =>
-        [String(n), r.puesto, r.nombre, r.retro||"—", r.locacion||"—", r.pickup||"—"]
-      const yL = drawTable(doc, x, y, colW, cols2(colW),
-        crewRows.slice(0, half).map((r, i) => toRow(r, i + 1)), scale)
-      const yR = drawTable(doc, x + colW + gap, y, colW, cols2(colW),
-        crewRows.slice(half).map((r, i) => toRow(r, half + i + 1)), scale)
-      y = Math.max(yL, yR) + s(3)
-    } else {
-      const crewCols = [
-        { header: "#",        width: W*0.04, align: "center" as const },
-        { header: "Puesto",   width: W*0.22 },
-        { header: "Nombre",   width: W*0.24 },
-        { header: "RETRO",    width: W*0.10, align: "center" as const, bgHex: "#4c1d95" },
-        { header: "LOCACIÓN", width: W*0.10, align: "center" as const, bgHex: "#0c4a6e" },
-        { header: "PICKUP",   width: W*0.10, align: "center" as const, bgHex: "#064e3b" },
-        { header: "Notas",    width: W*0.20 },
-      ]
-      y = drawTable(doc, x, y, W, crewCols,
-        crewRows.map((r, i) => [String(i+1), r.puesto, r.nombre, r.retro||"—", r.locacion||"—", r.pickup||"—", r.notas]),
-        scale)
-      y += s(3)
-    }
+    startSection("Crew List")
+    const crewCols = [
+      { header: "#",        width: W*0.04, align: "center" as const },
+      { header: "Puesto",   width: W*0.22 },
+      { header: "Nombre",   width: W*0.24 },
+      { header: "RETRO",    width: W*0.10, align: "center" as const, bgHex: "#4c1d95" },
+      { header: "LOCACIÓN", width: W*0.10, align: "center" as const, bgHex: "#0c4a6e" },
+      { header: "PICKUP",   width: W*0.10, align: "center" as const, bgHex: "#064e3b" },
+      { header: "Notas",    width: W*0.20 },
+    ]
+    y = drawTable(doc, x, y, W, crewCols,
+      crewRows.map((r, i) => [String(i+1), r.puesto, r.nombre, r.retro||"—", r.locacion||"—", r.pickup||"—", r.notas]))
+    y += 3
   }
 
   // ── Necesidades ─────────────────────────────────────────────────
@@ -441,72 +427,37 @@ export async function buildHojaDoc(data: HojaPDFData): Promise<jsPDF> {
   ]
   const hasNeeds = needsData.some((n) => n.value?.trim())
   if (hasNeeds) {
-    y = sectionBar(doc, x, y, W, "Necesidades", scale)
-    y += s(1)
-    const needW = W / 4
-    const needH = s(22)
-    for (let i = 0; i < needsData.length; i++) {
-      const nd = needsData[i]
-      const nx = x + i * needW
-      setBg(doc, i % 2 === 0 ? C_ROW : C_ROW_ALT)
-      setDraw(doc, C_BORDER)
-      doc.setLineWidth(0.1)
-      doc.rect(nx, y, needW, needH, "FD")
-      setColor(doc, C_MUTED)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(s(8))
-      doc.text(nd.label.toUpperCase(), nx + s(1.5), y + s(3.5))
-      setColor(doc, C_TEXT)
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(s(9))
-      const lines = doc.splitTextToSize(nd.value || "—", needW - s(3))
-      doc.text(lines.slice(0, 4), nx + s(1.5), y + s(7.5))
-    }
-    y += needH + s(3)
+    startSection("Necesidades")
+    y = boxRow(doc, x, y, W, needsData)
+    y += 3
   }
 
   // ── Logística y notas ───────────────────────────────────────────
   const hasLogistica = !!(data.vehiculos || data.equipo_especial || data.notas_produccion)
   if (hasLogistica) {
-    y = sectionBar(doc, x, y, W, "Logística y notas de producción", scale)
-    y += s(1)
-    const col3 = W / 3
-    const logH = s(18)
-    const logItems = [
+    startSection("Logística y notas de producción")
+    y = boxRow(doc, x, y, W, [
       { label: "Vehículos",            value: data.vehiculos },
       { label: "Equipo especial",      value: data.equipo_especial },
       { label: "Notas de producción",  value: data.notas_produccion },
-    ]
-    for (let i = 0; i < logItems.length; i++) {
-      const item = logItems[i]
-      const lx = x + i * col3
-      setBg(doc, i % 2 === 0 ? C_ROW : C_ROW_ALT)
-      setDraw(doc, C_BORDER)
-      doc.setLineWidth(0.1)
-      doc.rect(lx, y, col3, logH, "FD")
-      setColor(doc, C_MUTED)
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(s(8))
-      doc.text(item.label.toUpperCase(), lx + s(1.5), y + s(3.5))
-      setColor(doc, C_TEXT)
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(s(9))
-      const lines = doc.splitTextToSize(item.value || "—", col3 - s(3))
-      doc.text(lines.slice(0, 3), lx + s(1.5), y + s(7.5))
-    }
-    y += logH + s(3)
+    ])
+    y += 3
   }
 
-  // ── Footer ──────────────────────────────────────────────────────
-  const footerY = PAGE_H - MARGIN - 4
-  setDraw(doc, "#e2e8f0")
-  doc.setLineWidth(0.3)
-  doc.line(x, footerY, x + W, footerY)
-  setColor(doc, "#94a3b8")
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(7.5)
-  doc.text("RETRO CASA PRODUCTORA — Documento de uso interno", x, footerY + 3)
-  doc.text("Pág. 1 / 1", x + W, footerY + 3, { align: "right" })
+  // ── Footer en todas las páginas, con numeración real ────────────
+  const totalPages = doc.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    const footerY = PAGE_H - MARGIN - 4
+    setDraw(doc, "#e2e8f0")
+    doc.setLineWidth(0.3)
+    doc.line(x, footerY, x + W, footerY)
+    setColor(doc, "#94a3b8")
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7.5)
+    doc.text("RETRO CASA PRODUCTORA — Documento de uso interno", x, footerY + 3)
+    doc.text(`Pág. ${p} / ${totalPages}`, x + W, footerY + 3, { align: "right" })
+  }
 
   return doc
 }
