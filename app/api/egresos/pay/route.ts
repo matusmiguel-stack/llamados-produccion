@@ -4,6 +4,10 @@ import { verifyApiUser } from "../../../../lib/api-auth"
 
 const STAFF_ROLES = ["admin", "editor", "editor_premium"]
 
+// Formas de pago que sí obligan a adjuntar la factura del anticipo.
+// Debe coincidir con FORMAS_CON_FACTURA en EgresosPanel.tsx.
+const FORMAS_CON_FACTURA = ["Retro Studio", "Retro Films"]
+
 async function requireStaff(req: Request) {
   const user = await verifyApiUser(req)
   if (!user) return null
@@ -56,8 +60,13 @@ export async function POST(req: Request) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaPago)) {
       return NextResponse.json({ error: "Indica la fecha en que se realizó el pago" }, { status: 400 })
     }
-    if (tipo === "anticipo" && (!xmlFile || !pdfFile)) {
-      return NextResponse.json({ error: "Para anticipo, el XML y el PDF de la factura son obligatorios" }, { status: 400 })
+    // El anticipo solo exige factura cuando el pago sale de una de las empresas.
+    // En efectivo (o por Konfio/Banregio) es opcional, pero si la suben se guarda.
+    if (tipo === "anticipo" && FORMAS_CON_FACTURA.includes(formaPago) && (!xmlFile || !pdfFile)) {
+      return NextResponse.json(
+        { error: `Para un anticipo pagado por ${formaPago}, el XML y el PDF de la factura son obligatorios` },
+        { status: 400 },
+      )
     }
     // Comprobante de pago del banco — obligatorio para ambos tipos.
     if (!compFile && !compPathParam) {

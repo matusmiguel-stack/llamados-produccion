@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { createAdminClient } from "../../../../lib/supabase-admin"
+import { parseSubtotal, parseTotal, parseReceptorRfc, parseUuidFiscal } from "../../../../lib/cfdi"
 
 const FROM = "Retro Casa Productora <news@retrocasaproductora.com>"
 const CC_EMAILS = ["finanzas@retrocasaproductora.com", "miguel@retrocasaproductora.com"]
@@ -172,33 +173,6 @@ function buildRechazadaHtml(params: { proveedorNombre: string; proyectoLabel: st
 
 // ── Parseo de CFDI ────────────────────────────────────────────────────────────
 
-function parseSubtotal(xml: string): number | null {
-  // CFDI 3.3 / 4.0: atributo SubTotal en cfdi:Comprobante
-  const m = xml.match(/<(?:cfdi:)?Comprobante[^>]*\sSubTotal="([\d.]+)"/i)
-  if (!m) return null
-  const n = parseFloat(m[1])
-  return Number.isFinite(n) ? n : null
-}
-
-// Monto final a pagar del CFDI: Comprobante@Total = SubTotal + IVA trasladado
-// − retenciones (ISR/IVA). Correcto tanto para factura como para honorarios.
-function parseTotal(xml: string): number | null {
-  const m = xml.match(/<(?:cfdi:)?Comprobante[^>]*\sTotal="([\d.]+)"/i)
-  if (!m) return null
-  const n = parseFloat(m[1])
-  return Number.isFinite(n) ? n : null
-}
-
-function parseReceptorRfc(xml: string): string | null {
-  const m = xml.match(/<(?:cfdi:)?Receptor[^>]*\sRfc="([A-Z0-9&Ñ]{12,13})"/i)
-  return m ? m[1].toUpperCase() : null
-}
-
-function parseUuidFiscal(xml: string): string | null {
-  // TimbreFiscalDigital → UUID (folio fiscal)
-  const m = xml.match(/UUID="([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})"/i)
-  return m ? m[1].toUpperCase() : null
-}
 
 const RFC_POR_EMPRESA: Record<string, string> = {
   retro_studio: "RST070309F47",

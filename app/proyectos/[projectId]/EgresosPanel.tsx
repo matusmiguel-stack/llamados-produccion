@@ -39,6 +39,14 @@ type EditState = { qty: string; days: string; unit_price: string; contact: strin
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// El anticipo solo exige factura cuando el pago sale de una de las empresas.
+// Pagado en efectivo (o por Konfio/Banregio) no requiere XML ni PDF.
+const FORMAS_CON_FACTURA = ["Retro Studio", "Retro Films"]
+
+function facturaRequerida(formaPago: string | null | undefined): boolean {
+  return FORMAS_CON_FACTURA.includes((formaPago || "").trim())
+}
+
 function fmt(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 }
@@ -432,8 +440,8 @@ export function EgresosPanel({
     if (!capturado || capturado <= 0) { alert("Indica el monto"); return }
     if (!payForma) { alert("Selecciona de dónde salió el pago"); return }
     if (!payFecha) { alert("Indica la fecha en que se realizó el pago"); return }
-    if (tipo === "anticipo" && (!payXml || !payPdf)) {
-      alert("Para anticipo debes subir el XML y el PDF de la factura")
+    if (tipo === "anticipo" && facturaRequerida(payForma) && (!payXml || !payPdf)) {
+      alert(`Para un anticipo pagado por ${payForma} debes subir el XML y el PDF de la factura`)
       return
     }
     if (!payComprobante) {
@@ -939,10 +947,21 @@ export function EgresosPanel({
 
             {payModal.tipo === "anticipo" && (
               <>
-                <label style={{ ...payLabelStyle, marginTop: 14 }}>Factura XML (CFDI) *</label>
+                <label style={{ ...payLabelStyle, marginTop: 14 }}>
+                  Factura XML (CFDI) {facturaRequerida(payForma) ? "*" : "(opcional)"}
+                </label>
                 <input type="file" accept=".xml,text/xml" onChange={(e) => setPayXml(e.target.files?.[0] || null)} style={payFileStyle} />
-                <label style={{ ...payLabelStyle, marginTop: 12 }}>Factura PDF *</label>
+                <label style={{ ...payLabelStyle, marginTop: 12 }}>
+                  Factura PDF {facturaRequerida(payForma) ? "*" : "(opcional)"}
+                </label>
                 <input type="file" accept=".pdf,application/pdf" onChange={(e) => setPayPdf(e.target.files?.[0] || null)} style={payFileStyle} />
+                {!facturaRequerida(payForma) && (
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b" }}>
+                    {payForma
+                      ? `Pagado por ${payForma}: la factura no es obligatoria, pero puedes adjuntarla.`
+                      : "Solo es obligatoria si el pago sale de Retro Studio o Retro Films."}
+                  </p>
+                )}
               </>
             )}
 

@@ -7,13 +7,13 @@ import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { downloadIngresosTemplate, parseIngresosExcel } from "../../lib/ingresos-import"
+import { parseNumeroFactura } from "../../lib/cfdi"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Empresa = "retro_studio" | "retro_films"
 type Estatus =
   | "en_produccion"
-  | "proceso_facturado"
   | "facturado"
   | "por_cobrar"
   | "factorado"
@@ -75,7 +75,6 @@ const emptyForm: IngresoForm = {
 
 const ESTATUS: Record<Estatus, { label: string; color: string; bg: string; border: string }> = {
   en_produccion:    { label: "En Producción",       color: "#fbbf24", bg: "rgba(245,158,11,0.15)", border: "rgba(251,191,36,0.25)" },
-  proceso_facturado:{ label: "Proceso Facturado",   color: "#38bdf8", bg: "rgba(14,165,233,0.15)", border: "rgba(56,189,248,0.25)" },
   facturado:        { label: "Facturado",            color: "#a78bfa", bg: "rgba(124,58,237,0.15)", border: "rgba(167,139,250,0.25)" },
   por_cobrar:       { label: "Por Cobrar",           color: "#fb923c", bg: "rgba(249,115,22,0.15)", border: "rgba(251,146,60,0.25)" },
   factorado:        { label: "Factorado",            color: "#f472b6", bg: "rgba(236,72,153,0.12)", border: "rgba(244,114,182,0.25)" },
@@ -168,6 +167,12 @@ export default function IngresosPage() {
   const fileInputRef                = useRef<HTMLInputElement>(null)
   const [payModal, setPayModal]     = useState<{ id: string; label: string; fecha: string } | null>(null)
   const [paying, setPaying]         = useState(false)
+  const [facturarModal, setFacturarModal] = useState<{ id: string; label: string } | null>(null)
+  const [facXml, setFacXml]         = useState<File | null>(null)
+  const [facPdf, setFacPdf]         = useState<File | null>(null)
+  const [facNumero, setFacNumero]   = useState("")
+  const [facNumeroAuto, setFacNumeroAuto] = useState(false)
+  const [facturando, setFacturando] = useState(false)
 
   // ── Mobile detection ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -366,6 +371,70 @@ export default function IngresosPage() {
     if (!confirm("¿Eliminar este ingreso?")) return
     await supabase.from("ingresos").delete().eq("id", id)
     loadPage()
+  }
+
+  // ── Marcar facturado (exige XML + PDF; el número sale del CFDI) ──────────────
+  function openFacturarModal(r: Ingreso) {
+    setFacturarModal({ id: r.id, label: proyectoLabel(r) })
+    setFacXml(null)
+    setFacPdf(null)
+    setFacNumero("")
+    setFacNumeroAuto(false)
+  }
+
+  // Al elegir el XML se lee el número (Serie + Folio) y se llena el campo. No
+  // todos los CFDI traen Serie/Folio, por eso el campo queda editable.
+  async function onPickFacXml(file: File | null) {
+    setFacXml(file)
+    if (!file) return
+    try {
+      const numero = parseNumeroFactura(await file.text())
+      if (numero) {
+        setFacNumero(numero)
+        setFacNumeroAuto(true)
+      } else {
+        setFacNumeroAuto(false)
+      }
+    } catch {
+      setFacNumeroAuto(false)
+    }
+  }
+
+  async function confirmarFacturado() {
+    if (!facturarModal) return
+    if (!facXml || !facPdf) {
+      alert("Sube el XML y el PDF de la factura")
+      return
+    }
+    if (!facNumero.trim()) {
+      alert("Falta el número de factura")
+      return
+    }
+    setFacturando(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const fd = new FormData()
+      fd.append("ingresoId", facturarModal.id)
+      fd.append("xml", facXml)
+      fd.append("pdf", facPdf)
+      fd.append("numeroFactura", facNumero.trim())
+      const res = await fetch("/api/ingresos/facturar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        alert(data.error || `Error ${res.status}`)
+        return
+      }
+      setFacturarModal(null)
+      loadPage()
+    } catch (err: any) {
+      alert("Error al facturar: " + err.message)
+    } finally {
+      setFacturando(false)
+    }
   }
 
   // ── Marcar pago (cambia estatus a pagado + fecha de pago) ────────────────────
@@ -711,6 +780,12 @@ export default function IngresosPage() {
                       <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
                       <td style={{ ...tdStyle, color: "#64748b", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
                       <td style={{ ...tdStyle, whiteSpace: "nowrap", textAlign: "right" }}>
+                        {/* Facturar pide el XML y el PDF, y saca el número del CFDI */}
+                        {r.estatus !== "facturado" && r.estatus !== "pagado" && (
+                          <button onClick={() => openFacturarModal(r)} style={facturarBtnStyle} title="Marcar como facturado">
+                            ✓ Facturar
+                          </button>
+                        )}
                         {r.estatus !== "pagado" && (
                           <button onClick={() => openPayModal(r)} style={marcarPagoBtnStyle} title="Marcar como pagado">
                             ✓ Marcar Pago
@@ -747,6 +822,67 @@ export default function IngresosPage() {
           </div>
         )}
       </main>
+
+      {/* ── Marcar facturado modal ── */}
+      {facturarModal && (
+        <div style={overlayStyle}>
+          <div style={{ ...modalStyle(isMobile), maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div style={modalHeaderStyle}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Marcar como facturado</h2>
+              <button onClick={() => setFacturarModal(null)} style={closeBtnStyle}>✕</button>
+            </div>
+            <div style={modalBodyStyle}>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+                {facturarModal.label}
+              </p>
+              <FormField label="Factura XML (CFDI) *">
+                <input
+                  type="file"
+                  accept=".xml,text/xml"
+                  onChange={e => onPickFacXml(e.target.files?.[0] || null)}
+                  style={inputStyle}
+                />
+              </FormField>
+              <div style={{ marginTop: 12 }}>
+                <FormField label="Factura PDF *">
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={e => setFacPdf(e.target.files?.[0] || null)}
+                    style={inputStyle}
+                  />
+                </FormField>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <FormField label="Número de factura *">
+                  <input
+                    type="text"
+                    value={facNumero}
+                    onChange={e => { setFacNumero(e.target.value); setFacNumeroAuto(false) }}
+                    placeholder="F3777"
+                    style={inputStyle}
+                  />
+                </FormField>
+              </div>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: facNumeroAuto ? "#34d399" : "#64748b", lineHeight: 1.5 }}>
+                {facNumeroAuto
+                  ? "✓ Leído del XML — se guarda en la lista de ingresos."
+                  : facXml
+                    ? "El XML no trae Serie/Folio: escribe el número a mano."
+                    : "Al elegir el XML se llena solo con el número de la factura."}
+              </p>
+              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                <button onClick={() => setFacturarModal(null)} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+                <button onClick={confirmarFacturado} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(167,139,250,0.4)", background: "rgba(124,58,237,0.15)", color: "#a78bfa", fontSize: 13, fontWeight: 700, cursor: facturando ? "not-allowed" : "pointer", opacity: facturando ? 0.6 : 1 }}>
+                  {facturando ? "Guardando…" : "✓ Facturar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Marcar pago modal ── */}
       {payModal && (
@@ -806,7 +942,13 @@ export default function IngresosPage() {
                 <FormField label="Estatus">
                   <select value={form.estatus} onChange={e => setForm(f => ({ ...f, estatus: e.target.value as Estatus }))} style={inputStyle}>
                     {(Object.entries(ESTATUS) as [Estatus, typeof ESTATUS[Estatus]][]).map(([k, cfg]) => (
-                      <option key={k} value={k}>{cfg.label}</option>
+                      // "Facturado" solo se pone con el botón de la lista, que exige el
+                      // XML y el PDF. Se deja elegible si el ingreso ya está facturado,
+                      // para poder sacarlo de ese estatus.
+                      <option key={k} value={k} disabled={k === "facturado" && form.estatus !== "facturado"}>
+                        {cfg.label}
+                        {k === "facturado" && form.estatus !== "facturado" ? " — usa ✓ Facturar" : ""}
+                      </option>
                     ))}
                   </select>
                 </FormField>
@@ -1255,6 +1397,19 @@ const actionBtnStyle: React.CSSProperties = {
   color: "#475569",
   cursor: "pointer",
   fontSize: 13,
+}
+
+const facturarBtnStyle: React.CSSProperties = {
+  padding: "4px 10px",
+  marginRight: 8,
+  borderRadius: 7,
+  border: "1px solid rgba(167,139,250,0.35)",
+  background: "rgba(124,58,237,0.12)",
+  color: "#a78bfa",
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 }
 
 const marcarPagoBtnStyle: React.CSSProperties = {

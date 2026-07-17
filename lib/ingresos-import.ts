@@ -8,8 +8,9 @@ const norm = (s: any) =>
 
 // Estatus válidos (valor en BD ← etiquetas amigables aceptadas en el Excel)
 const ESTATUS_MAP: { key: string; labels: string[] }[] = [
-  { key: "en_produccion",     labels: ["en produccion", "produccion", "en_produccion"] },
-  { key: "proceso_facturado", labels: ["proceso facturado", "en proceso de facturar", "proceso_facturado"] },
+  // "Proceso facturado" se eliminó como estatus; las hojas viejas que lo traigan
+  // entran como "en producción", que es el paso previo a tener la factura.
+  { key: "en_produccion",     labels: ["en produccion", "produccion", "en_produccion", "proceso facturado", "en proceso de facturar", "proceso_facturado"] },
   { key: "facturado",         labels: ["facturado"] },
   { key: "por_cobrar",        labels: ["por cobrar", "por_cobrar"] },
   { key: "factorado",         labels: ["factorado"] },
