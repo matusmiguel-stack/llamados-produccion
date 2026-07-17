@@ -2167,7 +2167,7 @@ function openEditVacation() {
                 STACK_OFFSETS.map((offset) => {
                   const d = new Date(calMonthStart.getFullYear(), calMonthStart.getMonth() + offset, 1)
                   return (
-                    <div key={`${d.getFullYear()}-${d.getMonth()}`} style={{ marginTop: 24 }}>
+                    <div key={`${d.getFullYear()}-${d.getMonth()}`} style={stackedMonthBlockStyle}>
                       <p style={stackedMonthTitleStyle}>{monthTitle(d)}</p>
                       <FullCalendar
                         plugins={[dayGridPlugin, interactionPlugin]}
@@ -2177,6 +2177,9 @@ function openEditVacation() {
                         height="auto"
                         dayMaxEvents={false}
                         fixedWeekCount={false}
+                        // Sin días del mes vecino: el mes de arriba ya los muestra y
+                        // se verían repetidos con sus eventos.
+                        showNonCurrentDates={false}
                         events={events}
                         editable={canEdit}
                         eventResizableFromStart={canEdit}
@@ -4629,11 +4632,25 @@ const ghostButtonStyle: React.CSSProperties = {
   height: 32,
 }
 
+// Corte entre un mes y el siguiente en la vista apilada: línea separadora + aire
+const stackedMonthBlockStyle: React.CSSProperties = {
+  marginTop: 34,
+  paddingTop: 28,
+  borderTop: "2px solid rgba(167,139,250,0.22)",
+}
+
+// Banda del mes, en el mismo idioma visual que las cabeceras de sección de Matriz
 const stackedMonthTitleStyle: React.CSSProperties = {
-  margin: "0 0 10px",
-  color: "#c4b5fd",
-  fontSize: 15,
+  margin: "0 0 14px",
+  padding: "10px 16px",
+  background: "linear-gradient(90deg, rgba(124,58,237,0.32), rgba(30,58,138,0.12), transparent)",
+  borderLeft: "3px solid #a78bfa",
+  borderRadius: 8,
+  color: "#ede9fe",
+  fontSize: 14,
   fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: 1.8,
 }
 
 const overlayStyle: React.CSSProperties = {
