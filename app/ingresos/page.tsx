@@ -8,6 +8,7 @@ import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { downloadIngresosTemplate, parseIngresosExcel } from "../../lib/ingresos-import"
 import { parseNumeroFactura } from "../../lib/cfdi"
+import { nombreLiquidacion } from "../../lib/liquidacion"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -167,11 +168,15 @@ export default function IngresosPage() {
   const fileInputRef                = useRef<HTMLInputElement>(null)
   const [payModal, setPayModal]     = useState<{ id: string; label: string; fecha: string } | null>(null)
   const [paying, setPaying]         = useState(false)
-  const [facturarModal, setFacturarModal] = useState<{ id: string; label: string } | null>(null)
+  const [facturarModal, setFacturarModal] = useState<{ id: string; label: string; subtotal: number } | null>(null)
   const [facXml, setFacXml]         = useState<File | null>(null)
   const [facPdf, setFacPdf]         = useState<File | null>(null)
   const [facNumero, setFacNumero]   = useState("")
   const [facNumeroAuto, setFacNumeroAuto] = useState(false)
+  // Facturación parcial: monto (sin IVA) y porcentaje van sincronizados
+  const [facParcial, setFacParcial] = useState(false)
+  const [facMonto, setFacMonto]     = useState("")
+  const [facPct, setFacPct]         = useState("")
   const [facturando, setFacturando] = useState(false)
 
   // ── Mobile detection ────────────────────────────────────────────────────────
@@ -375,11 +380,28 @@ export default function IngresosPage() {
 
   // ── Marcar facturado (exige XML + PDF; el número sale del CFDI) ──────────────
   function openFacturarModal(r: Ingreso) {
-    setFacturarModal({ id: r.id, label: proyectoLabel(r) })
+    setFacturarModal({ id: r.id, label: proyectoLabel(r), subtotal: Number(r.subtotal ?? 0) })
     setFacXml(null)
     setFacPdf(null)
     setFacNumero("")
     setFacNumeroAuto(false)
+    setFacParcial(false)
+    setFacMonto("")
+    setFacPct("")
+  }
+
+  // Monto y porcentaje sincronizados sobre el subtotal original (sin IVA)
+  function onFacMonto(v: string) {
+    setFacMonto(v)
+    const n = parseFloat(v)
+    const st = facturarModal?.subtotal || 0
+    setFacPct(Number.isFinite(n) && st > 0 ? String(Math.round((n / st) * 10000) / 100) : "")
+  }
+  function onFacPct(v: string) {
+    setFacPct(v)
+    const n = parseFloat(v)
+    const st = facturarModal?.subtotal || 0
+    setFacMonto(Number.isFinite(n) && st > 0 ? String(Math.round(st * n) / 100) : "")
   }
 
   // Al elegir el XML se lee el número (Serie + Folio) y se llena el campo. No
@@ -410,6 +432,17 @@ export default function IngresosPage() {
       alert("Falta el número de factura")
       return
     }
+    const montoParcial = facParcial ? parseFloat(facMonto) : null
+    if (facParcial) {
+      if (!montoParcial || !Number.isFinite(montoParcial) || montoParcial <= 0) {
+        alert("Indica el monto (sin IVA) o el porcentaje a facturar")
+        return
+      }
+      if (montoParcial >= facturarModal.subtotal) {
+        alert("El monto parcial debe ser menor al subtotal. Para facturar todo, desmarca la parcialidad.")
+        return
+      }
+    }
     setFacturando(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -418,6 +451,8 @@ export default function IngresosPage() {
       fd.append("xml", facXml)
       fd.append("pdf", facPdf)
       fd.append("numeroFactura", facNumero.trim())
+      fd.append("label", facturarModal.label)
+      if (facParcial && montoParcial) fd.append("parcialSubtotal", String(montoParcial))
       const res = await fetch("/api/ingresos/facturar", {
         method: "POST",
         headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -871,6 +906,48 @@ export default function IngresosPage() {
                     ? "El XML no trae Serie/Folio: escribe el número a mano."
                     : "Al elegir el XML se llena solo con el número de la factura."}
               </p>
+
+              {/* ── Facturación parcial ── */}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={facParcial}
+                  onChange={e => setFacParcial(e.target.checked)}
+                  style={{ accentColor: "#7c3aed", width: 15, height: 15 }}
+                />
+                Facturar parcialmente
+              </label>
+              {facParcial && (
+                <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
+                    Subtotal original (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
+                  </p>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <FormField label="Cantidad (sin IVA)">
+                        <input type="number" min="0" step="0.01" value={facMonto} onChange={e => onFacMonto(e.target.value)} placeholder="0.00" style={inputStyle} />
+                      </FormField>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <FormField label="Porcentaje %">
+                        <input type="number" min="0" max="100" step="0.01" value={facPct} onChange={e => onFacPct(e.target.value)} placeholder="50" style={inputStyle} />
+                      </FormField>
+                    </div>
+                  </div>
+                  {(() => {
+                    const m = parseFloat(facMonto)
+                    if (!Number.isFinite(m) || m <= 0 || m >= facturarModal.subtotal) return null
+                    const rem = Math.round((facturarModal.subtotal - m) * 100) / 100
+                    return (
+                      <p style={{ margin: "10px 0 0", fontSize: 11, color: "#a78bfa", lineHeight: 1.6 }}>
+                        Se factura {fmt(m)} y se creará{" "}
+                        <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{nombreLiquidacion(facturarModal.label)}</span>{" "}
+                        por {fmt(rem)} (sin IVA), justo abajo en la lista.
+                      </p>
+                    )
+                  })()}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button onClick={() => setFacturarModal(null)} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
                   Cancelar
