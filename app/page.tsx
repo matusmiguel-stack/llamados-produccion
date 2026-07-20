@@ -143,6 +143,11 @@ export default function Home() {
   const [stackedMonths, setStackedMonths] = useState(false)
   const [calViewType, setCalViewType] = useState("dayGridMonth")
   const [calMonthStart, setCalMonthStart] = useState<Date | null>(null)
+  // Día seleccionado en la vista móvil estilo iPhone: al picar un día se
+  // resalta y abajo aparece la lista de sus eventos.
+  const [mobileSelectedDay, setMobileSelectedDay] = useState<string>(() =>
+    new Date().toLocaleDateString("sv")
+  )
 
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
@@ -327,6 +332,10 @@ export default function Home() {
     function handleDayNumberClick(event: MouseEvent) {
       if (!isDayNumberTarget(event.target)) return
 
+      // En móvil no navegamos a la vista diaria: el tap lo maneja dateClick,
+      // que selecciona el día y muestra la lista de eventos abajo (estilo iPhone).
+      if (window.innerWidth < 768) return
+
       const calendarApi = calendarRef.current?.getApi()
       if (!calendarApi || calendarApi.view.type !== "dayGridMonth") return
 
@@ -351,6 +360,20 @@ export default function Home() {
       shell.removeEventListener("click", handleDayNumberClick, true)
     }
   }, [])
+
+  // Resalta imperativamente la celda del día seleccionado en móvil (estilo iPhone).
+  useEffect(() => {
+    const shell = calendarShellRef.current
+    if (!shell) return
+    shell
+      .querySelectorAll(".fc-daygrid-day.is-mobile-selected")
+      .forEach((el) => el.classList.remove("is-mobile-selected"))
+    if (!isMobile) return
+    const cell = shell.querySelector(
+      `.fc-daygrid-day[data-date="${mobileSelectedDay}"]`
+    )
+    cell?.classList.add("is-mobile-selected")
+  }, [mobileSelectedDay, isMobile, calMonthStart, events, stackedMonths])
 
   async function loadAll() {
     const [
@@ -971,6 +994,49 @@ export default function Home() {
     const shoot = allShoots.find((s) => s.id === eventId)
     setSelectedShoot(shoot || null)
     setDetailsOpen(true)
+  }
+
+  // ── Vista móvil estilo iPhone ────────────────────────────────────────────
+  // Eventos que caen en un día concreto (YYYY-MM-DD), considerando que en los
+  // eventos de día completo el `end` es exclusivo (como en FullCalendar).
+  function eventsForDay(dayStr: string) {
+    return events
+      .filter((ev) => {
+        const startDay = String(ev.start).slice(0, 10)
+        if (!ev.end) return startDay === dayStr
+        const endDay = String(ev.end).slice(0, 10)
+        if (ev.allDay) return dayStr >= startDay && dayStr < endDay
+        return dayStr >= startDay && dayStr <= endDay
+      })
+      .sort((a, b) => {
+        // Primero los de día completo, luego por hora de inicio.
+        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1
+        return String(a.start).localeCompare(String(b.start))
+      })
+  }
+
+  // "16:00" a partir de "2026-07-20T16:00[:00]"; "" si no trae hora.
+  function eventTimeLabel(ev: any) {
+    if (ev.allDay) return "Todo el día"
+    const start = String(ev.start)
+    if (start.length < 16) return ""
+    const startHM = start.slice(11, 16)
+    const end = ev.end ? String(ev.end) : ""
+    const endHM = end.length >= 16 ? end.slice(11, 16) : ""
+    return endHM ? `${startHM} – ${endHM}` : startHM
+  }
+
+  // Abre el formulario de creación con el día ya prellenado.
+  function openCreateForDay(dayStr: string) {
+    if (!canJunta) return
+    resetForm()
+    if (isProductorRole) setEntryMode("junta")
+    setSelectedDate(dayStr)
+    setSelectedEndDate(dayStr)
+    setVacationStartDate(dayStr)
+    setVacationEndDate(dayStr)
+    setJuntaDate(dayStr)
+    setModalOpen(true)
   }
 
 function getVacationEmployees(vacationId: string) {
@@ -2111,11 +2177,15 @@ function openEditVacation() {
                     click: () => setStackedMonths((v) => !v),
                   },
                 }}
-                headerToolbar={{
-                  left: "prev,next today",
-                  center: "title",
-                  right: "stackMonths,dayGridMonth,timeGridWeek,timeGridDay",
-                }}
+                headerToolbar={
+                  isMobile
+                    ? { left: "prev,next", center: "title", right: "today" }
+                    : {
+                        left: "prev,next today",
+                        center: "title",
+                        right: "stackMonths,dayGridMonth,timeGridWeek,timeGridDay",
+                      }
+                }
                 height="auto"
                 views={{
                   dayGridMonth: {
@@ -2135,24 +2205,21 @@ function openEditVacation() {
                 eventResizableFromStart={canEdit}
                 select={handleCalendarSelect}
                 dateClick={(info) => {
-                  // Picarle al número del día siempre navega a la vista diaria
+                  // En móvil el tap sobre un día lo selecciona y muestra sus
+                  // eventos en la lista de abajo (estilo calendario de iPhone).
+                  if (isMobile) {
+                    if (info.view.type === "dayGridMonth") {
+                      setMobileSelectedDay(info.dateStr)
+                    }
+                    return
+                  }
+                  // Escritorio: picarle al número del día navega a la vista diaria.
                   if (
                     info.view.type === "dayGridMonth" &&
                     (info.jsEvent?.target as HTMLElement | null)?.closest(".fc-daygrid-day-number")
                   ) {
                     calendarRef.current?.getApi().changeView("timeGridDay", info.dateStr)
-                    return
                   }
-                  if (!isMobile) return
-                  if (!canJunta) return
-                  resetForm()
-                  if (isProductorRole) setEntryMode("junta")
-                  setSelectedDate(info.dateStr)
-                  setSelectedEndDate(info.dateStr)
-                  setVacationStartDate(info.dateStr)
-                  setVacationEndDate(info.dateStr)
-                  setJuntaDate(info.dateStr)
-                  setModalOpen(true)
                 }}
                 eventClick={handleEventClick}
                 eventDrop={updateEventDate}
@@ -2192,6 +2259,57 @@ function openEditVacation() {
                   )
                 })}
             </div>
+
+            {/* Lista de eventos del día seleccionado (solo móvil, estilo iPhone) */}
+            {isMobile && (
+              <div style={mobileDayListStyle}>
+                <div style={mobileDayListHeaderStyle}>
+                  <span style={mobileDayListDateStyle}>
+                    {new Date(`${mobileSelectedDay}T00:00:00`).toLocaleDateString("es-MX", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </span>
+                  {canJunta && (
+                    <button
+                      type="button"
+                      onClick={() => openCreateForDay(mobileSelectedDay)}
+                      style={mobileDayAddBtnStyle}
+                      aria-label="Nuevo evento"
+                    >
+                      + Nuevo
+                    </button>
+                  )}
+                </div>
+
+                {eventsForDay(mobileSelectedDay).length === 0 ? (
+                  <p style={mobileDayEmptyStyle}>Sin eventos este día</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {eventsForDay(mobileSelectedDay).map((ev) => (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={() => handleEventClick({ event: { id: ev.id } })}
+                        style={mobileDayEventRowStyle}
+                      >
+                        <span
+                          style={{
+                            ...mobileDayEventBarStyle,
+                            background: ev.backgroundColor || "#7c3aed",
+                          }}
+                        />
+                        <span style={mobileDayEventTitleStyle}>{ev.title}</span>
+                        {eventTimeLabel(ev) && (
+                          <span style={mobileDayEventTimeStyle}>{eventTimeLabel(ev)}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </div>
 
@@ -4617,6 +4735,85 @@ const panelHintStyle: React.CSSProperties = {
   margin: 0,
   color: "#64748b",
   fontSize: 11,
+}
+
+// ── Lista de eventos del día (vista móvil estilo iPhone) ────────────────────
+const mobileDayListStyle: React.CSSProperties = {
+  marginTop: 14,
+  paddingTop: 14,
+  borderTop: "1px solid rgba(148,163,184,0.14)",
+}
+
+const mobileDayListHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  marginBottom: 8,
+}
+
+const mobileDayListDateStyle: React.CSSProperties = {
+  color: "#e2e8f0",
+  fontSize: 14,
+  fontWeight: 700,
+  textTransform: "capitalize",
+}
+
+const mobileDayAddBtnStyle: React.CSSProperties = {
+  padding: "5px 12px",
+  borderRadius: 999,
+  border: "1px solid rgba(167,139,250,0.35)",
+  background: "rgba(124,58,237,0.15)",
+  color: "#a78bfa",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  flexShrink: 0,
+}
+
+const mobileDayEmptyStyle: React.CSSProperties = {
+  margin: "6px 0 4px",
+  color: "#64748b",
+  fontSize: 13,
+}
+
+const mobileDayEventRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  width: "100%",
+  padding: "9px 6px",
+  background: "transparent",
+  border: "none",
+  borderBottom: "1px solid rgba(148,163,184,0.08)",
+  cursor: "pointer",
+  textAlign: "left",
+}
+
+const mobileDayEventBarStyle: React.CSSProperties = {
+  width: 4,
+  alignSelf: "stretch",
+  minHeight: 30,
+  borderRadius: 4,
+  flexShrink: 0,
+}
+
+const mobileDayEventTitleStyle: React.CSSProperties = {
+  flex: 1,
+  color: "#e2e8f0",
+  fontSize: 14,
+  fontWeight: 600,
+  lineHeight: 1.3,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+}
+
+const mobileDayEventTimeStyle: React.CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 12,
+  fontWeight: 500,
+  whiteSpace: "nowrap",
+  flexShrink: 0,
 }
 
 const ghostButtonStyle: React.CSSProperties = {

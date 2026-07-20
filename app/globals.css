@@ -286,7 +286,64 @@ input[type="number"] {
   }
 
   .calendar-shell-mobile .fc-daygrid-day-frame {
-    min-height: 72px;
+    min-height: 60px;
+  }
+
+  /* Estilo iPhone: los eventos se ven como barritas de color sin texto.
+     El texto/detalle se lee en la lista de abajo al picar el día. */
+  .calendar-shell-mobile .fc-daygrid-day-events {
+    margin-top: 3px;
+    padding: 0 3px;
+    min-height: 0 !important;
+  }
+
+  .calendar-shell-mobile .fc-daygrid-event-harness {
+    margin-bottom: 2px !important;
+  }
+
+  .calendar-shell-mobile .fc-daygrid-day-bottom {
+    display: none !important;
+  }
+
+  .calendar-shell-mobile .fc-daygrid-event {
+    height: 5px;
+    min-height: 5px;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 3px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .calendar-shell-mobile .fc-daygrid-event .fc-event-main,
+  .calendar-shell-mobile .fc-daygrid-event .fc-event-title,
+  .calendar-shell-mobile .fc-daygrid-event .fc-event-title-container,
+  .calendar-shell-mobile .fc-daygrid-event .fc-event-time {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    padding: 0 !important;
+    color: transparent !important;
+  }
+
+  /* Ocultar el enlace "+N más": la lista de abajo ya muestra todo */
+  .calendar-shell-mobile .fc-daygrid-more-link {
+    display: none !important;
+  }
+
+  /* Día seleccionado (que no sea hoy): círculo relleno como en iPhone */
+  .calendar-shell-mobile .fc-daygrid-day.is-mobile-selected:not(.fc-day-today) .fc-daygrid-day-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    margin: 4px 6px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(226, 232, 240, 0.16);
+    color: #ffffff !important;
+    font-weight: 700;
   }
 
   .calendar-shell .fc-header-toolbar {
