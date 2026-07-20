@@ -285,15 +285,58 @@ input[type="number"] {
     height: auto !important;
   }
 
-  .calendar-shell-mobile .fc-daygrid-day-frame {
-    min-height: 60px;
+  /* ── Rejilla estilo iPhone: solo números + barritas de color, sin recuadros ── */
+
+  /* Fuera el marco/caja exterior y las esquinas redondeadas */
+  .calendar-shell-mobile .fc-theme-standard .fc-scrollgrid {
+    border: none !important;
+    border-radius: 0 !important;
   }
 
-  /* Estilo iPhone: los eventos se ven como barritas de color sin texto.
+  /* Sin líneas verticales; solo una separación horizontal tenue entre semanas */
+  .calendar-shell-mobile .fc-theme-standard td,
+  .calendar-shell-mobile .fc-theme-standard th {
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    border-bottom-color: rgba(148, 163, 184, 0.10) !important;
+  }
+
+  /* Cabecera de días (D L M M J V S) sin caja de fondo */
+  .calendar-shell-mobile .fc-col-header-cell {
+    background: transparent !important;
+    border-bottom: none !important;
+  }
+  .calendar-shell-mobile .fc-col-header-cell-cushion {
+    padding: 6px 2px;
+    font-size: 10px;
+  }
+
+  /* Hoy: sin recuadro de fondo, solo el número marcado */
+  .calendar-shell-mobile .fc-daygrid-day.fc-day-today {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Celdas compactas: número centrado arriba, poca altura */
+  .calendar-shell-mobile .fc-daygrid-day-frame {
+    min-height: 46px;
+  }
+  .calendar-shell-mobile .fc-daygrid-day-top {
+    justify-content: center;
+  }
+  .calendar-shell-mobile .fc-daygrid-day-number {
+    padding: 5px 0 2px !important;
+    font-size: 15px;
+    font-weight: 500;
+    color: #e2e8f0;
+  }
+
+  /* Barritas de color sin texto, centradas bajo el número (como en iPhone).
      El texto/detalle se lee en la lista de abajo al picar el día. */
   .calendar-shell-mobile .fc-daygrid-day-events {
-    margin-top: 3px;
-    padding: 0 3px;
+    margin-top: 1px;
+    padding: 0 7px;
     min-height: 0 !important;
   }
 
@@ -306,8 +349,8 @@ input[type="number"] {
   }
 
   .calendar-shell-mobile .fc-daygrid-event {
-    height: 5px;
-    min-height: 5px;
+    height: 4px;
+    min-height: 4px;
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
@@ -336,14 +379,22 @@ input[type="number"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 26px;
-    height: 26px;
-    margin: 4px 6px;
-    padding: 0 5px;
+    min-width: 28px;
+    height: 28px;
+    margin: 2px auto;
+    padding: 0 !important;
     border-radius: 999px;
     background: rgba(226, 232, 240, 0.16);
     color: #ffffff !important;
     font-weight: 700;
+  }
+
+  /* Hoy: círculo relleno centrado (sobrescribe el estilo de escritorio) */
+  .calendar-shell-mobile .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+    margin: 2px auto;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 !important;
   }
 
   .calendar-shell .fc-header-toolbar {

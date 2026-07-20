@@ -2189,7 +2189,9 @@ function openEditVacation() {
                 height="auto"
                 views={{
                   dayGridMonth: {
-                    dayMaxEvents: false,
+                    // En móvil limitamos las barritas para que las filas queden
+                    // uniformes y compactas como en el calendario de iPhone.
+                    dayMaxEvents: isMobile ? 3 : false,
                     fixedWeekCount: false,
                   },
                 }}
