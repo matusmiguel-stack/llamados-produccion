@@ -148,6 +148,11 @@ export default function Home() {
   const [mobileSelectedDay, setMobileSelectedDay] = useState<string>(() =>
     new Date().toLocaleDateString("sv")
   )
+  // Tooltip de escritorio al pasar el mouse sobre un evento del calendario.
+  const [hoverTip, setHoverTip] = useState<
+    | null
+    | { x: number; y: number; below: boolean; title: string; time: string; participants: string[] }
+  >(null)
 
   const [events, setEvents] = useState<any[]>([])
   const [allShoots, setAllShoots] = useState<any[]>([])
@@ -1024,6 +1029,74 @@ export default function Home() {
     const end = ev.end ? String(ev.end) : ""
     const endHM = end.length >= 16 ? end.slice(11, 16) : ""
     return endHM ? `${startHM} – ${endHM}` : startHM
+  }
+
+  // ── Tooltip de escritorio ─────────────────────────────────────────────────
+  // Etiqueta de fecha/horario legible a partir de un evento de FullCalendar.
+  function hoverTimeLabel(ev: any): string {
+    const start: Date | null = ev.start
+    if (!start) return ""
+    const dateFmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" })
+    const timeFmt = (d: Date) =>
+      d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false })
+
+    if (ev.allDay) {
+      const end: Date | null = ev.end
+      // El `end` de un evento de día completo es exclusivo: le restamos un día
+      // para mostrar el último día real del rango.
+      if (end) {
+        const lastDay = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+        if (lastDay.toDateString() !== start.toDateString()) {
+          return `${dateFmt(start)} – ${dateFmt(lastDay)}`
+        }
+      }
+      return `${dateFmt(start)} · Todo el día`
+    }
+
+    const end: Date | null = ev.end
+    const base = `${dateFmt(start)} · ${timeFmt(start)}`
+    return end ? `${base} – ${timeFmt(end)}` : base
+  }
+
+  // Nombres de los participantes de un evento según su tipo.
+  function hoverParticipants(id: string): string[] {
+    if (id.startsWith(JUNTA_EVENT_PREFIX)) {
+      const juntaId = id.slice(JUNTA_EVENT_PREFIX.length)
+      return (juntaAttendeeMap[juntaId] || [])
+        .map((empId) => employees.find((e: any) => e.id === empId))
+        .filter(Boolean)
+        .map((e: any) => employeeDisplayName(e))
+    }
+    if (id.startsWith(VACATION_EVENT_PREFIX)) {
+      return getVacationEmployees(id.slice(VACATION_EVENT_PREFIX.length)).map((e: any) =>
+        employeeDisplayName(e)
+      )
+    }
+    if (id.startsWith(BIRTHDAY_EVENT_PREFIX) || id.startsWith(ANNIVERSARY_EVENT_PREFIX)) {
+      const prefix = id.startsWith(BIRTHDAY_EVENT_PREFIX) ? BIRTHDAY_EVENT_PREFIX : ANNIVERSARY_EVENT_PREFIX
+      const empId = id.slice(prefix.length).split(":")[0]
+      const emp = employees.find((e: any) => e.id === empId)
+      return emp ? [employeeDisplayName(emp)] : []
+    }
+    if (id.startsWith(ENSAYO_EVENT_PREFIX)) return []
+    // Llamado
+    return getShootEmployees(id).map((e: any) => employeeDisplayName(e))
+  }
+
+  function handleEventMouseEnter(info: any) {
+    if (isMobile) return
+    const rect = info.el.getBoundingClientRect()
+    // Si el evento está muy arriba, mostramos el tooltip debajo para que no se
+    // salga de la pantalla.
+    const below = rect.top < 170
+    setHoverTip({
+      x: rect.left + rect.width / 2,
+      y: below ? rect.bottom : rect.top,
+      below,
+      title: info.event.title,
+      time: hoverTimeLabel(info.event),
+      participants: hoverParticipants(String(info.event.id)),
+    })
   }
 
   // Abre el formulario de creación con el día ya prellenado.
@@ -2226,6 +2299,8 @@ function openEditVacation() {
                 eventClick={handleEventClick}
                 eventDrop={updateEventDate}
                 eventResize={updateEventDate}
+                eventMouseEnter={handleEventMouseEnter}
+                eventMouseLeave={() => setHoverTip(null)}
                 eventDisplay="block"
               />
 
@@ -2255,6 +2330,8 @@ function openEditVacation() {
                         eventClick={handleEventClick}
                         eventDrop={updateEventDate}
                         eventResize={updateEventDate}
+                        eventMouseEnter={handleEventMouseEnter}
+                        eventMouseLeave={() => setHoverTip(null)}
                         eventDisplay="block"
                       />
                     </div>
@@ -4237,6 +4314,33 @@ function openEditVacation() {
         </div>
       )}
 
+      {/* Tooltip de escritorio al pasar el mouse sobre un evento */}
+      {!isMobile && hoverTip && (
+        <div
+          style={{
+            ...eventTooltipStyle,
+            left: hoverTip.x,
+            top: hoverTip.y,
+            transform: hoverTip.below
+              ? "translate(-50%, 10px)"
+              : "translate(-50%, calc(-100% - 10px))",
+          }}
+        >
+          <p style={eventTooltipTitleStyle}>{hoverTip.title}</p>
+          {hoverTip.time && <p style={eventTooltipTimeStyle}>🕑 {hoverTip.time}</p>}
+          {hoverTip.participants.length > 0 && (
+            <div style={eventTooltipPeopleStyle}>
+              <span style={eventTooltipPeopleLabelStyle}>
+                👥 {hoverTip.participants.length}
+              </span>
+              <span style={eventTooltipPeopleNamesStyle}>
+                {hoverTip.participants.join(", ")}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       </main>
     </div>
   )
@@ -4737,6 +4841,58 @@ const panelHintStyle: React.CSSProperties = {
   margin: 0,
   color: "#64748b",
   fontSize: 11,
+}
+
+// ── Tooltip de escritorio al pasar el mouse sobre un evento ──────────────────
+const eventTooltipStyle: React.CSSProperties = {
+  position: "fixed",
+  zIndex: 4000,
+  maxWidth: 280,
+  padding: "10px 12px",
+  borderRadius: 10,
+  background: "rgba(15, 23, 42, 0.97)",
+  border: "1px solid rgba(148,163,184,0.22)",
+  boxShadow: "0 14px 40px rgba(0,0,0,0.45)",
+  backdropFilter: "blur(8px)",
+  pointerEvents: "none",
+  animation: "modal-overlay-in 0.12s ease-out both",
+}
+
+const eventTooltipTitleStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#f8fafc",
+  fontSize: 13,
+  fontWeight: 700,
+  lineHeight: 1.3,
+}
+
+const eventTooltipTimeStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  color: "#cbd5e1",
+  fontSize: 12,
+  fontWeight: 500,
+}
+
+const eventTooltipPeopleStyle: React.CSSProperties = {
+  marginTop: 6,
+  paddingTop: 6,
+  borderTop: "1px solid rgba(148,163,184,0.16)",
+  display: "flex",
+  gap: 6,
+}
+
+const eventTooltipPeopleLabelStyle: React.CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 11,
+  fontWeight: 700,
+  flexShrink: 0,
+}
+
+const eventTooltipPeopleNamesStyle: React.CSSProperties = {
+  color: "#e2e8f0",
+  fontSize: 11.5,
+  fontWeight: 500,
+  lineHeight: 1.35,
 }
 
 // ── Lista de eventos del día (vista móvil estilo iPhone) ────────────────────
