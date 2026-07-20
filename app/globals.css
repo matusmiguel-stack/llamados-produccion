@@ -359,6 +359,14 @@ input[type="number"] {
     white-space: nowrap;
   }
 
+  /* Las barritas son solo indicadores visuales: no interceptan el tap, así
+     picar en cualquier parte del día (incluidas las barritas) selecciona el
+     día y despliega la lista de abajo, en vez de abrir el evento. */
+  .calendar-shell-mobile .fc-daygrid-event-harness,
+  .calendar-shell-mobile .fc-daygrid-event {
+    pointer-events: none !important;
+  }
+
   .calendar-shell-mobile .fc-daygrid-event .fc-event-main,
   .calendar-shell-mobile .fc-daygrid-event .fc-event-title,
   .calendar-shell-mobile .fc-daygrid-event .fc-event-title-container,
