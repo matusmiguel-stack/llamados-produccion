@@ -35,7 +35,7 @@ type EgresoItem = {
   pago_fecha: string | null
 }
 
-type EditState = { qty: string; days: string; unit_price: string; contact: string; fecha_pago: string }
+type EditState = { qty: string; days: string; unit_price: string; contact: string; fecha_pago: string; section_id: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,12 +97,16 @@ export function EgresosPanel({
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [employees, setEmployees]   = useState<Employee[]>([])
   const [editingId, setEditingId]   = useState<string | null>(null)
-  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "" })
+  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "", section_id: "" })
   const [saving, setSaving]         = useState(false)
   // Sub-listas de egresos (secciones de la cotización contenedora) + alta de gasto
   const [subLists, setSubLists]           = useState<{ id: string; name: string; order_index: number }[]>([])
   const [containerQuoteId, setContainerQuoteId] = useState<string | null>(null)
   const [addSectionId, setAddSectionId]   = useState<string>("")
+  // Pestaña de sub-lista activa (se navega entre ellas, no se ven todas juntas)
+  const [activeSubListId, setActiveSubListId] = useState<string>("")
+  // Modal para crear / renombrar sub-listas (mismo look que los demás modales)
+  const [subListModal, setSubListModal] = useState<{ mode: "create" | "rename"; id?: string; value: string } | null>(null)
   const [addOpen, setAddOpen]       = useState(false)
   const [addDesc, setAddDesc]       = useState("")
   const [addContact, setAddContact] = useState("")
@@ -265,10 +269,16 @@ export function EgresosPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
-  // Mantener seleccionada una sub-lista válida en el formulario de alta.
+  // Mantener seleccionada una sub-lista válida en el formulario de alta y en la
+  // pestaña activa.
   useEffect(() => {
-    if (subLists.length === 0) { if (addSectionId) setAddSectionId(""); return }
+    if (subLists.length === 0) {
+      if (addSectionId) setAddSectionId("")
+      if (activeSubListId) setActiveSubListId("")
+      return
+    }
     if (!subLists.some((s) => s.id === addSectionId)) setAddSectionId(subLists[0].id)
+    if (!subLists.some((s) => s.id === activeSubListId)) setActiveSubListId(subLists[0].id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subLists])
 
@@ -286,36 +296,41 @@ export function EgresosPanel({
     return data.id
   }
 
-  async function addSubList() {
-    const nombre = window.prompt("Nombre de la sub-lista (ej. Recetas Julio, Salmón, Trends):")?.trim()
-    if (!nombre) return
+  function openCreateSubList() { setSubListModal({ mode: "create", value: "" }) }
+  function openRenameSubList(id: string, current: string) { setSubListModal({ mode: "rename", id, value: current }) }
+
+  async function submitSubListModal() {
+    if (!subListModal) return
+    const nombre = subListModal.value.trim()
+    if (!nombre) { alert("Escribe un nombre para la sub-lista"); return }
     setSubBusy(true)
     try {
-      const quoteId = await ensureContainerQuote()
-      if (!quoteId) return
-      const maxOrder = Math.max(0, ...subLists.map((s) => s.order_index || 0))
-      const { data, error } = await supabase
-        .from("quote_sections")
-        .insert({ quote_id: quoteId, name: nombre, order_index: maxOrder + 1 })
-        .select("id,name,order_index")
-        .single()
-      if (error) throw error
-      setSubLists((prev) => [...prev, { id: data.id, name: data.name, order_index: data.order_index }])
-      setAddSectionId(data.id)
+      if (subListModal.mode === "create") {
+        const quoteId = await ensureContainerQuote()
+        if (!quoteId) return
+        const maxOrder = Math.max(0, ...subLists.map((s) => s.order_index || 0))
+        const { data, error } = await supabase
+          .from("quote_sections")
+          .insert({ quote_id: quoteId, name: nombre, order_index: maxOrder + 1 })
+          .select("id,name,order_index")
+          .single()
+        if (error) throw error
+        setSubLists((prev) => [...prev, { id: data.id, name: data.name, order_index: data.order_index }])
+        setAddSectionId(data.id)
+        setActiveSubListId(data.id)
+      } else {
+        const id = subListModal.id!
+        const { error } = await supabase.from("quote_sections").update({ name: nombre }).eq("id", id)
+        if (error) throw error
+        setSubLists((prev) => prev.map((s) => (s.id === id ? { ...s, name: nombre } : s)))
+        setItems((prev) => prev.map((it) => (it.section_id === id ? { ...it, section_name: nombre } : it)))
+      }
+      setSubListModal(null)
     } catch (err: any) {
-      alert("Error al crear la sub-lista: " + err.message)
+      alert("Error al guardar la sub-lista: " + err.message)
     } finally {
       setSubBusy(false)
     }
-  }
-
-  async function renameSubList(id: string, current: string) {
-    const nombre = window.prompt("Nuevo nombre de la sub-lista:", current)?.trim()
-    if (!nombre || nombre === current) return
-    const { error } = await supabase.from("quote_sections").update({ name: nombre }).eq("id", id)
-    if (error) { alert("Error al renombrar: " + error.message); return }
-    setSubLists((prev) => prev.map((s) => (s.id === id ? { ...s, name: nombre } : s)))
-    setItems((prev) => prev.map((it) => (it.section_id === id ? { ...it, section_name: nombre } : it)))
   }
 
   async function deleteSubList(id: string, name: string) {
@@ -340,6 +355,7 @@ export function EgresosPanel({
       unit_price: item.actual_unit_price != null ? String(item.actual_unit_price) : "",
       contact,
       fecha_pago: item.pago_fecha ? String(item.pago_fecha).split("T")[0] : "",
+      section_id: item.section_id,
     })
     setEditingId(item.id)
   }
@@ -404,10 +420,13 @@ export function EgresosPanel({
       else if (editState.contact.startsWith("emp:")) actual_employee_id = editState.contact.slice(4)
 
       const pago_fecha = editState.fecha_pago !== "" ? editState.fecha_pago : null
+      // Permite mover el gasto a otra sub-lista (sección de la contenedora).
+      const section_id = editState.section_id || undefined
+      const newSectionName = subLists.find((s) => s.id === section_id)?.name
 
       const { error } = await supabase
         .from("quote_items")
-        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha })
+        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha, ...(section_id ? { section_id } : {}) })
         .eq("id", itemId)
       if (error) throw error
 
@@ -415,7 +434,8 @@ export function EgresosPanel({
       const { label: supplierLabel, type: supplierType } = resolveLabel(proveedores, employees, editState.contact)
       setItems(prev => prev.map(it => {
         if (it.id !== itemId) return it
-        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha }
+        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha,
+          ...(section_id ? { section_id, section_name: newSectionName ?? it.section_name } : {}) }
         // Recalcular monto — si queda en 0 lo quitamos
         const q2 = actual_qty        != null ? actual_qty        : Math.max(it.qty, 1)
         const d2 = actual_days       != null ? actual_days       : Math.max(it.days, 1)
@@ -634,36 +654,25 @@ export function EgresosPanel({
 
   if (loading) return <p style={{ color: "#64748b", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
 
-  // Barra de sub-listas: crear / renombrar / eliminar (solo en modo directo)
+  // Navegación entre sub-listas: pestañas (se ve una a la vez, no todas juntas)
   const subListsUI = directEnabled ? (
-    <div style={{ border: "1px solid rgba(148,163,184,0.14)", borderRadius: 12, background: "rgba(255,255,255,0.02)", padding: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: subLists.length ? 8 : 0 }}>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.6 }}>
-          🗂 Sub-listas de egresos
-        </p>
-        <button onClick={addSubList} disabled={subBusy}
-          style={{ padding: "6px 14px", borderRadius: 8, cursor: subBusy ? "not-allowed" : "pointer",
-            background: "rgba(167,139,250,0.14)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd", fontSize: 12, fontWeight: 700, opacity: subBusy ? 0.6 : 1 }}>
-          + Nueva sub-lista
-        </button>
-      </div>
-      {subLists.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {subLists.map((s) => (
-            <span key={s.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 6px 4px 12px", borderRadius: 999, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.18)" }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>{s.name}</span>
-              <button onClick={() => renameSubList(s.id, s.name)} title="Renombrar"
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>✎</button>
-              <button onClick={() => deleteSubList(s.id, s.name)} title="Eliminar"
-                style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>🗑</button>
-            </span>
-          ))}
-        </div>
-      )}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      {subLists.map((s) => {
+        const active = s.id === activeSubListId
+        return (
+          <button key={s.id} onClick={() => setActiveSubListId(s.id)}
+            style={active ? subTabActiveStyle : subTabStyle}>
+            🗂 {s.name}
+          </button>
+        )
+      })}
+      <button onClick={openCreateSubList} disabled={subBusy} style={subTabAddStyle}>
+        + Nueva sub-lista
+      </button>
       {subLists.length === 0 && (
-        <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b" }}>
+        <span style={{ fontSize: 11, color: "#64748b" }}>
           Crea una sub-lista (ej. Recetas Julio, Salmón, Trends) para empezar a capturar gastos.
-        </p>
+        </span>
       )}
     </div>
   ) : null
@@ -673,7 +682,7 @@ export function EgresosPanel({
     <div style={{ border: "1px solid rgba(52,211,153,0.25)", borderRadius: 12, background: "rgba(52,211,153,0.04)", padding: addOpen ? 16 : 0 }}>
       {!addOpen ? (
         <button
-          onClick={() => { if (subLists.length === 0) { addSubList(); return } setAddOpen(true) }}
+          onClick={() => { if (subLists.length === 0) { openCreateSubList(); return } if (activeSubListId) setAddSectionId(activeSubListId); setAddOpen(true) }}
           style={{ width: "100%", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
             background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.30)",
             color: "#6ee7b7", fontSize: 14, fontWeight: 700 }}
@@ -690,7 +699,7 @@ export function EgresosPanel({
               {subLists.length === 0 && <option value="">(crea una sub-lista)</option>}
               {subLists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <button type="button" onClick={addSubList} disabled={subBusy}
+            <button type="button" onClick={openCreateSubList} disabled={subBusy}
               style={{ padding: "7px 12px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px dashed rgba(167,139,250,0.4)", color: "#c4b5fd", fontSize: 12, fontWeight: 600 }}>
               + Nueva
             </button>
@@ -801,7 +810,20 @@ export function EgresosPanel({
 
                 return (
                   <tr key={item.id} style={{ background: "rgba(167,139,250,0.06)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
-                    <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
+                    <td style={{ ...tdStyle, fontSize: 12 }}>
+                      {directEnabled && containerQuoteId && item.quote_id === containerQuoteId ? (
+                        <select
+                          value={editState.section_id}
+                          onChange={e => setEditState(s => ({ ...s, section_id: e.target.value }))}
+                          title="Mover a otra sub-lista"
+                          style={{ ...editInputStyle, textAlign: "left", width: "100%", maxWidth: 140 }}
+                        >
+                          {subLists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      ) : (
+                        <span style={{ color: "#64748b" }}>{item.section_name}</span>
+                      )}
+                    </td>
                     <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
                       {item.description}
                     </td>
@@ -1016,14 +1038,21 @@ export function EgresosPanel({
         ))}
       </div>
 
-      {/* Egresos directos, agrupados por sub-lista */}
-      {directEnabled && subLists.map((s) => {
-        const sItems = sortItems(containerVisible.filter((i) => i.section_id === s.id))
+      {/* Egresos directos: solo la sub-lista activa (se navega con las pestañas) */}
+      {directEnabled && subLists.length > 0 && (() => {
+        const active = subLists.find((s) => s.id === activeSubListId) || subLists[0]
+        const sItems = sortItems(containerVisible.filter((i) => i.section_id === active.id))
         const sTotal = sItems.reduce((acc, i) => acc + montoEgreso(i), 0)
         return (
-          <div key={s.id}>
+          <div>
             <div style={quoteHeaderStyle}>
-              <span style={quoteLabelStyle}>🗂 {s.name}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={quoteLabelStyle}>🗂 {active.name}</span>
+                <button onClick={() => openRenameSubList(active.id, active.name)} title="Renombrar sub-lista"
+                  style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>✎</button>
+                <button onClick={() => deleteSubList(active.id, active.name)} title="Eliminar sub-lista"
+                  style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>🗑</button>
+              </span>
               <span style={quoteTotalStyle}>{fmt(sTotal)}</span>
             </div>
             {sItems.length > 0 ? renderEgresoTable(sItems) : (
@@ -1033,7 +1062,7 @@ export function EgresosPanel({
             )}
           </div>
         )
-      })}
+      })()}
 
       {/* Egresos provenientes de cotizaciones reales */}
       {Object.entries(byQuote).map(([quoteId, { quote_name, items: qItems }]) => {
@@ -1048,6 +1077,36 @@ export function EgresosPanel({
           </div>
         )
       })}
+
+      {/* Modal para crear / renombrar sub-lista */}
+      {subListModal && (
+        <div style={payOverlayStyle} onClick={() => !subBusy && setSubListModal(null)}>
+          <div style={{ ...payPanelStyle, maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#c4b5fd" }}>
+              {subListModal.mode === "create" ? "Nueva sub-lista" : "Renombrar sub-lista"}
+            </p>
+            <p style={{ margin: "6px 0 16px", fontSize: 12, color: "#94a3b8" }}>
+              Ej. Recetas Julio, Salmón, Trends
+            </p>
+            <label style={payLabelStyle}>Nombre</label>
+            <input
+              autoFocus
+              value={subListModal.value}
+              onChange={(e) => setSubListModal((m) => (m ? { ...m, value: e.target.value } : m))}
+              onKeyDown={(e) => { if (e.key === "Enter" && !subBusy) submitSubListModal() }}
+              placeholder="Nombre de la sub-lista"
+              style={payInputStyle}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
+              <button onClick={() => setSubListModal(null)} disabled={subBusy} style={payCancelStyle}>Cancelar</button>
+              <button onClick={submitSubListModal} disabled={subBusy}
+                style={{ ...payConfirmStyle, borderColor: "rgba(167,139,250,0.4)", background: "rgba(167,139,250,0.16)", color: "#c4b5fd", opacity: subBusy ? 0.6 : 1 }}>
+                {subBusy ? "Guardando…" : subListModal.mode === "create" ? "✓ Crear" : "✓ Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de pago (anticipo / comprobación) */}
       {payModal && (
@@ -1170,6 +1229,22 @@ const quoteHeaderStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.12)", borderBottom: "none",
 }
 const quoteLabelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#e2e8f0" }
+
+// Pestañas de sub-listas
+const subTabStyle: React.CSSProperties = {
+  padding: "7px 14px", borderRadius: 999, cursor: "pointer",
+  border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.03)",
+  color: "#94a3b8", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
+  maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis",
+}
+const subTabActiveStyle: React.CSSProperties = {
+  ...subTabStyle,
+  border: "1px solid rgba(167,139,250,0.55)", background: "rgba(167,139,250,0.16)", color: "#c4b5fd", cursor: "default",
+}
+const subTabAddStyle: React.CSSProperties = {
+  ...subTabStyle,
+  border: "1px dashed rgba(52,211,153,0.40)", background: "rgba(52,211,153,0.06)", color: "#34d399",
+}
 const quoteTotalStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: "#f87171", fontFamily: "monospace" }
 const tableWrapStyle: React.CSSProperties  = { overflowX: "auto", borderRadius: "0 0 10px 10px", border: "1px solid rgba(148,163,184,0.10)" }
 const tableStyle: React.CSSProperties      = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#cbd5e1" }
