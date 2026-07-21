@@ -68,8 +68,31 @@ function emptyMatriz(projectId: string): MatrizData {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function isUrl(s: string): boolean {
-  return s.startsWith("http://") || s.startsWith("https://")
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+
+// Convierte los enlaces dentro de una línea en <a> clickeables, dejando el
+// resto como texto. Así una línea tipo "Master 1: https://..." también linkea.
+function renderLineWithLinks(line: string): React.ReactNode {
+  const parts = line.split(URL_REGEX)
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          color: "#60a5fa",
+          textDecoration: "underline",
+          wordBreak: "break-all",
+        }}
+      >
+        {part}
+      </a>
+    ) : (
+      <React.Fragment key={i}>{part}</React.Fragment>
+    )
+  )
 }
 
 function ValueView({
@@ -81,39 +104,33 @@ function ValueView({
   center?: boolean
   bold?: boolean
 }) {
-  if (!val) return <span style={{ color: "#2d3748" }}>—</span>
-  if (isUrl(val)) {
-    return (
-      <a
-        href={val}
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          color: "#60a5fa",
-          textDecoration: "underline",
-          fontSize: 13,
-          wordBreak: "break-all",
-          lineHeight: 1.5,
-        }}
-      >
-        {val}
-      </a>
-    )
-  }
+  if (!val || !val.trim()) return <span style={{ color: "#2d3748" }}>—</span>
+  // Cada línea se muestra por separado; los enlaces se vuelven clickeables.
+  const lines = val.split("\n")
   return (
-    <span
+    <div
       style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
         color: "#e2e8f0",
         fontSize: 13,
         lineHeight: 1.5,
-        whiteSpace: "pre-wrap",
         fontWeight: bold ? 700 : 400,
         textAlign: center ? "center" : "left",
-        display: "block",
       }}
     >
-      {val}
-    </span>
+      {lines.map((line, i) =>
+        line.trim() === "" ? (
+          // Línea en blanco: pequeño espacio para mantener separaciones
+          <span key={i} style={{ height: 6 }} />
+        ) : (
+          <span key={i} style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            {renderLineWithLinks(line)}
+          </span>
+        )
+      )}
+    </div>
   )
 }
 
@@ -179,23 +196,13 @@ function GenCell({
       <div style={labelCell}>{label}</div>
       <div style={{ ...genValueCellStyle, fontWeight: bold ? 700 : 400 }}>
         {editing ? (
-          multiline ? (
-            <textarea
-              value={value}
-              onChange={(e) => onChange(fieldKey, e.target.value)}
-              style={textareaStyle}
-              rows={2}
-              placeholder={label}
-            />
-          ) : (
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => onChange(fieldKey, e.target.value)}
-              style={inputStyle}
-              placeholder={label}
-            />
-          )
+          <textarea
+            value={value}
+            onChange={(e) => onChange(fieldKey, e.target.value)}
+            style={textareaStyle}
+            rows={multiline ? 2 : 1}
+            placeholder={label}
+          />
         ) : (
           <ValueView val={value} bold={bold} />
         )}
@@ -234,23 +241,13 @@ function FieldRow({
       <div style={singleLabelCellStyle(isMobile)}>{label}</div>
       <div style={singleValueCellStyle}>
         {editing ? (
-          multiline ? (
-            <textarea
-              value={value}
-              onChange={(e) => onChange(fieldKey, e.target.value)}
-              style={textareaStyle}
-              rows={3}
-              placeholder={label + "..."}
-            />
-          ) : (
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => onChange(fieldKey, e.target.value)}
-              style={inputStyle}
-              placeholder={label}
-            />
-          )
+          <textarea
+            value={value}
+            onChange={(e) => onChange(fieldKey, e.target.value)}
+            style={textareaStyle}
+            rows={multiline ? 3 : 2}
+            placeholder={multiline ? label + "..." : label}
+          />
         ) : (
           <ValueView val={value} />
         )}
@@ -292,12 +289,12 @@ function BackupRow({
               }}
             >
               <span style={{ color: "#64748b", fontSize: 12 }}>Backup de producción:</span>
-              <input
-                type="text"
+              <textarea
                 value={draft.backup_produccion}
                 onChange={(e) => onChange("backup_produccion", e.target.value)}
-                style={inputStyle}
-                placeholder="Discos, ubicación..."
+                style={textareaStyle}
+                rows={2}
+                placeholder="Discos, ubicación, links..."
               />
             </div>
             <div
@@ -309,33 +306,25 @@ function BackupRow({
               }}
             >
               <span style={{ color: "#64748b", fontSize: 12 }}>Backup de post:</span>
-              <input
-                type="text"
+              <textarea
                 value={draft.backup_post}
                 onChange={(e) => onChange("backup_post", e.target.value)}
-                style={inputStyle}
-                placeholder="Discos, ubicación..."
+                style={textareaStyle}
+                rows={2}
+                placeholder="Discos, ubicación, links..."
               />
             </div>
           </>
         ) : (
-          <div style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#94a3b8" }}>
-              Backup de producción:{" "}
-              {draft.backup_produccion ? (
-                <span style={{ color: "#e2e8f0" }}>{draft.backup_produccion}</span>
-              ) : (
-                <span style={{ color: "#2d3748" }}>—</span>
-              )}
-            </span>
-            <span style={{ fontSize: 13, color: "#94a3b8" }}>
-              Backup de post:{" "}
-              {draft.backup_post ? (
-                <span style={{ color: "#e2e8f0" }}>{draft.backup_post}</span>
-              ) : (
-                <span style={{ color: "#2d3748" }}>—</span>
-              )}
-            </span>
+          <div style={{ display: "grid", gap: 10 }}>
+            <div>
+              <span style={{ fontSize: 12, color: "#64748b" }}>Backup de producción:</span>
+              <ValueView val={draft.backup_produccion} />
+            </div>
+            <div>
+              <span style={{ fontSize: 12, color: "#64748b" }}>Backup de post:</span>
+              <ValueView val={draft.backup_post} />
+            </div>
           </div>
         )}
       </div>
