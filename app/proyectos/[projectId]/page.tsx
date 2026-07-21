@@ -226,7 +226,9 @@ export default function ProjectDetailPage() {
   const visibleModules = esGastosInternos
     ? projectModules.filter((m) => m.id === "egresos")
     : isProductor
-      ? projectModules.filter((m) => m.id === "matriz")
+      // En proyectos con egresos directos los productores también entran a
+      // Control de Egresos (ellos generan las sub-listas y capturan gastos).
+      ? projectModules.filter((m) => m.id === "matriz" || (esEgresosDirectos && m.id === "egresos"))
       : projectModules
 
   const activeModuleData = useMemo(
