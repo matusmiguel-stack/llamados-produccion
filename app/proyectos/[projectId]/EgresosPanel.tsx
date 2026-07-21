@@ -35,7 +35,7 @@ type EgresoItem = {
   pago_fecha: string | null
 }
 
-type EditState = { qty: string; days: string; unit_price: string; contact: string; fecha_pago: string; section_id: string }
+type EditState = { qty: string; days: string; unit_price: string; contact: string; fecha_pago: string; section_id: string; pago_modo: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,7 +97,7 @@ export function EgresosPanel({
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [employees, setEmployees]   = useState<Employee[]>([])
   const [editingId, setEditingId]   = useState<string | null>(null)
-  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "", section_id: "" })
+  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "", section_id: "", pago_modo: "" })
   const [saving, setSaving]         = useState(false)
   // Sub-listas de egresos (secciones de la cotización contenedora) + alta de gasto
   const [subLists, setSubLists]           = useState<{ id: string; name: string; order_index: number }[]>([])
@@ -111,6 +111,8 @@ export function EgresosPanel({
   const [addDesc, setAddDesc]       = useState("")
   const [addContact, setAddContact] = useState("")
   const [addMonto, setAddMonto]     = useState("")
+  // Modo de pago del gasto: "" = Pago a programación, o anticipo / comprobación
+  const [addPagoModo, setAddPagoModo] = useState<string>("")
   const [adding, setAdding]         = useState(false)
   const [subBusy, setSubBusy]       = useState(false)
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
@@ -356,6 +358,7 @@ export function EgresosPanel({
       contact,
       fecha_pago: item.pago_fecha ? String(item.pago_fecha).split("T")[0] : "",
       section_id: item.section_id,
+      pago_modo: item.pago_modo || "",
     })
     setEditingId(item.id)
   }
@@ -389,9 +392,10 @@ export function EgresosPanel({
         order_index: maxOrder + 1,
         actual_qty: 1, actual_days: 1, actual_unit_price: monto,
         actual_supplier_id, actual_employee_id,
+        pago_modo: addPagoModo || null,
       })
       if (error) throw error
-      setAddDesc(""); setAddContact(""); setAddMonto(""); setAddOpen(false)
+      setAddDesc(""); setAddContact(""); setAddMonto(""); setAddPagoModo(""); setAddOpen(false)
       await load()
     } catch (err: any) {
       alert("Error al agregar el gasto: " + err.message)
@@ -420,13 +424,14 @@ export function EgresosPanel({
       else if (editState.contact.startsWith("emp:")) actual_employee_id = editState.contact.slice(4)
 
       const pago_fecha = editState.fecha_pago !== "" ? editState.fecha_pago : null
+      const pago_modo = editState.pago_modo || null
       // Permite mover el gasto a otra sub-lista (sección de la contenedora).
       const section_id = editState.section_id || undefined
       const newSectionName = subLists.find((s) => s.id === section_id)?.name
 
       const { error } = await supabase
         .from("quote_items")
-        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha, ...(section_id ? { section_id } : {}) })
+        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha, pago_modo, ...(section_id ? { section_id } : {}) })
         .eq("id", itemId)
       if (error) throw error
 
@@ -434,7 +439,7 @@ export function EgresosPanel({
       const { label: supplierLabel, type: supplierType } = resolveLabel(proveedores, employees, editState.contact)
       setItems(prev => prev.map(it => {
         if (it.id !== itemId) return it
-        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha,
+        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha, pago_modo,
           ...(section_id ? { section_id, section_name: newSectionName ?? it.section_name } : {}) }
         // Recalcular monto — si queda en 0 lo quitamos
         const q2 = actual_qty        != null ? actual_qty        : Math.max(it.qty, 1)
@@ -727,13 +732,22 @@ export function EgresosPanel({
               style={{ ...addInputStyle, flex: 1, minWidth: 120 }}
             />
           </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Tipo de pago:</span>
+            <select value={addPagoModo} onChange={e => setAddPagoModo(e.target.value)}
+              style={{ ...addInputStyle, width: "auto", minWidth: 200, flex: "0 1 auto", padding: "8px 10px" }}>
+              <option value="">Pago a programación</option>
+              <option value="anticipo">Anticipo</option>
+              <option value="comprobacion">Comprobación</option>
+            </select>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={addGastoInterno} disabled={adding}
               style={{ padding: "9px 18px", borderRadius: 8, cursor: adding ? "not-allowed" : "pointer",
                 background: "rgba(52,211,153,0.18)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399", fontSize: 13, fontWeight: 700, opacity: adding ? 0.6 : 1 }}>
               {adding ? "Guardando…" : "✓ Agregar"}
             </button>
-            <button onClick={() => { setAddOpen(false); setAddDesc(""); setAddContact(""); setAddMonto("") }}
+            <button onClick={() => { setAddOpen(false); setAddDesc(""); setAddContact(""); setAddMonto(""); setAddPagoModo("") }}
               style={{ padding: "9px 16px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px solid rgba(148,163,184,0.2)", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>
               Cancelar
             </button>
@@ -854,15 +868,27 @@ export function EgresosPanel({
                       {fmt(previewMonto)}
                     </td>
                     <td style={tdStyle}>
-                      {(item.pago_modo === "anticipo" || item.pago_modo === "comprobacion") && (
-                        <input
-                          type="date"
-                          value={editState.fecha_pago}
-                          onChange={e => setEditState(s => ({ ...s, fecha_pago: e.target.value }))}
-                          title="Fecha de pago"
-                          style={{ ...editInputStyle, width: 130 }}
-                        />
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <select
+                          value={editState.pago_modo}
+                          onChange={e => setEditState(s => ({ ...s, pago_modo: e.target.value }))}
+                          title="Tipo de pago"
+                          style={{ ...editInputStyle, textAlign: "left", width: 150 }}
+                        >
+                          <option value="">Pago a programación</option>
+                          <option value="anticipo">Anticipo</option>
+                          <option value="comprobacion">Comprobación</option>
+                        </select>
+                        {(editState.pago_modo === "anticipo" || editState.pago_modo === "comprobacion") && (
+                          <input
+                            type="date"
+                            value={editState.fecha_pago}
+                            onChange={e => setEditState(s => ({ ...s, fecha_pago: e.target.value }))}
+                            title="Fecha de pago"
+                            style={{ ...editInputStyle, width: 150 }}
+                          />
+                        )}
+                      </div>
                     </td>
                     <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
                       <button onClick={() => saveEdit(item.id)} disabled={saving} style={saveBtnStyle}>
