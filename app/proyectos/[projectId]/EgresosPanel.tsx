@@ -78,7 +78,7 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
 
 export function EgresosPanel({
   projectId, isMobile, projectName, projectCode, empresa, projectResponsable,
-  gastosInternos = false,
+  gastosInternos = false, egresosDirectos = false,
 }: {
   projectId: string
   isMobile: boolean
@@ -87,7 +87,11 @@ export function EgresosPanel({
   empresa: "retro_studio" | "retro_films" | null
   projectResponsable: string | null
   gastosInternos?: boolean
+  egresosDirectos?: boolean
 }) {
+  // Modo de captura directa de egresos (sin cotización), con sub-listas.
+  // Aplica a gastos internos (RS0000) y a proyectos marcados como iguala.
+  const directEnabled = gastosInternos || egresosDirectos
   const [loading, setLoading]       = useState(true)
   const [items, setItems]           = useState<EgresoItem[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -95,13 +99,16 @@ export function EgresosPanel({
   const [editingId, setEditingId]   = useState<string | null>(null)
   const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "" })
   const [saving, setSaving]         = useState(false)
-  // Alta de gasto interno (solo en proyectos de gastos internos)
-  const [internalSectionId, setInternalSectionId] = useState<string | null>(null)
+  // Sub-listas de egresos (secciones de la cotización contenedora) + alta de gasto
+  const [subLists, setSubLists]           = useState<{ id: string; name: string; order_index: number }[]>([])
+  const [containerQuoteId, setContainerQuoteId] = useState<string | null>(null)
+  const [addSectionId, setAddSectionId]   = useState<string>("")
   const [addOpen, setAddOpen]       = useState(false)
   const [addDesc, setAddDesc]       = useState("")
   const [addContact, setAddContact] = useState("")
   const [addMonto, setAddMonto]     = useState("")
   const [adding, setAdding]         = useState(false)
+  const [subBusy, setSubBusy]       = useState(false)
   const [sendingBilling, setSendingBilling] = useState<string | null>(null)
   const [sendingAll, setSendingAll]  = useState(false)
 
@@ -167,20 +174,38 @@ export function EgresosPanel({
 
       // Solo la cotización liberada
       const { data: quotes } = await supabase
-        .from("quotes").select("id,name")
+        .from("quotes").select("id,name,egresos_directos")
         .eq("project_id", projectId).eq("released", true)
         .order("created_at", { ascending: true })
-      if (!quotes || quotes.length === 0) { setLoading(false); return }
+      if (!quotes || quotes.length === 0) {
+        // En modo directo el proyecto puede no tener cotización todavía: se deja
+        // vacío para que el usuario cree su primera sub-lista.
+        setItems([]); setSubLists([]); setContainerQuoteId(null)
+        setLoading(false); return
+      }
+
+      // Cotización "contenedora" de egresos directos: sus secciones son las
+      // sub-listas. En gastos internos, si aún no está marcada, se usa la 1ª.
+      // La contenedora debe estar marcada explícitamente. Para gastos internos
+      // heredados (RS0000) sin marcar, se usa la 1ª como respaldo; NO así en
+      // iguala, donde una cotización real no debe confundirse con la contenedora.
+      const container =
+        (quotes as any[]).find((q) => q.egresos_directos) ||
+        (gastosInternos ? quotes[0] : null)
+      const containerId: string | null = container ? container.id : null
+      setContainerQuoteId(containerId)
 
       const allItems: EgresoItem[] = []
       for (const quote of quotes) {
         const { data: sections } = await supabase
-          .from("quote_sections").select("id,name")
+          .from("quote_sections").select("id,name,order_index")
           .eq("quote_id", quote.id).order("order_index", { ascending: true })
         if (!sections) continue
 
-        // En gastos internos hay una sola sección: es el destino de los altas.
-        if (gastosInternos && !internalSectionId) setInternalSectionId(sections[0].id)
+        // Las secciones de la contenedora son las sub-listas de egresos.
+        if (containerId && quote.id === containerId) {
+          setSubLists(sections.map((s: any) => ({ id: s.id, name: s.name, order_index: s.order_index })))
+        }
 
         for (const section of sections) {
           const { data: raw } = await supabase
@@ -240,6 +265,71 @@ export function EgresosPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
+  // Mantener seleccionada una sub-lista válida en el formulario de alta.
+  useEffect(() => {
+    if (subLists.length === 0) { if (addSectionId) setAddSectionId(""); return }
+    if (!subLists.some((s) => s.id === addSectionId)) setAddSectionId(subLists[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subLists])
+
+  // ── Sub-listas de egresos ───────────────────────────────────────────────────
+  // Crea (si hace falta) la cotización contenedora que aloja las sub-listas.
+  async function ensureContainerQuote(): Promise<string | null> {
+    if (containerQuoteId) return containerQuoteId
+    const { data, error } = await supabase
+      .from("quotes")
+      .insert({ project_id: projectId, name: "Egresos", status: "draft", released: true, egresos_directos: true })
+      .select("id")
+      .single()
+    if (error) { alert("Error al preparar egresos: " + error.message); return null }
+    setContainerQuoteId(data.id)
+    return data.id
+  }
+
+  async function addSubList() {
+    const nombre = window.prompt("Nombre de la sub-lista (ej. Recetas Julio, Salmón, Trends):")?.trim()
+    if (!nombre) return
+    setSubBusy(true)
+    try {
+      const quoteId = await ensureContainerQuote()
+      if (!quoteId) return
+      const maxOrder = Math.max(0, ...subLists.map((s) => s.order_index || 0))
+      const { data, error } = await supabase
+        .from("quote_sections")
+        .insert({ quote_id: quoteId, name: nombre, order_index: maxOrder + 1 })
+        .select("id,name,order_index")
+        .single()
+      if (error) throw error
+      setSubLists((prev) => [...prev, { id: data.id, name: data.name, order_index: data.order_index }])
+      setAddSectionId(data.id)
+    } catch (err: any) {
+      alert("Error al crear la sub-lista: " + err.message)
+    } finally {
+      setSubBusy(false)
+    }
+  }
+
+  async function renameSubList(id: string, current: string) {
+    const nombre = window.prompt("Nuevo nombre de la sub-lista:", current)?.trim()
+    if (!nombre || nombre === current) return
+    const { error } = await supabase.from("quote_sections").update({ name: nombre }).eq("id", id)
+    if (error) { alert("Error al renombrar: " + error.message); return }
+    setSubLists((prev) => prev.map((s) => (s.id === id ? { ...s, name: nombre } : s)))
+    setItems((prev) => prev.map((it) => (it.section_id === id ? { ...it, section_name: nombre } : it)))
+  }
+
+  async function deleteSubList(id: string, name: string) {
+    const count = items.filter((it) => it.section_id === id).length
+    if (count > 0) {
+      alert(`"${name}" tiene ${count} gasto${count !== 1 ? "s" : ""}. Bórralos o muévelos antes de eliminar la sub-lista.`)
+      return
+    }
+    if (!confirm(`¿Eliminar la sub-lista "${name}"?`)) return
+    const { error } = await supabase.from("quote_sections").delete().eq("id", id)
+    if (error) { alert("Error al eliminar: " + error.message); return }
+    setSubLists((prev) => prev.filter((s) => s.id !== id))
+  }
+
   function startEdit(item: EgresoItem) {
     const contact = item.actual_supplier_id
       ? `prov:${item.actual_supplier_id}`
@@ -262,7 +352,7 @@ export function EgresosPanel({
     const monto = parseFloat(addMonto)
     if (!desc) { alert("Escribe la descripción del gasto"); return }
     if (!monto || monto <= 0) { alert("Indica el monto del gasto"); return }
-    if (!internalSectionId) { alert("No se encontró la sección de gastos; recarga la página"); return }
+    if (!addSectionId) { alert("Crea o selecciona una sub-lista para el gasto"); return }
     let actual_supplier_id: string | null = null
     let actual_employee_id: string | null = null
     if (addContact.startsWith("prov:")) actual_supplier_id = addContact.slice(5)
@@ -270,12 +360,12 @@ export function EgresosPanel({
 
     setAdding(true)
     try {
-      // Colocar al final de la sección
+      // Colocar al final de la sub-lista
       const { data: ord } = await supabase
-        .from("quote_items").select("order_index").eq("section_id", internalSectionId)
+        .from("quote_items").select("order_index").eq("section_id", addSectionId)
       const maxOrder = Math.max(0, ...((ord || []).map((r: any) => r.order_index || 0)))
       const { error } = await supabase.from("quote_items").insert({
-        section_id: internalSectionId,
+        section_id: addSectionId,
         description: desc,
         qty: 1, days: 1, unit_price: 0,
         released_expense: 0, real_expense: 0,
@@ -526,25 +616,64 @@ export function EgresosPanel({
   }
 
   // ── Agrupar por cotización ─────────────────────────────────────────────────
+  // Los egresos de la cotización contenedora se agrupan por sub-lista (sección);
+  // el resto (cotizaciones reales) se agrupa por cotización como siempre.
   const visibleItems = items.filter(passesFilter)
   const byQuote: Record<string, { quote_name: string; items: EgresoItem[] }> = {}
   for (const item of visibleItems) {
+    if (containerQuoteId && item.quote_id === containerQuoteId) continue
     if (!byQuote[item.quote_id]) byQuote[item.quote_id] = { quote_name: item.quote_name, items: [] }
     byQuote[item.quote_id].items.push(item)
   }
   for (const k of Object.keys(byQuote)) byQuote[k].items = sortItems(byQuote[k].items)
   const totalGlobal = items.reduce((s, i) => s + montoEgreso(i), 0)
   const quoteCount  = Object.keys(byQuote).length
+  // Egresos directos visibles, por sub-lista
+  const containerVisible = containerQuoteId ? visibleItems.filter((i) => i.quote_id === containerQuoteId) : []
 
 
   if (loading) return <p style={{ color: "#64748b", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
 
-  // Formulario para dar de alta un gasto interno (solo en proyectos internos)
-  const addGastoUI = gastosInternos ? (
+  // Barra de sub-listas: crear / renombrar / eliminar (solo en modo directo)
+  const subListsUI = directEnabled ? (
+    <div style={{ border: "1px solid rgba(148,163,184,0.14)", borderRadius: 12, background: "rgba(255,255,255,0.02)", padding: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: subLists.length ? 8 : 0 }}>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.6 }}>
+          🗂 Sub-listas de egresos
+        </p>
+        <button onClick={addSubList} disabled={subBusy}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: subBusy ? "not-allowed" : "pointer",
+            background: "rgba(167,139,250,0.14)", border: "1px solid rgba(167,139,250,0.4)", color: "#c4b5fd", fontSize: 12, fontWeight: 700, opacity: subBusy ? 0.6 : 1 }}>
+          + Nueva sub-lista
+        </button>
+      </div>
+      {subLists.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {subLists.map((s) => (
+            <span key={s.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 6px 4px 12px", borderRadius: 999, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.18)" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>{s.name}</span>
+              <button onClick={() => renameSubList(s.id, s.name)} title="Renombrar"
+                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>✎</button>
+              <button onClick={() => deleteSubList(s.id, s.name)} title="Eliminar"
+                style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>🗑</button>
+            </span>
+          ))}
+        </div>
+      )}
+      {subLists.length === 0 && (
+        <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b" }}>
+          Crea una sub-lista (ej. Recetas Julio, Salmón, Trends) para empezar a capturar gastos.
+        </p>
+      )}
+    </div>
+  ) : null
+
+  // Formulario para dar de alta un gasto directo (gastos internos o iguala)
+  const addGastoUI = directEnabled ? (
     <div style={{ border: "1px solid rgba(52,211,153,0.25)", borderRadius: 12, background: "rgba(52,211,153,0.04)", padding: addOpen ? 16 : 0 }}>
       {!addOpen ? (
         <button
-          onClick={() => setAddOpen(true)}
+          onClick={() => { if (subLists.length === 0) { addSubList(); return } setAddOpen(true) }}
           style={{ width: "100%", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
             background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.30)",
             color: "#6ee7b7", fontSize: 14, fontWeight: 700 }}
@@ -553,11 +682,23 @@ export function EgresosPanel({
         </button>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#6ee7b7" }}>Nuevo gasto interno</p>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#6ee7b7" }}>Nuevo gasto</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Sub-lista:</span>
+            <select value={addSectionId} onChange={e => setAddSectionId(e.target.value)}
+              style={{ ...addInputStyle, width: "auto", minWidth: 180, flex: "0 1 auto", padding: "8px 10px" }}>
+              {subLists.length === 0 && <option value="">(crea una sub-lista)</option>}
+              {subLists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <button type="button" onClick={addSubList} disabled={subBusy}
+              style={{ padding: "7px 12px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px dashed rgba(167,139,250,0.4)", color: "#c4b5fd", fontSize: 12, fontWeight: 600 }}>
+              + Nueva
+            </button>
+          </div>
           <input
             value={addDesc}
             onChange={e => setAddDesc(e.target.value)}
-            placeholder="Descripción del gasto (ej. Papelería oficina)"
+            placeholder="Descripción del gasto (ej. Renta locación)"
             style={addInputStyle}
           />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -598,19 +739,230 @@ export function EgresosPanel({
 
   if (items.length === 0) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {subListsUI}
       {addGastoUI}
       <div style={{ textAlign: "center", padding: "36px 0", color: "#475569" }}>
-        <p style={{ fontSize: 15, marginBottom: 8 }}>No hay {gastosInternos ? "gastos" : "egresos"} registrados en este proyecto.</p>
+        <p style={{ fontSize: 15, marginBottom: 8 }}>No hay {directEnabled ? "gastos" : "egresos"} registrados en este proyecto.</p>
         <p style={{ fontSize: 12, color: "#334155" }}>
-          {gastosInternos ? "Usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
+          {directEnabled ? "Crea una sub-lista y usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
         </p>
       </div>
     </div>
   )
 
+  // Tabla de egresos reutilizable (una por cotización real o por sub-lista).
+  function renderEgresoTable(qItems: EgresoItem[]) {
+    const quoteTotal = qItems.reduce((s, i) => s + montoEgreso(i), 0)
+    return (
+      <div style={tableWrapStyle}>
+        <table style={{ ...tableStyle, width: isMobile ? "100%" : "auto" }}>
+          <thead>
+            <tr>
+              {([
+                ["Sección", "section", "left", undefined],
+                ["Rubro / Concepto", "desc", "left", 170],
+                ["Proveedor / Empleado", "supplier", "left", 150],
+                ["P. Unitario", "price", "right", undefined],
+                ["Monto", "monto", "right", undefined],
+                ["Status", "status", "left", undefined],
+                ["", null, "left", undefined],
+              ] as [string, string | null, "left" | "right", number | undefined][]).map(([h, key, align, maxW], i) => (
+                <th
+                  key={i}
+                  onClick={key ? () => toggleSort(key) : undefined}
+                  style={{
+                    ...thStyle,
+                    textAlign: align,
+                    cursor: key ? "pointer" : "default",
+                    userSelect: "none",
+                    color: key && sortKey === key ? "#a78bfa" : thStyle.color,
+                    whiteSpace: "nowrap",
+                    ...(maxW ? { maxWidth: maxW } : {}),
+                  }}
+                >
+                  {h}{key && sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {qItems.map((item, idx) => {
+              const isEditing = editingId === item.id
+              const monto = montoEgreso(item)
+              const qty   = item.actual_qty        != null ? item.actual_qty        : Math.max(item.qty, 1)
+              const days  = item.actual_days       != null ? item.actual_days       : Math.max(item.days, 1)
+              const price = item.actual_unit_price != null ? item.actual_unit_price : item.unit_price
+
+              if (isEditing) {
+                const pq = editState.qty        !== "" ? parseFloat(editState.qty)        : qty
+                const pd = editState.days       !== "" ? parseFloat(editState.days)       : days
+                const pp = editState.unit_price !== "" ? parseFloat(editState.unit_price) : price
+                const previewMonto = (!isNaN(pq) && !isNaN(pd) && !isNaN(pp)) ? pq * pd * pp : 0
+
+                return (
+                  <tr key={item.id} style={{ background: "rgba(167,139,250,0.06)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
+                    <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
+                    <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
+                      {item.description}
+                    </td>
+                    <td style={tdStyle}>
+                      <SupplierCombobox
+                        value={editState.contact}
+                        onChange={val => setEditState(s => ({ ...s, contact: val }))}
+                        proveedores={proveedores}
+                        employees={employees}
+                      />
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <input type="number" value={editState.qty}
+                          onChange={e => setEditState(s => ({ ...s, qty: e.target.value }))}
+                          placeholder={String(qty)} title="Cantidad" style={{ ...editInputStyle, width: 38 }} />
+                        <span style={{ color: "#475569", fontSize: 11 }}>×</span>
+                        <input type="number" value={editState.days}
+                          onChange={e => setEditState(s => ({ ...s, days: e.target.value }))}
+                          placeholder={String(days)} title="Días" style={{ ...editInputStyle, width: 38 }} />
+                        <span style={{ color: "#475569", fontSize: 11 }}>×</span>
+                        <input type="number" value={editState.unit_price}
+                          onChange={e => setEditState(s => ({ ...s, unit_price: e.target.value }))}
+                          placeholder={String(price)} title="Precio unitario" style={{ ...editInputStyle, width: 70 }} />
+                      </div>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
+                      {fmt(previewMonto)}
+                    </td>
+                    <td style={tdStyle}>
+                      {(item.pago_modo === "anticipo" || item.pago_modo === "comprobacion") && (
+                        <input
+                          type="date"
+                          value={editState.fecha_pago}
+                          onChange={e => setEditState(s => ({ ...s, fecha_pago: e.target.value }))}
+                          title="Fecha de pago"
+                          style={{ ...editInputStyle, width: 130 }}
+                        />
+                      )}
+                    </td>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                      <button onClick={() => saveEdit(item.id)} disabled={saving} style={saveBtnStyle}>
+                        {saving ? "…" : "✓"}
+                      </button>
+                      <button onClick={cancelEdit} style={cancelBtnStyle}>✕</button>
+                    </td>
+                  </tr>
+                )
+              }
+
+              return (
+                <tr key={item.id} style={{
+                  background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
+                  borderBottom: "1px solid rgba(148,163,184,0.07)",
+                }}>
+                  <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
+                  <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 170, wordBreak: "break-word", whiteSpace: "normal" }}>
+                    {item.description}
+                  </td>
+                  <td style={{ ...tdStyle, maxWidth: 150, whiteSpace: "normal" }}>
+                    {item.supplierType === "none" ? (
+                      <span style={{ color: "#475569", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
+                    ) : (
+                      <span style={{ ...supplierBadgeStyle(item.supplierType), whiteSpace: "normal", wordBreak: "break-word" }}>
+                        {item.supplierType === "empleado" ? "👤 " : "🏢 "}
+                        {item.supplierLabel}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
+                  <td style={tdStyle}>
+                    {(() => {
+                      const st = egresoStatus(item)
+                      return (
+                        <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+                            color: st.color, background: `${st.color}1f`, border: `1px solid ${st.color}55`,
+                          }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} />
+                            {st.label}
+                          </span>
+                          {st.fecha && (
+                            <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>📅 {fechaCorta(st.fecha)}</span>
+                          )}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={actionGridStyle}>
+                      <div style={actionColStyle}>
+                        {item.pago_estado === "pagado" ? (
+                          <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                            <span style={paidBadgeStyle} title={item.pago_fecha ? `Pago realizado el ${fechaCorta(item.pago_fecha)}` : item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación pagada"}>
+                              ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
+                            </span>
+                            {item.pago_fecha && (
+                              <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
+                            )}
+                          </span>
+                        ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
+                          <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                        ) : item.pago_modo === "comprobacion" && item.supplierType !== "none" ? (
+                          <>
+                            <span style={pendienteBadgeStyle}>⚠ Pendiente Cierre</span>
+                            <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>
+                          </>
+                        ) : null}
+                      </div>
+
+                      <div style={actionColStyle}>
+                        {item.supplierType === "proveedor" && (
+                          <button
+                            onClick={() => sendBilling(item, monto)}
+                            disabled={sendingBilling === item.id}
+                            title={item.billing_sent_at ? "Volver a enviar instrucciones de facturación" : "Enviar instrucciones de facturación"}
+                            style={{
+                              ...editBtnStyle,
+                              background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
+                              border: "1px solid rgba(6,182,212,0.25)",
+                              color: "#67e8f9",
+                              opacity: sendingBilling === item.id ? 0.6 : 1,
+                            }}
+                          >
+                            {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
+                          </button>
+                        )}
+                        <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
+                        {directEnabled && item.pago_estado !== "pagado" && (
+                          <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#f87171", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
+              <td colSpan={4} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
+                {qItems.length} rubro{qItems.length !== 1 ? "s" : ""}
+              </td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace", paddingTop: 10 }}>
+                {fmt(quoteTotal)}
+              </td>
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
+      {subListsUI}
       {addGastoUI}
 
       {/* Summary cards + Facturar todos */}
@@ -618,7 +970,9 @@ export function EgresosPanel({
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12, flex: 1 }}>
           <SummaryCard label="Total egresos"  value={fmt(totalGlobal)}     color="#f87171" />
           <SummaryCard label="Ítems"          value={String(items.length)} color="#94a3b8" />
-          <SummaryCard label="Cotizaciones"   value={String(quoteCount)}   color="#94a3b8" />
+          {directEnabled
+            ? <SummaryCard label="Sub-listas"    value={String(subLists.length)} color="#94a3b8" />
+            : <SummaryCard label="Cotizaciones"  value={String(quoteCount)}      color="#94a3b8" />}
         </div>
         <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexShrink: 0 }}>
           <button
@@ -662,7 +1016,26 @@ export function EgresosPanel({
         ))}
       </div>
 
-      {/* Per-quote tables */}
+      {/* Egresos directos, agrupados por sub-lista */}
+      {directEnabled && subLists.map((s) => {
+        const sItems = sortItems(containerVisible.filter((i) => i.section_id === s.id))
+        const sTotal = sItems.reduce((acc, i) => acc + montoEgreso(i), 0)
+        return (
+          <div key={s.id}>
+            <div style={quoteHeaderStyle}>
+              <span style={quoteLabelStyle}>🗂 {s.name}</span>
+              <span style={quoteTotalStyle}>{fmt(sTotal)}</span>
+            </div>
+            {sItems.length > 0 ? renderEgresoTable(sItems) : (
+              <div style={{ padding: 16, textAlign: "center", color: "#475569", fontSize: 12, border: "1px solid rgba(148,163,184,0.10)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+                Sin gastos en esta sub-lista todavía.
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Egresos provenientes de cotizaciones reales */}
       {Object.entries(byQuote).map(([quoteId, { quote_name, items: qItems }]) => {
         const quoteTotal = qItems.reduce((s, i) => s + montoEgreso(i), 0)
         return (
@@ -671,218 +1044,7 @@ export function EgresosPanel({
               <span style={quoteLabelStyle}>📋 {quote_name}</span>
               <span style={quoteTotalStyle}>{fmt(quoteTotal)}</span>
             </div>
-
-            <div style={tableWrapStyle}>
-              <table style={{ ...tableStyle, width: isMobile ? "100%" : "auto" }}>
-                <thead>
-                  <tr>
-                    {([
-                      ["Sección", "section", "left", undefined],
-                      ["Rubro / Concepto", "desc", "left", 170],
-                      ["Proveedor / Empleado", "supplier", "left", 150],
-                      ["P. Unitario", "price", "right", undefined],
-                      ["Monto", "monto", "right", undefined],
-                      ["Status", "status", "left", undefined],
-                      ["", null, "left", undefined],
-                    ] as [string, string | null, "left" | "right", number | undefined][]).map(([h, key, align, maxW], i) => (
-                      <th
-                        key={i}
-                        onClick={key ? () => toggleSort(key) : undefined}
-                        style={{
-                          ...thStyle,
-                          textAlign: align,
-                          cursor: key ? "pointer" : "default",
-                          userSelect: "none",
-                          color: key && sortKey === key ? "#a78bfa" : thStyle.color,
-                          whiteSpace: "nowrap",
-                          ...(maxW ? { maxWidth: maxW } : {}),
-                        }}
-                      >
-                        {h}{key && sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {qItems.map((item, idx) => {
-                    const isEditing = editingId === item.id
-                    const monto = montoEgreso(item)
-                    const qty   = item.actual_qty        != null ? item.actual_qty        : Math.max(item.qty, 1)
-                    const days  = item.actual_days       != null ? item.actual_days       : Math.max(item.days, 1)
-                    const price = item.actual_unit_price != null ? item.actual_unit_price : item.unit_price
-
-                    if (isEditing) {
-                      // Calcular preview del monto mientras editas
-                      const pq = editState.qty        !== "" ? parseFloat(editState.qty)        : qty
-                      const pd = editState.days       !== "" ? parseFloat(editState.days)       : days
-                      const pp = editState.unit_price !== "" ? parseFloat(editState.unit_price) : price
-                      const previewMonto = (!isNaN(pq) && !isNaN(pd) && !isNaN(pp)) ? pq * pd * pp : 0
-
-                      return (
-                        <tr key={item.id} style={{ background: "rgba(167,139,250,0.06)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
-                          <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
-                          <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
-                            {item.description}
-                          </td>
-                          {/* Selector proveedor */}
-                          <td style={tdStyle}>
-                            <SupplierCombobox
-                              value={editState.contact}
-                              onChange={val => setEditState(s => ({ ...s, contact: val }))}
-                              proveedores={proveedores}
-                              employees={employees}
-                            />
-                          </td>
-                          {/* Inputs qty × días × precio compactos */}
-                          <td style={tdStyle}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                              <input type="number" value={editState.qty}
-                                onChange={e => setEditState(s => ({ ...s, qty: e.target.value }))}
-                                placeholder={String(qty)} title="Cantidad" style={{ ...editInputStyle, width: 38 }} />
-                              <span style={{ color: "#475569", fontSize: 11 }}>×</span>
-                              <input type="number" value={editState.days}
-                                onChange={e => setEditState(s => ({ ...s, days: e.target.value }))}
-                                placeholder={String(days)} title="Días" style={{ ...editInputStyle, width: 38 }} />
-                              <span style={{ color: "#475569", fontSize: 11 }}>×</span>
-                              <input type="number" value={editState.unit_price}
-                                onChange={e => setEditState(s => ({ ...s, unit_price: e.target.value }))}
-                                placeholder={String(price)} title="Precio unitario" style={{ ...editInputStyle, width: 70 }} />
-                            </div>
-                          </td>
-                          {/* Preview monto */}
-                          <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
-                            {fmt(previewMonto)}
-                          </td>
-                          {/* Fecha de pago (solo anticipo/comprobación) */}
-                          <td style={tdStyle}>
-                            {(item.pago_modo === "anticipo" || item.pago_modo === "comprobacion") && (
-                              <input
-                                type="date"
-                                value={editState.fecha_pago}
-                                onChange={e => setEditState(s => ({ ...s, fecha_pago: e.target.value }))}
-                                title="Fecha de pago"
-                                style={{ ...editInputStyle, width: 130 }}
-                              />
-                            )}
-                          </td>
-                          {/* Acciones */}
-                          <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
-                            <button onClick={() => saveEdit(item.id)} disabled={saving} style={saveBtnStyle}>
-                              {saving ? "…" : "✓"}
-                            </button>
-                            <button onClick={cancelEdit} style={cancelBtnStyle}>✕</button>
-                          </td>
-                        </tr>
-                      )
-                    }
-
-                    // Vista normal
-                    return (
-                      <tr key={item.id} style={{
-                        background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
-                        borderBottom: "1px solid rgba(148,163,184,0.07)",
-                      }}>
-                        <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{item.section_name}</td>
-                        <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 170, wordBreak: "break-word", whiteSpace: "normal" }}>
-                          {item.description}
-                        </td>
-                        <td style={{ ...tdStyle, maxWidth: 150, whiteSpace: "normal" }}>
-                          {item.supplierType === "none" ? (
-                            <span style={{ color: "#475569", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
-                          ) : (
-                            <span style={{ ...supplierBadgeStyle(item.supplierType), whiteSpace: "normal", wordBreak: "break-word" }}>
-                              {item.supplierType === "empleado" ? "👤 " : "🏢 "}
-                              {item.supplierLabel}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "monospace", fontSize: 12 }}>{fmt(price)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "monospace" }}>{fmt(monto)}</td>
-                        <td style={tdStyle}>
-                          {(() => {
-                            const st = egresoStatus(item)
-                            return (
-                              <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                                <span style={{
-                                  display: "inline-flex", alignItems: "center", gap: 5,
-                                  padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
-                                  color: st.color, background: `${st.color}1f`, border: `1px solid ${st.color}55`,
-                                }}>
-                                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} />
-                                  {st.label}
-                                </span>
-                                {st.fecha && (
-                                  <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>📅 {fechaCorta(st.fecha)}</span>
-                                )}
-                              </span>
-                            )
-                          })()}
-                        </td>
-                        <td style={tdStyle}>
-                          <div style={actionGridStyle}>
-                            {/* Columna izquierda: pagos */}
-                            <div style={actionColStyle}>
-                              {item.pago_estado === "pagado" ? (
-                                <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                                  <span style={paidBadgeStyle} title={item.pago_fecha ? `Pago realizado el ${fechaCorta(item.pago_fecha)}` : item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación pagada"}>
-                                    ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
-                                  </span>
-                                  {item.pago_fecha && (
-                                    <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
-                                  )}
-                                </span>
-                              ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
-                                <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
-                              ) : item.pago_modo === "comprobacion" && item.supplierType !== "none" ? (
-                                <>
-                                  <span style={pendienteBadgeStyle}>⚠ Pendiente Cierre</span>
-                                  <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>
-                                </>
-                              ) : null}
-                            </div>
-
-                            {/* Columna derecha: facturar + editar */}
-                            <div style={actionColStyle}>
-                              {item.supplierType === "proveedor" && (
-                                <button
-                                  onClick={() => sendBilling(item, monto)}
-                                  disabled={sendingBilling === item.id}
-                                  title={item.billing_sent_at ? "Volver a enviar instrucciones de facturación" : "Enviar instrucciones de facturación"}
-                                  style={{
-                                    ...editBtnStyle,
-                                    background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
-                                    border: "1px solid rgba(6,182,212,0.25)",
-                                    color: "#67e8f9",
-                                    opacity: sendingBilling === item.id ? 0.6 : 1,
-                                  }}
-                                >
-                                  {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
-                                </button>
-                              )}
-                              <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
-                              {gastosInternos && item.pago_estado !== "pagado" && (
-                                <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#f87171", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                    <td colSpan={4} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
-                      {qItems.length} rubro{qItems.length !== 1 ? "s" : ""}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace", paddingTop: 10 }}>
-                      {fmt(quoteTotal)}
-                    </td>
-                    <td colSpan={2} />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+            {renderEgresoTable(qItems)}
           </div>
         )
       })}

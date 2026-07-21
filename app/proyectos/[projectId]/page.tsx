@@ -22,6 +22,7 @@ type Project = {
   responsable: string | null
   empresa?: "retro_studio" | "retro_films" | null
   gastos_internos?: boolean | null
+  egresos_directos?: boolean | null
 }
 
 type Quote = {
@@ -206,6 +207,22 @@ export default function ProjectDetailPage() {
   // Proyecto de gastos internos: solo se meten egresos, nada de cotización ni
   // matriz. Todos (incluidos productores) ven únicamente Control de egresos.
   const esGastosInternos = !!project?.gastos_internos
+  const esEgresosDirectos = !!project?.egresos_directos
+
+  async function toggleEgresosDirectos() {
+    if (!project) return
+    const nuevo = !project.egresos_directos
+    if (nuevo && !project.code) {
+      alert("Asigna primero un código (RS) al proyecto para usar egresos directos.")
+      return
+    }
+    const { error } = await supabase
+      .from("projects")
+      .update({ egresos_directos: nuevo })
+      .eq("id", project.id)
+    if (error) { alert("Error al cambiar el modo: " + error.message); return }
+    setProject({ ...project, egresos_directos: nuevo })
+  }
   const visibleModules = esGastosInternos
     ? projectModules.filter((m) => m.id === "egresos")
     : isProductor
@@ -648,13 +665,32 @@ export default function ProjectDetailPage() {
                 <p style={modalEyebrowStyle}>Proyecto · {project?.name}</p>
                 <h2 style={modalTitleStyle}>Control de egresos</h2>
               </div>
-              <button
-                onClick={() => setShowEgresos(false)}
-                style={modalCloseStyle}
-                aria-label="Cerrar"
-              >
-                ✕
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {isAdmin && !esGastosInternos && (
+                  <button
+                    onClick={toggleEgresosDirectos}
+                    title="Permite capturar egresos a mano (sin cotización) y crear sub-listas, como en gastos retro. Ideal para proyectos por iguala."
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 7,
+                      padding: "7px 14px", borderRadius: 999, cursor: "pointer",
+                      fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
+                      border: esEgresosDirectos ? "1px solid rgba(52,211,153,0.45)" : "1px solid rgba(148,163,184,0.25)",
+                      background: esEgresosDirectos ? "rgba(52,211,153,0.14)" : "transparent",
+                      color: esEgresosDirectos ? "#34d399" : "#94a3b8",
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: esEgresosDirectos ? "#34d399" : "#475569" }} />
+                    Egresos directos (iguala)
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowEgresos(false)}
+                  style={modalCloseStyle}
+                  aria-label="Cerrar"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             <div
               style={{
@@ -671,6 +707,7 @@ export default function ProjectDetailPage() {
                 empresa={projectEmpresa}
                 projectResponsable={project?.responsable ?? null}
                 gastosInternos={esGastosInternos}
+                egresosDirectos={esEgresosDirectos}
               />
             </div>
           </div>
