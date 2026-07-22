@@ -553,6 +553,7 @@ export default function ProjectDetailPage() {
           detail={selectedQuote}
           isMobile={isMobile}
           clientName={clientName}
+          subfolderName={subfolderName}
           projectName={project?.name ?? ""}
           projectCode={project?.code ?? null}
           projectResponsable={project?.responsable ?? null}
@@ -1158,6 +1159,7 @@ function QuoteModal({
   detail,
   isMobile,
   clientName,
+  subfolderName,
   projectName,
   projectCode,
   projectResponsable,
@@ -1167,6 +1169,7 @@ function QuoteModal({
   detail: QuoteDetail
   isMobile: boolean
   clientName: string
+  subfolderName: string
   projectName: string
   projectCode: string | null
   projectResponsable: string | null
@@ -1234,7 +1237,8 @@ function QuoteModal({
           })),
         },
         clientName,
-        projectName
+        projectName,
+        subfolderName
       )
     } catch (err: any) {
       alert("Error al generar PDF: " + err.message)

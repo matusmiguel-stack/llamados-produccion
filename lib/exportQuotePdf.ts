@@ -22,7 +22,8 @@ export interface QuoteRubroPDF {
 export interface QuotePDFData {
   quoteName: string
   atencion: string
-  clientName: string
+  clientName: string      // CLIENTE = carpeta raíz
+  subfolderName?: string  // MARCA = subcarpeta
   projectName: string
   status: string
   date: string
@@ -71,7 +72,8 @@ const RUBRO_COLOR_MAP: Record<string, string> = {
 export async function exportQuotePdfFromDetail(
   detail: DBQuoteDetail,
   clientName: string,
-  projectName: string
+  projectName: string,
+  subfolderName?: string
 ): Promise<void> {
   const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" }).format(new Date())
 
@@ -124,6 +126,7 @@ export async function exportQuotePdfFromDetail(
     quoteName: detail.quote.name,
     atencion: detail.quote.atencion || "",
     clientName,
+    subfolderName,
     projectName,
     status: detail.quote.status,
     date,
@@ -230,7 +233,7 @@ function drawCoverPage(
   const infoGrid = [
     { label: "CLIENTE", value: data.clientName },
     { label: "CAMPAÑA", value: data.projectName },
-    { label: "MARCA", value: data.clientName },
+    { label: "MARCA", value: data.subfolderName || "—" },
     { label: "FECHA", value: data.date },
   ]
   infoGrid.forEach((col, i) => {

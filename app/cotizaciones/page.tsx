@@ -8,7 +8,7 @@ import { RESPONSABLES } from "../../lib/responsables"
 import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
 type Client = { id: string; name: string }
-type Project = { id: string; name: string; client_id: string; responsable: string | null; code: string | null }
+type Project = { id: string; name: string; client_id: string; subfolder_id: string | null; responsable: string | null; code: string | null }
 type Subfolder = { id: string; client_id: string; name: string }
 
 type ItemValues = {
@@ -355,7 +355,7 @@ export default function CotizacionesPage() {
       setProfile(auth.profile)
       const [{ data: c }, { data: p }, { data: sf }] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
-        supabase.from("projects").select("id, name, client_id, responsable, code").order("name"),
+        supabase.from("projects").select("id, name, client_id, subfolder_id, responsable, code").order("name"),
         supabase.from("client_subfolders").select("id, client_id, name").order("name"),
       ])
       setClients(c || [])
@@ -606,7 +606,7 @@ export default function CotizacionesPage() {
       const { data: projData, error: projErr } = await supabase
         .from("projects")
         .insert({ client_id: clientId, subfolder_id: subfolderId, name: newProjectName.trim() })
-        .select("id, name, client_id, responsable, code")
+        .select("id, name, client_id, subfolder_id, responsable, code")
         .single()
       if (projErr) { alert(projErr.message); return }
       setProjects((prev) => [...prev, projData].sort((a, b) => a.name.localeCompare(b.name, "es")))
@@ -980,7 +980,11 @@ export default function CotizacionesPage() {
   // Construye la data de la cotización (misma que usan el PDF y el Excel).
   function buildQuoteData(): QuotePDFData {
     const clientName = clients.find((c) => c.id === clientId)?.name || "—"
-    const projectName = projects.find((p) => p.id === projectId)?.name || "—"
+    const proj = projects.find((p) => p.id === projectId)
+    const projectName = proj?.name || "—"
+    // MARCA = subcarpeta del proyecto (la del selector si aún no se guarda)
+    const subfolderName =
+      subfolders.find((sf) => sf.id === (proj?.subfolder_id || newProjectSubfolderId))?.name || undefined
     const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" }).format(new Date())
 
     const rubros: QuoteRubroPDF[] = RUBROS.map((rubro) => {
@@ -1021,6 +1025,7 @@ export default function CotizacionesPage() {
       quoteName: quoteName || "Cotización",
       atencion,
       clientName,
+      subfolderName,
       projectName,
       status,
       date,
