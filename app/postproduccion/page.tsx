@@ -525,6 +525,20 @@ export default function PostproduccionPage() {
                   type="text"
                   value={editorSearch}
                   onChange={(e) => setEditorSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return
+                    const q = editorSearch.toLowerCase()
+                    const sugerencias = postproductores.filter((emp: any) =>
+                      !formEditores.includes(emp.id) &&
+                      (`${emp.nombre} ${emp.apellido_paterno} ${emp.nickname || ""}`).toLowerCase().includes(q)
+                    )
+                    // ENTER selecciona cuando queda una sola coincidencia
+                    if (sugerencias.length === 1) {
+                      e.preventDefault()
+                      setFormEditores((prev) => [...prev, sugerencias[0].id])
+                      setEditorSearch("")
+                    }
+                  }}
                   style={inputStyle}
                   placeholder="Buscar postproductor..."
                 />

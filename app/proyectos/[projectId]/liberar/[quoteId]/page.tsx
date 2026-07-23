@@ -1532,6 +1532,13 @@ function SupplierCombobox({
           placeholder="Buscar por nombre, empresa…"
           onFocus={() => { reposition(); setOpen(true); setQuery("") }}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onKeyDown={e => {
+            // ENTER selecciona cuando queda una sola coincidencia
+            if (e.key !== "Enter" || filteredEmps.length + filteredProvs.length !== 1) return
+            e.preventDefault()
+            onChange(filteredEmps.length === 1 ? `emp:${filteredEmps[0].id}` : `prov:${filteredProvs[0].id}`)
+            setOpen(false); setQuery("")
+          }}
           style={{
             ...comboboxInputStyle,
             paddingRight: value ? 28 : 12,

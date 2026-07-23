@@ -1447,6 +1447,13 @@ function SupplierCombobox({
           placeholder="Buscar por nombre, empresa…"
           onFocus={() => { setOpen(true); setQuery("") }}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onKeyDown={e => {
+            // ENTER selecciona cuando queda una sola coincidencia
+            if (e.key !== "Enter" || filteredEmps.length + filteredProvs.length !== 1) return
+            e.preventDefault()
+            onChange(filteredEmps.length === 1 ? `emp:${filteredEmps[0].id}` : `prov:${filteredProvs[0].id}`)
+            setOpen(false); setQuery("")
+          }}
           style={{
             width: "100%", padding: "4px 24px 4px 8px", borderRadius: 6,
             border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",

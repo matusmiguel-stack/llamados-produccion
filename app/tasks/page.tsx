@@ -380,30 +380,95 @@ export default function TasksPage() {
   )
 }
 
+// Buscador estilo llamados: escribes y aparecen las coincidencias. Los ya
+// seleccionados se muestran como chips arriba. Con una sola coincidencia,
+// ENTER la selecciona.
 function SharePicker({ users, selfId, selected, onToggle }: {
   users: AppUser[]; selfId: string | undefined
   selected: string[]; onToggle: (id: string) => void
 }) {
+  const [search, setSearch] = useState("")
+  const [open, setOpen] = useState(false)
+  const displayName = (u: AppUser) => u.full_name || u.email.split("@")[0]
+
+  const q = search.trim().toLowerCase()
+  const filtered = users.filter(u =>
+    u.id !== selfId &&
+    !selected.includes(u.id) &&
+    (displayName(u).toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+  )
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-      {users.filter(u => u.id !== selfId).map(u => {
-        const active = selected.includes(u.id)
-        return (
-          <button
-            key={u.id}
-            onClick={() => onToggle(u.id)}
-            style={{
-              padding: "4px 10px", borderRadius: 999, cursor: "pointer",
-              fontSize: 12, fontWeight: 600,
-              border: active ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(148,163,184,0.2)",
-              background: active ? "rgba(124,58,237,0.18)" : "transparent",
-              color: active ? "#c4b5fd" : "#94a3b8",
-            }}
-          >
-            {active ? "✓ " : ""}{u.full_name || u.email.split("@")[0]}
-          </button>
-        )
-      })}
+    <div>
+      {/* Chips de seleccionados */}
+      {selected.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          {selected.map(id => {
+            const u = users.find(x => x.id === id)
+            if (!u) return null
+            return (
+              <span key={id} style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "3px 10px", borderRadius: 999,
+                background: "rgba(124,58,237,0.18)", border: "1px solid rgba(167,139,250,0.4)",
+                color: "#c4b5fd", fontSize: 12, fontWeight: 600,
+              }}>
+                {displayName(u)}
+                <button type="button" onClick={() => onToggle(id)}
+                  style={{ background: "none", border: "none", color: "#c4b5fd", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, marginLeft: 2 }}>×</button>
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Input de búsqueda + dropdown */}
+      <div style={{ position: "relative" }}>
+        <input
+          type="text"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={e => {
+            // ENTER selecciona cuando queda una sola coincidencia
+            if (e.key === "Enter" && filtered.length === 1) {
+              e.preventDefault()
+              onToggle(filtered[0].id)
+              setSearch("")
+            }
+          }}
+          placeholder="Buscar persona..."
+          style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
+        />
+        {open && filtered.length > 0 && (
+          <div style={{
+            position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+            background: "#0f172a", border: "1px solid rgba(148,163,184,0.2)",
+            borderRadius: 10, marginTop: 4, maxHeight: 200, overflowY: "auto",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}>
+            {filtered.map(u => (
+              <button
+                key={u.id}
+                type="button"
+                onMouseDown={() => { onToggle(u.id); setSearch("") }}
+                style={{
+                  display: "block", width: "100%", textAlign: "left",
+                  padding: "8px 12px", background: "none", border: "none",
+                  color: "#e2e8f0", fontSize: 13, cursor: "pointer",
+                  borderBottom: "1px solid rgba(148,163,184,0.08)",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(148,163,184,0.08)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "none")}
+              >
+                <span style={{ fontWeight: 500 }}>{displayName(u)}</span>
+                <span style={{ color: "#64748b", marginLeft: 6, fontSize: 11 }}>· {u.email}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

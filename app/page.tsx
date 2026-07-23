@@ -2754,6 +2754,26 @@ function openEditVacation() {
                           onChange={(e) => { setJuntaAttendeeSearch(e.target.value); setJuntaAttendeeDropOpen(true) }}
                           onFocus={() => setJuntaAttendeeDropOpen(true)}
                           onBlur={() => setTimeout(() => setJuntaAttendeeDropOpen(false), 150)}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter") return
+                            const q = juntaAttendeeSearch.toLowerCase()
+                            const filtered = (employees as any[]).filter(emp =>
+                              !juntaAttendees.includes(emp.id) && (
+                                emp.nombre?.toLowerCase().includes(q) ||
+                                emp.apellido_paterno?.toLowerCase().includes(q) ||
+                                emp.apellido_materno?.toLowerCase().includes(q) ||
+                                emp.nickname?.toLowerCase().includes(q) ||
+                                emp.puesto?.toLowerCase().includes(q)
+                              )
+                            )
+                            // ENTER selecciona cuando queda una sola coincidencia
+                            if (filtered.length === 1) {
+                              e.preventDefault()
+                              setJuntaAttendees(prev => [...prev, filtered[0].id])
+                              setJuntaAttendeeSearch("")
+                              setJuntaAttendeeDropOpen(true)
+                            }
+                          }}
                           placeholder="Buscar empleado..."
                           style={{ ...formModalInputStyle, width: "100%", boxSizing: "border-box" }}
                         />
