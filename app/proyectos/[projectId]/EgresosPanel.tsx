@@ -760,6 +760,39 @@ export function EgresosPanel({
     </div>
   ) : null
 
+  // Modal de crear/renombrar sub-lista. Se declara aquí para poder renderizarlo
+  // tanto en el estado vacío como en el estado con gastos (antes solo estaba en
+  // el return principal, así que en un proyecto iguala recién creado —sin gastos—
+  // el botón "+ Nueva sub-lista" no mostraba nada).
+  const subListModalUI = subListModal && (
+    <div style={payOverlayStyle} onClick={() => !subBusy && setSubListModal(null)}>
+      <div style={{ ...payPanelStyle, maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#c4b5fd" }}>
+          {subListModal.mode === "create" ? "Nueva sub-lista" : "Renombrar sub-lista"}
+        </p>
+        <p style={{ margin: "6px 0 16px", fontSize: 12, color: "#94a3b8" }}>
+          Ej. Recetas Julio, Salmón, Trends
+        </p>
+        <label style={payLabelStyle}>Nombre</label>
+        <input
+          autoFocus
+          value={subListModal.value}
+          onChange={(e) => setSubListModal((m) => (m ? { ...m, value: e.target.value } : m))}
+          onKeyDown={(e) => { if (e.key === "Enter" && !subBusy) submitSubListModal() }}
+          placeholder="Nombre de la sub-lista"
+          style={payInputStyle}
+        />
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
+          <button onClick={() => setSubListModal(null)} disabled={subBusy} style={payCancelStyle}>Cancelar</button>
+          <button onClick={submitSubListModal} disabled={subBusy}
+            style={{ ...payConfirmStyle, borderColor: "rgba(167,139,250,0.4)", background: "rgba(167,139,250,0.16)", color: "#c4b5fd", opacity: subBusy ? 0.6 : 1 }}>
+            {subBusy ? "Guardando…" : subListModal.mode === "create" ? "✓ Crear" : "✓ Guardar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
   if (items.length === 0) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {subListsUI}
@@ -770,6 +803,7 @@ export function EgresosPanel({
           {directEnabled ? "Crea una sub-lista y usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
         </p>
       </div>
+      {subListModalUI}
     </div>
   )
 
@@ -1105,34 +1139,7 @@ export function EgresosPanel({
       })}
 
       {/* Modal para crear / renombrar sub-lista */}
-      {subListModal && (
-        <div style={payOverlayStyle} onClick={() => !subBusy && setSubListModal(null)}>
-          <div style={{ ...payPanelStyle, maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#c4b5fd" }}>
-              {subListModal.mode === "create" ? "Nueva sub-lista" : "Renombrar sub-lista"}
-            </p>
-            <p style={{ margin: "6px 0 16px", fontSize: 12, color: "#94a3b8" }}>
-              Ej. Recetas Julio, Salmón, Trends
-            </p>
-            <label style={payLabelStyle}>Nombre</label>
-            <input
-              autoFocus
-              value={subListModal.value}
-              onChange={(e) => setSubListModal((m) => (m ? { ...m, value: e.target.value } : m))}
-              onKeyDown={(e) => { if (e.key === "Enter" && !subBusy) submitSubListModal() }}
-              placeholder="Nombre de la sub-lista"
-              style={payInputStyle}
-            />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
-              <button onClick={() => setSubListModal(null)} disabled={subBusy} style={payCancelStyle}>Cancelar</button>
-              <button onClick={submitSubListModal} disabled={subBusy}
-                style={{ ...payConfirmStyle, borderColor: "rgba(167,139,250,0.4)", background: "rgba(167,139,250,0.16)", color: "#c4b5fd", opacity: subBusy ? 0.6 : 1 }}>
-                {subBusy ? "Guardando…" : subListModal.mode === "create" ? "✓ Crear" : "✓ Guardar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {subListModalUI}
 
       {/* Modal de pago (anticipo / comprobación) */}
       {payModal && (
