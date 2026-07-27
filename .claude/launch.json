@@ -12,6 +12,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "website"],
       "port": 3001
+    },
+    {
+      "name": "karaoke-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "../karaoke-app", "--", "--port", "3005"],
+      "port": 3005
+    },
+    {
+      "name": "reticulas-app",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3007", "--directory", "../reticulas-app"],
+      "port": 3007
     }
   ]
 }
