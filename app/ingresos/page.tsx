@@ -169,8 +169,15 @@ export default function IngresosPage() {
   const [saving, setSaving]         = useState(false)
   const [importing, setImporting]   = useState(false)
   const fileInputRef                = useRef<HTMLInputElement>(null)
-  const [payModal, setPayModal]     = useState<{ id: string; label: string; fecha: string } | null>(null)
+  const [payModal, setPayModal]     = useState<{ row: Ingreso; label: string; fecha: string } | null>(null)
   const [paying, setPaying]         = useState(false)
+  // Pago parcial: crea una línea "… - Liquidación" con lo que falta por cobrar.
+  // Monto (sin IVA) y porcentaje van sincronizados, igual que en facturación.
+  const [payParcial, setPayParcial] = useState(false)
+  const [payMonto, setPayMonto]     = useState("")
+  const [payPct, setPayPct]         = useState("")
+  // Pago en efectivo sin factura: la parte pagada se registra con IVA 0.
+  const [paySinIva, setPaySinIva]   = useState(false)
   const [facturarModal, setFacturarModal] = useState<{ id: string; label: string; subtotal: number } | null>(null)
   const [facXml, setFacXml]         = useState<File | null>(null)
   const [facPdf, setFacPdf]         = useState<File | null>(null)
@@ -477,7 +484,25 @@ export default function IngresosPage() {
 
   // ── Marcar pago (cambia estatus a pagado + fecha de pago) ────────────────────
   function openPayModal(r: Ingreso) {
-    setPayModal({ id: r.id, label: proyectoLabel(r), fecha: new Date().toLocaleDateString("sv") })
+    setPayModal({ row: r, label: proyectoLabel(r), fecha: new Date().toLocaleDateString("sv") })
+    setPayParcial(false)
+    setPayMonto("")
+    setPayPct("")
+    setPaySinIva(false)
+  }
+
+  function onPayMonto(v: string) {
+    setPayMonto(v)
+    const n = parseFloat(v)
+    const st = payModal?.row.subtotal || 0
+    setPayPct(Number.isFinite(n) && st > 0 ? String(Math.round((n / st) * 10000) / 100) : "")
+  }
+
+  function onPayPct(v: string) {
+    setPayPct(v)
+    const n = parseFloat(v)
+    const st = payModal?.row.subtotal || 0
+    setPayMonto(Number.isFinite(n) && st > 0 ? String(Math.round(st * (n / 100) * 100) / 100) : "")
   }
 
   // Avisa por correo al equipo que un ingreso se marcó como pagado.
@@ -505,15 +530,85 @@ export default function IngresosPage() {
   async function confirmarPago() {
     if (!payModal) return
     if (!payModal.fecha) { alert("Selecciona la fecha de pago."); return }
+
+    const r = payModal.row
+    const subtotalOriginal = Number(r.subtotal) || 0
+    const ivaOriginal = Number(r.iva) || 0
+
+    // Monto pagado (sin IVA): el capturado si es parcial, o todo el subtotal.
+    let parcial: number | null = null
+    if (payParcial) {
+      parcial = parseFloat(payMonto)
+      if (!Number.isFinite(parcial) || parcial <= 0) {
+        alert("Indica el monto pagado (sin IVA).")
+        return
+      }
+      if (parcial >= subtotalOriginal) {
+        alert("El monto parcial debe ser menor al subtotal. Para registrar el pago completo, desmarca la parcialidad.")
+        return
+      }
+    }
+
+    // IVA de la parte pagada: 0 si fue en efectivo sin factura; si no, la
+    // proporción que le toca. El remanente SIEMPRE conserva su IVA proporcional.
+    const montoPagado = parcial ?? subtotalOriginal
+    const ivaProporcional = subtotalOriginal > 0
+      ? Math.round(ivaOriginal * (montoPagado / subtotalOriginal) * 100) / 100
+      : 0
+    const ivaPagado = paySinIva ? 0 : ivaProporcional
+
     setPaying(true)
     const { error } = await supabase
       .from("ingresos")
-      .update({ estatus: "pagado", fecha_pago: payModal.fecha, updated_at: new Date().toISOString() })
-      .eq("id", payModal.id)
-    setPaying(false)
-    if (error) { alert(error.message); return }
+      .update({
+        estatus: "pagado",
+        fecha_pago: payModal.fecha,
+        ...(parcial != null ? { subtotal: parcial } : {}),
+        // Solo tocamos el IVA si cambió (parcial o pago sin factura)
+        ...(parcial != null || paySinIva ? { iva: ivaPagado } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", payModal.row.id)
+    if (error) { setPaying(false); alert(error.message); return }
 
-    await notifyIngresoPaid(payModal.id)
+    // Línea del remanente ("… - Liquidación"), con el mismo hipervínculo al
+    // proyecto. Va DESVINCULADA (liquidacion_project_id, no project_id), así no
+    // afecta al proyecto, la cotización ni los egresos.
+    if (parcial != null) {
+      const nombreRem = nombreLiquidacion(payModal.label)
+      const subtotalRem = Math.round((subtotalOriginal - parcial) * 100) / 100
+      const ivaRem = Math.round((ivaOriginal - ivaProporcional) * 100) / 100
+      // Un segundo antes que el original: la lista ordena por fecha descendente,
+      // así el remanente aparece justo ABAJO de la línea pagada.
+      const createdRem = new Date(new Date(r.created_at).getTime() - 1000).toISOString()
+      const { error: insErr } = await supabase.from("ingresos").insert({
+        empresa: r.empresa,
+        cliente_agencia: r.cliente_agencia,
+        responsable: r.responsable,
+        proyecto: nombreRem,
+        liquidacion_project_id: r.project_id ?? r.liquidacion_project_id ?? null,
+        subtotal: subtotalRem,
+        iva: ivaRem,
+        // Conserva el estatus que traía: si ya estaba facturado, lo que falta
+        // sigue facturado y pendiente de cobro.
+        estatus: r.estatus,
+        mes_cierre: r.mes_cierre,
+        fecha_aprox_pago: r.fecha_aprox_pago,
+        notas: `Remanente del pago del ${payModal.fecha}`,
+        created_at: createdRem,
+        updated_at: new Date().toISOString(),
+      })
+      if (insErr) {
+        setPaying(false)
+        alert(`El pago se guardó, pero no se pudo crear la línea de liquidación: ${insErr.message}`)
+        setPayModal(null)
+        loadPage()
+        return
+      }
+    }
+
+    setPaying(false)
+    await notifyIngresoPaid(payModal.row.id)
 
     setPayModal(null)
     loadPage()
@@ -985,6 +1080,65 @@ export default function IngresosPage() {
                   autoFocus
                 />
               </FormField>
+
+              {/* ── Pago sin IVA (efectivo, sin factura) ── */}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={paySinIva}
+                  onChange={e => setPaySinIva(e.target.checked)}
+                  style={{ accentColor: "#34d399", width: 15, height: 15 }}
+                />
+                Pago sin IVA (efectivo, sin factura)
+              </label>
+              {paySinIva && (
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#34d399", lineHeight: 1.6 }}>
+                  Lo pagado se registra con IVA $0. Si es parcial, el remanente conserva su IVA proporcional.
+                </p>
+              )}
+
+              {/* ── Pago parcial ── */}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={payParcial}
+                  onChange={e => setPayParcial(e.target.checked)}
+                  style={{ accentColor: "#7c3aed", width: 15, height: 15 }}
+                />
+                Pagar parcialmente
+              </label>
+              {payParcial && (
+                <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
+                    Subtotal pendiente (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontWeight: 700 }}>{fmt(payModal.row.subtotal)}</span>
+                  </p>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <FormField label="Pagado (sin IVA)">
+                        <input type="number" min="0" step="0.01" value={payMonto} onChange={e => onPayMonto(e.target.value)} placeholder="0.00" style={inputStyle} />
+                      </FormField>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <FormField label="Porcentaje %">
+                        <input type="number" min="0" max="100" step="0.01" value={payPct} onChange={e => onPayPct(e.target.value)} placeholder="50" style={inputStyle} />
+                      </FormField>
+                    </div>
+                  </div>
+                  {(() => {
+                    const m = parseFloat(payMonto)
+                    if (!Number.isFinite(m) || m <= 0 || m >= payModal.row.subtotal) return null
+                    const rem = Math.round((payModal.row.subtotal - m) * 100) / 100
+                    return (
+                      <p style={{ margin: "10px 0 0", fontSize: 11, color: "#a78bfa", lineHeight: 1.6 }}>
+                        Se registra el pago de {fmt(m)} y se creará{" "}
+                        <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{nombreLiquidacion(payModal.label)}</span>{" "}
+                        por {fmt(rem)} (sin IVA), justo abajo en la lista.
+                      </p>
+                    )
+                  })()}
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button onClick={() => setPayModal(null)} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
                   Cancelar
