@@ -267,47 +267,11 @@ export default function Home() {
   const [newProjectName, setNewProjectName] = useState("")
   const [savingProject, setSavingProject] = useState(false)
 
-  // ── Recordatorio de juntas (client-side, cada minuto) ─────────────────────
-  const REMINDER_MINUTES = 30 // minutos de anticipación del recordatorio de junta
-  const firedJuntaReminders = useRef<Set<string>>(new Set())
-
-  useEffect(() => {
-    if (!user) return
-
-    function checkJuntaReminders() {
-      if (typeof Notification === "undefined" || Notification.permission !== "granted") return
-
-      const now = new Date()
-      const todayStr = now.toLocaleDateString("sv") // YYYY-MM-DD en timezone local
-
-      for (const junta of allJuntas) {
-        if (!junta.hora_inicio || junta.fecha !== todayStr) continue
-
-        const [h, m] = junta.hora_inicio.split(":").map(Number)
-        const juntaTime = new Date(now)
-        juntaTime.setHours(h, m, 0, 0)
-
-        const diffMin = (juntaTime.getTime() - now.getTime()) / 60000
-
-        if (diffMin <= REMINDER_MINUTES && diffMin > -2) {
-          const key = `${junta.id}-${REMINDER_MINUTES}`
-          if (firedJuntaReminders.current.has(key)) continue
-          firedJuntaReminders.current.add(key)
-
-          const label = junta.titulo || junta.tipo
-          const title = `📋 Junta en ${Math.ceil(Math.max(diffMin, 0))} min`
-          const opts = { body: `${label} · ${junta.hora_inicio} hrs`, icon: "/logo-retro.png" }
-          navigator.serviceWorker.ready
-            .then((reg) => reg.showNotification(title, opts))
-            .catch(() => new Notification(title, opts))
-        }
-      }
-    }
-
-    checkJuntaReminders() // revisar inmediatamente al montar
-    const interval = setInterval(checkJuntaReminders, 10_000) // cada 10 segundos
-    return () => clearInterval(interval)
-  }, [user, allJuntas, juntaAttendeeMap, employees])
+  // El recordatorio previo a juntas y llamados lo manda el servidor
+  // (/api/cron/event-reminder, 10 min antes) como push real, así llega aunque
+  // la app esté cerrada y SOLO a los participantes registrados. Antes se hacía
+  // aquí con un setInterval, que únicamente funcionaba con el calendario
+  // abierto y avisaba de todas las juntas a cualquiera que lo tuviera abierto.
 
   const canEdit = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const isAdmin = profile?.role === "admin"
