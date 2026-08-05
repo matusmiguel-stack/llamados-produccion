@@ -24,6 +24,22 @@ const TIPOS_ENTREGA = [
 
 type TipoEntrega = typeof TIPOS_ENTREGA[number]["label"]
 
+// Normaliza para comparar: minúsculas y sin acentos. Los datos de entregas son
+// texto libre (apodos, nombres con y sin acento), así que sin esto no casan.
+function norm(s: string): string {
+  return (s || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+}
+
+// ¿El texto de la entrega corresponde a alguno de los nombres candidatos?
+function coincideTexto(texto: string, candidatos: string[]): boolean {
+  const t = norm(texto)
+  if (!t) return false
+  return candidatos.filter(Boolean).some((c) => {
+    const n = norm(c)
+    return !!n && (t === n || t.includes(n) || n.includes(t))
+  })
+}
+
 function colorForTipo(tipo: string): string {
   return TIPOS_ENTREGA.find((t) => t.label === tipo)?.color || "#6366f1"
 }
@@ -106,9 +122,34 @@ export default function PostproduccionPage() {
   useEffect(() => {
     const evs = entregas
       .filter((e) => !e.tipo || tiposVisibles.has(e.tipo))
-      .filter((e) => !filtroEditor   || (e.editores || []).some((ed: string) => ed.toLowerCase().includes(filtroEditor.toLowerCase())) || (e.editor || "").toLowerCase().includes(filtroEditor.toLowerCase()))
-      .filter((e) => !filtroCliente  || (e.cliente  || "").toLowerCase().includes(filtroCliente.toLowerCase()))
-      .filter((e) => !filtroProyecto || (e.proyecto || "").toLowerCase().includes(filtroProyecto.toLowerCase()))
+      // Editor: el filtro manda el id del empleado; las entregas guardan texto
+      // libre (apodo o nombre), así que comparamos contra todas sus variantes.
+      .filter((e) => {
+        if (!filtroEditor) return true
+        const emp: any = postproductores.find((p: any) => p.id === filtroEditor)
+        if (!emp) return true
+        const variantes = [
+          emp.nickname,
+          emp.nombre,
+          `${emp.nombre} ${emp.apellido_paterno}`,
+        ]
+        const asignados: string[] = [
+          ...(e.editores || []),
+          ...((e.editor || "").split(",")),
+        ]
+        return asignados.some((a) => coincideTexto(a, variantes))
+      })
+      .filter((e) => !filtroCliente || coincideTexto(e.cliente || "", [filtroCliente]))
+      // Proyecto: las entregas guardan a veces solo el nombre ("AON") y a veces
+      // con código ("RS3000 Kueski Junio"); comparamos contra ambas formas.
+      .filter((e) => {
+        if (!filtroProyecto) return true
+        const p: any = allProjects.find(
+          (x: any) => (x.code ? `${x.code} ${x.name}` : x.name) === filtroProyecto
+        )
+        const variantes = p ? [p.name, p.code ? `${p.code} ${p.name}` : p.name] : [filtroProyecto]
+        return coincideTexto(e.proyecto || "", variantes)
+      })
       .map((e) => {
         const color = colorForTipo(e.tipo) || e.color || "#6366f1"
         // fecha_fin es inclusiva → FullCalendar necesita +1 día como end exclusivo
@@ -130,7 +171,7 @@ export default function PostproduccionPage() {
         }
       })
     setEvents(evs)
-  }, [entregas, tiposVisibles, filtroEditor, filtroCliente, filtroProyecto])
+  }, [entregas, tiposVisibles, filtroEditor, filtroCliente, filtroProyecto, postproductores, allProjects])
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
@@ -289,7 +330,7 @@ export default function PostproduccionPage() {
             style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroEditor ? "#f8fafc" : "#64748b", fontSize: 12 }}>
             <option value="">Editor</option>
             {postproductores.map((e: any) => (
-              <option key={e.id} value={`${e.nombre} ${e.apellido_paterno}`}>{employeeDisplayName(e)}</option>
+              <option key={e.id} value={e.id}>{employeeDisplayName(e)}</option>
             ))}
           </select>
           <select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroProyecto("") }}

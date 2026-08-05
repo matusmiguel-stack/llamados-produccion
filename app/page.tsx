@@ -533,7 +533,22 @@ export default function Home() {
       color: ANNIVERSARY_COLOR,
     })
 
-    const juntaEvents = allJuntas.map((j) => {
+    // Las juntas solo tienen asistentes: no guardan cliente, proyecto ni estatus.
+    // Si se filtra por alguno de esos (que son propios del llamado), no pueden
+    // coincidir y se ocultan; por personal sí se filtran por asistente.
+    const filtrandoPorDatosDeLlamado = !!(filterClient || filterProject || filterStatus)
+    const filteredJuntas = allJuntas.filter((j) => {
+      if (filtrandoPorDatosDeLlamado) return false
+      if (!filterHumanResource) return true
+      return (juntaAttendeeMap[j.id] || []).includes(filterHumanResource)
+    })
+
+    // Los ensayos no guardan participantes ni cliente/proyecto, así que
+    // cualquier filtro activo los deja fuera.
+    const filteredEnsayos =
+      filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allEnsayos
+
+    const juntaEvents = filteredJuntas.map((j) => {
       const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : j.tipo === "Junta Interna" ? "🏠" : "🤝"
       return {
         id: `${JUNTA_EVENT_PREFIX}${j.id}`,
@@ -548,7 +563,7 @@ export default function Home() {
       }
     })
 
-    const ensayoEvents = allEnsayos.map((e) => ({
+    const ensayoEvents = filteredEnsayos.map((e) => ({
       id: `${ENSAYO_EVENT_PREFIX}${e.id}`,
       title: e.titulo ? `🎭 ${e.titulo}` : "🎭 Ensayo",
       start: !e.all_day && e.hora_inicio ? `${e.fecha}T${e.hora_inicio}` : e.fecha,
