@@ -530,7 +530,7 @@ export default function LiberarPage() {
             padding: isMobile ? "76px 14px 24px" : "28px 32px",
           }}
         >
-          <p style={{ color: "#64748b", fontSize: 14 }}>Cargando...</p>
+          <p style={{ color: "#7d8ca3", fontSize: 14 }}>Cargando...</p>
         </main>
       </div>
     )
@@ -598,7 +598,7 @@ export default function LiberarPage() {
             <span style={legendItemStyle("#34d399", "rgba(52,211,153,0.10)")}>
               ■ Real
             </span>
-            <p style={{ margin: 0, color: "#475569", fontSize: 11 }}>
+            <p style={{ margin: 0, color: "#6b7c93", fontSize: 11 }}>
               Deja vacío un campo Real para usar el valor liberado
             </p>
           </div>
@@ -731,7 +731,7 @@ export default function LiberarPage() {
                       gridTemplateColumns: GRID,
                       gap: 6,
                       padding: "0 4px 6px",
-                      color: "#475569",
+                      color: "#6b7c93",
                       fontSize: 10,
                       fontWeight: 600,
                       textTransform: "uppercase",
@@ -1225,7 +1225,7 @@ export default function LiberarPage() {
                 <div style={{ ...comparisonRowStyle, alignItems: "center", gap: 8 }}>
                   <span style={{ ...comparisonLabelStyle, flex: 1 }}>Gastos adicionales</span>
                   <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 11, pointerEvents: "none" }}>$</span>
+                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#7d8ca3", fontSize: 11, pointerEvents: "none" }}>$</span>
                     <input
                       type="number"
                       min="0"
@@ -1575,7 +1575,7 @@ function SupplierCombobox({
                     onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}>
                     <div>
                       <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                      <div style={{ color: "#64748b", fontSize: 11 }}>{e.puesto}</div>
+                      <div style={{ color: "#7d8ca3", fontSize: 11 }}>{e.puesto}</div>
                     </div>
                   </div>
                 )
@@ -1594,7 +1594,7 @@ function SupplierCombobox({
                     onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}>
                     <div>
                       <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                      <div style={{ color: "#64748b", fontSize: 11 }}>{sub}</div>
+                      <div style={{ color: "#7d8ca3", fontSize: 11 }}>{sub}</div>
                     </div>
                   </div>
                 )
@@ -1636,7 +1636,7 @@ const comboboxClearStyle: React.CSSProperties = {
   transform: "translateY(-50%)",
   background: "none",
   border: "none",
-  color: "#475569",
+  color: "#6b7c93",
   cursor: "pointer",
   fontSize: 11,
   padding: "0 2px",
@@ -1648,7 +1648,7 @@ const comboboxChevronStyle: React.CSSProperties = {
   right: 8,
   top: "50%",
   transform: "translateY(-50%)",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 10,
   pointerEvents: "none",
 }
@@ -1669,7 +1669,7 @@ const comboboxGroupHeaderStyle: React.CSSProperties = {
   padding: "8px 12px 4px",
   fontSize: 10,
   fontWeight: 700,
-  color: "#475569",
+  color: "#6b7c93",
   textTransform: "uppercase",
   letterSpacing: 0.7,
   borderTop: "1px solid rgba(148,163,184,0.08)",
@@ -1688,7 +1688,7 @@ const comboboxOptionStyle: React.CSSProperties = {
 
 const comboboxNoResultsStyle: React.CSSProperties = {
   padding: "12px",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 12,
   textAlign: "center",
 }
@@ -1764,7 +1764,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   display: "flex",
   alignItems: "center",
@@ -1900,7 +1900,7 @@ const selectStyle: React.CSSProperties = {
 
 const inputLabelStyle: React.CSSProperties = {
   margin: "0 0 3px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 10,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -1971,7 +1971,7 @@ const comparisonRowStyle: React.CSSProperties = {
 }
 
 const comparisonLabelStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -2065,7 +2065,7 @@ const addProvCancelStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(148,163,184,0.20)",
   background: "transparent",
-  color: "#64748b",
+  color: "#7d8ca3",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 500,

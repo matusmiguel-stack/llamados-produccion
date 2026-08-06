@@ -477,8 +477,8 @@ export default function ProveedorDetailPage() {
 
             {egresos.length === 0 ? (
               <div style={emptyStateStyle}>
-                <p style={{ margin: 0, fontSize: 15, color: "#475569" }}>Sin egresos asignados</p>
-                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#334155" }}>Este proveedor aún no tiene rubros capturados en ninguna liberación.</p>
+                <p style={{ margin: 0, fontSize: 15, color: "#6b7c93" }}>Sin egresos asignados</p>
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7c93" }}>Este proveedor aún no tiene rubros capturados en ninguna liberación.</p>
               </div>
             ) : (
               Object.entries(byProject).map(([pid, { project_name, client_name, rows }]) => {
@@ -491,10 +491,10 @@ export default function ProveedorDetailPage() {
                       title={colProj[pid] ? "Mostrar rubros" : "Ocultar rubros"}
                     >
                       <div>
-                        <span style={{ color: "#64748b", fontSize: 12, marginRight: 8 }}>{colProj[pid] ? "▸" : "▾"}</span>
+                        <span style={{ color: "#7d8ca3", fontSize: 12, marginRight: 8 }}>{colProj[pid] ? "▸" : "▾"}</span>
                         <Link href={`/proyectos/${pid}`} style={projectNameLinkStyle} onClick={e => e.stopPropagation()}>{project_name}</Link>
                         <span style={clientNameStyle}> · {client_name}</span>
-                        <span style={{ color: "#475569", fontSize: 11, marginLeft: 8 }}>({rows.length} rubro{rows.length === 1 ? "" : "s"})</span>
+                        <span style={{ color: "#6b7c93", fontSize: 11, marginLeft: 8 }}>({rows.length} rubro{rows.length === 1 ? "" : "s"})</span>
                       </div>
                       <span style={projectTotalStyle}>{fmt(projectTotal)}</span>
                     </div>
@@ -522,7 +522,7 @@ export default function ProveedorDetailPage() {
                                     <Link href={`/proyectos/${row.project_id}/liberar/${row.quote_id}`} style={quoteLinkStyle}>{row.quote_name}</Link>
                                   </td>
                                   {/* Sección */}
-                                  <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{row.section_name}</td>
+                                  <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12 }}>{row.section_name}</td>
                                   {/* Descripción */}
                                   <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
                                   {/* Combobox proveedor */}
@@ -556,7 +556,7 @@ export default function ProveedorDetailPage() {
                                       style={{ ...editInputStyle, width: 90 }} />
                                   </td>
                                   {/* Preview monto */}
-                                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace" }}>
+                                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                                     {fmt(previewMonto)}
                                   </td>
                                   {/* Acciones */}
@@ -583,15 +583,15 @@ export default function ProveedorDetailPage() {
                                 <td style={tdStyle}>
                                   <Link href={`/proyectos/${row.project_id}/liberar/${row.quote_id}`} style={quoteLinkStyle}>{row.quote_name}</Link>
                                 </td>
-                                <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>{row.section_name}</td>
+                                <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12 }}>{row.section_name}</td>
                                 <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
                                 <td style={tdStyle}>
                                   <span style={isThisProv ? currentProvBadge : otherProvBadge}>{isThisProv ? "🏢 " : "👤 "}{contactLabel}</span>
                                 </td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{qty}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{days}</td>
-                                <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>{price != null ? fmt(price) : "—"}</td>
-                                <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 700, fontFamily: "monospace" }}>{fmt(row.monto)}</td>
+                                <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{price != null ? fmt(price) : "—"}</td>
+                                <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(row.monto)}</td>
                                 <td style={{ ...tdStyle, textAlign: "right" }}>
                                   {canEdit && <button onClick={() => startEdit(row)} style={editBtnStyle}>✎ Editar</button>}
                                 </td>
@@ -601,10 +601,10 @@ export default function ProveedorDetailPage() {
                         </tbody>
                         <tfoot>
                           <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                            <td colSpan={7} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
+                            <td colSpan={7} style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12, paddingTop: 10 }}>
                               {rows.length} rubro{rows.length !== 1 ? "s" : ""}
                             </td>
-                            <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "monospace", paddingTop: 10 }}>
+                            <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", paddingTop: 10 }}>
                               {fmt(projectTotal)}
                             </td>
                             <td />
@@ -651,10 +651,10 @@ export default function ProveedorDetailPage() {
 
               {facturasFiltradas.length === 0 ? (
                 <div style={emptyStateStyle}>
-                  <p style={{ margin: 0, fontSize: 15, color: "#475569" }}>
+                  <p style={{ margin: 0, fontSize: 15, color: "#6b7c93" }}>
                     {facFilter === "aceptada" ? "Sin facturas por pagar" : facFilter === "pagada" ? "Sin facturas pagadas" : "Sin facturas rechazadas"}
                   </p>
-                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#334155" }}>
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7c93" }}>
                     {facturas.length === 0 ? "Este proveedor aún no ha subido facturas al sistema." : "Prueba con otro filtro."}
                   </p>
                 </div>
@@ -683,7 +683,7 @@ export default function ProveedorDetailPage() {
                             {f.status === "rechazada" && <span style={facPillStyle("#f87171")}>Rechazada</span>}
                             {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 400 }}>{f.origen}</span>}
                           </p>
-                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
                             {proyecto}
                             {f.status === "aceptada" && f.fecha_pago && (
                               <> · {vencida ? "venció el" : "pago programado"}{" "}
@@ -693,11 +693,11 @@ export default function ProveedorDetailPage() {
                           </p>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: vencida ? "#f87171" : "#f8fafc" }}>
+                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: vencida ? "#f87171" : "#f8fafc" }}>
                             {pagar > 0 ? fmt(pagar) : "—"}
                           </p>
                           {pagar > 0 && sub > 0 && Math.abs(pagar - sub) > 0.01 && (
-                            <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>{fmt(sub)} + imp.</p>
+                            <p style={{ margin: 0, fontSize: 11, color: "#7d8ca3" }}>{fmt(sub)} + imp.</p>
                           )}
                         </div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -776,7 +776,7 @@ export default function ProveedorDetailPage() {
                 Marcar pago{payModalFac.concepto ? ` — ${payModalFac.concepto}` : ""}
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
-                Monto: <span style={{ fontFamily: "monospace", color: "#e2e8f0", fontWeight: 700 }}>{fmt(Number(payModalFac.subtotal || 0))}</span>
+                Monto: <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#e2e8f0", fontWeight: 700 }}>{fmt(Number(payModalFac.subtotal || 0))}</span>
               </p>
               <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
                 Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>
@@ -787,7 +787,7 @@ export default function ProveedorDetailPage() {
                 onChange={e => setPayFile(e.target.files?.[0] || null)}
                 style={{ fontSize: 12, color: "#94a3b8", width: "100%" }}
               />
-              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
                 PDF o JPG. Queda guardado y vinculado a esta transacción. Al confirmar se
                 le envía el correo de pago al proveedor.
               </p>
@@ -896,11 +896,11 @@ function SupplierCombobox({
         {value && !open && (
           <button type="button"
             onMouseDown={e => { e.preventDefault(); onChange(""); setQuery("") }}
-            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
+            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#6b7c93", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
           >✕</button>
         )}
         {!value && !open && (
-          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
+          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#6b7c93", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
         )}
       </div>
 
@@ -912,18 +912,18 @@ function SupplierCombobox({
           maxHeight: 260, overflowY: "auto" as const, padding: "4px 0",
         }}>
           {!hasResults && q && (
-            <div style={{ padding: 12, color: "#475569", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
+            <div style={{ padding: 12, color: "#6b7c93", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
           )}
           {filteredEmps.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.7 }}>👤 Empleados RETRO</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase" as const, letterSpacing: 0.7 }}>👤 Empleados RETRO</div>
               {filteredEmps.map(e => {
                 const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
                 return (
                   <div key={e.id} onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
                     <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{e.nombre} {ap}</div>
-                    <div style={{ color: "#64748b", fontSize: 11 }}>{e.puesto}</div>
+                    <div style={{ color: "#7d8ca3", fontSize: 11 }}>{e.puesto}</div>
                   </div>
                 )
               })}
@@ -931,7 +931,7 @@ function SupplierCombobox({
           )}
           {filteredProvs.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.7, borderTop: "1px solid rgba(148,163,184,0.08)", marginTop: 2 }}>🏢 Proveedores</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase" as const, letterSpacing: 0.7, borderTop: "1px solid rgba(148,163,184,0.08)", marginTop: 2 }}>🏢 Proveedores</div>
               {filteredProvs.map(p => {
                 const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
                 const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad
@@ -939,7 +939,7 @@ function SupplierCombobox({
                   <div key={p.id} onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
                     <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                    <div style={{ color: "#64748b", fontSize: 11 }}>{sub}</div>
+                    <div style={{ color: "#7d8ca3", fontSize: 11 }}>{sub}</div>
                   </div>
                 )
               })}
@@ -958,7 +958,7 @@ function InfoCard({ icon, label, value }: { icon: string; label: string; value: 
     <div style={infoCardStyle}>
       <span style={{ fontSize: 16 }}>{icon}</span>
       <div>
-        <p style={{ margin: 0, color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
+        <p style={{ margin: 0, color: "#7d8ca3", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
         <p style={{ margin: "3px 0 0", color: "#e2e8f0", fontSize: 13, wordBreak: "break-word" }}>{value}</p>
       </div>
     </div>
@@ -968,9 +968,9 @@ function InfoCard({ icon, label, value }: { icon: string; label: string; value: 
 function SummaryCard({ label, value, color, big, hint }: { label: string; value: string; color: string; big?: boolean; hint?: string }) {
   return (
     <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", flex: big ? "1.5 1 0" : "1 1 0", minWidth: 0, boxShadow: `0 0 0 1px ${color}22` }}>
-      <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
-      <p style={{ margin: "6px 0 0", color, fontSize: big ? 22 : 20, fontWeight: 700, fontFamily: "monospace" }}>{value}</p>
-      {hint && <p style={{ margin: "4px 0 0", color: "#475569", fontSize: 11 }}>{hint}</p>}
+      <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
+      <p style={{ margin: "6px 0 0", color, fontSize: big ? 22 : 20, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{value}</p>
+      {hint && <p style={{ margin: "4px 0 0", color: "#6b7c93", fontSize: 11 }}>{hint}</p>}
     </div>
   )
 }
@@ -995,7 +995,7 @@ const tabBtnStyle = (active: boolean): React.CSSProperties => ({
 })
 const contactToggleStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer", padding: 0,
-  color: "#64748b", fontSize: 12, fontWeight: 600,
+  color: "#7d8ca3", fontSize: 12, fontWeight: 600,
 }
 const facPillStyle = (color: string): React.CSSProperties => ({
   padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
@@ -1061,7 +1061,7 @@ const sectionStyle: React.CSSProperties = {
 
 const sectionHeaderStyle: React.CSSProperties = { marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid rgba(148,163,184,0.10)" }
 const sectionTitleStyle: React.CSSProperties  = { margin: 0, color: "#f8fafc", fontSize: 14, fontWeight: 700 }
-const sectionHintStyle: React.CSSProperties   = { margin: "4px 0 0", color: "#64748b", fontSize: 12 }
+const sectionHintStyle: React.CSSProperties   = { margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }
 
 const projectHeaderStyle: React.CSSProperties = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -1071,14 +1071,14 @@ const projectHeaderStyle: React.CSSProperties = {
 }
 
 const projectNameLinkStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#e2e8f0", textDecoration: "none" }
-const clientNameStyle: React.CSSProperties       = { fontSize: 12, color: "#64748b" }
-const projectTotalStyle: React.CSSProperties     = { fontSize: 14, fontWeight: 700, color: "#f87171", fontFamily: "monospace" }
+const clientNameStyle: React.CSSProperties       = { fontSize: 12, color: "#7d8ca3" }
+const projectTotalStyle: React.CSSProperties     = { fontSize: 14, fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }
 
 const tableWrapStyle: React.CSSProperties = { overflowX: "auto", borderRadius: "0 0 10px 10px", border: "1px solid rgba(148,163,184,0.10)" }
 const tableStyle: React.CSSProperties     = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#cbd5e1" }
 
 const thStyle: React.CSSProperties = {
-  padding: "9px 12px", fontSize: 11, fontWeight: 700, color: "#475569",
+  padding: "9px 12px", fontSize: 11, fontWeight: 700, color: "#6b7c93",
   textTransform: "uppercase", letterSpacing: 0.6,
   borderBottom: "1px solid rgba(148,163,184,0.12)", background: "rgba(255,255,255,0.025)", whiteSpace: "nowrap",
 }
@@ -1105,7 +1105,7 @@ const saveBtnStyle: React.CSSProperties = {
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(148,163,184,0.18)",
-  background: "transparent", color: "#64748b", cursor: "pointer", fontSize: 12,
+  background: "transparent", color: "#7d8ca3", cursor: "pointer", fontSize: 12,
 }
 
 const editBtnStyle: React.CSSProperties = {

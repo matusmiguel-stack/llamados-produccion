@@ -779,19 +779,19 @@ export default function IngresosPage() {
         {/* ── Empresa summary ── */}
         <div style={empresaSummaryStyle}>
           <span style={empresaSumItemStyle}>
-            <span style={{ color: "#64748b" }}>Vendido:</span>{" "}
+            <span style={{ color: "#7d8ca3" }}>Vendido:</span>{" "}
             <span style={{ color: "#f8fafc", fontWeight: 600 }}>{fmt(totalVendido)}</span>
-            <span style={{ color: "#64748b", fontSize: 11 }}>{" "}· c/IVA {fmt(totalVendidoConIva)}</span>
+            <span style={{ color: "#7d8ca3", fontSize: 11 }}>{" "}· c/IVA {fmt(totalVendidoConIva)}</span>
           </span>
           <span style={empresaSumItemStyle}>
-            <span style={{ color: "#64748b" }}>Cobrado:</span>{" "}
+            <span style={{ color: "#7d8ca3" }}>Cobrado:</span>{" "}
             <span style={{ color: "#4ade80", fontWeight: 600 }}>{fmt(totalCobrado)}</span>
-            <span style={{ color: "#64748b", fontSize: 11 }}>{" "}· c/IVA {fmt(totalCobradoConIva)}</span>
+            <span style={{ color: "#7d8ca3", fontSize: 11 }}>{" "}· c/IVA {fmt(totalCobradoConIva)}</span>
           </span>
           <span style={empresaSumItemStyle}>
-            <span style={{ color: "#64748b" }}>Pendiente:</span>{" "}
+            <span style={{ color: "#7d8ca3" }}>Pendiente:</span>{" "}
             <span style={{ color: "#fb923c", fontWeight: 600 }}>{fmt(totalPendiente)}</span>
-            <span style={{ color: "#64748b", fontSize: 11 }}>{" "}· c/IVA {fmt(totalPendienteConIva)}</span>
+            <span style={{ color: "#7d8ca3", fontSize: 11 }}>{" "}· c/IVA {fmt(totalPendienteConIva)}</span>
           </span>
         </div>
 
@@ -823,10 +823,10 @@ export default function IngresosPage() {
 
         {/* ── Table ── */}
         {loading ? (
-          <p style={{ color: "#64748b", padding: "32px 0", textAlign: "center" }}>Cargando…</p>
+          <p style={{ color: "#7d8ca3", padding: "32px 0", textAlign: "center" }}>Cargando…</p>
         ) : rows.length === 0 ? (
           <div style={emptyStyle}>
-            <p style={{ color: "#475569", fontSize: 14 }}>
+            <p style={{ color: "#6b7c93", fontSize: 14 }}>
               No hay ingresos registrados{filtroEstatus !== "todos" ? " con este estatus" : ""}.
             </p>
             <button onClick={openCreate} style={{ ...newBtnStyle, marginTop: 12 }}>+ Agregar primero</button>
@@ -896,22 +896,22 @@ export default function IngresosPage() {
                           proyectoLabel(r)
                         )}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#f8fafc", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#f8fafc", whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal)}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#64748b", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#7d8ca3", whiteSpace: "nowrap" }}>
                         {fmt(r.iva)}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: "#a78bfa", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#a78bfa", fontWeight: 600, whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal + r.iva)}
                       </td>
                       <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", whiteSpace: "nowrap", fontWeight: isOverdue ? 600 : undefined }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
-                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>{r.numero_factura || "—"}</td>
-                      <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>{r.odc || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{r.numero_factura || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11 }}>{r.odc || "—"}</td>
                       <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
-                      <td style={{ ...tdStyle, color: "#64748b", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#7d8ca3", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
                       <td style={{ ...tdStyle, whiteSpace: "nowrap", textAlign: "right" }}>
                         {/* Facturar pide el XML y el PDF, y saca el número del CFDI */}
                         {r.estatus !== "facturado" && r.estatus !== "pagado" && (
@@ -936,16 +936,16 @@ export default function IngresosPage() {
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                  <td colSpan={3} style={{ ...tdStyle, color: "#64748b", fontSize: 12, paddingTop: 10 }}>
+                  <td colSpan={3} style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12, paddingTop: 10 }}>
                     {rows.length} registro{rows.length !== 1 ? "s" : ""}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f8fafc", paddingTop: 10, fontFamily: "monospace" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f8fafc", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                     {fmt(rows.reduce((s, r) => s + r.subtotal, 0))}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", color: "#64748b", paddingTop: 10, fontFamily: "monospace" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#7d8ca3", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                     {fmt(rows.reduce((s, r) => s + r.iva, 0))}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#a78bfa", paddingTop: 10, fontFamily: "monospace" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#a78bfa", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                     {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}
                   </td>
                   <td colSpan={6} />
@@ -1018,7 +1018,7 @@ export default function IngresosPage() {
               {facParcial && (
                 <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
                   <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
-                    Subtotal original (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
+                    Subtotal original (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
                   </p>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div style={{ flex: 1 }}>
@@ -1110,7 +1110,7 @@ export default function IngresosPage() {
               {payParcial && (
                 <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
                   <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
-                    Subtotal pendiente (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "monospace", fontWeight: 700 }}>{fmt(payModal.row.subtotal)}</span>
+                    Subtotal pendiente (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(payModal.row.subtotal)}</span>
                   </p>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div style={{ flex: 1 }}>
@@ -1201,7 +1201,7 @@ export default function IngresosPage() {
                     title={editingLinked ? "Vinculado a la carpeta del cliente en Proyectos" : undefined}
                   />
                   {editingLinked && (
-                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>
                       🔗 Vinculado a la carpeta del cliente — se renombra desde Proyectos.
                     </p>
                   )}
@@ -1229,7 +1229,7 @@ export default function IngresosPage() {
                   />
                   {editingLinked && (
                     <>
-                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
                         El nombre, monto (subtotal/IVA) y responsable los dicta la cotización aprobada.
                         Para editarlos a fondo, ve a la página del proyecto.
                       </p>
@@ -1357,8 +1357,8 @@ export default function IngresosPage() {
               {/* Preview total */}
               {(parseFloat(form.subtotal) > 0) && (
                 <div style={totalPreviewStyle}>
-                  <span style={{ color: "#64748b", fontSize: 12 }}>Total con IVA:</span>
-                  <span style={{ color: "#f8fafc", fontWeight: 700, fontFamily: "monospace", fontSize: 15 }}>
+                  <span style={{ color: "#7d8ca3", fontSize: 12 }}>Total con IVA:</span>
+                  <span style={{ color: "#f8fafc", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }}>
                     {fmt((parseFloat(form.subtotal) || 0) + (parseFloat(form.iva) || 0))}
                   </span>
                 </div>
@@ -1384,12 +1384,12 @@ export default function IngresosPage() {
 function SummaryCard({ label, value, color, valueWithIva }: { label: string; value: number; color: string; valueWithIva?: number }) {
   return (
     <div style={summaryCardStyle(color)}>
-      <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
-      <p style={{ margin: "6px 0 2px", color, fontSize: 20, fontWeight: 700, fontFamily: "monospace" }}>
+      <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
+      <p style={{ margin: "6px 0 2px", color, fontSize: 20, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
         {value.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 })}
       </p>
       {valueWithIva !== undefined && (
-        <p style={{ margin: 0, color: "#64748b", fontSize: 11, fontFamily: "monospace" }}>
+        <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
           c/IVA {valueWithIva.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 })}
         </p>
       )}
@@ -1440,7 +1440,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 13,
 }
 
@@ -1494,7 +1494,7 @@ const tabStyle: React.CSSProperties = {
   borderRadius: 9,
   border: "1px solid rgba(148,163,184,0.12)",
   background: "transparent",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   fontWeight: 500,
   cursor: "pointer",
@@ -1535,7 +1535,7 @@ const statusPillStyle: React.CSSProperties = {
   borderRadius: 999,
   border: "1px solid rgba(148,163,184,0.14)",
   background: "transparent",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
   cursor: "pointer",
 }
@@ -1592,7 +1592,7 @@ const thStyle: React.CSSProperties = {
   textAlign: "left",
   fontSize: 11,
   fontWeight: 700,
-  color: "#475569",
+  color: "#6b7c93",
   textTransform: "uppercase",
   letterSpacing: 0.6,
   borderBottom: "1px solid rgba(148,163,184,0.12)",
@@ -1628,7 +1628,7 @@ const actionBtnStyle: React.CSSProperties = {
   padding: "3px 4px",
   border: "none",
   background: "none",
-  color: "#475569",
+  color: "#6b7c93",
   cursor: "pointer",
   fontSize: 13,
 }
@@ -1725,7 +1725,7 @@ const rowStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: "#64748b",
+  color: "#7d8ca3",
 }
 
 const inputStyle: React.CSSProperties = {
@@ -1780,7 +1780,7 @@ const cancelBtnStyle: React.CSSProperties = {
 const closeBtnStyle: React.CSSProperties = {
   background: "none",
   border: "none",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 16,
   cursor: "pointer",
   padding: "2px 6px",

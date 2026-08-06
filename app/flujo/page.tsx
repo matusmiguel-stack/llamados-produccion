@@ -447,7 +447,7 @@ export default function FlujoPage() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 22 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>📊 Flujo de Caja</h1>
-            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#7d8ca3" }}>
               Planeación día a día · cobros esperados vs pagos programados · próximas {HORIZONTE_SEMANAS} semanas
             </p>
           </div>
@@ -475,15 +475,15 @@ export default function FlujoPage() {
             {editingConfig && cfgActual ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                 <input type="number" value={configForm.saldo} onChange={e => setConfigForm(f => ({ ...f, saldo: e.target.value }))} style={{ ...inputStyle, width: 160 }} placeholder="Saldo" />
-                <label style={{ fontSize: 11, color: "#64748b" }}>Mínimo alerta:</label>
+                <label style={{ fontSize: 11, color: "#7d8ca3" }}>Mínimo alerta:</label>
                 <input type="number" value={configForm.minimo} onChange={e => setConfigForm(f => ({ ...f, minimo: e.target.value }))} style={{ ...inputStyle, width: 120 }} placeholder="Mínimo" />
-                <label style={{ fontSize: 11, color: "#64748b" }}>Corte:</label>
+                <label style={{ fontSize: 11, color: "#7d8ca3" }}>Corte:</label>
                 <input type="date" value={configForm.corte} onChange={e => setConfigForm(f => ({ ...f, corte: e.target.value }))} style={{ ...inputStyle, width: 150, colorScheme: "dark" }} />
                 <button onClick={saveConfig} disabled={saving} style={miniPrimaryBtnStyle}>{saving ? "…" : "✓ Guardar"}</button>
                 <button onClick={() => setEditingConfig(false)} style={miniBtnStyle}>Cancelar</button>
               </div>
             ) : (
-              <p style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, fontFamily: "monospace", color: "#f8fafc" }}>
+              <p style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#f8fafc" }}>
                 {fmt(flujo.saldoInicial)}
                 {tab !== "combinado" && (
                   <button onClick={startEditConfig} style={{ ...miniBtnStyle, marginLeft: 12, verticalAlign: "middle" }}>✎ Editar</button>
@@ -491,17 +491,17 @@ export default function FlujoPage() {
               </p>
             )}
             {tab !== "combinado" && cfgActual && !editingConfig && (
-              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#475569" }}>
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7c93" }}>
                 Corte: {cfgActual.fecha_corte} · Alerta si baja de {fmt(Number(cfgActual.saldo_minimo || 0))}
               </p>
             )}
             {tab === "combinado" && (
-              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#475569" }}>El saldo se edita en el tab de cada empresa.</p>
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7c93" }}>El saldo se edita en el tab de cada empresa.</p>
             )}
           </div>
           <div style={{ textAlign: "right" }}>
             <p style={cardLabelStyle}>Saldo proyectado al final ({HORIZONTE_SEMANAS} sem)</p>
-            <p style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, fontFamily: "monospace", color: flujo.saldoFinal < flujo.saldoMinimo ? "#f87171" : "#4ade80" }}>
+            <p style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: flujo.saldoFinal < flujo.saldoMinimo ? "#f87171" : "#4ade80" }}>
               {fmt(flujo.saldoFinal)}
             </p>
           </div>
@@ -520,7 +520,7 @@ export default function FlujoPage() {
           <div style={fijosPanelStyle}>
             <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: 0.6 }}>Gastos fijos recurrentes</p>
             {fijosVisibles.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 13, color: "#475569" }}>Sin gastos fijos. Agrega nómina, renta, servicios, etc. con "+ Gasto fijo".</p>
+              <p style={{ margin: 0, fontSize: 13, color: "#6b7c93" }}>Sin gastos fijos. Agrega nómina, renta, servicios, etc. con "+ Gasto fijo".</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {fijosVisibles.map(f => (
@@ -528,9 +528,9 @@ export default function FlujoPage() {
                     <span style={{ flex: 1, minWidth: 160, color: f.activo ? "#e2e8f0" : "#475569", fontSize: 13, fontWeight: 600, textDecoration: f.activo ? "none" : "line-through" }}>
                       {f.concepto}
                     </span>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>{EMPRESA_LABEL[f.empresa]}</span>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>{fijoRecLabel(f)}</span>
-                    <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13, color: f.tipo === "egreso" ? "#f87171" : "#4ade80" }}>
+                    <span style={{ fontSize: 11, color: "#7d8ca3" }}>{EMPRESA_LABEL[f.empresa]}</span>
+                    <span style={{ fontSize: 11, color: "#7d8ca3" }}>{fijoRecLabel(f)}</span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700, fontSize: 13, color: f.tipo === "egreso" ? "#f87171" : "#4ade80" }}>
                       {f.tipo === "egreso" ? "–" : "+"}{fmt(Number(f.monto))}
                     </span>
                     <button onClick={() => toggleFijo(f)} style={miniBtnStyle}>{f.activo ? "Pausar" : "Activar"}</button>
@@ -545,7 +545,7 @@ export default function FlujoPage() {
         {/* ── Semanas ── */}
         {flujo.semanas.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", borderRadius: 14, border: "1px dashed rgba(148,163,184,0.14)" }}>
-            <p style={{ color: "#475569", fontSize: 14 }}>Sin movimientos proyectados en las próximas {HORIZONTE_SEMANAS} semanas.</p>
+            <p style={{ color: "#6b7c93", fontSize: 14 }}>Sin movimientos proyectados en las próximas {HORIZONTE_SEMANAS} semanas.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -557,7 +557,7 @@ export default function FlujoPage() {
                     Semana {fmtRangoSemana(sem.lunes)}
                     {sem.alerta && <span style={alertaBadgeStyle}>⚠ saldo bajo</span>}
                   </p>
-                  <div style={{ display: "flex", gap: 16, fontSize: 12, fontFamily: "monospace", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 16, fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", flexWrap: "wrap" }}>
                     <span style={{ color: "#4ade80" }}>+{fmt(sem.entradas)}</span>
                     <span style={{ color: "#f87171" }}>–{fmt(sem.salidas)}</span>
                     <span style={{ color: sem.neto >= 0 ? "#4ade80" : "#f87171", fontWeight: 700 }}>= {sem.neto >= 0 ? "+" : ""}{fmt(sem.neto)}</span>
@@ -710,11 +710,11 @@ function FragmentoDia({ dia, alertaMin, expandido, onToggle, onDeleteMov, esHoy,
           {fmtDia(dia.fecha)}{esHoy ? " · HOY" : ""}
           {dia.eventos.some(e => e.atrasado) && <span style={{ marginLeft: 6, fontSize: 10, color: "#f87171" }}>⚠ incluye atrasados</span>}
         </td>
-        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: dia.entradas > 0 ? "#4ade80" : "#334155" }}>{dia.entradas > 0 ? `+${fmt(dia.entradas)}` : "—"}</td>
-        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", color: dia.salidas > 0 ? "#f87171" : "#334155" }}>{dia.salidas > 0 ? `–${fmt(dia.salidas)}` : "—"}</td>
-        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", fontWeight: 600, color: dia.neto >= 0 ? "#4ade80" : "#f87171" }}>{dia.neto >= 0 ? "+" : ""}{fmt(dia.neto)}</td>
-        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: dia.saldo < alertaMin ? "#f87171" : "#f8fafc" }}>{fmt(dia.saldo)}</td>
-        <td style={{ ...tdStyle, textAlign: "right", color: "#475569", fontSize: 11 }}>{expandido ? "▲" : "▼"}</td>
+        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: dia.entradas > 0 ? "#4ade80" : "#334155" }}>{dia.entradas > 0 ? `+${fmt(dia.entradas)}` : "—"}</td>
+        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: dia.salidas > 0 ? "#f87171" : "#334155" }}>{dia.salidas > 0 ? `–${fmt(dia.salidas)}` : "—"}</td>
+        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: dia.neto >= 0 ? "#4ade80" : "#f87171" }}>{dia.neto >= 0 ? "+" : ""}{fmt(dia.neto)}</td>
+        <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700, color: dia.saldo < alertaMin ? "#f87171" : "#f8fafc" }}>{fmt(dia.saldo)}</td>
+        <td style={{ ...tdStyle, textAlign: "right", color: "#6b7c93", fontSize: 11 }}>{expandido ? "▲" : "▼"}</td>
       </tr>
       {expandido && dia.eventos.map((e, i) => (
         <tr key={i} style={{ background: "rgba(255,255,255,0.015)", borderBottom: "1px solid rgba(148,163,184,0.05)" }}>
@@ -723,10 +723,10 @@ function FragmentoDia({ dia, alertaMin, expandido, onToggle, onDeleteMov, esHoy,
               {FUENTE_META[e.fuente].label}
             </span>
             {e.concepto}
-            {mostrarEmpresa && <span style={{ marginLeft: 8, fontSize: 10, color: "#64748b" }}>{EMPRESA_LABEL[e.empresa]}</span>}
+            {mostrarEmpresa && <span style={{ marginLeft: 8, fontSize: 10, color: "#7d8ca3" }}>{EMPRESA_LABEL[e.empresa]}</span>}
             {e.atrasado && <span style={{ marginLeft: 8, fontSize: 10, color: "#f87171" }}>⚠ venció {fmtDia(e.fechaOriginal)}</span>}
           </td>
-          <td style={{ ...tdStyle, textAlign: "right", fontFamily: "monospace", fontSize: 12, color: e.tipo === "ingreso" ? "#4ade80" : "#f87171" }}>
+          <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 12, color: e.tipo === "ingreso" ? "#4ade80" : "#f87171" }}>
             {e.tipo === "ingreso" ? "+" : "–"}{fmt(e.monto)}
           </td>
           <td style={{ ...tdStyle, textAlign: "right" }}>
@@ -743,7 +743,7 @@ function FragmentoDia({ dia, alertaMin, expandido, onToggle, onDeleteMov, esHoy,
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginTop: 12 }}>
-      <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>{label}</label>
+      <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>{label}</label>
       {children}
     </div>
   )
@@ -777,7 +777,7 @@ const configCardStyle: React.CSSProperties = {
 }
 
 const cardLabelStyle: React.CSSProperties = {
-  margin: 0, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6, color: "#64748b",
+  margin: 0, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6, color: "#7d8ca3",
 }
 
 const notaStyle: React.CSSProperties = {
@@ -801,7 +801,7 @@ const alertaBadgeStyle: React.CSSProperties = {
 }
 
 const thStyle: React.CSSProperties = {
-  padding: "7px 10px", fontSize: 10, fontWeight: 700, color: "#475569",
+  padding: "7px 10px", fontSize: 10, fontWeight: 700, color: "#6b7c93",
   textTransform: "uppercase", letterSpacing: 0.6, borderBottom: "1px solid rgba(148,163,184,0.12)",
 }
 
@@ -867,7 +867,7 @@ const confirmBtnStyle: React.CSSProperties = {
 
 const toggleBtnStyle: React.CSSProperties = {
   flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#64748b",
+  border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#7d8ca3",
 }
 
 const toggleActiveRedStyle: React.CSSProperties = {

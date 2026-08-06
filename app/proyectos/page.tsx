@@ -1156,7 +1156,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -1224,7 +1224,7 @@ const breadcrumbActiveStyle: React.CSSProperties = {
 }
 
 const breadcrumbDividerStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 12,
 }
 
@@ -1245,7 +1245,7 @@ const driveActionsStyle: React.CSSProperties = {
 
 const driveHintStyle: React.CSSProperties = {
   margin: "0 0 14px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1356,7 +1356,7 @@ const dangerButtonStyle: React.CSSProperties = {
 const emptyStateStyle: React.CSSProperties = {
   padding: "56px 16px",
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -1429,13 +1429,13 @@ const driveItemNameStyle: React.CSSProperties = {
 }
 
 const driveItemMetaStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   lineHeight: 1.4,
   wordBreak: "break-word",
 }
 
 const driveItemHintStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 10,
 }

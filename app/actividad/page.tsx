@@ -223,7 +223,7 @@ export default function ActividadPage() {
       <main style={{ flex: 1, padding: isMobile ? "76px 14px 32px" : "32px 36px", maxWidth: 1100, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 22 }}>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>🕓 Historial de movimientos</h1>
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#7d8ca3" }}>
             Registro de todo lo que se crea, edita y elimina en la app. Solo visible para administradores.
           </p>
         </div>
@@ -255,7 +255,7 @@ export default function ActividadPage() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "rgba(2,6,23,0.35)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
               <span style={dateLabelStyle}>del</span>
               <input type="date" value={fFrom} onChange={e => setFFrom(e.target.value)} max={fTo || undefined} style={dateInputStyle} />
               <span style={dateLabelStyle}>al</span>
@@ -270,13 +270,13 @@ export default function ActividadPage() {
           </div>
         </div>
 
-        <p style={{ margin: "0 0 14px", fontSize: 12, color: "#475569" }}>
+        <p style={{ margin: "0 0 14px", fontSize: 12, color: "#6b7c93" }}>
           {total.toLocaleString("es-MX")} movimiento{total !== 1 ? "s" : ""}{anyFilter ? " (filtrados)" : ""}
         </p>
 
         {/* Timeline */}
         {rows.length === 0 && !fetching ? (
-          <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
+          <p style={{ color: "#6b7c93", textAlign: "center", padding: "48px 0" }}>
             No hay movimientos {anyFilter ? "con esos filtros" : "registrados todavía"}.
           </p>
         ) : (
@@ -308,7 +308,7 @@ export default function ActividadPage() {
                               {href ? <Link href={href} style={{ color: "#7dd3fc", textDecoration: "none" }}>{r.summary}</Link> : r.summary}
                             </p>
                           )}
-                          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>
+                          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#7d8ca3" }}>
                             {fechaHora(r.occurred_at)}
                             {r.actor_email && <> · {r.actor_email}</>}
                           </p>
@@ -387,7 +387,7 @@ function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolea
 
       <div style={{ marginTop: 16, maxHeight: "52vh", overflowY: "auto" }}>
         {fields.length === 0 ? (
-          <p style={{ fontSize: 12, color: "#64748b" }}>Sin cambios de datos que mostrar.</p>
+          <p style={{ fontSize: 12, color: "#7d8ca3" }}>Sin cambios de datos que mostrar.</p>
         ) : detail.action === "UPDATE" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {fields.map(f => (
@@ -395,7 +395,7 @@ function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolea
                 <span style={fieldKeyStyle}>{f.key}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
                   <span style={{ ...valPillStyle, color: "#fca5a5", textDecoration: "line-through", background: "rgba(248,113,113,0.08)" }}>{fmtVal(f.before)}</span>
-                  <span style={{ color: "#64748b" }}>→</span>
+                  <span style={{ color: "#7d8ca3" }}>→</span>
                   <span style={{ ...valPillStyle, color: "#86efac", background: "rgba(52,211,153,0.08)" }}>{fmtVal(f.after)}</span>
                 </div>
               </div>
@@ -428,7 +428,7 @@ const clearBtnStyle: React.CSSProperties = {
   border: "1px solid rgba(148,163,184,0.18)", background: "transparent", color: "#94a3b8", fontSize: 12, fontWeight: 600,
 }
 
-const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#64748b" }
+const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#7d8ca3" }
 
 const dateInputStyle: React.CSSProperties = {
   padding: "6px 8px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)",
@@ -481,10 +481,10 @@ const fieldRowStyle: React.CSSProperties = {
 }
 
 const fieldKeyStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, color: "#94a3b8", fontFamily: "monospace",
+  fontSize: 11, fontWeight: 600, color: "#94a3b8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums",
 }
 
 const valPillStyle: React.CSSProperties = {
-  padding: "2px 8px", borderRadius: 6, fontSize: 12, fontFamily: "monospace",
+  padding: "2px 8px", borderRadius: 6, fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums",
   maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
 }

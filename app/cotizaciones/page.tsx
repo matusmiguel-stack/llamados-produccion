@@ -1208,7 +1208,7 @@ export default function CotizacionesPage() {
                     style={{ ...inputStyle, paddingRight: 28 }}
                     placeholder="0"
                   />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 13, pointerEvents: "none" }}>%</span>
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#7d8ca3", fontSize: 13, pointerEvents: "none" }}>%</span>
                 </div>
               </Field>
               <Field label="Financiamiento %">
@@ -1222,7 +1222,7 @@ export default function CotizacionesPage() {
                     style={{ ...inputStyle, paddingRight: 28 }}
                     placeholder="0"
                   />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", fontSize: 13, pointerEvents: "none" }}>%</span>
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#7d8ca3", fontSize: 13, pointerEvents: "none" }}>%</span>
                 </div>
               </Field>
             </div>
@@ -1317,7 +1317,7 @@ export default function CotizacionesPage() {
               <div style={{ paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
                 {/* Header */}
                 <div style={summaryHeaderRowStyle}>
-                  <span style={{ flex: 1, color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Rubro</span>
+                  <span style={{ flex: 1, color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Rubro</span>
                   <span style={summaryColHeaderStyle}>Gasto</span>
                   <span style={summaryColHeaderStyle}>Utilidad</span>
                   <span style={summaryColHeaderStyle}>Venta</span>
@@ -1373,7 +1373,7 @@ export default function CotizacionesPage() {
                 {/* Margen */}
                 <div style={marginBarContainerStyle}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                    <span style={{ color: "#64748b", fontSize: 11 }}>Margen de utilidad</span>
+                    <span style={{ color: "#7d8ca3", fontSize: 11 }}>Margen de utilidad</span>
                     <span style={{ color: marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171", fontSize: 12, fontWeight: 700 }}>
                       {fmtPct(marginPct)}
                     </span>
@@ -1456,7 +1456,7 @@ export default function CotizacionesPage() {
 
             {/* Responsable */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Responsable</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Responsable</p>
               <select
                 value={aprobarResponsable}
                 onChange={(e) => setAprobarResponsable(e.target.value)}
@@ -1475,7 +1475,7 @@ export default function CotizacionesPage() {
 
             {/* Empresa selector */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Empresa</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Empresa</p>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["retro_studio", "retro_films"] as const).map(e => (
                   <button
@@ -1521,7 +1521,7 @@ export default function CotizacionesPage() {
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
-      <span style={{ color: "#64748b", fontSize: 13 }}>{label}</span>
+      <span style={{ color: "#7d8ca3", fontSize: 13 }}>{label}</span>
       <span style={{ color: bold ? "#f8fafc" : "#cbd5e1", fontWeight: bold ? 700 : 500, fontSize: 13, fontFamily: bold ? "monospace" : undefined }}>{value}</span>
     </div>
   )
@@ -1530,7 +1530,7 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 function TotalBlock({ label, value, color, large }: { label: string; value: string; color: string; large?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "8px 0" }}>
-      <span style={{ color: "#64748b", fontSize: large ? 13 : 12 }}>{label}</span>
+      <span style={{ color: "#7d8ca3", fontSize: large ? 13 : 12 }}>{label}</span>
       <span style={{ color, fontSize: large ? 20 : 14, fontWeight: 700 }}>{value}</span>
     </div>
   )
@@ -1574,10 +1574,10 @@ function RubroCard({
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {hasValue && (
             <>
-              <span style={{ color: "#64748b", fontSize: 11 }}>
+              <span style={{ color: "#7d8ca3", fontSize: 11 }}>
                 Gasto <strong style={{ color: "#94a3b8" }}>{fmt(financials.gasto)}</strong>
               </span>
-              <span style={{ color: "#64748b", fontSize: 11 }}>
+              <span style={{ color: "#7d8ca3", fontSize: 11 }}>
                 Utilidad <strong style={{ color: "#34d399" }}>{fmt(financials.utilidad)}</strong>
               </span>
             </>
@@ -1831,7 +1831,7 @@ const editableLabelStyle: React.CSSProperties = {
 }
 
 const gastoStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   minWidth: 70,
   textAlign: "right",
@@ -1866,7 +1866,7 @@ const costInputStyle: React.CSSProperties = {
 }
 
 const sepStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 11,
   flexShrink: 0,
   whiteSpace: "nowrap",
@@ -1934,7 +1934,7 @@ function addExtraButtonStyle(color: string): React.CSSProperties {
 }
 
 const colHdrStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 9,
   fontWeight: 700,
   textTransform: "uppercase",
@@ -1954,7 +1954,7 @@ const summaryHeaderRowStyle: React.CSSProperties = {
 }
 
 const summaryColHeaderStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 10,
   fontWeight: 700,
   textTransform: "uppercase",
@@ -2012,7 +2012,7 @@ const pageTitleStyle: React.CSSProperties = {
 }
 
 const pageSubtitleStyle: React.CSSProperties = {
-  margin: "6px 0 0", color: "#64748b", fontSize: 13,
+  margin: "6px 0 0", color: "#7d8ca3", fontSize: 13,
 }
 
 const panelStyle: React.CSSProperties = {

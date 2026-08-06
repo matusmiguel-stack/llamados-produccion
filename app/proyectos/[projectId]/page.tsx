@@ -978,10 +978,10 @@ function PresupuestoPanel({
           padding: "8px 14px",
           gap: 8,
         }}>
-          <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Rubro</span>
-          <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Proyectado</span>
-          <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Real</span>
-          {!isMobile && <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Diferencia</span>}
+          <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Rubro</span>
+          <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Proyectado</span>
+          <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Real</span>
+          {!isMobile && <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Diferencia</span>}
         </div>
 
         {sections.filter((s) => s.items.some((i) => libItemFin(i).venta > 0)).map((sec, idx) => {
@@ -1059,7 +1059,7 @@ const budgetRowStyle: React.CSSProperties = {
   display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8,
 }
 const budgetLabelStyle: React.CSSProperties = {
-  color: "#64748b", fontSize: 12,
+  color: "#7d8ca3", fontSize: 12,
 }
 const budgetValueStyle: React.CSSProperties = {
   color: "#94a3b8", fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums",
@@ -1357,7 +1357,7 @@ function QuoteModal({
               <span style={statusBadgeStyle(quote.status)}>
                 {quote.status === "approved" ? "APROBADO" : "DRAFT"}
               </span>
-              <span style={{ color: "#64748b", fontSize: 12 }}>
+              <span style={{ color: "#7d8ca3", fontSize: 12 }}>
                 Markup {quote.markup_percentage}%
                 {(quote.financiamiento_percentage || 0) > 0 ? ` · Financiamiento ${quote.financiamiento_percentage}%` : ""}
               </span>
@@ -1419,7 +1419,7 @@ function QuoteModal({
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
               {/* Paso 1: Cliente */}
               <div>
-                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>1. Cliente</p>
+                <p style={{ color: "#7d8ca3", fontSize: 11, margin: "0 0 4px" }}>1. Cliente</p>
                 <select
                   value={moveClientId}
                   onChange={(e) => { setMoveClientId(e.target.value); setMoveSubfolderId(""); setMoveProjectId("") }}
@@ -1431,7 +1431,7 @@ function QuoteModal({
               </div>
               {/* Paso 2: Subcarpeta */}
               <div>
-                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>2. Subcarpeta</p>
+                <p style={{ color: "#7d8ca3", fontSize: 11, margin: "0 0 4px" }}>2. Subcarpeta</p>
                 <select
                   value={moveSubfolderId}
                   onChange={(e) => { setMoveSubfolderId(e.target.value); setMoveProjectId("") }}
@@ -1446,7 +1446,7 @@ function QuoteModal({
               </div>
               {/* Paso 3: Proyecto */}
               <div>
-                <p style={{ color: "#64748b", fontSize: 11, margin: "0 0 4px" }}>3. Proyecto</p>
+                <p style={{ color: "#7d8ca3", fontSize: 11, margin: "0 0 4px" }}>3. Proyecto</p>
                 <select
                   value={moveProjectId}
                   onChange={(e) => setMoveProjectId(e.target.value)}
@@ -1481,7 +1481,7 @@ function QuoteModal({
         {/* Sections */}
         <div style={modalBodyStyle}>
           {sections.length === 0 ? (
-            <p style={{ color: "#64748b", fontSize: 13 }}>
+            <p style={{ color: "#7d8ca3", fontSize: 13 }}>
               Esta cotización no tiene secciones.
             </p>
           ) : (
@@ -1502,7 +1502,7 @@ function QuoteModal({
                         gridTemplateColumns: COL,
                         gap: 8,
                         padding: "0 4px 6px",
-                        color: "#64748b",
+                        color: "#7d8ca3",
                         fontSize: 10,
                         fontWeight: 600,
                         textTransform: "uppercase",
@@ -1551,7 +1551,7 @@ function QuoteModal({
                               <p
                                 style={{
                                   margin: 0,
-                                  color: "#64748b",
+                                  color: "#7d8ca3",
                                   fontSize: 11,
                                 }}
                               >
@@ -1623,13 +1623,13 @@ function QuoteModal({
           {/* Totals */}
           <div style={modalTotalsStyle}>
             <div style={modalTotalRowStyle}>
-              <span style={{ color: "#64748b", fontSize: 13 }}>Subtotal</span>
+              <span style={{ color: "#7d8ca3", fontSize: 13 }}>Subtotal</span>
               <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
                 {fmt(subtotal)}
               </span>
             </div>
             <div style={modalTotalRowStyle}>
-              <span style={{ color: "#64748b", fontSize: 13 }}>
+              <span style={{ color: "#7d8ca3", fontSize: 13 }}>
                 Markup ({quote.markup_percentage}%)
               </span>
               <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
@@ -1638,7 +1638,7 @@ function QuoteModal({
             </div>
             {(quote.financiamiento_percentage || 0) > 0 && (
               <div style={modalTotalRowStyle}>
-                <span style={{ color: "#64748b", fontSize: 13 }}>
+                <span style={{ color: "#7d8ca3", fontSize: 13 }}>
                   Financiamiento ({quote.financiamiento_percentage}%)
                 </span>
                 <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
@@ -1694,7 +1694,7 @@ function QuoteModal({
                 { label: "Total",     value: fmt(total * 1.16), bold: true },
               ].map(r => (
                 <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
-                  <span style={{ color: "#64748b", fontSize: 13 }}>{r.label}</span>
+                  <span style={{ color: "#7d8ca3", fontSize: 13 }}>{r.label}</span>
                   <span style={{ color: r.bold ? "#f8fafc" : "#cbd5e1", fontWeight: r.bold ? 700 : 500, fontSize: 13, fontFamily: r.bold ? "monospace" : undefined }}>{r.value}</span>
                 </div>
               ))}
@@ -1702,7 +1702,7 @@ function QuoteModal({
 
             {/* Empresa */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Empresa</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Empresa</p>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["retro_studio", "retro_films"] as const).map(e => (
                   <button
@@ -1718,7 +1718,7 @@ function QuoteModal({
 
             {/* Responsable */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Responsable</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Responsable</p>
               <select
                 value={aprobarResponsable}
                 onChange={(e) => setAprobarResponsable(e.target.value)}
@@ -2004,7 +2004,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -2055,12 +2055,12 @@ const breadcrumbLinkStyle: React.CSSProperties = {
 }
 
 const breadcrumbDividerStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 12,
 }
 
 const breadcrumbMutedStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -2135,7 +2135,7 @@ const moduleLabelStyle: React.CSSProperties = {
 }
 
 const moduleDescriptionStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
   lineHeight: 1.45,
 }
@@ -2176,7 +2176,7 @@ const modulePanelTitleStyle: React.CSSProperties = {
 
 const modulePanelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -2197,7 +2197,7 @@ const placeholderTitleStyle: React.CSSProperties = {
 
 const placeholderTextStyle: React.CSSProperties = {
   margin: "8px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   lineHeight: 1.5,
 }
@@ -2210,7 +2210,7 @@ const placeholderStrongStyle: React.CSSProperties = {
 const emptyStyle: React.CSSProperties = {
   padding: "28px 16px",
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -2265,12 +2265,12 @@ const quoteRowNameStyle: React.CSSProperties = {
 
 const quoteRowMetaStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
 const quoteRowArrowStyle: React.CSSProperties = {
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 16,
   flexShrink: 0,
 }
@@ -2507,7 +2507,7 @@ const moveCancelBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(148,163,184,0.2)",
   background: "transparent",
-  color: "#64748b",
+  color: "#7d8ca3",
   cursor: "pointer",
   fontSize: 13,
 }

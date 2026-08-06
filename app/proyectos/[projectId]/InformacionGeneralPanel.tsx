@@ -271,7 +271,7 @@ export function InformacionGeneralPanel({
           <KV label="Carpeta" value={subfolderName} />
           {empresa && (
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Empresa</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Empresa</span>
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "4px 12px", borderRadius: 999, width: "fit-content",
@@ -371,7 +371,7 @@ export function InformacionGeneralPanel({
         ) : shoots.length === 0 ? (
           <div style={emptyBoxStyle}>
             <p style={{ margin: 0, color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>Sin llamados registrados</p>
-            <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
+            <p style={{ margin: "6px 0 0", color: "#7d8ca3", fontSize: 13 }}>
               {isAdmin ? "Usa el botón de arriba para crear el primer llamado." : "No hay llamados para este proyecto aún."}
             </p>
           </div>
@@ -385,7 +385,7 @@ export function InformacionGeneralPanel({
             )}
             {past.length > 0 && (
               <>
-                <p style={{ ...groupLabelStyle, color: "#475569" }}>Anteriores</p>
+                <p style={{ ...groupLabelStyle, color: "#6b7c93" }}>Anteriores</p>
                 {past.map((s) => <ShootCard key={s.id} shoot={s} isMobile={isMobile} dimmed />)}
               </>
             )}
@@ -512,7 +512,7 @@ function ShootCard({ shoot, isMobile, dimmed }: { shoot: Shoot; isMobile: boolea
         </div>
       )}
       {shoot.production_notes && (
-        <p style={{ margin: "8px 0 0", color: "#64748b", fontSize: 12, fontStyle: "italic" }}>
+        <p style={{ margin: "8px 0 0", color: "#7d8ca3", fontSize: 12, fontStyle: "italic" }}>
           {shoot.production_notes}
         </p>
       )}
@@ -534,7 +534,7 @@ function KV({ label, value, accent }: { label: string; value: string; accent?: b
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}: </span>
+      <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}: </span>
       <span style={{ color: "#cbd5e1", fontSize: 12 }}>{value}</span>
     </div>
   )
@@ -544,7 +544,7 @@ function Detail({ label, value }: { label: string; value: string }) {
 function FinRow({ label, value, valueColor, bold }: { label: string; value: string; valueColor?: string; bold?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-      <span style={{ color: "#64748b", fontSize: 12 }}>{label}</span>
+      <span style={{ color: "#7d8ca3", fontSize: 12 }}>{label}</span>
       <span style={{ color: valueColor || "#94a3b8", fontSize: bold ? 16 : 13, fontWeight: bold ? 700 : 500, fontVariantNumeric: "tabular-nums" }}>{value}</span>
     </div>
   )
@@ -594,7 +594,7 @@ const kvStyle: React.CSSProperties = {
 
 const kvLabelStyle: React.CSSProperties = {
   margin: 0,
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 10,
   fontWeight: 700,
   textTransform: "uppercase",
@@ -615,7 +615,7 @@ const shootCardStyle: React.CSSProperties = {
 
 const mutedStyle: React.CSSProperties = {
   margin: "10px 0 0",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 13,
 }
 
@@ -630,7 +630,7 @@ const emptyBoxStyle: React.CSSProperties = {
 
 const groupLabelStyle: React.CSSProperties = {
   margin: "4px 0 6px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 700,
   textTransform: "uppercase",
@@ -687,7 +687,7 @@ const editModalStyle: React.CSSProperties = {
 const editLabelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: "#64748b",
+  color: "#7d8ca3",
 }
 
 const editInputStyle: React.CSSProperties = {

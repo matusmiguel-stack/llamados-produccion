@@ -149,7 +149,7 @@ export default function ReferenciasPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>
             Referencias
           </h1>
-          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: "#7d8ca3", marginBottom: 28 }}>
             Tableros de referencias por proyecto — todos pueden ver y aportar
           </p>
 
@@ -179,7 +179,7 @@ export default function ReferenciasPage() {
 
           {/* Grid de proyectos */}
           {proyectos.length === 0 ? (
-            <p style={{ color: "#475569", fontSize: 14, marginTop: 32, textAlign: "center" }}>
+            <p style={{ color: "#6b7c93", fontSize: 14, marginTop: 32, textAlign: "center" }}>
               Aún no hay proyectos de referencias. Crea el primero arriba. ✨
             </p>
           ) : (
@@ -230,7 +230,7 @@ export default function ReferenciasPage() {
                         <span style={countBadgeStyle}>
                           🔗 {p.total} referencia{p.total === 1 ? "" : "s"}
                         </span>
-                        <span style={{ fontSize: 11, color: "#475569" }}>
+                        <span style={{ fontSize: 11, color: "#6b7c93" }}>
                           por {p.creador}
                         </span>
                       </div>
@@ -266,7 +266,7 @@ export default function ReferenciasPage() {
 
 const appShellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh",
-  background: "#05070d", fontFamily: "Inter, system-ui, sans-serif",
+  background: "#05070d", fontFamily: "var(--font-sans)",
 }
 const panelStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.03)",
@@ -307,7 +307,7 @@ const countBadgeStyle: React.CSSProperties = {
 }
 const deleteBtnStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer",
-  color: "#64748b", fontSize: 14, padding: 4, flexShrink: 0,
+  color: "#7d8ca3", fontSize: 14, padding: 4, flexShrink: 0,
 }
 const cancelBtnStyle: React.CSSProperties = {
   background: "transparent",

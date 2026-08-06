@@ -446,7 +446,7 @@ const inputWrapStyle: React.CSSProperties = {
 const searchIconStyle: React.CSSProperties = {
   position: "absolute",
   left: 9,
-  color: "#475569",
+  color: "#6b7c93",
   display: "inline-flex",
   pointerEvents: "none",
   flexShrink: 0,
@@ -467,7 +467,7 @@ const inputStyle: React.CSSProperties = {
 const spinnerStyle: React.CSSProperties = {
   position: "absolute",
   right: 9,
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 13,
   animation: "spin 1s linear infinite",
   pointerEvents: "none",
@@ -478,7 +478,7 @@ const clearBtnStyle: React.CSSProperties = {
   right: 7,
   background: "none",
   border: "none",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 16,
   cursor: "pointer",
   lineHeight: 1,
@@ -505,7 +505,7 @@ const dropdownStyle: React.CSSProperties = {
 const groupLabelStyle: React.CSSProperties = {
   margin: 0,
   padding: "4px 12px 4px",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 10,
   fontWeight: 700,
   textTransform: "uppercase",
@@ -568,7 +568,7 @@ const resultNameStyle: React.CSSProperties = {
 }
 
 const resultMetaStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -576,7 +576,7 @@ const resultMetaStyle: React.CSSProperties = {
 }
 
 const resultArrowStyle: React.CSSProperties = {
-  color: "#334155",
+  color: "#6b7c93",
   fontSize: 13,
   flexShrink: 0,
 }
@@ -584,7 +584,7 @@ const resultArrowStyle: React.CSSProperties = {
 const emptyStyle: React.CSSProperties = {
   margin: 0,
   padding: "14px 12px",
-  color: "#475569",
+  color: "#6b7c93",
   fontSize: 12,
   textAlign: "center",
 }

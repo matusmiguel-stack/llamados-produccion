@@ -553,7 +553,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -582,7 +582,7 @@ const panelTitleStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -627,7 +627,7 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(220px, 1.4fr) 140px 220px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -671,7 +671,7 @@ const userNameStyle: React.CSSProperties = {
 
 const userEmailStyle: React.CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
   wordBreak: "break-word",
 }

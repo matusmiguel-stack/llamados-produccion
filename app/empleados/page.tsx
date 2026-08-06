@@ -583,7 +583,7 @@ export default function EmpleadosPage() {
                         if (employee.vac_mes_reseteo == null || employee.vac_anios == null) {
                           return (
                             <div style={vacBarStyle}>
-                              <span style={{ color: "#64748b", fontSize: 12 }}>
+                              <span style={{ color: "#7d8ca3", fontSize: 12 }}>
                                 🏖️ Vacaciones sin configurar · usa “Editar” para asignar años y mes de reseteo
                               </span>
                             </div>
@@ -596,13 +596,13 @@ export default function EmpleadosPage() {
                           <div style={vacBarStyle}>
                             <span style={{ fontSize: 14 }}>🏖️</span>
                             <span style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 700 }}>
-                              {r.restantes} <span style={{ color: "#64748b", fontWeight: 400 }}>de {r.corresponden} días restantes</span>
+                              {r.restantes} <span style={{ color: "#7d8ca3", fontWeight: 400 }}>de {r.corresponden} días restantes</span>
                             </span>
-                            <span style={{ color: "#64748b", fontSize: 11 }}>· {r.tomados} tomados</span>
+                            <span style={{ color: "#7d8ca3", fontSize: 11 }}>· {r.tomados} tomados</span>
                             <div style={{ flex: 1, minWidth: 60, maxWidth: 160, height: 6, borderRadius: 999, background: "rgba(148,163,184,0.15)", overflow: "hidden" }}>
                               <div style={{ width: `${pct}%`, height: "100%", background: barColor }} />
                             </div>
-                            <span style={{ color: "#64748b", fontSize: 11, marginLeft: "auto" }}>
+                            <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: "auto" }}>
                               {r.anios} año{r.anios !== 1 ? "s" : ""} · resetea {MESES[r.mesReseteo - 1]}
                             </span>
                           </div>
@@ -870,7 +870,7 @@ function EmployeeFormFields({
       </div>
 
       {/* Vacaciones */}
-      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 0.6 }}>🏖️ Vacaciones</p>
+      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase", letterSpacing: 0.6 }}>🏖️ Vacaciones</p>
       <div
         style={{
           display: "grid",
@@ -997,7 +997,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -1025,7 +1025,7 @@ const panelTitleStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1075,7 +1075,7 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -1133,7 +1133,7 @@ const employeeNameStyle: React.CSSProperties = {
 
 const employeeMetaStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1196,7 +1196,7 @@ const historyTitleStyle: React.CSSProperties = {
 
 const historyEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1241,7 +1241,7 @@ const emptyStateStyle: React.CSSProperties = {
   padding: "18px 12px",
   borderRadius: 12,
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   background: "rgba(255,255,255,0.02)",
   border: "1px dashed rgba(148,163,184,0.14)",

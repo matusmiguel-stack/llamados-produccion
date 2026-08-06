@@ -63,7 +63,7 @@ export default function FacturasPage() {
       <div style={cardStyle}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#64748b" }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#7d8ca3" }}>
             Retro Casa Productora
           </p>
           <h1 style={{ margin: "8px 0 0", fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>
@@ -72,7 +72,7 @@ export default function FacturasPage() {
         </div>
 
         {open === null ? (
-          <p style={{ color: "#64748b", textAlign: "center", padding: "32px 0" }}>Cargando...</p>
+          <p style={{ color: "#7d8ca3", textAlign: "center", padding: "32px 0" }}>Cargando...</p>
         ) : !open ? (
           /* ── Cerrado ── */
           <div style={{ textAlign: "center", padding: "32px 0" }}>
@@ -102,7 +102,7 @@ export default function FacturasPage() {
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 16, fontWeight: 700, color: "#a7f3d0" }}>{result.fechaPago}</p>
             </div>
-            <p style={{ color: "#64748b", fontSize: 13, marginTop: 20 }}>
+            <p style={{ color: "#7d8ca3", fontSize: 13, marginTop: 20 }}>
               Te enviamos la confirmación por correo.
             </p>
           </div>
@@ -121,7 +121,7 @@ export default function FacturasPage() {
               </p>
               <p style={{ margin: "8px 0 0", fontSize: 14, color: "#fecaca", lineHeight: 1.7 }}>{result.motivo}</p>
             </div>
-            <p style={{ color: "#64748b", fontSize: 13, marginTop: 20, textAlign: "center" }}>
+            <p style={{ color: "#7d8ca3", fontSize: 13, marginTop: 20, textAlign: "center" }}>
               También te enviamos el detalle por correo. Corrige tu factura y vuelve a intentarlo.
             </p>
             <button onClick={() => { setResult(null); setXmlFile(null); setPdfFile(null) }} style={secondaryBtnStyle}>
@@ -229,7 +229,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: 0.6,
-  color: "#64748b",
+  color: "#7d8ca3",
   marginBottom: 6,
 }
 

@@ -292,7 +292,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -343,7 +343,7 @@ const panelTitleStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 

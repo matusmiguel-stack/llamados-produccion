@@ -72,7 +72,7 @@ function ProjLink({ f }: { f: Factura }) {
   if (f.project_id) {
     return <Link href={`/proyectos/${f.project_id}`} style={projLinkStyle} title={`Ver proyecto: ${label}`}>{label}</Link>
   }
-  return <span style={{ color: "#64748b" }}>{label}</span>
+  return <span style={{ color: "#7d8ca3" }}>{label}</span>
 }
 
 function nextFridayISO(): string {
@@ -140,7 +140,7 @@ function MiniCalendar({ value, onPick, highlight }: {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
         {["D", "L", "M", "M", "J", "V", "S"].map((w, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#475569", padding: "2px 0" }}>{w}</div>
+          <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#6b7c93", padding: "2px 0" }}>{w}</div>
         ))}
         {cells.map((d, i) => {
           if (d === null) return <div key={i} />
@@ -169,7 +169,7 @@ function MiniCalendar({ value, onPick, highlight }: {
           )
         })}
       </div>
-      <p style={{ margin: "10px 0 0", fontSize: 10, color: "#475569", textAlign: "center" }}>Solo se pueden elegir viernes · ● = con pagos</p>
+      <p style={{ margin: "10px 0 0", fontSize: 10, color: "#6b7c93", textAlign: "center" }}>Solo se pueden elegir viernes · ● = con pagos</p>
     </div>
   )
 }
@@ -372,7 +372,7 @@ export default function FinanzasPage() {
       <main style={{ flex: 1, padding: isMobile ? "76px 14px 32px" : "32px 36px", maxWidth: 1200, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>💰 Finanzas — Facturas</h1>
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#7d8ca3" }}>
             Facturas recibidas de proveedores y programación de pagos
           </p>
         </div>
@@ -417,7 +417,7 @@ export default function FinanzasPage() {
               <div ref={calWrapRef} style={{ position: "relative" }}>
                 <button onClick={() => setCalOpen(o => !o)} style={dateJumpBtnStyle} title="Saltar a un viernes específico">
                   <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{fechaViernes(selectedViernes)}</span>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>📅</span>
+                  <span style={{ fontSize: 12, color: "#7d8ca3" }}>📅</span>
                 </button>
                 {calOpen && (
                   <MiniCalendar value={selectedViernes} onPick={goViernes} highlight={fridaysWithPagos} />
@@ -452,16 +452,16 @@ export default function FinanzasPage() {
                     <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}>Atrasado</span>
                   )}
                 </div>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
                   {selFacturas.length} factura{selFacturas.length !== 1 ? "s" : ""}
                 </p>
               </div>
-              <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", color: selVencido && selFacturas.length ? "#f87171" : "#fbbf24" }}>{fmtMx(selTotal)}</span>
+              <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: selVencido && selFacturas.length ? "#f87171" : "#fbbf24" }}>{fmtMx(selTotal)}</span>
             </div>
 
             {/* Detalle completo de cada factura de este viernes */}
             {selFacturas.length === 0 ? (
-              <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
+              <p style={{ color: "#6b7c93", textAlign: "center", padding: "48px 0" }}>
                 No hay pagos programados para este viernes.
               </p>
             ) : (
@@ -479,16 +479,16 @@ export default function FinanzasPage() {
                         {f.concepto && (
                           <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
                         )}
-                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
                           <ProjLink f={f} />
                           {f.forma_pago && <> · <span style={{ color: "#93c5fd" }}>Pago: {f.forma_pago}</span></>}
                         </p>
                         {f.uuid_fiscal && (
-                          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#475569", fontFamily: "monospace" }}>UUID: {f.uuid_fiscal}</p>
+                          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#6b7c93", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>UUID: {f.uuid_fiscal}</p>
                         )}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                        <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "monospace", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
+                        <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
                           {fmtMx(montoPagar(f))}
                         </span>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -524,7 +524,7 @@ export default function FinanzasPage() {
                     <span style={{ fontSize: 12, marginLeft: 8 }}><ProjLink f={f} /></span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "monospace", fontSize: 14 }}>
+                    <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 14 }}>
                       {fmtMx(montoPagar(f))}
                     </span>
                     <button
@@ -552,7 +552,7 @@ export default function FinanzasPage() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "rgba(2,6,23,0.35)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
               <span style={dateLabelStyle}>Del</span>
               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} max={dateTo || undefined} style={dateInputStyle} />
               <span style={dateLabelStyle}>al</span>
@@ -572,7 +572,7 @@ export default function FinanzasPage() {
 
         {/* Lista */}
         {filtered.length === 0 ? (
-          <p style={{ color: "#475569", textAlign: "center", padding: "48px 0" }}>
+          <p style={{ color: "#6b7c93", textAlign: "center", padding: "48px 0" }}>
             No hay facturas {filter !== "todas" || dateFrom || dateTo ? "con esos filtros" : "todavía"}.
           </p>
         ) : (
@@ -593,7 +593,7 @@ export default function FinanzasPage() {
                     {f.concepto && (
                       <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
                     )}
-                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
                       <ProjLink f={f} /> · Registrada {fechaCorta(f.created_at)}
                       {f.status === "aceptada" && f.fecha_pago && <> · <span style={{ color: "#fbbf24" }}>Pago: {fechaCorta(f.fecha_pago)}</span></>}
                       {f.status === "pagada" && f.paid_at && <> · <span style={{ color: "#34d399" }}>Pagada {fechaCorta(f.paid_at)}</span></>}
@@ -603,13 +603,13 @@ export default function FinanzasPage() {
                       <p style={{ margin: "6px 0 0", fontSize: 12, color: "#fca5a5", lineHeight: 1.5 }}>{f.motivo_rechazo}</p>
                     )}
                     {f.uuid_fiscal && (
-                      <p style={{ margin: "4px 0 0", fontSize: 10, color: "#475569", fontFamily: "monospace" }}>UUID: {f.uuid_fiscal}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 10, color: "#6b7c93", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>UUID: {f.uuid_fiscal}</p>
                     )}
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                     {(f.total != null || f.subtotal != null) && (
-                      <span style={{ color: "#e2e8f0", fontWeight: 700, fontFamily: "monospace", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
+                      <span style={{ color: "#e2e8f0", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
                         {fmtMx(montoPagar(f))}
                       </span>
                     )}
@@ -646,7 +646,7 @@ export default function FinanzasPage() {
                 Marcar pago — {provLabel(payModal)}
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
-                {projLabel(payModal)} · <span style={{ fontFamily: "monospace", color: "#e2e8f0", fontWeight: 700 }}>{fmtMx(montoPagar(payModal))}</span>
+                {projLabel(payModal)} · <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#e2e8f0", fontWeight: 700 }}>{fmtMx(montoPagar(payModal))}</span>
               </p>
               <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
                 Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>
@@ -657,7 +657,7 @@ export default function FinanzasPage() {
                 onChange={e => setPayFile(e.target.files?.[0] || null)}
                 style={{ fontSize: 12, color: "#94a3b8", width: "100%" }}
               />
-              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
                 PDF o JPG. Queda guardado y vinculado a esta transacción. Al confirmar se
                 le envía el correo de pago al proveedor.
               </p>
@@ -694,15 +694,15 @@ function cardStyle(accent: string): React.CSSProperties {
 
 const cardLabelStyle: React.CSSProperties = {
   margin: 0, fontSize: 11, fontWeight: 600, textTransform: "uppercase",
-  letterSpacing: 0.6, color: "#64748b",
+  letterSpacing: 0.6, color: "#7d8ca3",
 }
 
 const cardValueStyle: React.CSSProperties = {
-  margin: "8px 0 0", fontSize: 22, fontWeight: 700, fontFamily: "monospace",
+  margin: "8px 0 0", fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums",
 }
 
 const cardHintStyle: React.CSSProperties = {
-  margin: "4px 0 0", fontSize: 11, color: "#475569",
+  margin: "4px 0 0", fontSize: 11, color: "#6b7c93",
 }
 
 function filterBtnStyle(active: boolean): React.CSSProperties {
@@ -765,7 +765,7 @@ const calNavBtn: React.CSSProperties = {
 }
 
 // Rango de fechas
-const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#64748b" }
+const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#7d8ca3" }
 
 const dateInputStyle: React.CSSProperties = {
   padding: "6px 8px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)",

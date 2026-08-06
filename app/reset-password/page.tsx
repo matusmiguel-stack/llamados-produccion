@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
 
         {/* ── Loading ── */}
         {view === "loading" && (
-          <p style={{ color: "#64748b", textAlign: "center", fontSize: 14 }}>Verificando enlace…</p>
+          <p style={{ color: "#7d8ca3", textAlign: "center", fontSize: 14 }}>Verificando enlace…</p>
         )}
 
         {/* ── Invalid / expired ── */}

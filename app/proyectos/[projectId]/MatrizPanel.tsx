@@ -290,7 +290,7 @@ function BackupRow({
                 alignItems: "center",
               }}
             >
-              <span style={{ color: "#64748b", fontSize: 12 }}>Backup de producción:</span>
+              <span style={{ color: "#7d8ca3", fontSize: 12 }}>Backup de producción:</span>
               <textarea
                 value={draft.backup_produccion}
                 onChange={(e) => onChange("backup_produccion", e.target.value)}
@@ -307,7 +307,7 @@ function BackupRow({
                 alignItems: "center",
               }}
             >
-              <span style={{ color: "#64748b", fontSize: 12 }}>Backup de post:</span>
+              <span style={{ color: "#7d8ca3", fontSize: 12 }}>Backup de post:</span>
               <textarea
                 value={draft.backup_post}
                 onChange={(e) => onChange("backup_post", e.target.value)}
@@ -320,11 +320,11 @@ function BackupRow({
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div>
-              <span style={{ fontSize: 12, color: "#64748b" }}>Backup de producción:</span>
+              <span style={{ fontSize: 12, color: "#7d8ca3" }}>Backup de producción:</span>
               <ValueView val={draft.backup_produccion} />
             </div>
             <div>
-              <span style={{ fontSize: 12, color: "#64748b" }}>Backup de post:</span>
+              <span style={{ fontSize: 12, color: "#7d8ca3" }}>Backup de post:</span>
               <ValueView val={draft.backup_post} />
             </div>
           </div>
@@ -499,7 +499,7 @@ export function MatrizPanel({
   if (loading) {
     return (
       <div style={{ padding: "32px 16px", textAlign: "center" }}>
-        <p style={{ color: "#64748b", fontSize: 13 }}>Cargando matriz...</p>
+        <p style={{ color: "#7d8ca3", fontSize: 13 }}>Cargando matriz...</p>
       </div>
     )
   }
@@ -572,7 +572,7 @@ export function MatrizPanel({
               {draft.nombre || "Matriz de proyecto"}
             </p>
           )}
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+          <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>
             {isNew
               ? "Sin datos aún — llena el formulario y guarda"
               : "Información general, recursos y entregables del proyecto"}
@@ -716,7 +716,7 @@ const sectionHeaderStyle: React.CSSProperties = {
 const genLabelCellStyle: React.CSSProperties = {
   padding: "10px 12px",
   background: "rgba(255,255,255,0.022)",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   textAlign: "right",
   borderBottom: "1px solid rgba(148,163,184,0.10)",
@@ -742,7 +742,7 @@ function singleLabelCellStyle(isMobile: boolean): React.CSSProperties {
   return {
     padding: isMobile ? "10px 12px 4px" : "12px 14px",
     background: "rgba(255,255,255,0.022)",
-    color: "#64748b",
+    color: "#7d8ca3",
     fontSize: 11,
     textAlign: isMobile ? "left" : "right",
     borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)",
@@ -833,7 +833,7 @@ const cancelBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(148,163,184,0.20)",
   background: "transparent",
-  color: "#64748b",
+  color: "#7d8ca3",
   cursor: "pointer",
   fontSize: 13,
 }

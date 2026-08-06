@@ -235,7 +235,7 @@ export default function ReferenciaProyectoPage() {
           </Link>
 
           {!proyecto ? (
-            <p style={{ color: "#64748b", marginTop: 24 }}>Este proyecto de referencias no existe (o fue borrado).</p>
+            <p style={{ color: "#7d8ca3", marginTop: 24 }}>Este proyecto de referencias no existe (o fue borrado).</p>
           ) : (
             <>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "10px 0 4px" }}>
@@ -262,7 +262,7 @@ export default function ReferenciaProyectoPage() {
                   </button>
                 </div>
               </div>
-              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>
+              <p style={{ fontSize: 13, color: "#7d8ca3", marginBottom: 24 }}>
                 {proyecto.descripcion || "Referencias del proyecto"}
               </p>
 
@@ -297,7 +297,7 @@ export default function ReferenciaProyectoPage() {
                     </button>
                   </div>
                   {newUrl.trim() && (
-                    <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
+                    <p style={{ margin: 0, fontSize: 11, color: "#7d8ca3" }}>
                       Se guardará como{" "}
                       <span style={{ color: fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).color }}>
                         {fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).emoji}{" "}
@@ -328,7 +328,7 @@ export default function ReferenciaProyectoPage() {
 
               {/* Lista de referencias */}
               {visibles.length === 0 ? (
-                <p style={{ color: "#475569", fontSize: 14, marginTop: 32, textAlign: "center" }}>
+                <p style={{ color: "#6b7c93", fontSize: 14, marginTop: 32, textAlign: "center" }}>
                   Aún no hay referencias aquí. Pega el primer link arriba. 🎬
                 </p>
               ) : (
@@ -357,12 +357,12 @@ export default function ReferenciaProyectoPage() {
                             {r.titulo || hostLabel || r.url} ↗
                           </a>
                           {r.titulo && (
-                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#475569", wordBreak: "break-all" }}>{hostLabel}</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7c93", wordBreak: "break-all" }}>{hostLabel}</p>
                           )}
                           {r.nota && (
                             <p style={{ margin: "6px 0 0", fontSize: 12, color: "#94a3b8", lineHeight: 1.5, wordBreak: "break-word" }}>{r.nota}</p>
                           )}
-                          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b" }}>
+                          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#7d8ca3" }}>
                             👤 {r.autor} · {fechaCorta(r.created_at)}
                             {sem && !soyCalificador && (
                               <span style={{ marginLeft: 8, color: sem.color, fontWeight: 600 }}>
@@ -414,7 +414,7 @@ export default function ReferenciaProyectoPage() {
 
 const appShellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh",
-  background: "#05070d", fontFamily: "Inter, system-ui, sans-serif",
+  background: "#05070d", fontFamily: "var(--font-sans)",
 }
 const panelStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.03)",
@@ -452,7 +452,7 @@ const fuenteBadgeStyle: React.CSSProperties = {
 }
 const deleteBtnStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer",
-  color: "#64748b", fontSize: 14, padding: 4, flexShrink: 0,
+  color: "#7d8ca3", fontSize: 14, padding: 4, flexShrink: 0,
 }
 const driveBtnStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 5,

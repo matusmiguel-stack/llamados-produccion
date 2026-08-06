@@ -736,7 +736,7 @@ export function HojaLlamadoPanel({
               onChange={(e) => setField("fecha_rodaje", e.target.value)}
               style={inputStyle}
             />
-            <span style={{ color: "#475569", fontSize: 10 }}>
+            <span style={{ color: "#6b7c93", fontSize: 10 }}>
               El clima y amanecer/atardecer se cargan automáticamente para CDMX
             </span>
           </Field>
@@ -821,7 +821,7 @@ export function HojaLlamadoPanel({
         {/* Row 4: Direcciones (múltiples) */}
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>
               Direcciones / Locaciones
             </span>
             <button
@@ -1003,7 +1003,7 @@ export function HojaLlamadoPanel({
 
       {/* ══ SECCIÓN 4: CREW LIST ══════════════════════════════════════════ */}
       <Section title="Crew List">
-        <p style={{ margin: "0 0 10px", color: "#64748b", fontSize: 12 }}>
+        <p style={{ margin: "0 0 10px", color: "#7d8ca3", fontSize: 12 }}>
           El crew se autocompleta desde los proveedores asignados en la liberación. Solo rellena los horarios.
         </p>
         <div style={tableWrapStyle}>
@@ -1033,10 +1033,10 @@ export function HojaLlamadoPanel({
                   onDragEnd={() => { dragSrcIdx.current = null; setDragOverIdx(null) }}
                   style={dragOverIdx === idx ? { ...crewDragOverStyle } : undefined}
                 >
-                  <td style={{ ...tdStyle, width: 28, textAlign: "center", cursor: "grab", color: "#475569", fontSize: 14, userSelect: "none" }}>
+                  <td style={{ ...tdStyle, width: 28, textAlign: "center", cursor: "grab", color: "#6b7c93", fontSize: 14, userSelect: "none" }}>
                     ⠿
                   </td>
-                  <td style={{ ...tdStyle, width: 32, color: "#475569", fontSize: 12, textAlign: "center" }}>
+                  <td style={{ ...tdStyle, width: 32, color: "#6b7c93", fontSize: 12, textAlign: "center" }}>
                     {idx + 1}
                   </td>
                   <td style={{ ...tdStyle, minWidth: 140 }}>
@@ -1212,7 +1212,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const emptyStyle: React.CSSProperties = {
   padding: "28px 16px",
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -1235,7 +1235,7 @@ const panelTitleStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1299,7 +1299,7 @@ const sectionTitleStyle: React.CSSProperties = {
 }
 
 const labelStyle: React.CSSProperties = {
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -1347,7 +1347,7 @@ const tableStyle: React.CSSProperties = {
 const thStyle: React.CSSProperties = {
   padding: "8px 10px",
   background: "rgba(15,23,42,0.7)",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 10,
   fontWeight: 700,
   textTransform: "uppercase",
@@ -1397,7 +1397,7 @@ const addRowBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px dashed rgba(148,163,184,0.20)",
   background: "transparent",
-  color: "#64748b",
+  color: "#7d8ca3",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 500,

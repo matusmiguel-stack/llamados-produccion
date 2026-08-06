@@ -167,7 +167,7 @@ export default function WorkspacePage() {
             <span>Mi perfil</span>
           </button>
           <button onClick={logout} style={{ ...navBtnStyle, color: "#f87171" }}>Salir</button>
-          <Link href="/" style={{ padding: "7px 10px", borderRadius: 8, color: "#64748b", fontSize: 11, textDecoration: "none" }}>
+          <Link href="/" style={{ padding: "7px 10px", borderRadius: 8, color: "#7d8ca3", fontSize: 11, textDecoration: "none" }}>
             ← Vista normal (sin pestañas)
           </Link>
         </div>
@@ -198,7 +198,7 @@ export default function WorkspacePage() {
                 <span
                   onClick={(e) => { e.stopPropagation(); closeTab(t.id) }}
                   title="Cerrar pestaña"
-                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 5, color: "#64748b", fontSize: 14, lineHeight: 1 }}
+                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 5, color: "#7d8ca3", fontSize: 14, lineHeight: 1 }}
                 >×</span>
               </div>
             )

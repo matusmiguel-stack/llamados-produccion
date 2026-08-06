@@ -403,7 +403,7 @@ export function ShootFormModal({
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 16px", textAlign: "center", color: "#64748b", fontSize: 13 }}>
+          <div style={{ padding: "40px 16px", textAlign: "center", color: "#7d8ca3", fontSize: 13 }}>
             Cargando datos...
           </div>
         ) : (
@@ -739,13 +739,13 @@ export function ShootFormModal({
               </div>
               <button
                 onClick={() => setShowAddClient(false)}
-                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer" }}
               >
                 ×
               </button>
             </div>
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                 Nombre del cliente
               </p>
               <input
@@ -856,7 +856,7 @@ const colStyle: React.CSSProperties = {
 
 const sectionLabelStyle: React.CSSProperties = {
   margin: "0 0 2px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",

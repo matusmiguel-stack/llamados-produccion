@@ -310,7 +310,7 @@ export default function PostproduccionPage() {
             <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 800, color: "#f8fafc" }}>
               🎞️ Post Producción
             </h1>
-            <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>
+            <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 13 }}>
               Calendario de entregas y deadlines
             </p>
           </div>
@@ -347,7 +347,7 @@ export default function PostproduccionPage() {
           </select>
           {(filtroEditor || filtroCliente || filtroProyecto) && (
             <button onClick={() => { setFiltroEditor(""); setFiltroCliente(""); setFiltroProyecto("") }}
-              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#64748b", fontSize: 12, cursor: "pointer" }}>
+              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#7d8ca3", fontSize: 12, cursor: "pointer" }}>
               Limpiar
             </button>
           )}
@@ -382,7 +382,7 @@ export default function PostproduccionPage() {
         {/* Calendario */}
         <section style={calendarPanelStyle}>
           <div style={{ marginBottom: 8 }}>
-            <p style={{ margin: 0, color: "#64748b", fontSize: 11 }}>
+            <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11 }}>
               {canManage ? "Clic en la celda para crear una entrega; clic en un evento para ver detalle" : "Clic en un evento para ver detalle"}
             </p>
           </div>
@@ -591,7 +591,7 @@ export default function PostproduccionPage() {
                     (`${e.nombre} ${e.apellido_paterno} ${e.nickname || ""}`).toLowerCase().includes(q)
                   )
                   if (!sugerencias.length) return (
-                    <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>Sin resultados</p>
+                    <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>Sin resultados</p>
                   )
                   return (
                     <div style={{ marginTop: 4, borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", overflow: "hidden" }}>
@@ -602,14 +602,14 @@ export default function PostproduccionPage() {
                             background: "rgba(255,255,255,0.03)", border: "none", borderBottom: "1px solid rgba(148,163,184,0.1)",
                             color: "#e2e8f0", fontSize: 13, cursor: "pointer" }}>
                           {employeeDisplayName(e)}
-                          <span style={{ color: "#64748b", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
+                          <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
                         </button>
                       ))}
                     </div>
                   )
                 })()}
                 {postproductores.length === 0 && (
-                  <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 11 }}>
+                  <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 11 }}>
                     No hay empleados con puesto "Postproductor" registrados.
                   </p>
                 )}
@@ -641,7 +641,7 @@ export default function PostproduccionPage() {
                 <h2 style={{ ...panelTitleStyle, borderLeft: `4px solid ${colorForTipo(selectedEntrega.tipo) || "#6366f1"}`, paddingLeft: 10 }}>
                   {selectedEntrega.titulo}
                 </h2>
-                <p style={{ margin: "4px 0 0 14px", color: "#64748b", fontSize: 13 }}>
+                <p style={{ margin: "4px 0 0 14px", color: "#7d8ca3", fontSize: 13 }}>
                   {formatFecha(selectedEntrega.fecha)}
                   {selectedEntrega.hora ? ` · ${selectedEntrega.hora} hrs` : ""}
                 </p>
@@ -688,7 +688,7 @@ export default function PostproduccionPage() {
               )}
               {selectedEntrega.notas && (
                 <div style={{ padding: "12px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(148,163,184,0.1)" }}>
-                  <p style={{ margin: 0, color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", fontWeight: 600 }}>Notas</p>
+                  <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", fontWeight: 600 }}>Notas</p>
                   <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: 14, lineHeight: 1.6 }}>{selectedEntrega.notas}</p>
                 </div>
               )}
@@ -784,7 +784,7 @@ const panelFooterStyle: React.CSSProperties = {
 }
 
 const closeStyle: React.CSSProperties = {
-  background: "none", border: "none", color: "#64748b", fontSize: 22,
+  background: "none", border: "none", color: "#7d8ca3", fontSize: 22,
   cursor: "pointer", padding: "0 4px", lineHeight: 1,
 }
 
@@ -827,7 +827,7 @@ const detailRowStyle: React.CSSProperties = {
 }
 
 const detailLabelStyle: React.CSSProperties = {
-  minWidth: 80, color: "#64748b", fontSize: 12, fontWeight: 600,
+  minWidth: 80, color: "#7d8ca3", fontSize: 12, fontWeight: 600,
   textTransform: "uppercase", letterSpacing: "0.6px",
 }
 

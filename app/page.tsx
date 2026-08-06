@@ -2618,7 +2618,7 @@ function openEditVacation() {
                       <div style={{ flex: 1 }}>
                         <label style={formModalLabelStyle}>
                           Hora inicio
-                          <span style={{ marginLeft: 6, fontSize: 10, color: "#64748b", fontWeight: 400 }}>
+                          <span style={{ marginLeft: 6, fontSize: 10, color: "#7d8ca3", fontWeight: 400 }}>
                             (hora del invite — ajusta si es necesario)
                           </span>
                         </label>
@@ -2794,7 +2794,7 @@ function openEditVacation() {
                                   onMouseLeave={e => (e.currentTarget.style.background = "none")}
                                 >
                                   <span style={{ fontWeight: 500 }}>{employeeDisplayName(emp)}</span>
-                                  {emp.puesto && <span style={{ color: "#64748b", marginLeft: 6, fontSize: 11 }}>· {emp.puesto}</span>}
+                                  {emp.puesto && <span style={{ color: "#7d8ca3", marginLeft: 6, fontSize: 11 }}>· {emp.puesto}</span>}
                                 </button>
                               ))}
                             </div>
@@ -2807,7 +2807,7 @@ function openEditVacation() {
                     <div>
                       <label style={formModalLabelStyle}>
                         Invitar personas externas
-                        <span style={{ marginLeft: 6, fontSize: 10, color: "#64748b", fontWeight: 400 }}>
+                        <span style={{ marginLeft: 6, fontSize: 10, color: "#7d8ca3", fontWeight: 400 }}>
                           (recibirán email con .ics)
                         </span>
                       </label>
@@ -2871,7 +2871,7 @@ function openEditVacation() {
                               borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
                               maxHeight: 200, overflowY: "auto", padding: "4px 0",
                             }}>
-                              <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 0.7 }}>
+                              <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase", letterSpacing: 0.7 }}>
                                 Contactos anteriores
                               </div>
                               {matches.map((email) => (
@@ -3976,7 +3976,7 @@ function openEditVacation() {
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <div>
-                <p style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>
+                <p style={{ color: "#7d8ca3", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>
                   Duplicar llamado
                 </p>
                 <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>
@@ -3985,7 +3985,7 @@ function openEditVacation() {
               </div>
               <button
                 onClick={() => { setShowDupePicker(false); setDupeDate("") }}
-                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
 
@@ -4014,7 +4014,7 @@ function openEditVacation() {
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter" && dupeDate) duplicateShoot() }}
               />
-              <p style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>
+              <p style={{ color: "#6b7c93", fontSize: 11, marginTop: 8 }}>
                 Se copiará el llamado completo: equipo, recursos y todas las notas.
               </p>
             </div>
@@ -4082,11 +4082,11 @@ function openEditVacation() {
               </div>
               <button
                 onClick={() => setShowAddSubfolder(false)}
-                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                 Nombre de la subcarpeta
               </p>
               <input
@@ -4168,11 +4168,11 @@ function openEditVacation() {
               </div>
               <button
                 onClick={() => setShowAddProject(false)}
-                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                 Nombre del proyecto
               </p>
               <input
@@ -4255,13 +4255,13 @@ function openEditVacation() {
               </div>
               <button
                 onClick={() => setShowAddClient(false)}
-                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
 
             {/* Body */}
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
                 Nombre del cliente
               </p>
               <input
@@ -4770,7 +4770,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -4838,7 +4838,7 @@ const calendarShellMobileStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
 }
 
@@ -4930,7 +4930,7 @@ const mobileDayAddBtnStyle: React.CSSProperties = {
 
 const mobileDayEmptyStyle: React.CSSProperties = {
   margin: "6px 0 4px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -5214,7 +5214,7 @@ const formModalTitleStyle: React.CSSProperties = {
 
 const formModalMetaStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -5252,7 +5252,7 @@ const formModalColumnStyle: React.CSSProperties = {
 
 const formModalSectionLabelStyle: React.CSSProperties = {
   margin: "0 0 2px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -5304,7 +5304,7 @@ const formModalSelectStyle: React.CSSProperties = {
 
 const formModalHintStyle: React.CSSProperties = {
   margin: "0 0 4px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
   lineHeight: 1.45,
 }

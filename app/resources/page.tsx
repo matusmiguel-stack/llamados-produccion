@@ -383,7 +383,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -438,7 +438,7 @@ const countBadgeStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -483,7 +483,7 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(160px, 1.2fr) 140px 100px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -535,7 +535,7 @@ const emptyStateStyle: React.CSSProperties = {
   padding: "18px 12px",
   borderRadius: 12,
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   background: "rgba(255,255,255,0.02)",
   border: "1px dashed rgba(148,163,184,0.14)",

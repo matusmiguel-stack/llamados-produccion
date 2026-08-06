@@ -194,7 +194,7 @@ const linkBtnStyle: React.CSSProperties = {
   padding: "10px 0",
   background: "none",
   border: "none",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   cursor: "pointer",
   textAlign: "center",

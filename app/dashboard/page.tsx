@@ -607,7 +607,7 @@ export default function DashboardPage() {
                           </div>
                           {j.notas && <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: 12 }}>{j.notas}</p>}
                           {attendeeNames.length > 0 && (
-                            <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 12 }}>
+                            <p style={{ margin: "6px 0 0", color: "#7d8ca3", fontSize: 12 }}>
                               {attendeeNames.join(" · ")}
                             </p>
                           )}
@@ -674,8 +674,8 @@ export default function DashboardPage() {
                             )}
                           </div>
                           {e.proyecto && <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: 12 }}>{e.proyecto}{e.cliente ? ` · ${e.cliente}` : ""}</p>}
-                          {e.editor && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>Editor: {e.editor}</p>}
-                          {e.notas && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>{e.notas}</p>}
+                          {e.editor && <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>Editor: {e.editor}</p>}
+                          {e.notas && <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>{e.notas}</p>}
                         </div>
                       )
                     })}
@@ -743,7 +743,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
           >
             {/* Header día */}
             <div style={{ textAlign: "center", marginBottom: 8 }}>
-              <p style={{ margin: 0, color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>{DOW[i]}</p>
+              <p style={{ margin: 0, color: "#7d8ca3", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>{DOW[i]}</p>
               <p style={{
                 margin: "2px 0 0",
                 fontSize: isMobile ? 13 : 16,
@@ -755,7 +755,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
                 display: "flex", alignItems: "center", justifyContent: "center",
                 marginTop: 2, marginLeft: "auto", marginRight: "auto", marginBottom: 0,
               }}>{parseInt(d)}</p>
-              {!isMobile && <p style={{ margin: "2px 0 0", color: "#475569", fontSize: 10 }}>{parseInt(m)}月</p>}
+              {!isMobile && <p style={{ margin: "2px 0 0", color: "#6b7c93", fontSize: 10 }}>{parseInt(m)}月</p>}
             </div>
 
             {/* Eventos */}
@@ -799,7 +799,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
                 )
               })}
               {shoots.length === 0 && juntas.length === 0 && entregas.length === 0 && !isMobile && (
-                <p style={{ margin: 0, color: "#334155", fontSize: 10, textAlign: "center", marginTop: 8 }}>–</p>
+                <p style={{ margin: 0, color: "#6b7c93", fontSize: 10, textAlign: "center", marginTop: 8 }}>–</p>
               )}
             </div>
           </div>
@@ -976,7 +976,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1053,13 +1053,13 @@ const summaryNameStyle: React.CSSProperties = {
 
 const summaryMetaStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
 }
 
 const summaryEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1125,7 +1125,7 @@ const shootCrewLabelStyle: React.CSSProperties = {
 
 const shootCrewEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1154,7 +1154,7 @@ const participantNameStyle: React.CSSProperties = {
 
 const participantRoleStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
 }
 
@@ -1218,7 +1218,7 @@ const panelTitleStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -1247,7 +1247,7 @@ const idleNameStyle: React.CSSProperties = {
 
 const idleRoleStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
 }
 
@@ -1255,7 +1255,7 @@ const emptyPanelStyle: React.CSSProperties = {
   padding: "24px 16px",
   borderRadius: 16,
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   background: "rgba(15, 23, 42, 0.72)",
   border: "1px dashed rgba(148,163,184,0.16)",
@@ -1310,7 +1310,7 @@ function DashboardTasksWidget({ tasks }: { tasks: any[] }) {
           )
         })}
         {tasks.length > 5 && (
-          <Link href="/tasks" style={{ fontSize: 12, color: "#64748b", textDecoration: "none", marginTop: 2 }}>
+          <Link href="/tasks" style={{ fontSize: 12, color: "#7d8ca3", textDecoration: "none", marginTop: 2 }}>
             +{tasks.length - 5} más…
           </Link>
         )}

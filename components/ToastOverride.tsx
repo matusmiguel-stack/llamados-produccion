@@ -45,7 +45,7 @@ function showToast(message: string) {
     borderLeft: `3px solid ${c.accent}`,
     boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
     color: "#e2e8f0", fontSize: "13px", lineHeight: "1.5",
-    fontFamily: "Inter, system-ui, sans-serif",
+    fontFamily: "var(--font-sans)",
     whiteSpace: "pre-line", wordBreak: "break-word",
     pointerEvents: "auto", cursor: "pointer",
     opacity: "0", transform: "translateX(24px)",

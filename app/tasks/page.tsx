@@ -222,7 +222,7 @@ export default function TasksPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>
             Mis Tareas
           </h1>
-          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: "#7d8ca3", marginBottom: 28 }}>
             Tus tareas privadas y las que te comparten 👥
           </p>
 
@@ -463,7 +463,7 @@ function SharePicker({ users, selfId, selected, onToggle }: {
                 onMouseLeave={e => (e.currentTarget.style.background = "none")}
               >
                 <span style={{ fontWeight: 500 }}>{displayName(u)}</span>
-                <span style={{ color: "#64748b", marginLeft: 6, fontSize: 11 }}>· {u.email}</span>
+                <span style={{ color: "#7d8ca3", marginLeft: 6, fontSize: 11 }}>· {u.email}</span>
               </button>
             ))}
           </div>
@@ -503,7 +503,7 @@ function TaskRow({
             </div>
             <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
           </div>
-          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>👥 Compartir con:</p>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>👥 Compartir con:</p>
           <SharePicker
             users={users}
             selfId={selfId}
@@ -557,7 +557,7 @@ function TaskRow({
 
 const appShellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh",
-  background: "#05070d", fontFamily: "Inter, system-ui, sans-serif",
+  background: "#05070d", fontFamily: "var(--font-sans)",
 }
 
 const panelStyle: React.CSSProperties = {
@@ -604,7 +604,7 @@ const taskRowStyle: React.CSSProperties = {
 }
 
 const emptyStyle: React.CSSProperties = {
-  fontSize: 13, color: "#475569", textAlign: "center", padding: "12px 0",
+  fontSize: 13, color: "#6b7c93", textAlign: "center", padding: "12px 0",
 }
 
 const checkboxStyle = (checked: boolean): React.CSSProperties => ({

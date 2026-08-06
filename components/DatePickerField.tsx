@@ -439,7 +439,7 @@ const weekdayRowStyle: React.CSSProperties = {
 
 const weekdayLabelStyle: React.CSSProperties = {
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 10,
   fontWeight: 600,
   textTransform: "uppercase",

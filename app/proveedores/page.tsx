@@ -547,7 +547,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
 }
 
@@ -575,7 +575,7 @@ const panelTitleStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -625,7 +625,7 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(180px, 1.3fr) 140px 180px 180px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase",
@@ -656,7 +656,7 @@ const searchClearStyle: React.CSSProperties = {
   transform: "translateY(-50%)",
   background: "none",
   border: "none",
-  color: "#64748b",
+  color: "#7d8ca3",
   cursor: "pointer",
   fontSize: 14,
   lineHeight: 1,
@@ -696,7 +696,7 @@ const personNameStyle: React.CSSProperties = {
 
 const personMetaStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 12,
 }
 
@@ -728,7 +728,7 @@ const emptyStateStyle: React.CSSProperties = {
   padding: "18px 12px",
   borderRadius: 12,
   textAlign: "center",
-  color: "#64748b",
+  color: "#7d8ca3",
   fontSize: 13,
   background: "rgba(255,255,255,0.02)",
   border: "1px dashed rgba(148,163,184,0.14)",
