@@ -30,6 +30,7 @@ type MatrizData = {
   paqueteria_grafica: string
   assets: string
   liga_masters: string
+  liga_copia_trabajo: string
   backup_produccion: string
   backup_post: string
   // Minuta
@@ -59,6 +60,7 @@ function emptyMatriz(projectId: string): MatrizData {
     paqueteria_grafica: "",
     assets: "",
     liga_masters: "",
+    liga_copia_trabajo: "",
     backup_produccion: "",
     backup_post: "",
     minuta: "",
@@ -644,6 +646,7 @@ export function MatrizPanel({
         <FieldRow label="Paquetería gráfica" fieldKey="paqueteria_grafica" draft={draft} editing={editing} onChange={onChange} multiline isMobile={isMobile} />
         <FieldRow label="Assets" fieldKey="assets" draft={draft} editing={editing} onChange={onChange} multiline isMobile={isMobile} />
         <FieldRow label="Liga de masters" fieldKey="liga_masters" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
+        <FieldRow label="Liga Copia de Trabajo" fieldKey="liga_copia_trabajo" draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
         <BackupRow draft={draft} editing={editing} onChange={onChange} isMobile={isMobile} />
 
         {/* ─ MINUTA ────────────────────────── */}
