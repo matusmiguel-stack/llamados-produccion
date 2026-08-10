@@ -11,6 +11,8 @@ const EQUIPO_EMAILS = [
   "rodrigo@retrocasaproductora.com",
   "araceli@retrocasaproductora.com",
   "marco@retrocasaproductora.com",
+  "adriana@retrocasaproductora.com",
+  "paulina@retrocasaproductora.com",
 ]
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.retrocasaproductora.com"
