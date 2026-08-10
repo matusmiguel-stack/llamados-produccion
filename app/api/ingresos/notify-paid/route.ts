@@ -9,7 +9,7 @@ const FROM = "Retro Casa Productora <news@retrocasaproductora.com>"
 const EQUIPO_EMAILS = [
   "miguel@retrocasaproductora.com",
   "rodrigo@retrocasaproductora.com",
-  "araceli@retrocasaproductora.com",
+  "ana@retrocasaproductora.com",
   "marco@retrocasaproductora.com",
   "adriana@retrocasaproductora.com",
   "paulina@retrocasaproductora.com",
