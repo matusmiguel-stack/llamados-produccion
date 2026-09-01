@@ -114,3 +114,104 @@ export function resumenVacaciones(
     startISO, endISO, needsReset, newAnios: anios,
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Solicitudes de vacaciones
+// ════════════════════════════════════════════════════════════════════════════
+
+// Solo estas personas revisan (aprueban / declinan) las solicitudes.
+// Compartido entre el frontend, las API routes y las políticas RLS.
+export const VACACIONES_APROBADORES = [
+  "adriana@retrocasaproductora.com", // Adriana Barrera
+  "miguel@retrocasaproductora.com",  // Miguel Matus
+  "matusmiguel@gmail.com",           // Miguel Matus (cuenta de pruebas)
+]
+
+export const esAprobadorVacaciones = (email: string | null | undefined) =>
+  !!email && VACACIONES_APROBADORES.includes(email.toLowerCase())
+
+export type SolicitudStatus = "pendiente" | "aprobada" | "rechazada"
+
+export const STATUS_INFO: Record<SolicitudStatus, { emoji: string; label: string; color: string; bg: string }> = {
+  pendiente: { emoji: "⏳", label: "Pendiente", color: "#fbbf24", bg: "rgba(234,179,8,0.12)" },
+  aprobada:  { emoji: "✅", label: "Aprobada",  color: "#34d399", bg: "rgba(52,211,153,0.12)" },
+  rechazada: { emoji: "❌", label: "Declinada", color: "#f87171", bg: "rgba(248,113,113,0.12)" },
+}
+
+export function isWeekend(iso: string): boolean {
+  const dow = parseISO(iso).getDay()
+  return dow === 0 || dow === 6
+}
+
+// Días hábiles de una lista de fechas sueltas (ignora fines de semana y repetidos)
+export function contarDiasHabiles(dias: string[]): number {
+  return new Set(dias.filter((d) => !isWeekend(d))).size
+}
+
+// Agrupa fechas sueltas en rangos continuos para pintarlos en el calendario.
+// El fin de semana no rompe el rango: viernes + lunes forma un solo bloque
+// (el conteo de días hábiles no cambia, pero la barra se ve continua).
+export function agruparDiasEnRangos(dias: string[]): { start_date: string; end_date: string }[] {
+  const orden = Array.from(new Set(dias)).sort()
+  const rangos: { start_date: string; end_date: string }[] = []
+
+  for (const dia of orden) {
+    const ultimo = rangos[rangos.length - 1]
+    if (ultimo && siguienteDiaHabil(ultimo.end_date) === dia) {
+      ultimo.end_date = dia
+    } else {
+      rangos.push({ start_date: dia, end_date: dia })
+    }
+  }
+
+  return rangos
+}
+
+function siguienteDiaHabil(iso: string): string {
+  const d = parseISO(iso)
+  do {
+    d.setDate(d.getDate() + 1)
+  } while (d.getDay() === 0 || d.getDay() === 6)
+  return toISO(d)
+}
+
+// Día en que se reinician las vacaciones del período actual (1° del mes de reseteo)
+export function proximoReseteoISO(mesReseteo: number, today = new Date()): string {
+  const { startYear } = periodoActual(mesReseteo || 1, today)
+  return toISO(new Date(startYear + 1, (mesReseteo || 1) - 1, 1))
+}
+
+export function formatFechaLarga(iso: string): string {
+  return parseISO(iso).toLocaleDateString("es-MX", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  })
+}
+
+export function formatFechaCorta(iso: string): string {
+  return parseISO(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short" })
+}
+
+// "12 de mayo", "12 al 16 de mayo", "28 de abril al 2 de mayo"
+export function describirRango(startISO: string, endISO: string): string {
+  if (startISO === endISO) return formatFechaLarga(startISO).replace(/^\w+,?\s*/, "")
+  const a = parseISO(startISO)
+  const b = parseISO(endISO)
+  const mesA = a.toLocaleDateString("es-MX", { month: "long" })
+  const mesB = b.toLocaleDateString("es-MX", { month: "long" })
+  if (mesA === mesB && a.getFullYear() === b.getFullYear()) {
+    return `${a.getDate()} al ${b.getDate()} de ${mesB} ${b.getFullYear()}`
+  }
+  return `${a.getDate()} de ${mesA} al ${b.getDate()} de ${mesB} ${b.getFullYear()}`
+}
+
+/** Días hábiles sueltos que abarca un rango (para pintar el calendario). */
+export function expandirRango(startISO: string, endISO: string): string[] {
+  const out: string[] = []
+  const d = parseISO(startISO)
+  const fin = parseISO(endISO)
+  while (d <= fin) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) out.push(toISO(d))
+    d.setDate(d.getDate() + 1)
+  }
+  return out
+}

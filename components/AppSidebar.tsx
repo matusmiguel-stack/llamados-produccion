@@ -6,6 +6,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { GlobalSearch } from "./GlobalSearch"
 import { supabase } from "../lib/supabase"
+import { esAprobadorVacaciones } from "../lib/vacaciones"
 
 function getLocalToday() {
   const d = new Date()
@@ -23,7 +24,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks" | "workspace" | "referencias" | "history"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks" | "workspace" | "referencias" | "history" | "vacaciones"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -34,7 +35,8 @@ const ROLE_LABELS: Record<string, string> = {
 const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
 
 // roles: null/undefined = visible para todos; array = visible solo para esos roles
-export const navItems: { href: string; label: string; icon: NavIconType; roles?: string[] }[] = [
+// aprobadorVacaciones: se muestra solo a quienes resuelven solicitudes (por correo)
+export const navItems: { href: string; label: string; icon: NavIconType; roles?: string[]; aprobadorVacaciones?: boolean }[] = [
   { href: "/",            label: "Calendario",   icon: "calendar"   },
   { href: "/workspace",   label: "Escritorio",   icon: "workspace"  },
   { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "editor_premium", "productor", "viewer", "finanzas"] },
@@ -49,6 +51,7 @@ export const navItems: { href: string; label: string; icon: NavIconType; roles?:
   { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
   { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
   { href: "/actividad",   label: "Historial",    icon: "history",    roles: ["admin"] },
+  { href: "/solicitudes-vacaciones", label: "Solicitud de Vacaciones", icon: "vacaciones", aprobadorVacaciones: true },
   { href: "/referencias", label: "Referencias",  icon: "referencias" },
   { href: "/tasks",       label: "Mis Tareas",   icon: "tasks" },
 ]
@@ -99,14 +102,34 @@ export function AppSidebar({
     return () => { cancel = true }
   }, [pathname])
 
+  // Solicitudes de vacaciones sin resolver → alarma junto al módulo.
+  // Solo los aprobadores reciben filas por RLS, así que el conteo sale 0 al resto.
+  const [pendingVacaciones, setPendingVacaciones] = useState(0)
+  useEffect(() => {
+    let cancel = false
+    ;(async () => {
+      if (!esAprobadorVacaciones(profile?.email || user?.email)) return
+      const { count } = await supabase
+        .from("vacation_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pendiente")
+      if (!cancel) setPendingVacaciones(count || 0)
+    })()
+    return () => { cancel = true }
+  }, [pathname, profile?.email, user?.email])
+
   const email = profile?.email || user?.email || "..."
   const displayName = profile?.full_name || email.split("@")[0] || "Usuario"
   const role = profile?.role || "viewer"
   const initial = displayName.charAt(0).toUpperCase()
   const mustChangePassword = !!profile?.must_change_password
+  const puedeAprobarVacaciones = esAprobadorVacaciones(email)
   const visibleNavItems = mustChangePassword
     ? []
-    : navItems.filter((item) => !item.roles || item.roles.includes(role))
+    : navItems.filter((item) => {
+        if (item.aprobadorVacaciones) return puedeAprobarVacaciones
+        return !item.roles || item.roles.includes(role)
+      })
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/"
@@ -197,6 +220,13 @@ export function AppSidebar({
                           style={taskAlertDotStyle}
                           title={`${overdueTasks} tarea${overdueTasks !== 1 ? "s" : ""} vencida${overdueTasks !== 1 ? "s" : ""}`}
                           aria-label={`${overdueTasks} tareas vencidas`}
+                        />
+                      )}
+                      {item.href === "/solicitudes-vacaciones" && pendingVacaciones > 0 && (
+                        <span
+                          style={taskAlertDotStyle}
+                          title={`${pendingVacaciones} solicitud${pendingVacaciones !== 1 ? "es" : ""} de vacaciones sin responder`}
+                          aria-label={`${pendingVacaciones} solicitudes de vacaciones pendientes`}
                         />
                       )}
                     </span>
@@ -373,6 +403,16 @@ export function NavIcon({
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
+  if (type === "vacaciones") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M3 11a9 9 0 0 1 18 0Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M12 2v9M12 11l2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M3 20c1.5-1.2 3-1.2 4.5 0S10.5 21.2 12 20s3-1.2 4.5 0 3 1.2 4.5 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
