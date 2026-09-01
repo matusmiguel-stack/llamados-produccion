@@ -3,6 +3,7 @@ import { Resend } from "resend"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiUser } from "../../../../lib/api-auth"
 import {
+  VACACIONES_FINANZAS,
   agruparDiasEnRangos,
   esAprobadorVacaciones,
   proximoReseteoISO,
@@ -12,7 +13,7 @@ import {
   diasEnPeriodo,
   diasYaBloqueados,
 } from "../../../../lib/vacaciones-server"
-import { VACACIONES_FROM, htmlResolucion } from "../../../../lib/vacaciones-email"
+import { VACACIONES_FROM, htmlAprobadaFinanzas, htmlResolucion } from "../../../../lib/vacaciones-email"
 import { sendPushToUser } from "../../../../lib/web-push"
 
 // POST → aprueba o declina una solicitud. Solo Adriana y Miguel.
@@ -58,12 +59,13 @@ export async function POST(req: Request) {
     const rangos = agruparDiasEnRangos(dias)
     let restantes: number | null = null
     let reseteoISO: string | null = null
+    let puesto: string | null = null
     const vacationIds: string[] = []
 
     if (aprobar) {
       const { data: emp } = await admin
         .from("employees")
-        .select("id, nombre, apellido_paterno, nickname, email, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
+        .select("id, nombre, apellido_paterno, nickname, email, puesto, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
         .eq("id", solicitud.employee_id)
         .maybeSingle()
       if (!emp) {
@@ -112,6 +114,7 @@ export async function POST(req: Request) {
 
       restantes = saldo.disponibles - consumenSaldo
       reseteoISO = proximoReseteoISO(emp.vac_mes_reseteo || 1)
+      puesto = emp.puesto || null
     }
 
     const { error: updateError } = await admin
@@ -154,6 +157,23 @@ export async function POST(req: Request) {
         }),
       })
       if (sendErr) emailWarning = sendErr.message
+
+      // Finanzas se entera solo de las aprobadas (no de solicitudes ni rechazos)
+      if (aprobar) {
+        const { error: finErr } = await resend.emails.send({
+          from: VACACIONES_FROM,
+          to: VACACIONES_FINANZAS,
+          subject: `Vacaciones aprobadas — ${solicitud.requester_name}`,
+          html: htmlAprobadaFinanzas({
+            solicitante: solicitud.requester_name,
+            puesto,
+            dias: Number(solicitud.dias_habiles || 0),
+            rangos,
+            aprobadaPor: resueltoPor,
+          }),
+        })
+        if (finErr && !emailWarning) emailWarning = finErr.message
+      }
     } catch (err: any) {
       emailWarning = err?.message || "No se pudo enviar el correo"
     }

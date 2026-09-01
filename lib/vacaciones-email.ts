@@ -155,3 +155,35 @@ export function htmlResolucion(params: {
     cierre: !aprobada && !motivo ? "No se registró un motivo. Habla con Adriana o Miguel para más detalle." : undefined,
   })
 }
+
+// Aviso a finanzas cuando unas vacaciones quedan aprobadas. Va aparte del
+// correo al solicitante porque aquí interesa quién se ausenta y en qué fechas,
+// no el "felicidades, te las aprobaron".
+export function htmlAprobadaFinanzas(params: {
+  solicitante: string
+  puesto: string | null
+  dias: number
+  rangos: { start_date: string; end_date: string }[]
+  aprobadaPor: string
+}): string {
+  const { solicitante, puesto, dias, rangos, aprobadaPor } = params
+  return shell({
+    headerBg: "#064e3b",
+    eyebrowColor: "#6ee7b7",
+    titleColor: "#ecfdf5",
+    eyebrow: "Retro Casa Productora",
+    titulo: "Vacaciones aprobadas 🏖️",
+    intro: `Se aprobaron vacaciones de <strong style="color:#334155;">${escapeHtml(solicitante)}</strong>. Ya quedaron bloqueadas en el calendario.`,
+    filas: [
+      fila("Quién", escapeHtml(solicitante)),
+      puesto ? fila("Puesto", escapeHtml(puesto)) : "",
+      fila("Días", `${dias} día${dias !== 1 ? "s" : ""} hábil${dias !== 1 ? "es" : ""}`),
+      fila("Fechas", listaDias(rangos)),
+      fila("Aprobó", escapeHtml(aprobadaPor)),
+    ].join(""),
+    ctaBg: "#064e3b",
+    ctaColor: "#ecfdf5",
+    ctaHref: `${APP_URL}/`,
+    ctaLabel: "Ver calendario →",
+  })
+}

@@ -130,6 +130,13 @@ export const VACACIONES_APROBADORES = [
 export const esAprobadorVacaciones = (email: string | null | undefined) =>
   !!email && VACACIONES_APROBADORES.includes(email.toLowerCase())
 
+// Finanzas recibe copia SOLO cuando unas vacaciones se aprueban
+// (no cuando se solicitan ni cuando se declinan).
+export const VACACIONES_FINANZAS = [
+  "ana@retrocasaproductora.com",
+  "marco@retrocasaproductora.com",
+]
+
 export type SolicitudStatus = "pendiente" | "aprobada" | "rechazada"
 
 export const STATUS_INFO: Record<SolicitudStatus, { emoji: string; label: string; color: string; bg: string }> = {
