@@ -31,6 +31,33 @@ const FREELANCE = {
   puesto: "Externo",
 }
 
+// Un freelance con nombre se lleva en el formulario como "freelance:Ana Ruiz"
+// y se guarda como "Freelance · Ana Ruiz". Conservar la palabra "Freelance" en
+// el texto es lo que hace que el filtro de Freelance los siga encontrando a todos.
+const FREELANCE_PREFIX = "freelance:"
+const FREELANCE_SEP = " · "
+
+function etiquetaResponsable(entrada: string, lista: any[]): string | null {
+  if (entrada.startsWith(FREELANCE_PREFIX)) {
+    const nombre = entrada.slice(FREELANCE_PREFIX.length).trim()
+    return nombre ? `${FREELANCE.nombre}${FREELANCE_SEP}${nombre}` : FREELANCE.nombre
+  }
+  const emp = lista.find((e: any) => e.id === entrada)
+  return emp ? employeeDisplayName(emp) : null
+}
+
+// Camino inverso, al abrir una entrega para editarla.
+function entradaDesdeNombre(nombre: string, lista: any[]): string | null {
+  if (nombre === FREELANCE.nombre) return FREELANCE.id
+  if (nombre.startsWith(FREELANCE.nombre + FREELANCE_SEP)) {
+    return FREELANCE_PREFIX + nombre.slice((FREELANCE.nombre + FREELANCE_SEP).length)
+  }
+  const emp = lista.find((e: any) =>
+    `${e.nombre} ${e.apellido_paterno}` === nombre || employeeDisplayName(e) === nombre
+  )
+  return emp?.id ?? null
+}
+
 // Normaliza para comparar: minúsculas y sin acentos. Los datos de entregas son
 // texto libre (apodos, nombres con y sin acento), así que sin esto no casan.
 function norm(s: string): string {
@@ -245,9 +272,8 @@ export default function DisenoPage() {
     }
 
     const editoresNames = formEditores
-      .map((id) => disenadores.find((e) => e.id === id))
-      .filter(Boolean)
-      .map((e: any) => employeeDisplayName(e))
+      .map((entrada) => etiquetaResponsable(entrada, disenadores))
+      .filter(Boolean) as string[]
 
     const payload = {
       titulo:     formTitulo.trim(),
@@ -556,14 +582,16 @@ export default function DisenoPage() {
                 {formEditores.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, marginTop: 6 }}>
                     {formEditores.map((id) => {
-                      const emp = disenadores.find((e: any) => e.id === id)
-                      if (!emp) return null
+                      const etiqueta = etiquetaResponsable(id, disenadores)
+                      if (!etiqueta) return null
+                      const esFreelance = id === FREELANCE.id || id.startsWith(FREELANCE_PREFIX)
                       return (
                         <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "3px 10px", borderRadius: 999,
-                          background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
-                          color: "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
-                          {employeeDisplayName(emp)}
+                          background: esFreelance ? "rgba(251,191,36,0.12)" : "rgba(99,102,241,0.12)",
+                          border: `1px solid ${esFreelance ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.3)"}`,
+                          color: esFreelance ? "#fbbf24" : "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
+                          {etiqueta}
                           <button type="button" onClick={() => setFormEditores((prev) => prev.filter((i) => i !== id))}
                             style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                         </span>
@@ -595,14 +623,16 @@ export default function DisenoPage() {
                 />
                 {/* Sugerencias */}
                 {editorSearch.trim() && (() => {
-                  const q = editorSearch.toLowerCase()
+                  const escrito = editorSearch.trim()
+                  const q = escrito.toLowerCase()
                   const sugerencias = disenadores.filter((e: any) =>
                     !formEditores.includes(e.id) &&
                     (`${e.nombre} ${e.apellido_paterno} ${e.nickname || ""}`).toLowerCase().includes(q)
                   )
-                  if (!sugerencias.length) return (
-                    <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>Sin resultados</p>
-                  )
+                  // Si lo que escribieron no es del equipo, se puede sumar como
+                  // freelance con nombre propio.
+                  const yaEsFreelance = formEditores.includes(FREELANCE_PREFIX + escrito)
+                  const ofrecerFreelance = !yaEsFreelance && escrito.toLowerCase() !== FREELANCE.nombre.toLowerCase()
                   return (
                     <div style={{ marginTop: 4, borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", overflow: "hidden" }}>
                       {sugerencias.map((e: any) => (
@@ -615,6 +645,22 @@ export default function DisenoPage() {
                           <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
                         </button>
                       ))}
+                      {ofrecerFreelance && (
+                        <button type="button"
+                          onClick={() => {
+                            setFormEditores((prev) => [...prev, FREELANCE_PREFIX + escrito])
+                            setEditorSearch("")
+                          }}
+                          style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
+                            background: "rgba(251,191,36,0.08)", border: "none",
+                            color: "#fbbf24", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+                          + Freelance: “{escrito}”
+                          <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8, fontWeight: 400 }}>externo</span>
+                        </button>
+                      )}
+                      {!sugerencias.length && !ofrecerFreelance && (
+                        <p style={{ margin: 0, padding: "8px 12px", color: "#7d8ca3", fontSize: 12 }}>Sin resultados</p>
+                      )}
                     </div>
                   )
                 })()}
@@ -709,15 +755,15 @@ export default function DisenoPage() {
               {canManage && (
                 <button onClick={() => {
                   setFormTitulo(selectedEntrega.titulo)
-                  setFormTipo((selectedEntrega.tipo as TipoEntrega) || "CDT Interna")
+                  setFormTipo((selectedEntrega.tipo as TipoEntrega) || "Entrega Interna")
                   setFormProyecto(selectedEntrega.proyecto || "")
                   setFormCliente(selectedEntrega.cliente || "")
                   setFormClienteId(""); setFormProyectoId("")
                   const savedNames: string[] = selectedEntrega.editores || (selectedEntrega.editor ? [selectedEntrega.editor] : [])
+                  // Incluye los freelance con nombre; antes, cualquier nombre que
+                  // no fuera de un empleado se perdía en silencio al editar.
                   const edIds = savedNames
-                    .map((name: string) => disenadores.find((e: any) =>
-                      `${e.nombre} ${e.apellido_paterno}` === name || employeeDisplayName(e) === name
-                    )?.id)
+                    .map((name: string) => entradaDesdeNombre(name, disenadores))
                     .filter(Boolean) as string[]
                   setFormEditores(edIds)
                   setModoLibre(true)
