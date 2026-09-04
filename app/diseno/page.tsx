@@ -20,6 +20,17 @@ const TIPOS_ENTREGA = [
 
 type TipoEntrega = typeof TIPOS_ENTREGA[number]["label"]
 
+// Opción extra del selector de responsable, para cuando la entrega la hace
+// alguien de fuera. No es un empleado: se guarda como el texto "Freelance",
+// igual que los nombres del resto, así el filtro y la vista lo tratan parejo.
+const FREELANCE = {
+  id: "freelance",
+  nombre: "Freelance",
+  apellido_paterno: "",
+  nickname: null as string | null,
+  puesto: "Externo",
+}
+
 // Normaliza para comparar: minúsculas y sin acentos. Los datos de entregas son
 // texto libre (apodos, nombres con y sin acento), así que sin esto no casan.
 function norm(s: string): string {
@@ -108,9 +119,11 @@ export default function DisenoPage() {
     setEntregas(entregasData || [])
     setAllClients(clients || [])
     setAllProjects(projects || [])
-    setDisenadores((emps || []).filter((e: any) =>
+    const equipoDiseno = (emps || []).filter((e: any) =>
       e.puesto?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes("disen")
-    ))
+    )
+    // "Freelance" va al final, despu\u00e9s del equipo de casa
+    setDisenadores([...equipoDiseno, FREELANCE])
   }
 
   useEffect(() => { loadData() }, [])
