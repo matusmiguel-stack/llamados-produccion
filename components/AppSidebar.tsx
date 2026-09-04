@@ -24,7 +24,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "tasks" | "workspace" | "referencias" | "history" | "vacaciones"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "diseno" | "tasks" | "workspace" | "referencias" | "history" | "vacaciones"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -44,6 +44,7 @@ export const navItems: { href: string; label: string; icon: NavIconType; roles?:
   { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor", "editor_premium"] },
   { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "editor_premium", "productor"] },
   { href: "/postproduccion", label: "Post Producción", icon: "postpro", roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
+  { href: "/diseno",         label: "Diseño",          icon: "diseno",  roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
   { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor", "editor_premium", "finanzas"] },
   { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin", "finanzas"] },
   { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
@@ -385,6 +386,18 @@ export function NavIcon({
         <path d="M2 11h20" stroke="currentColor" strokeWidth="1.6" />
         <path d="M7 7V3M17 7V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         <path d="M7 3l2 4M12 3l2 4M17 3l2 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  // Herramienta de pluma (curva bézier con sus nodos): lee como diseño y no se
+  // confunde con la tira de película de postproducción.
+  if (type === "diseno") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M4 17c5.5 0 10.5-10 16-10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <rect x="2" y="15" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.6" />
+        <rect x="18" y="5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.6" />
       </svg>
     )
   }

@@ -172,19 +172,20 @@ function buildDigestHtml(data: {
     }
   }
 
-  // ── Post Producción ─────────────────────────────────────────────────────────
-  let postHtml = ""
-  if (entregas.length > 0) {
-    postHtml = sectionHeader("🎞️", "Post Producción", entregas.length, "#f472b6")
-    const TIPO_COLORS: Record<string, string> = {
-      "CDT Interna": "#6366f1", "CDT Cliente": "#0891b2",
-      "Entrega final": "#16a34a", "Ronda Ajustes": "#ea580c",
-      "Edición y Post": "#7c3aed", "Online CC y Audio": "#db2777",
-    }
-    for (const e of entregas) {
+  // ── Entregas: Post Producción y Diseño van en secciones aparte ─────────────
+  const TIPO_COLORS: Record<string, string> = {
+    "CDT Interna": "#6366f1", "CDT Cliente": "#0891b2",
+    "Entrega final": "#16a34a", "Ronda Ajustes": "#ea580c",
+    "Edición y Post": "#7c3aed", "Online CC y Audio": "#db2777",
+    "Entrega Interna": "#6366f1", "Entrega Cliente": "#0891b2", "Entrega Final": "#16a34a",
+  }
+  function bloqueEntregas(lista: any[], emoji: string, titulo: string, tono: string) {
+    if (lista.length === 0) return ""
+    let html = sectionHeader(emoji, titulo, lista.length, tono)
+    for (const e of lista) {
       const color = TIPO_COLORS[e.tipo] || "#6366f1"
       const editores = Array.isArray(e.editores) ? e.editores : (e.editor ? [e.editor] : [])
-      postHtml += card(color, `
+      html += card(color, `
         <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${e.titulo}</p>
         ${e.tipo ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;background:${color}22;color:${color};border:1px solid ${color}44;">${e.tipo}</span>` : ""}
         ${e.hora ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">🕐 ${e.hora} hrs</p>` : ""}
@@ -192,7 +193,11 @@ function buildDigestHtml(data: {
         ${editores.length > 0 ? `<p style="margin:4px 0 0;color:#64748b;font-size:12px;">✂️ ${editores.join(" · ")}</p>` : ""}
       `)
     }
+    return html
   }
+  const postHtml =
+    bloqueEntregas(entregas.filter((e: any) => e.area !== "diseno"), "🎞️", "Post Producción", "#f472b6") +
+    bloqueEntregas(entregas.filter((e: any) => e.area === "diseno"), "🎨", "Diseño", "#a78bfa")
 
   // ── Vacaciones ───────────────────────────────────────────────────────────────
   let vacacionesHtml = ""
@@ -326,7 +331,7 @@ export async function GET(req: Request) {
     admin.from("shoots").select("id,title,start_time,end_time,all_day,location,color,status").lte("start_time", todayMx + "T23:59:59").gt("end_time", todayMx + "T00:00:00"),
     admin.from("juntas").select("id,tipo,titulo,fecha,hora_inicio,hora_fin,notas,link").eq("fecha", todayMx),
     admin.from("ensayos").select("id,titulo,fecha,hora_inicio,hora_fin,all_day").eq("fecha", todayMx),
-    admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores").eq("fecha", todayMx),
+    admin.from("entregas").select("id,titulo,tipo,fecha,hora,proyecto,cliente,editor,editores,area").eq("fecha", todayMx),
     admin.from("shoot_employees").select("shoot_id,employee_id"),
     admin.from("junta_attendees").select("junta_id,employee_id"),
     admin.from("employees").select("id,nombre,apellido_paterno,nickname,email,puesto,cumpleanos,fecha_ingreso"),

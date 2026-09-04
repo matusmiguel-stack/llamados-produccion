@@ -89,10 +89,10 @@ export async function GET(req: Request) {
     }
   }
 
-  // ── 3. Entregas de post producción hoy ────────────────────────────────────
+  // ── 3. Entregas de hoy (post producción y diseño) ─────────────────────────
   const { data: entregas } = await admin
     .from("entregas")
-    .select("id, titulo, tipo, hora")
+    .select("id, titulo, tipo, hora, area")
     .eq("fecha", todayDate)
 
   if ((entregas || []).length > 0) {
@@ -107,10 +107,12 @@ export async function GET(req: Request) {
         const isNew = await markNotificationSent("entrega_hoy", refId, profile.id)
         if (!isNew) continue
 
+        // El aviso lleva al calendario del área que corresponde
+        const esDiseno = entrega.area === "diseno"
         await sendPushToUser(profile.id, {
-          title: `🎞️ Entrega hoy`,
+          title: esDiseno ? "🎨 Entrega de diseño hoy" : "🎞️ Entrega hoy",
           body: `${entrega.titulo}${entrega.tipo ? ` · ${entrega.tipo}` : ""}${entrega.hora ? ` · ${entrega.hora} hrs` : ""}`,
-          url: "/postproduccion",
+          url: esDiseno ? "/diseno" : "/postproduccion",
         })
         results.push(`entrega_hoy: ${entrega.titulo} → ${profile.id}`)
       }

@@ -13,13 +13,9 @@ import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 
 const TIPOS_ENTREGA = [
-  { label: "CDT Interna",       color: "#6366f1" },
-  { label: "CDT Cliente",       color: "#0891b2" },
-  { label: "CDT Agencia",       color: "#d97706" },
-  { label: "Entrega final",     color: "#16a34a" },
-  { label: "Ronda Ajustes",     color: "#ea580c" },
-  { label: "Edición y Post",    color: "#7c3aed" },
-  { label: "Online CC y Audio", color: "#db2777" },
+  { label: "Entrega Interna", color: "#6366f1" },
+  { label: "Entrega Cliente", color: "#0891b2" },
+  { label: "Entrega Final",   color: "#16a34a" },
 ] as const
 
 type TipoEntrega = typeof TIPOS_ENTREGA[number]["label"]
@@ -44,7 +40,7 @@ function colorForTipo(tipo: string): string {
   return TIPOS_ENTREGA.find((t) => t.label === tipo)?.color || "#6366f1"
 }
 
-export default function PostproduccionPage() {
+export default function DisenoPage() {
   const [profile, setProfile] = useState<any>(null)
   const [user, setUser]       = useState<any>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -56,7 +52,7 @@ export default function PostproduccionPage() {
   // catálogo
   const [allClients,       setAllClients]       = useState<any[]>([])
   const [allProjects,      setAllProjects]       = useState<any[]>([])
-  const [postproductores,  setPostproductores]   = useState<any[]>([])
+  const [disenadores,  setDisenadores]   = useState<any[]>([])
 
   // form
   const [modalOpen, setModalOpen]             = useState(false)
@@ -75,7 +71,7 @@ export default function PostproduccionPage() {
   const [filtroProyecto, setFiltroProyecto] = useState("")
 
   const [formTitulo,     setFormTitulo]     = useState("")
-  const [formTipo,       setFormTipo]       = useState<TipoEntrega>("CDT Interna")
+  const [formTipo,       setFormTipo]       = useState<TipoEntrega>("Entrega Interna")
   const [formEditores,   setFormEditores]   = useState<string[]>([]) // array de IDs
   const [editorSearch,   setEditorSearch]   = useState("")
   const [formClienteId,  setFormClienteId]  = useState("")
@@ -104,7 +100,7 @@ export default function PostproduccionPage() {
     setProfile(auth.profile)
 
     const [{ data: entregasData }, { data: clients }, { data: projects }, { data: emps }] = await Promise.all([
-      supabase.from("entregas").select("*").eq("area", "postproduccion").order("fecha"),
+      supabase.from("entregas").select("*").eq("area", "diseno").order("fecha"),
       supabase.from("clients").select("id, name").order("name"),
       supabase.from("projects").select("id, name, client_id, code").order("name"),
       supabase.from("employees").select("id, nombre, apellido_paterno, puesto, nickname").order("nombre"),
@@ -112,8 +108,8 @@ export default function PostproduccionPage() {
     setEntregas(entregasData || [])
     setAllClients(clients || [])
     setAllProjects(projects || [])
-    setPostproductores((emps || []).filter((e: any) =>
-      e.puesto?.toLowerCase().includes("postproduc") || e.puesto?.toLowerCase().includes("post produc")
+    setDisenadores((emps || []).filter((e: any) =>
+      e.puesto?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes("disen")
     ))
   }
 
@@ -126,7 +122,7 @@ export default function PostproduccionPage() {
       // libre (apodo o nombre), así que comparamos contra todas sus variantes.
       .filter((e) => {
         if (!filtroEditor) return true
-        const emp: any = postproductores.find((p: any) => p.id === filtroEditor)
+        const emp: any = disenadores.find((p: any) => p.id === filtroEditor)
         if (!emp) return true
         const variantes = [
           emp.nickname,
@@ -171,12 +167,12 @@ export default function PostproduccionPage() {
         }
       })
     setEvents(evs)
-  }, [entregas, tiposVisibles, filtroEditor, filtroCliente, filtroProyecto, postproductores, allProjects])
+  }, [entregas, tiposVisibles, filtroEditor, filtroCliente, filtroProyecto, disenadores, allProjects])
 
   function resetForm() {
     setFormTitulo(""); setFormProyecto(""); setFormCliente("")
     setFormClienteId(""); setFormProyectoId(""); setFormEditores([]); setEditorSearch("")
-    setFormTipo("CDT Interna")
+    setFormTipo("Entrega Interna")
     setFormFecha(""); setFormFechaFin(""); setFormHora(""); setFormNotas("")
     setModoLibre(false)
     setSelectedEntrega(null)
@@ -236,7 +232,7 @@ export default function PostproduccionPage() {
     }
 
     const editoresNames = formEditores
-      .map((id) => postproductores.find((e) => e.id === id))
+      .map((id) => disenadores.find((e) => e.id === id))
       .filter(Boolean)
       .map((e: any) => employeeDisplayName(e))
 
@@ -253,7 +249,7 @@ export default function PostproduccionPage() {
       hora:      formHora  || null,
       notas:     formNotas.trim() || null,
       color:     colorForTipo(formTipo),
-      area:      "postproduccion",
+      area:      "diseno",
       created_by: user?.id || null,
       updated_at: new Date().toISOString(),
     }
@@ -268,7 +264,7 @@ export default function PostproduccionPage() {
 
     setModalOpen(false)
     resetForm()
-    const { data } = await supabase.from("entregas").select("*").eq("area", "postproduccion").order("fecha")
+    const { data } = await supabase.from("entregas").select("*").eq("area", "diseno").order("fecha")
     setEntregas(data || [])
   }
 
@@ -277,7 +273,7 @@ export default function PostproduccionPage() {
     await supabase.from("entregas").delete().eq("id", id)
     setDetailsOpen(false)
     setSelectedEntrega(null)
-    const { data } = await supabase.from("entregas").select("*").eq("area", "postproduccion").order("fecha")
+    const { data } = await supabase.from("entregas").select("*").eq("area", "diseno").order("fecha")
     setEntregas(data || [])
   }
 
@@ -309,10 +305,10 @@ export default function PostproduccionPage() {
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 800, color: "#f8fafc" }}>
-              🎞️ Post Producción
+              🎨 Diseño
             </h1>
             <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 13 }}>
-              Calendario de entregas y deadlines
+              Calendario de entregas de diseño
             </p>
           </div>
           {canManage && (
@@ -329,8 +325,8 @@ export default function PostproduccionPage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           <select value={filtroEditor} onChange={(e) => setFiltroEditor(e.target.value)}
             style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroEditor ? "#f8fafc" : "#64748b", fontSize: 12 }}>
-            <option value="">Editor</option>
-            {postproductores.map((e: any) => (
+            <option value="">Diseñador</option>
+            {disenadores.map((e: any) => (
               <option key={e.id} value={e.id}>{employeeDisplayName(e)}</option>
             ))}
           </select>
@@ -542,12 +538,12 @@ export default function PostproduccionPage() {
 
               {/* Editores */}
               <div>
-                <label style={labelStyle}>Editor / Postproductor</label>
+                <label style={labelStyle}>Diseñador</label>
                 {/* Chips de editores seleccionados */}
                 {formEditores.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, marginTop: 6 }}>
                     {formEditores.map((id) => {
-                      const emp = postproductores.find((e: any) => e.id === id)
+                      const emp = disenadores.find((e: any) => e.id === id)
                       if (!emp) return null
                       return (
                         <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5,
@@ -570,7 +566,7 @@ export default function PostproduccionPage() {
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return
                     const q = editorSearch.toLowerCase()
-                    const sugerencias = postproductores.filter((emp: any) =>
+                    const sugerencias = disenadores.filter((emp: any) =>
                       !formEditores.includes(emp.id) &&
                       (`${emp.nombre} ${emp.apellido_paterno} ${emp.nickname || ""}`).toLowerCase().includes(q)
                     )
@@ -582,12 +578,12 @@ export default function PostproduccionPage() {
                     }
                   }}
                   style={inputStyle}
-                  placeholder="Buscar postproductor..."
+                  placeholder="Buscar diseñador..."
                 />
                 {/* Sugerencias */}
                 {editorSearch.trim() && (() => {
                   const q = editorSearch.toLowerCase()
-                  const sugerencias = postproductores.filter((e: any) =>
+                  const sugerencias = disenadores.filter((e: any) =>
                     !formEditores.includes(e.id) &&
                     (`${e.nombre} ${e.apellido_paterno} ${e.nickname || ""}`).toLowerCase().includes(q)
                   )
@@ -609,9 +605,9 @@ export default function PostproduccionPage() {
                     </div>
                   )
                 })()}
-                {postproductores.length === 0 && (
+                {disenadores.length === 0 && (
                   <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 11 }}>
-                    No hay empleados con puesto "Postproductor" registrados.
+                    No hay empleados con puesto de diseño registrados.
                   </p>
                 )}
               </div>
@@ -664,7 +660,7 @@ export default function PostproduccionPage() {
               })()}
               {selectedEntrega.editor && (
                 <div style={detailRowStyle}>
-                  <span style={detailLabelStyle}>Editor</span>
+                  <span style={detailLabelStyle}>Diseñador</span>
                   <span style={detailValueStyle}>{selectedEntrega.editor}</span>
                 </div>
               )}
@@ -706,7 +702,7 @@ export default function PostproduccionPage() {
                   setFormClienteId(""); setFormProyectoId("")
                   const savedNames: string[] = selectedEntrega.editores || (selectedEntrega.editor ? [selectedEntrega.editor] : [])
                   const edIds = savedNames
-                    .map((name: string) => postproductores.find((e: any) =>
+                    .map((name: string) => disenadores.find((e: any) =>
                       `${e.nombre} ${e.apellido_paterno}` === name || employeeDisplayName(e) === name
                     )?.id)
                     .filter(Boolean) as string[]
