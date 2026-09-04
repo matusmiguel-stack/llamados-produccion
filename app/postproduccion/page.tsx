@@ -9,6 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { employeeDisplayName } from "../../lib/employee-dates"
+import { FREELANCE, FREELANCE_PREFIX, esEntradaFreelance, etiquetaResponsable, entradaDesdeNombre } from "../../lib/entrega-responsables"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 
@@ -112,9 +113,11 @@ export default function PostproduccionPage() {
     setEntregas(entregasData || [])
     setAllClients(clients || [])
     setAllProjects(projects || [])
-    setPostproductores((emps || []).filter((e: any) =>
+    const equipoPost = (emps || []).filter((e: any) =>
       e.puesto?.toLowerCase().includes("postproduc") || e.puesto?.toLowerCase().includes("post produc")
-    ))
+    )
+    // "Freelance" va al final, después del equipo de casa
+    setPostproductores([...equipoPost, FREELANCE])
   }
 
   useEffect(() => { loadData() }, [])
@@ -236,9 +239,8 @@ export default function PostproduccionPage() {
     }
 
     const editoresNames = formEditores
-      .map((id) => postproductores.find((e) => e.id === id))
-      .filter(Boolean)
-      .map((e: any) => employeeDisplayName(e))
+      .map((entrada) => etiquetaResponsable(entrada, postproductores))
+      .filter(Boolean) as string[]
 
     const payload = {
       titulo:     formTitulo.trim(),
@@ -547,14 +549,16 @@ export default function PostproduccionPage() {
                 {formEditores.length > 0 && (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, marginTop: 6 }}>
                     {formEditores.map((id) => {
-                      const emp = postproductores.find((e: any) => e.id === id)
-                      if (!emp) return null
+                      const etiqueta = etiquetaResponsable(id, postproductores)
+                      if (!etiqueta) return null
+                      const esFreelance = esEntradaFreelance(id)
                       return (
                         <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "3px 10px", borderRadius: 999,
-                          background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
-                          color: "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
-                          {employeeDisplayName(emp)}
+                          background: esFreelance ? "rgba(251,191,36,0.12)" : "rgba(99,102,241,0.12)",
+                          border: `1px solid ${esFreelance ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.3)"}`,
+                          color: esFreelance ? "#fbbf24" : "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
+                          {etiqueta}
                           <button type="button" onClick={() => setFormEditores((prev) => prev.filter((i) => i !== id))}
                             style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                         </span>
@@ -586,14 +590,15 @@ export default function PostproduccionPage() {
                 />
                 {/* Sugerencias */}
                 {editorSearch.trim() && (() => {
-                  const q = editorSearch.toLowerCase()
+                  const escrito = editorSearch.trim()
+                  const q = escrito.toLowerCase()
                   const sugerencias = postproductores.filter((e: any) =>
                     !formEditores.includes(e.id) &&
                     (`${e.nombre} ${e.apellido_paterno} ${e.nickname || ""}`).toLowerCase().includes(q)
                   )
-                  if (!sugerencias.length) return (
-                    <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>Sin resultados</p>
-                  )
+                  // Si lo escrito no es del equipo, se puede sumar como freelance
+                  const yaEsFreelance = formEditores.includes(FREELANCE_PREFIX + escrito)
+                  const ofrecerFreelance = !yaEsFreelance && escrito.toLowerCase() !== FREELANCE.nombre.toLowerCase()
                   return (
                     <div style={{ marginTop: 4, borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", overflow: "hidden" }}>
                       {sugerencias.map((e: any) => (
@@ -606,6 +611,22 @@ export default function PostproduccionPage() {
                           <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
                         </button>
                       ))}
+                      {ofrecerFreelance && (
+                        <button type="button"
+                          onClick={() => {
+                            setFormEditores((prev) => [...prev, FREELANCE_PREFIX + escrito])
+                            setEditorSearch("")
+                          }}
+                          style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
+                            background: "rgba(251,191,36,0.08)", border: "none",
+                            color: "#fbbf24", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+                          + Freelance: “{escrito}”
+                          <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8, fontWeight: 400 }}>externo</span>
+                        </button>
+                      )}
+                      {!sugerencias.length && !ofrecerFreelance && (
+                        <p style={{ margin: 0, padding: "8px 12px", color: "#7d8ca3", fontSize: 12 }}>Sin resultados</p>
+                      )}
                     </div>
                   )
                 })()}
@@ -705,10 +726,10 @@ export default function PostproduccionPage() {
                   setFormCliente(selectedEntrega.cliente || "")
                   setFormClienteId(""); setFormProyectoId("")
                   const savedNames: string[] = selectedEntrega.editores || (selectedEntrega.editor ? [selectedEntrega.editor] : [])
+                  // Incluye los freelance con nombre; antes, cualquier nombre que
+                  // no fuera de un empleado se perdía en silencio al editar.
                   const edIds = savedNames
-                    .map((name: string) => postproductores.find((e: any) =>
-                      `${e.nombre} ${e.apellido_paterno}` === name || employeeDisplayName(e) === name
-                    )?.id)
+                    .map((name: string) => entradaDesdeNombre(name, postproductores))
                     .filter(Boolean) as string[]
                   setFormEditores(edIds)
                   setModoLibre(true)

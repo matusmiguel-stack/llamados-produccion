@@ -9,6 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { employeeDisplayName } from "../../lib/employee-dates"
+import { FREELANCE, FREELANCE_PREFIX, esEntradaFreelance, etiquetaResponsable, entradaDesdeNombre } from "../../lib/entrega-responsables"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
 
@@ -19,44 +20,6 @@ const TIPOS_ENTREGA = [
 ] as const
 
 type TipoEntrega = typeof TIPOS_ENTREGA[number]["label"]
-
-// Opción extra del selector de responsable, para cuando la entrega la hace
-// alguien de fuera. No es un empleado: se guarda como el texto "Freelance",
-// igual que los nombres del resto, así el filtro y la vista lo tratan parejo.
-const FREELANCE = {
-  id: "freelance",
-  nombre: "Freelance",
-  apellido_paterno: "",
-  nickname: null as string | null,
-  puesto: "Externo",
-}
-
-// Un freelance con nombre se lleva en el formulario como "freelance:Ana Ruiz"
-// y se guarda como "Freelance · Ana Ruiz". Conservar la palabra "Freelance" en
-// el texto es lo que hace que el filtro de Freelance los siga encontrando a todos.
-const FREELANCE_PREFIX = "freelance:"
-const FREELANCE_SEP = " · "
-
-function etiquetaResponsable(entrada: string, lista: any[]): string | null {
-  if (entrada.startsWith(FREELANCE_PREFIX)) {
-    const nombre = entrada.slice(FREELANCE_PREFIX.length).trim()
-    return nombre ? `${FREELANCE.nombre}${FREELANCE_SEP}${nombre}` : FREELANCE.nombre
-  }
-  const emp = lista.find((e: any) => e.id === entrada)
-  return emp ? employeeDisplayName(emp) : null
-}
-
-// Camino inverso, al abrir una entrega para editarla.
-function entradaDesdeNombre(nombre: string, lista: any[]): string | null {
-  if (nombre === FREELANCE.nombre) return FREELANCE.id
-  if (nombre.startsWith(FREELANCE.nombre + FREELANCE_SEP)) {
-    return FREELANCE_PREFIX + nombre.slice((FREELANCE.nombre + FREELANCE_SEP).length)
-  }
-  const emp = lista.find((e: any) =>
-    `${e.nombre} ${e.apellido_paterno}` === nombre || employeeDisplayName(e) === nombre
-  )
-  return emp?.id ?? null
-}
 
 // Normaliza para comparar: minúsculas y sin acentos. Los datos de entregas son
 // texto libre (apodos, nombres con y sin acento), así que sin esto no casan.
@@ -584,7 +547,7 @@ export default function DisenoPage() {
                     {formEditores.map((id) => {
                       const etiqueta = etiquetaResponsable(id, disenadores)
                       if (!etiqueta) return null
-                      const esFreelance = id === FREELANCE.id || id.startsWith(FREELANCE_PREFIX)
+                      const esFreelance = esEntradaFreelance(id)
                       return (
                         <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "3px 10px", borderRadius: 999,
