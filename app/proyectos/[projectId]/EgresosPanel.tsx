@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
-import { uploadComprobante } from "../../../lib/upload-comprobante"
+import { uploadComprobante, mensajeDeRed } from "../../../lib/upload-comprobante"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -586,13 +586,24 @@ export function EgresosPanel({
         fd.append("pdf", payPdf)
       }
       fd.append("comprobantePath", comprobantePath)
-      const res = await fetch("/api/egresos/pay", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-        body: fd,
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || "Error al registrar pago")
+      let res: Response
+      try {
+        res = await fetch("/api/egresos/pay", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+          body: fd,
+        })
+      } catch {
+        // El comprobante ya se subió: hay que decirlo para que no lo cuenten
+        // como perdido y sepan que solo falta el registro.
+        throw new Error(mensajeDeRed("El comprobante sí se subió, pero no se pudo registrar el pago"))
+      }
+      // Si el servidor no responde JSON (p. ej. una página de error), sin este
+      // catch el usuario veía un "Unexpected token '<'" imposible de accionar.
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `No se pudo registrar el pago (error ${res.status})`)
+      }
       setPayModal(null)
       if (data.reembolso) {
         alert(`✓ Pago registrado.\nSe generó un reembolso de ${fmt(data.reembolso)} para ${item.supplierLabel}, visible en Finanzas como REEMBOLSO por pagar.`)

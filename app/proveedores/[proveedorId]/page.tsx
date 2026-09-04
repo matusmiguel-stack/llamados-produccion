@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
-import { uploadComprobante } from "../../../lib/upload-comprobante"
+import { uploadComprobante, mensajeDeRed } from "../../../lib/upload-comprobante"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { PageLoader } from "../../../components/PageLoader"
 
@@ -266,13 +266,20 @@ export default function ProveedorDetailPage() {
       // Subida directa a Storage (los archivos grandes truenan si pasan por la API)
       const comprobantePath = await uploadComprobante(payFile, f.codigo_proyecto || f.project_code)
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch("/api/facturas/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ action: "mark-paid", facturaId: f.id, comprobantePath }),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || "Error")
+      let res: Response
+      try {
+        res = await fetch("/api/facturas/admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ action: "mark-paid", facturaId: f.id, comprobantePath }),
+        })
+      } catch {
+        throw new Error(mensajeDeRed("El comprobante sí se subió, pero no se pudo marcar la factura como pagada"))
+      }
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `No se pudo marcar la factura como pagada (error ${res.status})`)
+      }
       setFacturas(prev => prev.map(x => x.id === f.id
         ? { ...x, status: "pagada", paid_at: new Date().toISOString(), comprobante_path: data.comprobante_path || null }
         : x))

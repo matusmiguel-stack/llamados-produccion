@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
-import { uploadComprobante } from "../../lib/upload-comprobante"
+import { uploadComprobante, mensajeDeRed } from "../../lib/upload-comprobante"
 import { AppSidebar } from "../../components/AppSidebar"
 
 type Factura = {
@@ -252,9 +252,16 @@ export default function FinanzasPage() {
     try {
       // Subida directa a Storage (los archivos grandes truenan si pasan por la API)
       const comprobantePath = await uploadComprobante(payFile, factura.codigo_proyecto || factura.projects?.code || null)
-      const res = await authedFetch({ action: "mark-paid", facturaId: factura.id, comprobantePath })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || "Error")
+      let res: Response
+      try {
+        res = await authedFetch({ action: "mark-paid", facturaId: factura.id, comprobantePath })
+      } catch {
+        throw new Error(mensajeDeRed("El comprobante sí se subió, pero no se pudo marcar la factura como pagada"))
+      }
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `No se pudo marcar la factura como pagada (error ${res.status})`)
+      }
       setFacturas(prev => prev.map(f =>
         f.id === factura.id
           ? { ...f, status: "pagada" as const, paid_at: new Date().toISOString(), comprobante_path: data.comprobante_path || null }
