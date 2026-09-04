@@ -2,12 +2,15 @@
 
 import React, { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
+import { nuevoShareToken } from "../../../lib/matriz-campos"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MatrizData = {
   id?: string
   project_id: string
+  // Liga pública de solo lectura; null = no compartida
+  share_token?: string | null
   // Nombre de esta matriz (un proyecto puede tener varias)
   nombre: string
   // Generales
@@ -42,6 +45,7 @@ type MatrizData = {
 function emptyMatriz(projectId: string): MatrizData {
   return {
     project_id: projectId,
+    share_token: null,
     nombre: "",
     nombre_proyecto: "",
     cliente: "",
@@ -354,6 +358,10 @@ export function MatrizPanel({
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // Compartir: liga pública de solo lectura + PDF
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareBusy, setShareBusy] = useState(false)
+  const [copiado, setCopiado] = useState(false)
 
   const isNew = activeId === "new"
 
@@ -450,6 +458,77 @@ export function MatrizPanel({
       alert("Error al guardar: " + err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // ── Compartir ──────────────────────────────────────────────────────────────
+  const shareUrl = draft.share_token
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/matriz/${draft.share_token}`
+    : ""
+
+  async function crearLiga() {
+    if (!draft.id) return
+    setShareBusy(true)
+    try {
+      const token = nuevoShareToken()
+      const { error } = await supabase
+        .from("project_matrices")
+        .update({ share_token: token })
+        .eq("id", draft.id)
+      if (error) throw error
+      setDraft((d) => ({ ...d, share_token: token }))
+      setMatrices((prev) => prev.map((m) => (m.id === draft.id ? { ...m, share_token: token } : m)))
+    } catch (err: any) {
+      alert("No se pudo crear la liga: " + err.message)
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
+  async function revocarLiga() {
+    if (!draft.id) return
+    if (!confirm("Al revocarla, quien tenga la liga dejará de ver la matriz. ¿Continuar?")) return
+    setShareBusy(true)
+    try {
+      const { error } = await supabase
+        .from("project_matrices")
+        .update({ share_token: null })
+        .eq("id", draft.id)
+      if (error) throw error
+      setDraft((d) => ({ ...d, share_token: null }))
+      setMatrices((prev) => prev.map((m) => (m.id === draft.id ? { ...m, share_token: null } : m)))
+      setCopiado(false)
+    } catch (err: any) {
+      alert("No se pudo revocar la liga: " + err.message)
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
+  async function copiarLiga() {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2200)
+    } catch {
+      alert("No se pudo copiar. Selecciona la liga y cópiala a mano.")
+    }
+  }
+
+  async function descargarPdf() {
+    setShareBusy(true)
+    try {
+      const { exportMatrizPdf } = await import("../../../lib/exportMatrizPdf")
+      await exportMatrizPdf({
+        nombre: draft.nombre || "Matriz de proyecto",
+        proyecto: projectName || null,
+        cliente: clientName || null,
+        campos: draft as unknown as Record<string, string>,
+      })
+    } catch (err: any) {
+      alert("No se pudo generar el PDF: " + err.message)
+    } finally {
+      setShareBusy(false)
     }
   }
 
@@ -596,9 +675,16 @@ export function MatrizPanel({
               </button>
             </>
           ) : (
-            <button onClick={() => setEditing(true)} style={editBtnStyle}>
-              ✏ Editar
-            </button>
+            <>
+              {!isNew && (
+                <button onClick={() => setShareOpen(true)} style={shareBtnStyle}>
+                  ↗ Compartir matriz
+                </button>
+              )}
+              <button onClick={() => setEditing(true)} style={editBtnStyle}>
+                ✏ Editar
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -693,11 +779,116 @@ export function MatrizPanel({
           )}
         </div>
       </div>
+
+      {/* ── Compartir matriz ── */}
+      {shareOpen && (
+        <div style={shareOverlayStyle} onClick={() => !shareBusy && setShareOpen(false)}>
+          <div style={sharePanelStyle} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#93c5fd" }}>
+              Compartir matriz
+            </p>
+            <p style={{ margin: "6px 0 18px", fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              {draft.nombre || "Matriz de proyecto"}
+            </p>
+
+            <p style={shareLabelStyle}>Liga de solo lectura</p>
+            {draft.share_token ? (
+              <>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input readOnly value={shareUrl} onFocus={(e) => e.currentTarget.select()} style={shareInputStyle} />
+                  <button onClick={copiarLiga} style={shareCopyStyle}>{copiado ? "✓ Copiada" : "Copiar"}</button>
+                </div>
+                <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "#7d8ca3", lineHeight: 1.6 }}>
+                  Quien tenga esta liga puede ver la matriz sin usuario, y siempre verá la versión
+                  actual. No puede editar nada. Si se comparte de más, revócala y genera otra.
+                </p>
+                <button onClick={revocarLiga} disabled={shareBusy} style={shareRevokeStyle}>
+                  Revocar liga
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#94a3b8", lineHeight: 1.6 }}>
+                  Genera una liga secreta para que alguien de fuera pueda ver esta matriz sin
+                  necesidad de usuario. Es de solo lectura y la puedes revocar cuando quieras.
+                </p>
+                <button onClick={crearLiga} disabled={shareBusy} style={shareCreateStyle}>
+                  {shareBusy ? "Generando…" : "Crear liga"}
+                </button>
+              </>
+            )}
+
+            <div style={{ height: 1, background: "rgba(148,163,184,0.14)", margin: "20px 0 16px" }} />
+
+            <p style={shareLabelStyle}>Descargar</p>
+            <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#94a3b8", lineHeight: 1.6 }}>
+              PDF con las ligas clickeables. Es una foto del momento: si la matriz cambia,
+              hay que volver a generarlo.
+            </p>
+            <button onClick={descargarPdf} disabled={shareBusy} style={sharePdfStyle}>
+              {shareBusy ? "Generando…" : "⬇ Descargar PDF"}
+            </button>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 22 }}>
+              <button onClick={() => setShareOpen(false)} disabled={shareBusy} style={shareCloseStyle}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+
+const shareBtnStyle: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 16px", borderRadius: 8,
+  border: "1px solid rgba(96,165,250,0.32)", background: "rgba(59,130,246,0.10)",
+  color: "#93c5fd", cursor: "pointer", fontSize: 13, fontWeight: 600,
+}
+const shareOverlayStyle: React.CSSProperties = {
+  position: "fixed", inset: 0, zIndex: 1000020, background: "rgba(2,6,23,0.78)",
+  display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+}
+const sharePanelStyle: React.CSSProperties = {
+  width: "100%", maxWidth: 470, background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
+  border: "1px solid rgba(148,163,184,0.16)", borderRadius: 16,
+  padding: "22px 22px 18px", boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+  maxHeight: "88vh", overflowY: "auto",
+}
+const shareLabelStyle: React.CSSProperties = {
+  margin: "0 0 8px", fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+  letterSpacing: 0.5, color: "#7d8ca3",
+}
+const shareInputStyle: React.CSSProperties = {
+  flex: 1, minWidth: 0, padding: "9px 11px", borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.22)", background: "rgba(2,6,23,0.55)",
+  color: "#e2e8f0", fontSize: 12, outline: "none",
+}
+const shareCopyStyle: React.CSSProperties = {
+  padding: "9px 14px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.4)",
+  background: "rgba(59,130,246,0.16)", color: "#93c5fd", cursor: "pointer",
+  fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
+}
+const shareCreateStyle: React.CSSProperties = {
+  padding: "10px 18px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.4)",
+  background: "rgba(59,130,246,0.16)", color: "#93c5fd", cursor: "pointer",
+  fontSize: 13, fontWeight: 700,
+}
+const shareRevokeStyle: React.CSSProperties = {
+  marginTop: 12, padding: "8px 14px", borderRadius: 8,
+  border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)",
+  color: "#f87171", cursor: "pointer", fontSize: 12.5, fontWeight: 600,
+}
+const sharePdfStyle: React.CSSProperties = {
+  padding: "10px 18px", borderRadius: 8, border: "1px solid rgba(52,211,153,0.32)",
+  background: "rgba(52,211,153,0.10)", color: "#34d399", cursor: "pointer",
+  fontSize: 13, fontWeight: 700,
+}
+const shareCloseStyle: React.CSSProperties = {
+  padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.22)",
+  background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: 13,
+}
 
 const sectionHeaderStyle: React.CSSProperties = {
   background: "linear-gradient(90deg, rgba(29,78,216,0.28), rgba(30,58,138,0.18))",
