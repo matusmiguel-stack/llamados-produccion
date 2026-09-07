@@ -549,7 +549,7 @@ export default function Home() {
       filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allEnsayos
 
     const juntaEvents = filteredJuntas.map((j) => {
-      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : j.tipo === "Junta Interna" ? "🏠" : "🤝"
+      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : j.tipo === "Junta Interna" ? "🏠" : j.tipo === "Invitación por correo" ? "📧" : "🤝"
       return {
         id: `${JUNTA_EVENT_PREFIX}${j.id}`,
         title: j.titulo ? `${emoji} ${j.titulo}` : `${emoji} ${j.tipo}`,
@@ -3521,7 +3521,7 @@ function openEditVacation() {
               <div style={formModalHeaderStyle}>
                 <div>
                   <h2 style={formModalTitleStyle}>
-                    {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : selectedJunta.tipo === "Junta Interna" ? "🏠" : "🤝"}{" "}
+                    {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : selectedJunta.tipo === "Junta Interna" ? "🏠" : selectedJunta.tipo === "Invitación por correo" ? "📧" : "🤝"}{" "}
                     {selectedJunta.titulo || selectedJunta.tipo}
                   </h2>
                   <p style={formModalMetaStyle}>
