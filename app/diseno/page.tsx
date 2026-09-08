@@ -1,7 +1,7 @@
 "use client"
 import { PageLoader } from "../../components/PageLoader"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
@@ -12,6 +12,7 @@ import { employeeDisplayName } from "../../lib/employee-dates"
 import { FREELANCE, FREELANCE_PREFIX, esEntradaFreelance, etiquetaResponsable, entradaDesdeNombre } from "../../lib/entrega-responsables"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
+import { CalendarSearch, type CalendarSearchItem } from "../../components/CalendarSearch"
 
 const TIPOS_ENTREGA = [
   { label: "Entrega Interna", color: "#6366f1" },
@@ -117,6 +118,21 @@ export default function DisenoPage() {
   }
 
   useEffect(() => { loadData() }, [])
+
+  // Busca sobre TODAS las entregas, sin importar los filtros o el mes visible.
+  const searchItems: CalendarSearchItem[] = useMemo(
+    () => entregas.map((e) => ({
+      id: e.id,
+      title: e.titulo,
+      subtitle: [e.cliente, e.proyecto].filter(Boolean).join(" · "),
+      date: e.fecha,
+    })),
+    [entregas]
+  )
+
+  function irAFecha(dateStr: string) {
+    calendarRef.current?.getApi().changeView("timeGridDay", dateStr)
+  }
 
   useEffect(() => {
     const evs = entregas
@@ -325,6 +341,7 @@ export default function DisenoPage() {
 
         {/* Filtros por editor / cliente / proyecto */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <CalendarSearch items={searchItems} onSelect={(it) => irAFecha(it.date)} placeholder="Buscar entrega…" />
           <select value={filtroEditor} onChange={(e) => setFiltroEditor(e.target.value)}
             style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroEditor ? "#f8fafc" : "#64748b", fontSize: 12 }}>
             <option value="">Diseñador</option>

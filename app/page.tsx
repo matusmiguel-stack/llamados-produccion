@@ -12,6 +12,7 @@ import { AppSidebar } from "../components/AppSidebar"
 import { PageLoader } from "../components/PageLoader"
 import { PushNotificationManager } from "../components/PushNotificationManager"
 import { DatePickerField } from "../components/DatePickerField"
+import { CalendarSearch, type CalendarSearchItem } from "../components/CalendarSearch"
 import {
   DraggableModalPanel,
   draggableModalHeaderStyle,
@@ -1884,6 +1885,34 @@ function openEditVacation() {
 
   const technicalResources = resources.filter((r) => r.type === "technical")
 
+  // Busca sobre TODOS los llamados y juntas, sin importar los filtros o el
+  // mes visible en el calendario.
+  const searchItems: CalendarSearchItem[] = useMemo(() => {
+    const llamadoItems: CalendarSearchItem[] = allShoots.map((shoot) => ({
+      id: `shoot:${shoot.id}`,
+      title: shoot.title,
+      subtitle: [shoot.client, shoot.project].filter(Boolean).join(" · "),
+      date: shootToDateRange(shoot).startDate,
+    }))
+    const juntaItems: CalendarSearchItem[] = allJuntas.map((j) => ({
+      id: `junta:${j.id}`,
+      title: j.titulo || j.tipo,
+      subtitle: j.titulo ? j.tipo : undefined,
+      date: j.fecha,
+    }))
+    return [...llamadoItems, ...juntaItems]
+  }, [allShoots, allJuntas])
+
+  function irAFecha(dateStr: string) {
+    const calendarApi = calendarRef.current?.getApi()
+    calendarApi?.gotoDate(dateStr)
+    if (isMobile) {
+      setMobileSelectedDay(dateStr)
+    } else {
+      calendarApi?.changeView("timeGridDay", dateStr)
+    }
+  }
+
   const filterSubfolderOptions = useMemo(() => {
     if (!filterClient) return allSubfolders
     return allSubfolders.filter((subfolder) => subfolder.client_id === filterClient)
@@ -2105,6 +2134,8 @@ function openEditVacation() {
                 : "repeat(5, minmax(0, 1fr)) auto",
             }}
           >
+            <CalendarSearch items={searchItems} onSelect={(it) => irAFecha(it.date)} placeholder="Buscar llamado o junta…" />
+
             <select
               aria-label="Cliente"
               value={filterClient}
