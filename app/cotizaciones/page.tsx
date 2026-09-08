@@ -636,6 +636,7 @@ export default function CotizacionesPage() {
         actual_days: number | null
         actual_unit_price: number | null
         actual_supplier_id: string | null
+        actual_employee_id: string | null
       }
       const savedActuals: Record<string, ActualSnapshot> = {}
 
@@ -658,7 +659,7 @@ export default function CotizacionesPage() {
           for (const sec of oldSecs) {
             const { data: oldItems } = await supabase
               .from("quote_items")
-              .select("description, qty, days, unit_price, actual_qty, actual_days, actual_unit_price, actual_supplier_id")
+              .select("description, qty, days, unit_price, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id")
               .eq("section_id", sec.id)
             for (const it of oldItems || []) {
               oldTotal += (Number(it.qty) || 0) * (Number(it.days) || 0) * (Number(it.unit_price) || 0)
@@ -668,6 +669,7 @@ export default function CotizacionesPage() {
                 actual_days: it.actual_days,
                 actual_unit_price: it.actual_unit_price,
                 actual_supplier_id: it.actual_supplier_id,
+                actual_employee_id: it.actual_employee_id,
               }
             }
           }
@@ -683,9 +685,6 @@ export default function CotizacionesPage() {
             )
           }
 
-          // Borrar secciones + ítems anteriores
-          await supabase.from("quote_items").delete().in("section_id", oldSecs.map((s: any) => s.id))
-          await supabase.from("quote_sections").delete().eq("quote_id", editQuoteId)
         }
         quoteId = editQuoteId
       } else {
@@ -708,22 +707,18 @@ export default function CotizacionesPage() {
         quoteId = quoteData.id
       }
 
-      for (let ri = 0; ri < RUBROS.length; ri++) {
-        const rubro = RUBROS[ri]
-        const { data: secData, error: secErr } = await supabase
-          .from("quote_sections")
-          .insert({ quote_id: quoteId, name: rubro.label, order_index: ri })
-          .select("id")
-          .single()
-
-        if (secErr) throw secErr
-
+      // Construir secciones + items en memoria y mandarlos en una sola llamada
+      // (replace_quote_sections) que borra lo anterior y reinserta todo dentro
+      // de UNA transacción en la base. Antes cada rubro se insertaba con su
+      // propia llamada a Supabase; si una fallaba a la mitad (red, lo que
+      // fuera), lo ya borrado no volvía y el resto de rubros no llegaba a
+      // insertarse, dejando la cotización con solo los primeros rubros.
+      const sectionsPayload = RUBROS.map((rubro, ri) => {
         const predefinedRows = rubro.items.map((item, ii) => {
           if (item.special === "agency_commission") {
             const desc = `Comisión de agencia (${commissionPct}%)`
             const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
             return {
-              section_id: secData.id,
               description: desc,
               qty: 1,
               days: 1,
@@ -739,7 +734,6 @@ export default function CotizacionesPage() {
           const itemLabel = (v.label && v.label.trim()) ? v.label.trim() : item.label
           const prev = savedActuals?.[`${rubro.label}|${itemLabel}`] ?? savedActuals?.[`${rubro.label}|${item.label}`] ?? {}
           return {
-            section_id: secData.id,
             description: itemLabel,
             qty: parseFloat(v.qty) || 0,
             days: parseFloat(v.days) || 0,
@@ -756,7 +750,6 @@ export default function CotizacionesPage() {
           const desc = item.description || "Concepto adicional"
           const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
           return {
-            section_id: secData.id,
             description: desc,
             qty: parseFloat(item.qty) || 0,
             days: parseFloat(item.days) || 0,
@@ -769,9 +762,14 @@ export default function CotizacionesPage() {
           }
         })
 
-        const { error: itemsErr } = await supabase.from("quote_items").insert([...predefinedRows, ...extraRows])
-        if (itemsErr) throw itemsErr
-      }
+        return { name: rubro.label, order_index: ri, items: [...predefinedRows, ...extraRows] }
+      })
+
+      const { error: replaceErr } = await supabase.rpc("replace_quote_sections", {
+        p_quote_id: quoteId,
+        p_sections: sectionsPayload,
+      })
+      if (replaceErr) throw replaceErr
 
       if (!editQuoteId) {
         // Tras la primera vez, quedarse en esta cotización para seguir editando
