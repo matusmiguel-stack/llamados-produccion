@@ -196,6 +196,7 @@ export default function CotizacionesPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [floatingSummaryOpen, setFloatingSummaryOpen] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showAprobarModal, setShowAprobarModal] = useState(false)
@@ -332,6 +333,12 @@ export default function CotizacionesPage() {
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  // Título de la pestaña con el nombre de la cotización, para distinguir
+  // varias ventanas de cotizaciones abiertas al mismo tiempo.
+  useEffect(() => {
+    document.title = quoteName.trim() ? `${quoteName.trim()} · Cotización` : "Cotizaciones"
+  }, [quoteName])
 
   // Evitar que la rueda del mouse cambie el valor de los campos numéricos al
   // scrollear sobre ellos: al hacer wheel sobre un input[type=number] enfocado
@@ -1087,7 +1094,9 @@ export default function CotizacionesPage() {
 
           <header style={pageHeaderStyle}>
             <p style={eyebrowStyle}>Finanzas</p>
-            <h1 style={pageTitleStyle}>{editQuoteId ? "Editar cotización" : "Nueva cotización"}</h1>
+            <h1 style={pageTitleStyle}>
+              {quoteName.trim() || (editQuoteId ? "Editar cotización" : "Nueva cotización")}
+            </h1>
             <p style={pageSubtitleStyle}>Presupuesto estructurado por rubros con análisis de utilidad</p>
             {collaborators.length > 0 && (
               <div style={{
@@ -1512,6 +1521,20 @@ export default function CotizacionesPage() {
           </div>
         </div>
       )}
+
+      {!isMobile && (
+        <FloatingSummary
+          open={floatingSummaryOpen}
+          onToggle={() => setFloatingSummaryOpen((v) => !v)}
+          gasto={globalFinancials.gasto}
+          utilidad={globalFinancials.utilidad}
+          venta={globalFinancials.venta}
+          markupGeneral={markupGeneral}
+          financiamientoGeneral={financiamientoGeneral}
+          totalCliente={globalFinancials.venta * (1 + ((parseFloat(markupGeneral) || 0) + (parseFloat(financiamientoGeneral) || 0)) / 100)}
+          marginPct={marginPct}
+        />
+      )}
     </div>
   )
 }
@@ -1521,6 +1544,102 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
     <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
       <span style={{ color: "#7d8ca3", fontSize: 13 }}>{label}</span>
       <span style={{ color: bold ? "#f8fafc" : "#cbd5e1", fontWeight: bold ? 700 : 500, fontSize: 13, fontFamily: bold ? "monospace" : undefined }}>{value}</span>
+    </div>
+  )
+}
+
+// Resumen flotante en la esquina: para no tener que bajar hasta el final de
+// la cotización cada vez que quieres saber en cuánto va. Solo en desktop —
+// en móvil ya todo está en una sola columna y no hay tanto que scrollear.
+function FloatingSummary({
+  open, onToggle, gasto, utilidad, venta, markupGeneral, financiamientoGeneral, totalCliente, marginPct,
+}: {
+  open: boolean
+  onToggle: () => void
+  gasto: number
+  utilidad: number
+  venta: number
+  markupGeneral: string
+  financiamientoGeneral: string
+  totalCliente: number
+  marginPct: number
+}) {
+  const marginColor = marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171"
+
+  if (!open) {
+    return (
+      <button
+        onClick={onToggle}
+        title="Mostrar resumen"
+        style={{
+          position: "fixed", bottom: 20, right: 20, zIndex: 60,
+          padding: "9px 14px", borderRadius: 999,
+          background: "rgba(15,23,42,0.92)", backdropFilter: "blur(10px)",
+          border: "1px solid rgba(148,163,184,0.22)", boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
+          color: "#f0abfc", fontSize: 13, fontWeight: 700, cursor: "pointer",
+        }}
+      >
+        {fmt(totalCliente)}
+      </button>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed", bottom: 20, right: 20, zIndex: 60, width: 220,
+        background: "rgba(15,23,42,0.92)", backdropFilter: "blur(10px)",
+        border: "1px solid rgba(148,163,184,0.18)", borderRadius: 14,
+        boxShadow: "0 16px 40px rgba(0,0,0,0.4)", padding: "12px 14px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>
+          Resumen
+        </span>
+        <button
+          onClick={onToggle}
+          title="Minimizar"
+          style={{ background: "transparent", border: "none", color: "#64748b", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 2 }}
+        >
+          −
+        </button>
+      </div>
+
+      <MiniRow label="Total gasto" value={fmt(gasto)} color="#94a3b8" />
+      <MiniRow label="Total utilidad" value={fmt(utilidad)} color="#34d399" />
+      <div style={{ margin: "5px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
+      <MiniRow label="Subtotal" value={fmt(venta)} color="#a78bfa" bold />
+      {(parseFloat(markupGeneral) || 0) > 0 && (
+        <MiniRow label={`Markup (${markupGeneral}%)`} value={fmt(venta * ((parseFloat(markupGeneral) || 0) / 100))} color="#fbbf24" />
+      )}
+      {(parseFloat(financiamientoGeneral) || 0) > 0 && (
+        <MiniRow label={`Financiam. (${financiamientoGeneral}%)`} value={fmt(venta * ((parseFloat(financiamientoGeneral) || 0) / 100))} color="#38bdf8" />
+      )}
+      <div style={{ margin: "5px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "4px 0" }}>
+        <span style={{ color: "#7d8ca3", fontSize: 11 }}>Total al cliente</span>
+        <span style={{ color: "#f0abfc", fontSize: 16, fontWeight: 800 }}>{fmt(totalCliente)}</span>
+      </div>
+
+      <div style={{ marginTop: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+          <span style={{ color: "#7d8ca3", fontSize: 10 }}>Margen</span>
+          <span style={{ color: marginColor, fontSize: 11, fontWeight: 700 }}>{fmtPct(marginPct)}</span>
+        </div>
+        <div style={{ height: 4, borderRadius: 999, background: "rgba(148,163,184,0.15)", overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: 999, width: `${Math.min(marginPct, 100)}%`, background: marginColor }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MiniRow({ label, value, color, bold }: { label: string; value: string; color: string; bold?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "2px 0" }}>
+      <span style={{ color: "#7d8ca3", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ color, fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 600, whiteSpace: "nowrap" }}>{value}</span>
     </div>
   )
 }
