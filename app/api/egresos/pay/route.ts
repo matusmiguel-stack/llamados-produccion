@@ -68,8 +68,9 @@ export async function POST(req: Request) {
         { status: 400 },
       )
     }
-    // Comprobante de pago del banco — obligatorio para ambos tipos.
-    if (!compFile && !compPathParam) {
+    // Comprobante de pago del banco — obligatorio salvo que el pago haya sido
+    // en efectivo (ahí no siempre hay un respaldo bancario que subir).
+    if (formaPago !== "Efectivo" && !compFile && !compPathParam) {
       return NextResponse.json({ error: "Sube el comprobante de pago del banco (PDF o JPG)" }, { status: 400 })
     }
     if (compFile && !["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(compFile.type)) {
@@ -99,17 +100,17 @@ export async function POST(req: Request) {
       if (!pdfUp.error) pdfPath = pdfUp.data.path
     }
 
-    // Comprobante de pago del banco (obligatorio, validado arriba)
-    let comprobantePath: string
+    // Comprobante de pago del banco (obligatorio salvo efectivo, validado arriba)
+    let comprobantePath: string | null = null
     if (compPathParam) {
       const { error: checkErr } = await admin.storage.from("facturas").createSignedUrl(compPathParam, 60)
       if (checkErr) {
         return NextResponse.json({ error: "El comprobante no se encontró en el storage; vuelve a subirlo" }, { status: 400 })
       }
       comprobantePath = compPathParam
-    } else {
+    } else if (compFile) {
       const compUp = await admin.storage.from("facturas")
-        .upload(`${folder}/comprobante-${stamp}-${safe(compFile!.name)}`, Buffer.from(await compFile!.arrayBuffer()), { contentType: compFile!.type })
+        .upload(`${folder}/comprobante-${stamp}-${safe(compFile.name)}`, Buffer.from(await compFile.arrayBuffer()), { contentType: compFile.type })
       if (compUp.error) {
         return NextResponse.json({ error: `No se pudo guardar el comprobante: ${compUp.error.message}` }, { status: 500 })
       }

@@ -47,6 +47,13 @@ function facturaRequerida(formaPago: string | null | undefined): boolean {
   return FORMAS_CON_FACTURA.includes((formaPago || "").trim())
 }
 
+// El comprobante de pago del banco solo aplica cuando el dinero salió de una
+// cuenta bancaria (transferencia). En efectivo casi nunca hay ese respaldo.
+function comprobanteRequerido(formaPago: string | null | undefined): boolean {
+  const forma = (formaPago || "").trim()
+  return !!forma && forma !== "Efectivo"
+}
+
 function fmt(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 }
@@ -559,14 +566,15 @@ export function EgresosPanel({
       alert(`Para un anticipo pagado por ${payForma} debes subir el XML y el PDF de la factura`)
       return
     }
-    if (!payComprobante) {
+    if (comprobanteRequerido(payForma) && !payComprobante) {
       alert("Sube el comprobante de pago del banco (PDF o JPG)")
       return
     }
     setPaying(true)
     try {
-      // Subida directa a Storage (los archivos grandes truenan si pasan por la API)
-      const comprobantePath = await uploadComprobante(payComprobante, projectCode || null)
+      // Subida directa a Storage (los archivos grandes truenan si pasan por la API).
+      // En efectivo el comprobante es opcional: si no lo adjuntaron, no hay nada que subir.
+      const comprobantePath = payComprobante ? await uploadComprobante(payComprobante, projectCode || null) : ""
       const { data: { session } } = await supabase.auth.getSession()
       const fd = new FormData()
       fd.append("itemId", item.id)
@@ -1230,13 +1238,20 @@ export function EgresosPanel({
               </>
             )}
 
-            <label style={{ ...payLabelStyle, marginTop: 14 }}>Comprobante de pago del banco *</label>
+            <label style={{ ...payLabelStyle, marginTop: 14 }}>
+              Comprobante de pago del banco {comprobanteRequerido(payForma) ? "*" : "(opcional)"}
+            </label>
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
               onChange={(e) => setPayComprobante(e.target.files?.[0] || null)}
               style={payFileStyle}
             />
+            {!comprobanteRequerido(payForma) && (
+              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                Pagado en efectivo: el comprobante no es obligatorio, pero puedes adjuntarlo si lo tienes.
+              </p>
+            )}
             <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>
               PDF o JPG. Queda guardado y vinculado a esta transacción.
             </p>
