@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
+import { DraggableModalPanel } from "../../components/DraggableModalPanel"
 import { RESPONSABLES } from "../../lib/responsables"
 import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
@@ -1572,7 +1573,7 @@ function FloatingSummary({
         onClick={onToggle}
         title="Mostrar resumen"
         style={{
-          position: "fixed", bottom: 20, right: 20, zIndex: 60,
+          position: "fixed", top: 20, right: 20, zIndex: 60,
           padding: "9px 14px", borderRadius: 999,
           background: "rgba(15,23,42,0.92)", backdropFilter: "blur(10px)",
           border: "1px solid rgba(148,163,184,0.22)", boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
@@ -1585,17 +1586,17 @@ function FloatingSummary({
   }
 
   return (
-    <div
+    <DraggableModalPanel
       style={{
-        position: "fixed", bottom: 20, right: 20, zIndex: 60, width: 220,
+        position: "fixed", top: 20, right: 20, zIndex: 60, width: 220,
         background: "rgba(15,23,42,0.92)", backdropFilter: "blur(10px)",
         border: "1px solid rgba(148,163,184,0.18)", borderRadius: 14,
         boxShadow: "0 16px 40px rgba(0,0,0,0.4)", padding: "12px 14px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+      <div data-drag-handle style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, cursor: "grab" }}>
         <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>
-          Resumen
+          ⠿ Resumen
         </span>
         <button
           onClick={onToggle}
@@ -1631,7 +1632,7 @@ function FloatingSummary({
           <div style={{ height: "100%", borderRadius: 999, width: `${Math.min(marginPct, 100)}%`, background: marginColor }} />
         </div>
       </div>
-    </div>
+    </DraggableModalPanel>
   )
 }
 
