@@ -63,6 +63,7 @@ type FacturaRow = {
   pdf_path: string | null
   project_name: string | null
   project_code: string | null
+  es_historico: boolean
 }
 
 type EditState = { qty: string; days: string; unit_price: string; contact: string }
@@ -177,7 +178,7 @@ export default function ProveedorDetailPage() {
       if (["admin", "finanzas"].includes(auth.profile.role)) {
         const { data: facs } = await supabase
           .from("facturas")
-          .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, xml_path, pdf_path, projects(name, code)")
+          .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, xml_path, pdf_path, es_historico, projects(name, code)")
           .eq("proveedor_id", proveedorId)
           .order("created_at", { ascending: false })
         setFacturas((facs || []).map((f: any) => ({
@@ -188,6 +189,7 @@ export default function ProveedorDetailPage() {
           comprobante_path: f.comprobante_path ?? null,
           xml_path: f.xml_path ?? null, pdf_path: f.pdf_path ?? null,
           project_name: f.projects?.name ?? null, project_code: f.projects?.code ?? null,
+          es_historico: !!f.es_historico,
         })))
       }
 
@@ -688,6 +690,7 @@ export default function ProveedorDetailPage() {
                             {vencida && <span style={facPillStyle("#f87171")}>Vencida</span>}
                             {f.status === "pagada" && <span style={facPillStyle("#34d399")}>✓ Pagada{f.paid_at ? ` ${fmtDate(f.paid_at)}` : ""}</span>}
                             {f.status === "rechazada" && <span style={facPillStyle("#f87171")}>Rechazada</span>}
+                            {f.es_historico && <span style={facPillStyle("#fb923c")}>PASADO</span>}
                             {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 400 }}>{f.origen}</span>}
                           </p>
                           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>

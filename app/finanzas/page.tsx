@@ -28,6 +28,7 @@ type Factura = {
   concepto: string | null
   origen: "proveedor" | "anticipo" | "comprobacion" | "reembolso" | null
   forma_pago: string | null
+  es_historico: boolean
   proveedores: { nombre: string; apellido: string; empresa: string | null } | null
   projects: { name: string; code: string | null } | null
 }
@@ -290,7 +291,7 @@ export default function FinanzasPage() {
   const viernes = nextFridayISO()
 
   const pagosEsteViernes = useMemo(
-    () => facturas.filter(f => f.status === "aceptada" && f.fecha_pago && f.fecha_pago <= viernes),
+    () => facturas.filter(f => f.status === "aceptada" && !f.es_historico && f.fecha_pago && f.fecha_pago <= viernes),
     [facturas, viernes]
   )
 
@@ -313,17 +314,29 @@ export default function FinanzasPage() {
     return list
   }, [facturas, filter, search, dateFrom, dateTo])
 
+  // Deuda actual (generada por la app) vs. histórica (importada, previa a la
+  // app) — nunca se mezclan en los mismos totales.
   const totalPorPagar = useMemo(
-    () => facturas.filter(f => f.status === "aceptada").reduce((s, f) => s + montoPagar(f), 0),
+    () => facturas.filter(f => f.status === "aceptada" && !f.es_historico).reduce((s, f) => s + montoPagar(f), 0),
+    [facturas]
+  )
+  const totalPorPagarHistorico = useMemo(
+    () => facturas.filter(f => f.status === "aceptada" && f.es_historico).reduce((s, f) => s + montoPagar(f), 0),
+    [facturas]
+  )
+  const totalPagadoHistorico = useMemo(
+    () => facturas.filter(f => f.status === "pagada" && f.es_historico).reduce((s, f) => s + montoPagar(f), 0),
     [facturas]
   )
   const totalViernes = pagosEsteViernes.reduce((s, f) => s + montoPagar(f), 0)
 
   // Facturas por pagar agrupadas por su viernes de vencimiento (fecha_pago).
+  // La deuda histórica queda fuera: sus fechas son de años pasados y no
+  // pintan nada útil en el calendario de próximos viernes.
   const pagosViernesMap = useMemo(() => {
     const map = new Map<string, Factura[]>()
     for (const f of facturas) {
-      if (f.status !== "aceptada" || !f.fecha_pago) continue
+      if (f.status !== "aceptada" || f.es_historico || !f.fecha_pago) continue
       const k = f.fecha_pago.split("T")[0]
       if (!map.has(k)) map.set(k, [])
       map.get(k)!.push(f)
@@ -399,11 +412,32 @@ export default function FinanzasPage() {
           <div style={cardStyle("#34d399")}>
             <p style={cardLabelStyle}>Pagadas</p>
             <p style={{ ...cardValueStyle, color: "#34d399" }}>
-              {fmtMx(facturas.filter(f => f.status === "pagada").reduce((s, f) => s + montoPagar(f), 0))}
+              {fmtMx(facturas.filter(f => f.status === "pagada" && !f.es_historico).reduce((s, f) => s + montoPagar(f), 0))}
             </p>
-            <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada").length} facturas</p>
+            <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada" && !f.es_historico).length} facturas</p>
           </div>
         </div>
+
+        {/* Deuda histórica (previa a la app) — aparte, para no mezclarla con la de arriba */}
+        {(totalPorPagarHistorico > 0 || totalPagadoHistorico > 0) && (
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#fb923c", textTransform: "uppercase", letterSpacing: 0.6 }}>
+              🕰️ Deuda histórica (pasada, previa a la app)
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 12 }}>
+              <div style={cardStyle("#fb923c")}>
+                <p style={cardLabelStyle}>Total por pagar (pasadas)</p>
+                <p style={{ ...cardValueStyle, color: "#fb923c" }}>{fmtMx(totalPorPagarHistorico)}</p>
+                <p style={cardHintStyle}>{facturas.filter(f => f.status === "aceptada" && f.es_historico).length} pendientes</p>
+              </div>
+              <div style={cardStyle("#fdba74")}>
+                <p style={cardLabelStyle}>Pagadas (pasadas)</p>
+                <p style={{ ...cardValueStyle, color: "#fdba74" }}>{fmtMx(totalPagadoHistorico)}</p>
+                <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada" && f.es_historico).length} facturas</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toggle de vista */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -596,6 +630,7 @@ export default function FinanzasPage() {
                       {f.origen && f.origen !== "proveedor" && (
                         <span style={origenBadgeStyle}>{ORIGEN_LABEL[f.origen]}</span>
                       )}
+                      {f.es_historico && <span style={historicoBadgeStyle}>PASADO</span>}
                     </div>
                     {f.concepto && (
                       <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
@@ -812,6 +847,11 @@ const miniBtnStyle: React.CSSProperties = {
 const origenBadgeStyle: React.CSSProperties = {
   padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700,
   background: "rgba(96,165,250,0.14)", border: "1px solid rgba(96,165,250,0.3)", color: "#93c5fd",
+}
+
+const historicoBadgeStyle: React.CSSProperties = {
+  padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700,
+  background: "rgba(251,146,60,0.14)", border: "1px solid rgba(251,146,60,0.35)", color: "#fb923c",
 }
 
 function payBtnStyle(busy: boolean): React.CSSProperties {
