@@ -46,6 +46,17 @@ const fmtMx = (n: number) =>
 // Monto final a pagar: total neto de impuestos del CFDI (IVA − retenciones).
 // Fallback al subtotal para registros sin total.
 const montoPagar = (f: Factura) => Number(f.total ?? f.subtotal ?? 0)
+// Monto sin IVA: el que se muestra en grande en los resúmenes/totales.
+// Fallback al total para registros sin subtotal (no hay forma de saber el neto).
+const montoSinIva = (f: Factura) => Number(f.subtotal ?? f.total ?? 0)
+
+// Suma sin IVA (grande) y con IVA (chiquito) de una lista de facturas.
+function sumas(fs: Factura[]) {
+  return {
+    sinIva: fs.reduce((s, f) => s + montoSinIva(f), 0),
+    conIva: fs.reduce((s, f) => s + montoPagar(f), 0),
+  }
+}
 
 function provLabel(f: Factura) {
   if (!f.proveedores) return f.proveedor_email || "—"
@@ -315,20 +326,25 @@ export default function FinanzasPage() {
   }, [facturas, filter, search, dateFrom, dateTo])
 
   // Deuda actual (generada por la app) vs. histórica (importada, previa a la
-  // app) — nunca se mezclan en los mismos totales.
+  // app) — nunca se mezclan en los mismos totales. Cada total trae su par
+  // sin IVA (el que se muestra en grande) / con IVA (chiquito, debajo).
   const totalPorPagar = useMemo(
-    () => facturas.filter(f => f.status === "aceptada" && !f.es_historico).reduce((s, f) => s + montoPagar(f), 0),
+    () => sumas(facturas.filter(f => f.status === "aceptada" && !f.es_historico)),
+    [facturas]
+  )
+  const totalPagado = useMemo(
+    () => sumas(facturas.filter(f => f.status === "pagada" && !f.es_historico)),
     [facturas]
   )
   const totalPorPagarHistorico = useMemo(
-    () => facturas.filter(f => f.status === "aceptada" && f.es_historico).reduce((s, f) => s + montoPagar(f), 0),
+    () => sumas(facturas.filter(f => f.status === "aceptada" && f.es_historico)),
     [facturas]
   )
   const totalPagadoHistorico = useMemo(
-    () => facturas.filter(f => f.status === "pagada" && f.es_historico).reduce((s, f) => s + montoPagar(f), 0),
+    () => sumas(facturas.filter(f => f.status === "pagada" && f.es_historico)),
     [facturas]
   )
-  const totalViernes = pagosEsteViernes.reduce((s, f) => s + montoPagar(f), 0)
+  const totalViernes = sumas(pagosEsteViernes)
 
   // Facturas por pagar agrupadas por su viernes de vencimiento (fecha_pago).
   // La deuda histórica queda fuera: sus fechas son de años pasados y no
@@ -350,7 +366,7 @@ export default function FinanzasPage() {
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
       .map(([fecha, fs]) => ({
         fecha,
-        total: fs.reduce((s, f) => s + montoPagar(f), 0),
+        total: fs.reduce((s, f) => s + montoSinIva(f), 0),
         count: fs.length,
         vencido: fecha < hoy,
       }))
@@ -364,7 +380,7 @@ export default function FinanzasPage() {
     () => (pagosViernesMap.get(selectedViernes) || []).slice().sort((a, b) => montoPagar(b) - montoPagar(a)),
     [pagosViernesMap, selectedViernes]
   )
-  const selTotal = selFacturas.reduce((s, f) => s + montoPagar(f), 0)
+  const selTotal = sumas(selFacturas)
   const selVencido = selectedViernes < todayISO()
 
   function goViernes(iso: string) { setSelViernes(iso); setCalOpen(false) }
@@ -401,25 +417,26 @@ export default function FinanzasPage() {
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
           <div style={cardStyle("#f59e0b")}>
             <p style={cardLabelStyle}>Pagos este viernes ({fechaCorta(viernes)})</p>
-            <p style={{ ...cardValueStyle, color: "#fbbf24" }}>{fmtMx(totalViernes)}</p>
+            <p style={{ ...cardValueStyle, color: "#fbbf24" }}>{fmtMx(totalViernes.sinIva)}</p>
+            <ConIva sinIva={totalViernes.sinIva} conIva={totalViernes.conIva} />
             <p style={cardHintStyle}>{pagosEsteViernes.length} factura{pagosEsteViernes.length !== 1 ? "s" : ""}</p>
           </div>
           <div style={cardStyle("#f87171")}>
             <p style={cardLabelStyle}>Total por pagar</p>
-            <p style={{ ...cardValueStyle, color: "#f87171" }}>{fmtMx(totalPorPagar)}</p>
-            <p style={cardHintStyle}>{facturas.filter(f => f.status === "aceptada").length} pendientes</p>
+            <p style={{ ...cardValueStyle, color: "#f87171" }}>{fmtMx(totalPorPagar.sinIva)}</p>
+            <ConIva sinIva={totalPorPagar.sinIva} conIva={totalPorPagar.conIva} />
+            <p style={cardHintStyle}>{facturas.filter(f => f.status === "aceptada" && !f.es_historico).length} pendientes</p>
           </div>
           <div style={cardStyle("#34d399")}>
             <p style={cardLabelStyle}>Pagadas</p>
-            <p style={{ ...cardValueStyle, color: "#34d399" }}>
-              {fmtMx(facturas.filter(f => f.status === "pagada" && !f.es_historico).reduce((s, f) => s + montoPagar(f), 0))}
-            </p>
+            <p style={{ ...cardValueStyle, color: "#34d399" }}>{fmtMx(totalPagado.sinIva)}</p>
+            <ConIva sinIva={totalPagado.sinIva} conIva={totalPagado.conIva} />
             <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada" && !f.es_historico).length} facturas</p>
           </div>
         </div>
 
         {/* Deuda histórica (previa a la app) — aparte, para no mezclarla con la de arriba */}
-        {(totalPorPagarHistorico > 0 || totalPagadoHistorico > 0) && (
+        {(totalPorPagarHistorico.sinIva > 0 || totalPagadoHistorico.sinIva > 0) && (
           <div style={{ marginBottom: 24 }}>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#fb923c", textTransform: "uppercase", letterSpacing: 0.6 }}>
               🕰️ Deuda histórica (pasada, previa a la app)
@@ -427,12 +444,14 @@ export default function FinanzasPage() {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 12 }}>
               <div style={cardStyle("#fb923c")}>
                 <p style={cardLabelStyle}>Total por pagar (pasadas)</p>
-                <p style={{ ...cardValueStyle, color: "#fb923c" }}>{fmtMx(totalPorPagarHistorico)}</p>
+                <p style={{ ...cardValueStyle, color: "#fb923c" }}>{fmtMx(totalPorPagarHistorico.sinIva)}</p>
+                <ConIva sinIva={totalPorPagarHistorico.sinIva} conIva={totalPorPagarHistorico.conIva} />
                 <p style={cardHintStyle}>{facturas.filter(f => f.status === "aceptada" && f.es_historico).length} pendientes</p>
               </div>
               <div style={cardStyle("#fdba74")}>
                 <p style={cardLabelStyle}>Pagadas (pasadas)</p>
-                <p style={{ ...cardValueStyle, color: "#fdba74" }}>{fmtMx(totalPagadoHistorico)}</p>
+                <p style={{ ...cardValueStyle, color: "#fdba74" }}>{fmtMx(totalPagadoHistorico.sinIva)}</p>
+                <ConIva sinIva={totalPagadoHistorico.sinIva} conIva={totalPagadoHistorico.conIva} />
                 <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada" && f.es_historico).length} facturas</p>
               </div>
             </div>
@@ -497,7 +516,10 @@ export default function FinanzasPage() {
                   {selFacturas.length} factura{selFacturas.length !== 1 ? "s" : ""}
                 </p>
               </div>
-              <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: selVencido && selFacturas.length ? "#f87171" : "#fbbf24" }}>{fmtMx(selTotal)}</span>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: selVencido && selFacturas.length ? "#f87171" : "#fbbf24" }}>{fmtMx(selTotal.sinIva)}</span>
+                <ConIva sinIva={selTotal.sinIva} conIva={selTotal.conIva} />
+              </div>
             </div>
 
             {/* Detalle completo de cada factura de este viernes */}
@@ -745,6 +767,18 @@ const cardValueStyle: React.CSSProperties = {
 
 const cardHintStyle: React.CSSProperties = {
   margin: "4px 0 0", fontSize: 11, color: "#6b7c93",
+}
+
+// Línea chiquita del "con IVA" debajo del total grande (que va sin IVA).
+const cardIvaStyle: React.CSSProperties = {
+  margin: "2px 0 0", fontSize: 11, color: "#7d8ca3",
+}
+
+// El total grande siempre va sin IVA; si el con-IVA es distinto, se muestra
+// chiquito debajo (si son iguales, ej. sin subtotal registrado, no hay nada que agregar).
+function ConIva({ sinIva, conIva }: { sinIva: number; conIva: number }) {
+  if (Math.abs(conIva - sinIva) < 0.01) return null
+  return <p style={cardIvaStyle}>{fmtMx(conIva)} con IVA</p>
 }
 
 function filterBtnStyle(active: boolean): React.CSSProperties {
