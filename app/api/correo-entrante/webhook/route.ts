@@ -67,6 +67,10 @@ export async function POST(req: Request) {
   }
 
   const evento = JSON.parse(payloadTexto)
+  // Log de diagnóstico: con "All events" activado en Resend, aquí llega de
+  // todo (sent, delivered, etc.) además de email.received — así se ve en
+  // los logs de Vercel qué tipo de evento fue cada llamada y a quién iba.
+  console.log("[correo-entrante] evento:", evento.type, "to:", JSON.stringify(evento.data?.to), "subject:", evento.data?.subject)
   if (evento.type !== "email.received") return NextResponse.json({ ok: true })
 
   const { email_id, from, subject, to, cc, attachments } = evento.data as {
