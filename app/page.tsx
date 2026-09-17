@@ -238,6 +238,8 @@ export default function Home() {
   const [juntaAttendees, setJuntaAttendees] = useState<string[]>([])
   const [juntaExternalEmails, setJuntaExternalEmails] = useState<string[]>([])
   const [juntaEmailInput, setJuntaEmailInput] = useState("")
+  const [juntaRecurrente, setJuntaRecurrente] = useState(false)
+  const [juntaRecurrenteSemanas, setJuntaRecurrenteSemanas] = useState(8)
   const [externalContacts, setExternalContacts] = useState<string[]>([])
   const [juntaAttendeeSearch, setJuntaAttendeeSearch] = useState("")
   const [juntaAttendeeDropOpen, setJuntaAttendeeDropOpen] = useState(false)
@@ -850,6 +852,8 @@ export default function Home() {
     setJuntaAttendees([])
     setJuntaExternalEmails([])
     setJuntaEmailInput("")
+    setJuntaRecurrente(false)
+    setJuntaRecurrenteSemanas(8)
     setJuntaAttendeeSearch("")
     setJuntaAttendeeDropOpen(false)
     setSelectedJunta(null)
@@ -1522,10 +1526,9 @@ function openEditVacation() {
       ? [...juntaExternalEmails, pendingEmail]
       : juntaExternalEmails
 
-    const payload = {
+    const basePayload = {
       tipo:        juntaTipo,
       titulo:      juntaTitulo.trim() || null,
-      fecha:       juntaDate,
       hora_inicio: juntaStartTime || "09:00",
       hora_fin:    juntaEndTime   || null,
       notas:       juntaNotas.trim() || null,
@@ -1537,66 +1540,105 @@ function openEditVacation() {
       updated_at:  new Date().toISOString(),
     }
 
-    let juntaId: string
-
-    if (selectedJunta) {
-      const { error } = await supabase.from("juntas").update(payload).eq("id", selectedJunta.id)
-      if (error) { setSavingEntry(false); alert(error.message); return }
-      juntaId = selectedJunta.id
-      await supabase.from("junta_attendees").delete().eq("junta_id", juntaId)
-    } else {
-      const { data, error } = await supabase.from("juntas").insert(payload).select("id").single()
-      if (error) { setSavingEntry(false); alert(error.message); return }
-      juntaId = data.id
-    }
-
-    if (juntaAttendees.length > 0) {
-      await supabase.from("junta_attendees").insert(
-        juntaAttendees.map((emp_id) => ({ junta_id: juntaId, employee_id: emp_id }))
-      )
-    }
-
     const { data: { session: juntaSession } } = await supabase.auth.getSession()
     const juntaAuthHeaders = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${juntaSession?.access_token}`,
     }
 
-    // Enviar emails con ICS adjunto
-    if (juntaAttendees.length > 0 || finalExternalEmails.length > 0) {
-      try {
-        const res = await fetch("/api/juntas/send-invites", {
-          method: "POST",
-          headers: juntaAuthHeaders,
-          body: JSON.stringify({
-            junta: { ...payload, id: juntaId },
-            attendeeEmployeeIds: juntaAttendees,
-          }),
-        })
-        const data = await res.json()
-        if (!res.ok || data.error) {
-          alert(`Error al enviar invitaciones: ${data.error || res.statusText}`)
-        } else {
-          alert(`Invitaciones enviadas: ${data.sent} correo(s)${data.debug ? `\nDebug: ${data.debug}` : ""}`)
+    async function sendInvitesAndPush(payload: any, juntaId: string) {
+      let sent = 0
+      let inviteError: string | null = null
+      if (juntaAttendees.length > 0 || finalExternalEmails.length > 0) {
+        try {
+          const res = await fetch("/api/juntas/send-invites", {
+            method: "POST",
+            headers: juntaAuthHeaders,
+            body: JSON.stringify({
+              junta: { ...payload, id: juntaId },
+              attendeeEmployeeIds: juntaAttendees,
+            }),
+          })
+          const data = await res.json()
+          if (!res.ok || data.error) {
+            inviteError = data.error || res.statusText
+          } else {
+            sent = data.sent || 0
+          }
+        } catch (e: any) {
+          inviteError = e.message
         }
-      } catch (e: any) {
-        alert(`Error al enviar invitaciones: ${e.message}`)
       }
+
+      // Push notification a todos (fire-and-forget)
+      fetch("/api/push/junta-created", {
+        method: "POST",
+        headers: juntaAuthHeaders,
+        body: JSON.stringify({
+          juntaId,
+          tipo:        payload.tipo,
+          titulo:      payload.titulo,
+          fecha:       payload.fecha,
+          horaInicio:  payload.hora_inicio,
+          attendeeEmployeeIds: juntaAttendees,
+        }),
+      }).catch(() => {})
+
+      return { sent, inviteError }
     }
 
-    // Push notification a todos (fire-and-forget)
-    fetch("/api/push/junta-created", {
-      method: "POST",
-      headers: juntaAuthHeaders,
-      body: JSON.stringify({
-        juntaId,
-        tipo:        payload.tipo,
-        titulo:      payload.titulo,
-        fecha:       payload.fecha,
-        horaInicio:  payload.hora_inicio,
-        attendeeEmployeeIds: juntaAttendees,
-      }),
-    }).catch(() => {})
+    if (selectedJunta) {
+      const payload = { ...basePayload, fecha: juntaDate }
+      const { error } = await supabase.from("juntas").update(payload).eq("id", selectedJunta.id)
+      if (error) { setSavingEntry(false); alert(error.message); return }
+      const juntaId = selectedJunta.id
+      await supabase.from("junta_attendees").delete().eq("junta_id", juntaId)
+      if (juntaAttendees.length > 0) {
+        await supabase.from("junta_attendees").insert(
+          juntaAttendees.map((emp_id) => ({ junta_id: juntaId, employee_id: emp_id }))
+        )
+      }
+
+      const { sent, inviteError } = await sendInvitesAndPush(payload, juntaId)
+      if (inviteError) {
+        alert(`Error al enviar invitaciones: ${inviteError}`)
+      } else if (juntaAttendees.length > 0 || finalExternalEmails.length > 0) {
+        alert(`Invitaciones enviadas: ${sent} correo(s)`)
+      }
+    } else {
+      // Junta(s) nueva(s): si es recurrente, se crea una fila independiente por semana
+      // (borrar una no afecta a las demás, no existe vínculo de serie entre ellas).
+      const weeks = juntaRecurrente ? Math.max(1, Math.min(52, juntaRecurrenteSemanas || 1)) : 1
+      let totalSent = 0
+      let creationError: string | null = null
+      const inviteErrors: string[] = []
+
+      for (let i = 0; i < weeks; i++) {
+        const fecha = i === 0 ? juntaDate : addDaysToDateString(juntaDate, i * 7)
+        const payload = { ...basePayload, fecha }
+
+        const { data, error } = await supabase.from("juntas").insert(payload).select("id").single()
+        if (error) { creationError = error.message; break }
+        const juntaId = data.id
+
+        if (juntaAttendees.length > 0) {
+          await supabase.from("junta_attendees").insert(
+            juntaAttendees.map((emp_id) => ({ junta_id: juntaId, employee_id: emp_id }))
+          )
+        }
+
+        const { sent, inviteError } = await sendInvitesAndPush(payload, juntaId)
+        totalSent += sent
+        if (inviteError) inviteErrors.push(inviteError)
+      }
+
+      if (creationError) { setSavingEntry(false); alert(creationError); return }
+      if (inviteErrors.length > 0) {
+        alert(`Error al enviar invitaciones: ${inviteErrors[0]}`)
+      } else if (juntaAttendees.length > 0 || finalExternalEmails.length > 0) {
+        alert(`Invitaciones enviadas: ${totalSent} correo(s)${weeks > 1 ? ` (${weeks} juntas creadas)` : ""}`)
+      }
+    }
 
     setModalOpen(false)
     setJuntaDetailsOpen(false)
@@ -2670,6 +2712,37 @@ function openEditVacation() {
                         />
                       </div>
                     </div>
+
+                    {/* Recurrencia semanal */}
+                    {!selectedJunta && (
+                      <div>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                          <input
+                            type="checkbox"
+                            checked={juntaRecurrente}
+                            onChange={(e) => setJuntaRecurrente(e.target.checked)}
+                            style={{ width: 16, height: 16, cursor: "pointer" }}
+                          />
+                          <span style={{ ...formModalLabelStyle, margin: 0 }}>Junta recurrente (se repite cada semana)</span>
+                        </label>
+                        {juntaRecurrente && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                            <span style={{ fontSize: 13, color: "#94a3b8" }}>Repetir durante</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={52}
+                              value={juntaRecurrenteSemanas}
+                              onChange={(e) => setJuntaRecurrenteSemanas(Math.max(1, Math.min(52, Number(e.target.value) || 1)))}
+                              style={{ ...formModalInputStyle, width: 64, textAlign: "center" }}
+                            />
+                            <span style={{ fontSize: 13, color: "#94a3b8" }}>
+                              semana{juntaRecurrenteSemanas === 1 ? "" : "s"} (crea {juntaRecurrenteSemanas} junta{juntaRecurrenteSemanas === 1 ? "" : "s"} independientes, una por semana; borrar una no afecta a las demás)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Liga de reunión */}
                     <div>
