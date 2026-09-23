@@ -309,22 +309,23 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
           <div className={styles.overlay} />
         </div>
 
+        {/* Indicadores de scroll horizontal — también sirven de botón; siempre
+            visibles, no se esconden en idle como el resto del UI */}
+        <button
+          type="button"
+          className={`${styles.hint} ${styles.hintLeft}`}
+          onClick={e => { e.stopPropagation(); goPrev() }}
+          aria-label="Proyecto anterior"
+        >‹</button>
+        <button
+          type="button"
+          className={`${styles.hint} ${styles.hintRight}`}
+          onClick={e => { e.stopPropagation(); goNext() }}
+          aria-label="Proyecto siguiente"
+        >›</button>
+
         {/* ── UI: se esconde en idle ── */}
         <div className={styles.ui}>
-          {/* Indicadores de scroll horizontal — también sirven como botones */}
-          <button
-            type="button"
-            className={`${styles.hint} ${styles.hintLeft}`}
-            onClick={e => { e.stopPropagation(); goPrev() }}
-            aria-label="Proyecto anterior"
-          >‹</button>
-          <button
-            type="button"
-            className={`${styles.hint} ${styles.hintRight}`}
-            onClick={e => { e.stopPropagation(); goNext() }}
-            aria-label="Proyecto siguiente"
-          >›</button>
-
           {/* Riel de progreso horizontal con numeral romano, abajo centrado */}
           <div className={styles.rail}>
             <span className={styles.roman} key={active}>{roman(active + 1)}</span>
