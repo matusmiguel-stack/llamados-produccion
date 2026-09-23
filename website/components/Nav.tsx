@@ -6,10 +6,11 @@ import { usePathname, useRouter } from "next/navigation"
 import styles from "./Nav.module.css"
 
 const LINKS = [
+  { href: "/nosotros",  label: "Nosotros"  },
   { href: "/proyectos", label: "Proyectos" },
-  { href: "/films",     label: "Films"      },
-  { href: "/live",      label: "Live"        },
-  { href: "/nosotros",  label: "Nosotros"    },
+  { href: "/films",     label: "Films"     },
+  { href: "/live",      label: "Live"      },
+  { href: "/nosotros",  label: "Contacto"  },
 ]
 
 export default function Nav() {
@@ -78,7 +79,7 @@ export default function Nav() {
         <nav className={styles.menu}>
           {LINKS.map(({ href, label }, i) => (
             <Link
-              key={href}
+              key={label}
               href={href}
               className={`${styles.menuItem} ${pathname === href ? styles.menuItemActive : ""}`}
               style={{ transitionDelay: open ? `${0.08 + i * 0.07}s` : "0s" }}
@@ -102,9 +103,6 @@ export default function Nav() {
             <a href="https://vimeo.com" target="_blank" rel="noopener noreferrer">
               Vimeo
             </a>
-            <Link href="/nosotros" className={styles.footCta} onClick={() => setOpen(false)}>
-              Contacto
-            </Link>
           </div>
         </footer>
       </div>

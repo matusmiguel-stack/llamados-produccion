@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import VideoModal from "./VideoModal"
 import styles from "./ScrollProjects.module.css"
 import type { VimeoVideo } from "@/lib/vimeo"
@@ -32,18 +33,20 @@ const IDLE_MS    = 1300  // sin input durante esto → se esconde el UI
 
 export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const N = videos.length
+  const router = useRouter()
 
   const stageRef  = useRef<HTMLElement>(null)
   const itemRefs  = useRef<(HTMLDivElement | null)[]>([])
   const titleRefs = useRef<(HTMLDivElement | null)[]>([])
   const lineRef   = useRef<HTMLDivElement>(null)
 
-  const targetRef  = useRef(0)
-  const currentRef = useRef(0)
-  const lastInput  = useRef(Date.now())
-  const phaseRef   = useRef<Phase>("visible")
-  const activeRef  = useRef(0)
-  const touchY     = useRef<number | null>(null)
+  const targetRef     = useRef(0)
+  const currentRef    = useRef(0)
+  const lastInput      = useRef(Date.now())
+  const phaseRef       = useRef<Phase>("visible")
+  const activeRef       = useRef(0)
+  const touchY           = useRef<number | null>(null)
+  const navigatingRef = useRef(false)
 
   const [active, setActive] = useState(0)
   const [phase,  setPhase]  = useState<Phase>("visible")
@@ -60,6 +63,15 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
     function onWheel(e: WheelEvent) {
+      // Ya llegaste al último proyecto y sigues bajando → sales a Films (mismo orden que el menú)
+      if (phaseRef.current !== "moving" && activeRef.current === N - 1 && e.deltaY > 60) {
+        if (!navigatingRef.current) {
+          navigatingRef.current = true
+          router.push("/films", { transitionTypes: ["nav-forward"] })
+        }
+        return
+      }
+
       lastInput.current = Date.now()
       let t = targetRef.current + e.deltaY * 0.0011
       // no permitir vuelos de más de 3 proyectos de golpe

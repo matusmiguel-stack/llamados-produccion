@@ -246,17 +246,3 @@
   transition: color 0.2s;
 }
 .footRight a:hover { color: var(--fg); }
-
-/* ── Contact CTA in footer ── */
-.footCta {
-  font-family: var(--fm);
-  font-size: 8.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--fg);
-  background: var(--red);
-  padding: 8px 18px;
-  border-radius: 2px;
-  transition: opacity 0.2s;
-}
-.footCta:hover { opacity: 0.82; }

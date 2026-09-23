@@ -1,60 +1,28 @@
 "use client"
 
-import { useEffect, useRef, useState, ViewTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import VideoModal from "@/components/VideoModal"
+import PageTransition from "@/components/PageTransition"
+import { useScrollExit } from "@/components/useScrollExit"
 import styles from "./home.module.css"
 
 const REEL_VIMEO_ID = "1228977530"
 
 export default function Home() {
-  const router = useRouter()
   const [showModal, setShowModal] = useState(false)
   // Cambia al cerrar el modal para remontar el iframe de fondo y que vuelva a arrancar
   const [bgKey, setBgKey] = useState(0)
-  const navigatingRef = useRef(false)
 
   function closeModal() {
     setShowModal(false)
     setBgKey(k => k + 1)
   }
 
-  // Scroll o swipe hacia abajo → ir a proyectos con transición
-  useEffect(() => {
-    function goToProyectos() {
-      if (navigatingRef.current) return
-      navigatingRef.current = true
-      router.push("/proyectos", { transitionTypes: ["nav-forward"] })
-    }
-
-    function onWheel(e: WheelEvent) {
-      if (e.deltaY > 60) goToProyectos()
-    }
-
-    let touchStartY: number | null = null
-    function onTouchStart(e: TouchEvent) { touchStartY = e.touches[0].clientY }
-    function onTouchEnd(e: TouchEvent) {
-      if (touchStartY === null) return
-      if (touchStartY - e.changedTouches[0].clientY > 60) goToProyectos()
-      touchStartY = null
-    }
-
-    window.addEventListener("wheel", onWheel, { passive: true })
-    window.addEventListener("touchstart", onTouchStart, { passive: true })
-    window.addEventListener("touchend", onTouchEnd, { passive: true })
-    return () => {
-      window.removeEventListener("wheel", onWheel)
-      window.removeEventListener("touchstart", onTouchStart)
-      window.removeEventListener("touchend", onTouchEnd)
-    }
-  }, [router])
+  // Scroll o swipe hacia abajo → sigue el orden del menú (Nosotros es lo primero)
+  useScrollExit("/nosotros")
 
   return (
-    <ViewTransition
-      enter={{ "nav-forward": "nav-forward", default: "none" }}
-      exit={{ "nav-forward": "nav-forward", default: "none" }}
-      default="none"
-    >
+    <PageTransition>
     <main className={styles.root}>
       {/* Fullscreen video background — clic para reproducir con sonido */}
       <div
@@ -87,6 +55,6 @@ export default function Home() {
 
       {showModal && <VideoModal videoId={REEL_VIMEO_ID} onClose={closeModal} />}
     </main>
-    </ViewTransition>
+    </PageTransition>
   )
 }
