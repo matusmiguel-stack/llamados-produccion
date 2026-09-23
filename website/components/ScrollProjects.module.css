@@ -15,6 +15,16 @@
   outline-offset: -2px;
 }
 
+/* Mientras el intro está activo, deja transparente el stage para que se
+   vea el reel persistente del layout (reel) detrás, igual que en Nosotros */
+.stageIntro {
+  background: transparent;
+}
+.stageIntro .visor,
+.stageIntro .ui {
+  opacity: 0;
+}
+
 /* ══════════════════════════════════════
    INTRO — aviso inicial, con el reel de fondo (igual que Nosotros)
 ══════════════════════════════════════ */
@@ -23,7 +33,6 @@
   inset: 0;
   z-index: 50;
   overflow: hidden;
-  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,18 +42,6 @@
   pointer-events: none;
 }
 .introHide { opacity: 0; }
-
-/* iframe 16:9 escalado para cubrir el viewport (misma técnica que el home) */
-.introVideo {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: max(100vw, 177.78dvh);
-  height: max(100dvh, 56.25vw);
-  transform: translate(-50%, -50%);
-  border: none;
-  pointer-events: none;
-}
 
 .introOverlay {
   position: absolute;
