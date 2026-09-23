@@ -32,6 +32,8 @@ const LERP       = 0.075 // factor de suavizado del scroll virtual
 const SNAP_MS    = 150   // sin input durante esto → snap al proyecto más cercano
 const IDLE_MS    = 1300  // sin input durante esto → se esconde el UI
 const EXIT_COOLDOWN_MS = 700 // ignora el scroll vertical justo al entrar (inercia del gesto anterior)
+const INTRO_MS      = 5000 // tiempo que se muestra el aviso de "desplaza…" al entrar
+const INTRO_FADE_MS = 700  // duración del fade out del aviso
 
 export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const N = videos.length
@@ -54,10 +56,22 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const [active, setActive] = useState(0)
   const [phase,  setPhase]  = useState<Phase>("visible")
   const [modal,  setModal]  = useState<string | null>(null)
+  const [intro,  setIntro]  = useState<"show" | "hide" | "gone">("show")
   // Iframes montados: ventana alrededor del activo, acumulativa (una vez cargado, se queda)
   const [mounted, setMounted] = useState<Set<number>>(
     () => new Set(Array.from({ length: Math.min(3, N) }, (_, i) => i).concat(N > 3 ? [N - 1] : []))
   )
+
+  // Aviso inicial: se ve INTRO_MS, luego fade out y desaparece del DOM
+  useEffect(() => {
+    const t1 = setTimeout(() => setIntro("hide"), INTRO_MS)
+    return () => clearTimeout(t1)
+  }, [])
+  useEffect(() => {
+    if (intro !== "hide") return
+    const t2 = setTimeout(() => setIntro("gone"), INTRO_FADE_MS)
+    return () => clearTimeout(t2)
+  }, [intro])
 
   useEffect(() => {
     const stage = stageRef.current
@@ -243,6 +257,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         role="button"
         aria-label={`Proyecto ${active + 1} de ${N}: ${av?.title ?? ""}. Enter para ver con sonido, flechas izquierda/derecha para navegar.`}
         data-cursor="play"
+        data-cursor-label="Ver video"
       >
         {/* ── Visor: videos fullscreen con crossfade ── */}
         <div className={styles.visor}>
@@ -304,6 +319,14 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       </section>
 
       {modal && <VideoModal videoId={modal} onClose={() => setModal(null)} />}
+
+      {intro !== "gone" && (
+        <div className={`${styles.intro} ${intro === "hide" ? styles.introHide : ""}`} aria-hidden>
+          <p className={styles.introText}>
+            Desplaza a la izquierda o derecha<br />para ver los proyectos
+          </p>
+        </div>
+      )}
     </>
   )
 }

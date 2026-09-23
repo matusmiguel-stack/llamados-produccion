@@ -51,7 +51,7 @@
   opacity: 0.8;
 }
 .ringPlay::after {
-  content: 'Ver reel';
+  content: attr(data-label);
   position: absolute;
   top: 100%;
   left: 50%;

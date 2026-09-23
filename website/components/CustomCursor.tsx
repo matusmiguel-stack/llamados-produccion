@@ -24,10 +24,13 @@ export default function CustomCursor() {
     function over(e: MouseEvent) {
       const t = e.target as Element | null
       const isLink  = !!t?.closest("a, button")
-      const isVideo = !!t?.closest("[data-cursor='play']")
+      const videoEl = t?.closest("[data-cursor='play']") as HTMLElement | null
 
-      ringRef.current!.classList.toggle(styles.ringHover, isLink && !isVideo)
-      ringRef.current!.classList.toggle(styles.ringPlay,  isVideo)
+      ringRef.current!.classList.toggle(styles.ringHover, isLink && !videoEl)
+      ringRef.current!.classList.toggle(styles.ringPlay,  !!videoEl)
+      if (videoEl) {
+        ringRef.current!.dataset.label = videoEl.dataset.cursorLabel || "Ver reel"
+      }
     }
 
     // Show / hide when cursor enters or leaves the window
