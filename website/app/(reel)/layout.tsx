@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import VideoModal from "@/components/VideoModal"
-import PageTransition from "@/components/PageTransition"
-import { useScrollExit } from "@/components/useScrollExit"
-import styles from "./home.module.css"
+import styles from "./reel-bg.module.css"
 
 const REEL_VIMEO_ID = "1228977530"
 
-export default function Home() {
+/* Video de fondo compartido por Home y Nosotros: al navegar entre ambas
+   páginas este layout no se desmonta, así que el reel sigue reproduciéndose
+   sin cortes — sólo el contenido (children) cambia con la transición. */
+export default function ReelLayout({ children }: { children: React.ReactNode }) {
   const [showModal, setShowModal] = useState(false)
   // Cambia al cerrar el modal para remontar el iframe de fondo y que vuelva a arrancar
   const [bgKey, setBgKey] = useState(0)
@@ -18,13 +19,8 @@ export default function Home() {
     setBgKey(k => k + 1)
   }
 
-  // Scroll o swipe hacia abajo → sigue el orden del menú (Nosotros es lo primero)
-  useScrollExit("/nosotros")
-
   return (
-    <PageTransition>
-    <main className={styles.root}>
-      {/* Fullscreen video background — clic para reproducir con sonido */}
+    <div className={styles.root}>
       <div
         className={styles.videoBg}
         onClick={() => setShowModal(true)}
@@ -34,7 +30,6 @@ export default function Home() {
         aria-label="Reproducir reel con sonido"
         data-cursor="play"
       >
-        {/* Fallback gradient shown while the iframe loads */}
         <div className={styles.fallback} aria-hidden />
         <iframe
           key={bgKey}
@@ -44,17 +39,12 @@ export default function Home() {
           tabIndex={-1}
           aria-hidden
         />
-        {/* Subtle dark overlay so text is readable */}
         <div className={styles.overlay} aria-hidden />
       </div>
 
-      {/* Bottom bar */}
-      <div className={styles.bottom}>
-        <span className={styles.scroll}>Desplazar ↓</span>
-      </div>
+      <div className={styles.content}>{children}</div>
 
       {showModal && <VideoModal videoId={REEL_VIMEO_ID} onClose={closeModal} />}
-    </main>
-    </PageTransition>
+    </div>
   )
 }

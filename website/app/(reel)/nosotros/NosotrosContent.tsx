@@ -4,28 +4,13 @@ import PageTransition from "@/components/PageTransition"
 import { useScrollExit } from "@/components/useScrollExit"
 import styles from "./nosotros.module.css"
 
-const BG_VIMEO_ID = "1229379326"
-const BG_VIMEO_HASH = "aeb1e744f0"
-
 export default function NosotrosContent() {
   // Scroll o swipe hacia abajo → sigue con Proyectos (mismo orden que el menú)
   useScrollExit("/proyectos")
 
   return (
     <PageTransition>
-      <main className={styles.root}>
-        {/* Video de fondo — textura decorativa, sin controles ni sonido */}
-        <div className={styles.videoBg}>
-          <iframe
-            className={styles.video}
-            src={`https://player.vimeo.com/video/${BG_VIMEO_ID}?h=${BG_VIMEO_HASH}&background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
-            allow="autoplay"
-            tabIndex={-1}
-            aria-hidden
-          />
-          <div className={styles.overlay} aria-hidden />
-        </div>
-
+      <div className={styles.wrap}>
         <div className={styles.content}>
           <p className={styles.eyebrow}>Nosotros</p>
           <p className={styles.text}>
@@ -39,7 +24,7 @@ export default function NosotrosContent() {
             Retro…
           </p>
         </div>
-      </main>
+      </div>
     </PageTransition>
   )
 }
