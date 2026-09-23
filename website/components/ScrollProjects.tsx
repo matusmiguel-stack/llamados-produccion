@@ -331,7 +331,6 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       {intro !== "gone" && (
         <div className={`${styles.intro} ${intro === "hide" ? styles.introHide : ""}`} aria-hidden>
           {/* El fondo se ve a través: es el reel persistente del layout (reel), igual que en Nosotros */}
-          <div className={styles.introOverlay} />
           <img src="/intro-desliza.webp" alt="" className={styles.introImg} />
         </div>
       )}

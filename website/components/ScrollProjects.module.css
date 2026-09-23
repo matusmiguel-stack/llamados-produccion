@@ -43,17 +43,12 @@
 }
 .introHide { opacity: 0; }
 
-.introOverlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(6, 6, 8, 0.6);
-}
-
 .introImg {
   position: relative;
   z-index: 1;
   width: min(720px, 84vw);
   height: auto;
+  filter: drop-shadow(0 6px 28px rgba(0, 0, 0, 0.75)) drop-shadow(0 2px 10px rgba(0, 0, 0, 0.6));
   opacity: 0;
   animation: introFadeIn 0.9s ease 0.15s forwards;
 }
