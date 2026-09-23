@@ -95,6 +95,10 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
     }
 
     function onWheel(e: WheelEvent) {
+      // Reclama el gesto: sin esto, un swipe horizontal de trackpad lo agarra
+      // el navegador para "atrás/adelante" y nunca llega a mover el carrusel.
+      e.preventDefault()
+
       const dx = e.deltaX
       const dy = e.deltaY
 
@@ -166,7 +170,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       }
     }
 
-    stage.addEventListener("wheel", onWheel, { passive: true })
+    stage.addEventListener("wheel", onWheel, { passive: false })
     stage.addEventListener("touchstart", onTouchStart, { passive: true })
     stage.addEventListener("touchmove", onTouchMove, { passive: false })
     stage.addEventListener("touchend", onTouchEnd)
