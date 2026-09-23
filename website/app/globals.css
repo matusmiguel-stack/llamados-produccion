@@ -14,6 +14,10 @@
 
 html { scroll-behavior: smooth; }
 
+/* Evita que Chrome/Safari en Mac le roben el swipe horizontal del trackpad
+   para su gesto nativo de "atrás/adelante" del navegador */
+html, body { overscroll-behavior-x: none; }
+
 body {
   background: var(--bg);
   color: var(--fg);
