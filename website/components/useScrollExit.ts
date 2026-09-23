@@ -3,6 +3,11 @@
 import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 
+// Al montar, ignora el scroll durante este tiempo: evita que la inercia
+// del gesto que te trajo a esta página (trackpad/mouse) seguido disparando
+// eventos "wheel" te empuje de inmediato a la siguiente.
+const MOUNT_COOLDOWN_MS = 700
+
 /* Scroll o swipe hacia abajo → navega a la siguiente página de la secuencia */
 export function useScrollExit(nextHref: string | null) {
   const router = useRouter()
@@ -11,8 +16,12 @@ export function useScrollExit(nextHref: string | null) {
   useEffect(() => {
     if (!nextHref) return
 
+    const mountedAt = Date.now()
+    navigatingRef.current = false
+
     function goNext() {
       if (navigatingRef.current) return
+      if (Date.now() - mountedAt < MOUNT_COOLDOWN_MS) return
       navigatingRef.current = true
       router.push(nextHref!, { transitionTypes: ["nav-forward"] })
     }
