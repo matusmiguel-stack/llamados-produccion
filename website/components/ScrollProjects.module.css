@@ -16,12 +16,13 @@
 }
 
 /* ══════════════════════════════════════
-   INTRO — aviso inicial, fondo negro con fade out
+   INTRO — aviso inicial, con el reel de fondo (igual que Nosotros)
 ══════════════════════════════════════ */
 .intro {
   position: fixed;
   inset: 0;
   z-index: 50;
+  overflow: hidden;
   background: #000;
   display: flex;
   align-items: center;
@@ -33,7 +34,27 @@
 }
 .introHide { opacity: 0; }
 
+/* iframe 16:9 escalado para cubrir el viewport (misma técnica que el home) */
+.introVideo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100vw, 177.78dvh);
+  height: max(100dvh, 56.25vw);
+  transform: translate(-50%, -50%);
+  border: none;
+  pointer-events: none;
+}
+
+.introOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 6, 8, 0.6);
+}
+
 .introImg {
+  position: relative;
+  z-index: 1;
   width: min(720px, 84vw);
   height: auto;
   opacity: 0;

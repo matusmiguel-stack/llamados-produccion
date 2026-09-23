@@ -34,6 +34,7 @@ const IDLE_MS    = 1300  // sin input durante esto → se esconde el UI
 const EXIT_COOLDOWN_MS = 700 // ignora el scroll vertical justo al entrar (inercia del gesto anterior)
 const INTRO_MS      = 5000 // tiempo que se muestra el aviso de "desplaza…" al entrar
 const INTRO_FADE_MS = 700  // duración del fade out del aviso
+const REEL_VIMEO_ID = "1228977530" // mismo reel de fondo que Home/Nosotros
 
 export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const N = videos.length
@@ -330,6 +331,13 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
       {intro !== "gone" && (
         <div className={`${styles.intro} ${intro === "hide" ? styles.introHide : ""}`} aria-hidden>
+          <iframe
+            className={styles.introVideo}
+            src={`https://player.vimeo.com/video/${REEL_VIMEO_ID}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
+            allow="autoplay"
+            tabIndex={-1}
+          />
+          <div className={styles.introOverlay} />
           <img src="/intro-desliza.webp" alt="" className={styles.introImg} />
         </div>
       )}
