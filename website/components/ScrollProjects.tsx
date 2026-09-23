@@ -186,7 +186,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
       // Línea de progreso global (0→1 a través del set)
       if (lineRef.current) {
-        lineRef.current.style.transform = `scaleY(${N > 1 ? cur / (N - 0) : 1})`
+        lineRef.current.style.transform = `scaleX(${N > 1 ? cur / (N - 0) : 1})`
       }
 
       // Índice activo → crossfade del visor
@@ -271,18 +271,16 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
         {/* ── UI: se esconde en idle ── */}
         <div className={styles.ui}>
-          {/* Riel de progreso con numeral romano */}
+          {/* Indicadores de scroll horizontal */}
+          <span className={`${styles.hint} ${styles.hintLeft}`} aria-hidden>‹</span>
+          <span className={`${styles.hint} ${styles.hintRight}`} aria-hidden>›</span>
+
+          {/* Riel de progreso horizontal con numeral romano, abajo centrado */}
           <div className={styles.rail}>
             <span className={styles.roman} key={active}>{roman(active + 1)}</span>
             <div className={styles.railLine}>
               <div ref={lineRef} className={styles.railFill} />
             </div>
-          </div>
-
-          {/* Metadata fija del proyecto activo */}
-          <div className={styles.meta} key={`m${active}`}>
-            <span>{av?.year}</span>
-            <span className={styles.metaDur}>{av?.duration}</span>
           </div>
 
           {/* Títulos voladores con parallax */}
