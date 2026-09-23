@@ -1,6 +1,6 @@
-import { ViewTransition } from "react"
 import { getShowcaseVideos } from "@/lib/vimeo"
 import ScrollProjects from "@/components/ScrollProjects"
+import PageTransition from "@/components/PageTransition"
 
 export const metadata = {
   title: "Proyectos — Retro Casa Productora",
@@ -10,12 +10,8 @@ export const metadata = {
 export default async function ProyectosPage() {
   const videos = await getShowcaseVideos()
   return (
-    <ViewTransition
-      enter={{ "nav-forward": "nav-forward", default: "none" }}
-      exit={{ "nav-forward": "nav-forward", default: "none" }}
-      default="none"
-    >
+    <PageTransition>
       <ScrollProjects videos={videos} />
-    </ViewTransition>
+    </PageTransition>
   )
 }

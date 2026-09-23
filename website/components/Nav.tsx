@@ -50,7 +50,7 @@ export default function Nav() {
         </Link>
 
         <div className={styles.barRight}>
-          {pathname === "/" && (
+          {pathname !== "/proyectos" && (
             <button type="button" className={styles.proyectos} onClick={goToProyectos}>
               Ver proyectos →
             </button>

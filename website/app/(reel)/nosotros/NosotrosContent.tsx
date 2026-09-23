@@ -5,8 +5,8 @@ import { useScrollExit } from "@/components/useScrollExit"
 import styles from "./nosotros.module.css"
 
 export default function NosotrosContent() {
-  // Scroll o swipe hacia abajo → sigue con Proyectos (mismo orden que el menú)
-  useScrollExit("/proyectos")
+  // Scroll o swipe: abajo → Proyectos, arriba → regresa a Home
+  useScrollExit("/proyectos", "/")
 
   return (
     <PageTransition>

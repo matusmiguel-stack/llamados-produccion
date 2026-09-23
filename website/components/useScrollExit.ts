@@ -8,33 +8,36 @@ import { useRouter } from "next/navigation"
 // eventos "wheel" te empuje de inmediato a la siguiente.
 const MOUNT_COOLDOWN_MS = 700
 
-/* Scroll o swipe hacia abajo → navega a la siguiente página de la secuencia */
-export function useScrollExit(nextHref: string | null) {
+/* Scroll o swipe hacia abajo/arriba → navega a la página siguiente/anterior de la secuencia */
+export function useScrollExit(nextHref: string | null, prevHref: string | null = null) {
   const router = useRouter()
   const navigatingRef = useRef(false)
 
   useEffect(() => {
-    if (!nextHref) return
+    if (!nextHref && !prevHref) return
 
     const mountedAt = Date.now()
     navigatingRef.current = false
 
-    function goNext() {
+    function go(href: string, dir: "nav-forward" | "nav-back") {
       if (navigatingRef.current) return
       if (Date.now() - mountedAt < MOUNT_COOLDOWN_MS) return
       navigatingRef.current = true
-      router.push(nextHref!, { transitionTypes: ["nav-forward"] })
+      router.push(href, { transitionTypes: [dir] })
     }
 
     function onWheel(e: WheelEvent) {
-      if (e.deltaY > 60) goNext()
+      if (e.deltaY > 60 && nextHref) go(nextHref, "nav-forward")
+      else if (e.deltaY < -60 && prevHref) go(prevHref, "nav-back")
     }
 
     let touchStartY: number | null = null
     function onTouchStart(e: TouchEvent) { touchStartY = e.touches[0].clientY }
     function onTouchEnd(e: TouchEvent) {
       if (touchStartY === null) return
-      if (touchStartY - e.changedTouches[0].clientY > 60) goNext()
+      const dy = touchStartY - e.changedTouches[0].clientY
+      if (dy > 60 && nextHref) go(nextHref, "nav-forward")
+      else if (dy < -60 && prevHref) go(prevHref, "nav-back")
       touchStartY = null
     }
 
@@ -46,5 +49,5 @@ export function useScrollExit(nextHref: string | null) {
       window.removeEventListener("touchstart", onTouchStart)
       window.removeEventListener("touchend", onTouchEnd)
     }
-  }, [nextHref, router])
+  }, [nextHref, prevHref, router])
 }

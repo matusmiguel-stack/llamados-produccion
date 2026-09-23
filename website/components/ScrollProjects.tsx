@@ -24,12 +24,14 @@ function wrapDist(d: number, n: number): number {
 }
 
 type Phase = "moving" | "visible" | "idle"
+type Axis = "x" | "y" | null
 
-const TRAVEL_VH  = 230   // recorrido vertical de cada item (en vh) por slot
+const TRAVEL_VW  = 130   // recorrido horizontal de cada item (en vw) por slot
 const PARALLAX   = 0.9   // el título contra-viaja a 0.9 → velocidad neta 0.1x
 const LERP       = 0.075 // factor de suavizado del scroll virtual
 const SNAP_MS    = 150   // sin input durante esto → snap al proyecto más cercano
 const IDLE_MS    = 1300  // sin input durante esto → se esconde el UI
+const EXIT_COOLDOWN_MS = 700 // ignora el scroll vertical justo al entrar (inercia del gesto anterior)
 
 export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const N = videos.length
@@ -40,13 +42,14 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const titleRefs = useRef<(HTMLDivElement | null)[]>([])
   const lineRef   = useRef<HTMLDivElement>(null)
 
-  const targetRef     = useRef(0)
-  const currentRef    = useRef(0)
-  const lastInput      = useRef(Date.now())
-  const phaseRef       = useRef<Phase>("visible")
-  const activeRef       = useRef(0)
-  const touchY           = useRef<number | null>(null)
-  const navigatingRef = useRef(false)
+  const targetRef      = useRef(0)
+  const currentRef     = useRef(0)
+  const lastInput       = useRef(Date.now())
+  const phaseRef        = useRef<Phase>("visible")
+  const activeRef        = useRef(0)
+  const touchStartRef      = useRef<{ x: number; y: number } | null>(null)
+  const touchAxisRef       = useRef<Axis>(null)
+  const navigatingRef  = useRef(false)
 
   const [active, setActive] = useState(0)
   const [phase,  setPhase]  = useState<Phase>("visible")
@@ -61,42 +64,83 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
     if (!stage || N < 1) return
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const mountedAt = Date.now()
+    navigatingRef.current = false
+
+    // Vertical → cambia de sección: abajo a Films, arriba a Nosotros
+    function exitSection(dir: "down" | "up") {
+      if (navigatingRef.current) return
+      if (Date.now() - mountedAt < EXIT_COOLDOWN_MS) return
+      navigatingRef.current = true
+      if (dir === "down") router.push("/films", { transitionTypes: ["nav-forward"] })
+      else router.push("/nosotros", { transitionTypes: ["nav-back"] })
+    }
 
     function onWheel(e: WheelEvent) {
-      // Ya llegaste al último proyecto y sigues bajando → sales a Films (mismo orden que el menú)
-      if (phaseRef.current !== "moving" && activeRef.current === N - 1 && e.deltaY > 60) {
-        if (!navigatingRef.current) {
-          navigatingRef.current = true
-          router.push("/films", { transitionTypes: ["nav-forward"] })
-        }
+      const dx = e.deltaX
+      const dy = e.deltaY
+
+      // Vertical domina → sale de la sección
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 60) {
+        exitSection(dy > 0 ? "down" : "up")
         return
       }
 
+      // Horizontal → navega entre proyectos
       lastInput.current = Date.now()
-      let t = targetRef.current + e.deltaY * 0.0011
+      let t = targetRef.current + dx * 0.0011
       // no permitir vuelos de más de 3 proyectos de golpe
       t = Math.max(currentRef.current - 3, Math.min(currentRef.current + 3, t))
       targetRef.current = t
     }
 
-    function onTouchStart(e: TouchEvent) { touchY.current = e.touches[0].clientY }
-    function onTouchMove(e: TouchEvent) {
-      if (touchY.current === null) return
-      e.preventDefault()
-      lastInput.current = Date.now()
-      const y = e.touches[0].clientY
-      targetRef.current += (touchY.current - y) / (window.innerHeight * 0.85)
-      touchY.current = y
+    function onTouchStart(e: TouchEvent) {
+      const t = e.touches[0]
+      touchStartRef.current = { x: t.clientX, y: t.clientY }
+      touchAxisRef.current = null
     }
-    function onTouchEnd() { touchY.current = null }
+    function onTouchMove(e: TouchEvent) {
+      const start = touchStartRef.current
+      if (!start) return
+      const t = e.touches[0]
+      const dx = t.clientX - start.x
+      const dy = t.clientY - start.y
+
+      if (!touchAxisRef.current) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+        touchAxisRef.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y"
+      }
+
+      if (touchAxisRef.current === "x") {
+        e.preventDefault()
+        lastInput.current = Date.now()
+        targetRef.current += (start.x - t.clientX) / (window.innerWidth * 0.85)
+        touchStartRef.current = { x: t.clientX, y: t.clientY }
+      }
+      // eje vertical: no mueve el carrusel, se decide en touchend
+    }
+    function onTouchEnd(e: TouchEvent) {
+      const start = touchStartRef.current
+      if (start && touchAxisRef.current === "y") {
+        const t = e.changedTouches[0]
+        const dy = start.y - t.clientY
+        if (Math.abs(dy) > 60) exitSection(dy > 0 ? "down" : "up")
+      }
+      touchStartRef.current = null
+      touchAxisRef.current = null
+    }
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowDown" || e.key === "PageDown") {
+      if (e.key === "ArrowRight" || e.key === "PageDown") {
         lastInput.current = Date.now()
         targetRef.current = Math.round(currentRef.current) + 1
-      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
         lastInput.current = Date.now()
         targetRef.current = Math.round(currentRef.current) - 1
+      } else if (e.key === "ArrowDown") {
+        exitSection("down")
+      } else if (e.key === "ArrowUp") {
+        exitSection("up")
       }
     }
 
@@ -111,7 +155,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       const now = Date.now()
 
       // Snap: si no hay input reciente, asentarse en el proyecto más cercano
-      if (now - lastInput.current > SNAP_MS && touchY.current === null) {
+      if (now - lastInput.current > SNAP_MS && touchAxisRef.current !== "x") {
         targetRef.current = Math.round(targetRef.current)
       }
 
@@ -134,8 +178,8 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
           continue
         }
         el.style.visibility = "visible"
-        el.style.transform = `translate3d(0, ${d * TRAVEL_VH}vh, 0)`
-        ti.style.transform = `translate3d(0, ${-d * TRAVEL_VH * PARALLAX}vh, 0)`
+        el.style.transform = `translate3d(${d * TRAVEL_VW}vw, 0, 0)`
+        ti.style.transform = `translate3d(${-d * TRAVEL_VW * PARALLAX}vw, 0, 0)`
         const op = Math.max(0, Math.min(1, 1 - (Math.abs(d) - 0.1) / 0.28))
         ti.style.opacity = String(op)
       }
@@ -179,7 +223,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       stage.removeEventListener("touchend", onTouchEnd)
       window.removeEventListener("keydown", onKey)
     }
-  }, [N])
+  }, [N, router])
 
   function openActive() {
     const v = videos[activeRef.current]
@@ -197,7 +241,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openActive() } }}
         tabIndex={0}
         role="button"
-        aria-label={`Proyecto ${active + 1} de ${N}: ${av?.title ?? ""}. Enter para ver con sonido, flechas para navegar.`}
+        aria-label={`Proyecto ${active + 1} de ${N}: ${av?.title ?? ""}. Enter para ver con sonido, flechas izquierda/derecha para navegar.`}
         data-cursor="play"
       >
         {/* ── Visor: videos fullscreen con crossfade ── */}
