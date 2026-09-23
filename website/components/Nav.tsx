@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import styles from "./Nav.module.css"
 
 const LINKS = [
@@ -14,7 +14,15 @@ const LINKS = [
 
 export default function Nav() {
   const pathname = usePathname()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
+  const navigatingRef = useRef(false)
+
+  function goToProyectos() {
+    if (navigatingRef.current) return
+    navigatingRef.current = true
+    router.push("/proyectos", { transitionTypes: ["nav-forward"] })
+  }
 
   // Lock body scroll when overlay is open
   useEffect(() => {
@@ -37,17 +45,25 @@ export default function Nav() {
       {/* ── Persistent top bar ── */}
       <div className={`${styles.bar} ${open ? styles.barOpen : ""}`}>
         <Link href="/" className={styles.logo} onClick={() => setOpen(false)}>
-          Retro Casa
+          <img src="/logo-retro.png" alt="Retro Casa Productora" className={styles.logoImg} />
         </Link>
 
-        <button
-          className={`${styles.hamburger} ${open ? styles.hamburgerOpen : ""}`}
-          onClick={() => setOpen(v => !v)}
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={open}
-        >
-          <span /><span /><span />
-        </button>
+        <div className={styles.barRight}>
+          {pathname === "/" && (
+            <button type="button" className={styles.proyectos} onClick={goToProyectos}>
+              Ver proyectos →
+            </button>
+          )}
+
+          <button
+            className={`${styles.hamburger} ${open ? styles.hamburgerOpen : ""}`}
+            onClick={() => setOpen(v => !v)}
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={open}
+          >
+            <span /><span /><span />
+          </button>
+        </div>
       </div>
 
       {/* ── Fullscreen overlay ── */}

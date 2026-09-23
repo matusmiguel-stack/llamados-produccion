@@ -24,16 +24,44 @@
 }
 
 .logo {
-  font-family: var(--fd);
-  font-style: italic;
-  font-size: 16px;
-  letter-spacing: 0.04em;
-  color: var(--fg);
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 101;
   transition: opacity 0.25s;
+}
+.logo:hover { opacity: 0.55; }
+
+.logoImg {
+  height: 30px;
+  width: auto;
+  display: block;
+}
+
+.barRight {
+  display: flex;
+  align-items: center;
+  gap: 26px;
   position: relative;
   z-index: 101;
 }
-.logo:hover { opacity: 0.55; }
+
+.proyectos {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(232, 228, 220, 0.22);
+  padding: 0 0 3px;
+  transition: border-color 0.25s, letter-spacing 0.3s;
+}
+.proyectos:hover {
+  border-color: var(--red);
+  letter-spacing: 0.3em;
+}
 
 /* ══════════════════════════════════════
    HAMBURGER (3 bars → X)
