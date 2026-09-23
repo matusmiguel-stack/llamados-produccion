@@ -256,6 +256,19 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
     if (v?.id && phaseRef.current !== "moving") setModal(v.id)
   }
 
+  // Botones ‹ › — misma acción que ArrowLeft/ArrowRight, para quien no
+  // pueda hacer swipe horizontal (mouse, o para descartar si es tema de gesto)
+  function goPrev() {
+    dismissIntro()
+    lastInput.current = Date.now()
+    targetRef.current = Math.round(currentRef.current) - 1
+  }
+  function goNext() {
+    dismissIntro()
+    lastInput.current = Date.now()
+    targetRef.current = Math.round(currentRef.current) + 1
+  }
+
   const av = videos[active]
 
   return (
@@ -298,9 +311,19 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
         {/* ── UI: se esconde en idle ── */}
         <div className={styles.ui}>
-          {/* Indicadores de scroll horizontal */}
-          <span className={`${styles.hint} ${styles.hintLeft}`} aria-hidden>‹</span>
-          <span className={`${styles.hint} ${styles.hintRight}`} aria-hidden>›</span>
+          {/* Indicadores de scroll horizontal — también sirven como botones */}
+          <button
+            type="button"
+            className={`${styles.hint} ${styles.hintLeft}`}
+            onClick={e => { e.stopPropagation(); goPrev() }}
+            aria-label="Proyecto anterior"
+          >‹</button>
+          <button
+            type="button"
+            className={`${styles.hint} ${styles.hintRight}`}
+            onClick={e => { e.stopPropagation(); goNext() }}
+            aria-label="Proyecto siguiente"
+          >›</button>
 
           {/* Riel de progreso horizontal con numeral romano, abajo centrado */}
           <div className={styles.rail}>
