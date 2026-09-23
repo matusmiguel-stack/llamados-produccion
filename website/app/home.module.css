@@ -57,28 +57,6 @@
     linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0.42) 100%);
 }
 
-/* ── Wordmark ── */
-.wordmark {
-  position: relative;
-  z-index: 1;
-  /* deja pasar el clic al video de fondo */
-  pointer-events: none;
-  padding: 0 48px 32px;
-}
-
-.logo {
-  display: block;
-  width: clamp(220px, 32vw, 460px);
-  height: auto;
-  opacity: 0;
-  transform: translateY(24px);
-  animation: logoIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
-}
-
-@keyframes logoIn {
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* ── Bottom bar ── */
 .bottom {
   position: relative;

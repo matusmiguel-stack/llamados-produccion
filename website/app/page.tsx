@@ -80,11 +80,6 @@ export default function Home() {
         <div className={styles.overlay} aria-hidden />
       </div>
 
-      {/* Wordmark */}
-      <div className={styles.wordmark}>
-        <img src="/logo-retro.png" alt="Retro Casa Productora" className={styles.logo} />
-      </div>
-
       {/* Bottom bar */}
       <div className={styles.bottom}>
         <span className={styles.scroll}>Desplazar ↓</span>
