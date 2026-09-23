@@ -62,9 +62,13 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
     () => new Set(Array.from({ length: Math.min(3, N) }, (_, i) => i).concat(N > 3 ? [N - 1] : []))
   )
 
-  // Aviso inicial: se ve INTRO_MS, luego fade out y desaparece del DOM
+  // Aviso inicial: se ve INTRO_MS, luego fade out y desaparece del DOM.
+  // También se puede saltar antes si el usuario ya empieza a hacer scroll horizontal.
+  function dismissIntro() {
+    setIntro(i => i === "show" ? "hide" : i)
+  }
   useEffect(() => {
-    const t1 = setTimeout(() => setIntro("hide"), INTRO_MS)
+    const t1 = setTimeout(dismissIntro, INTRO_MS)
     return () => clearTimeout(t1)
   }, [])
   useEffect(() => {
@@ -100,7 +104,8 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         return
       }
 
-      // Horizontal → navega entre proyectos
+      // Horizontal → navega entre proyectos (y salta el aviso inicial si sigue ahí)
+      dismissIntro()
       lastInput.current = Date.now()
       let t = targetRef.current + dx * 0.0011
       // no permitir vuelos de más de 3 proyectos de golpe
@@ -127,6 +132,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
       if (touchAxisRef.current === "x") {
         e.preventDefault()
+        dismissIntro()
         lastInput.current = Date.now()
         targetRef.current += (start.x - t.clientX) / (window.innerWidth * 0.85)
         touchStartRef.current = { x: t.clientX, y: t.clientY }
@@ -146,9 +152,11 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "ArrowRight" || e.key === "PageDown") {
+        dismissIntro()
         lastInput.current = Date.now()
         targetRef.current = Math.round(currentRef.current) + 1
       } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        dismissIntro()
         lastInput.current = Date.now()
         targetRef.current = Math.round(currentRef.current) - 1
       } else if (e.key === "ArrowDown") {
