@@ -330,9 +330,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
       {intro !== "gone" && (
         <div className={`${styles.intro} ${intro === "hide" ? styles.introHide : ""}`} aria-hidden>
-          <p className={styles.introText}>
-            Desplaza a la izquierda o derecha<br />para ver los proyectos
-          </p>
+          <img src="/intro-desliza.webp" alt="" className={styles.introImg} />
         </div>
       )}
     </>

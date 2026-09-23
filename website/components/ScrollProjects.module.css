@@ -33,14 +33,15 @@
 }
 .introHide { opacity: 0; }
 
-.introText {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: clamp(12px, 1.7vw, 17px);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--fg);
-  text-align: center;
-  line-height: 2.1;
+.introImg {
+  width: min(720px, 84vw);
+  height: auto;
+  opacity: 0;
+  animation: introFadeIn 0.9s ease 0.15s forwards;
+}
+
+@keyframes introFadeIn {
+  to { opacity: 1; }
 }
 
 /* ══════════════════════════════════════
@@ -220,5 +221,5 @@
 ══════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   .visor, .overlay, .ui, .figure { transition: none; }
-  .roman, .hint { animation: none; }
+  .roman, .hint, .introImg { animation: none; opacity: 1; }
 }
