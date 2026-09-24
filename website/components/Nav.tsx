@@ -10,7 +10,7 @@ const LINKS = [
   { href: "/proyectos", label: "Proyectos" },
   { href: "/films",     label: "Films"     },
   { href: "/live",      label: "Live"      },
-  { href: "/nosotros",  label: "Contacto"  },
+  { href: "/contacto",  label: "Contacto"  },
 ]
 
 export default function Nav() {

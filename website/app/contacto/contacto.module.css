@@ -1,0 +1,129 @@
+.main {
+  position: relative;
+  min-height: 100dvh;
+  padding: 148px 48px 96px;
+}
+
+.inner {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.heading {
+  font-family: var(--fd);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(20px, 2.4vw, 30px);
+  margin: 0 0 24px;
+}
+
+/* ── Contacto comercial ── */
+.infoList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 0 88px;
+  padding: 0;
+}
+.infoList li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--fm);
+  font-size: clamp(12px, 1.1vw, 14px);
+  color: var(--fg);
+}
+.infoList svg {
+  flex-shrink: 0;
+  color: var(--red);
+}
+.infoList a {
+  color: inherit;
+  transition: color 0.2s;
+}
+.infoList a:hover { color: var(--red); }
+
+/* ── Dos columnas: formulario / reclutamiento ── */
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+}
+@media (max-width: 860px) {
+  .columns { grid-template-columns: 1fr; gap: 64px; }
+}
+
+.sub {
+  font-family: var(--fm);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--fg2);
+  margin: -14px 0 28px;
+}
+
+/* ── Formulario ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.field label {
+  font-family: var(--fm);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg2);
+}
+.field input,
+.field textarea {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--b2);
+  padding: 6px 0 10px;
+  font-family: var(--fb);
+  font-size: 14px;
+  color: var(--fg);
+  transition: border-color 0.25s;
+  resize: none;
+}
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--fg2);
+}
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--red);
+}
+.field textarea { min-height: 72px; }
+
+.submit {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-family: var(--fm);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--b2);
+  padding: 0 0 6px;
+  transition: border-color 0.25s, letter-spacing 0.3s, color 0.25s;
+}
+.submit:hover {
+  border-color: var(--red);
+  letter-spacing: 0.3em;
+  color: var(--red);
+}
+
+@media (max-width: 640px) {
+  .main { padding: 120px 24px 72px; }
+}

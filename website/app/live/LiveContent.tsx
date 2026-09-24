@@ -4,8 +4,8 @@ import PageTransition from "@/components/PageTransition"
 import { useScrollExit } from "@/components/useScrollExit"
 
 export default function LiveContent() {
-  // Live es el último de la secuencia — no hay siguiente página
-  useScrollExit(null)
+  // Scroll o swipe: abajo → Contacto, arriba → regresa a Films (mismo orden que el menú)
+  useScrollExit("/contacto", "/films")
 
   return (
     <PageTransition>
