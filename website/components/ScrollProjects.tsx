@@ -6,16 +6,6 @@ import VideoModal from "./VideoModal"
 import styles from "./ScrollProjects.module.css"
 import type { VimeoVideo } from "@/lib/vimeo"
 
-/* Numeral romano para el contador (I, II, III…) */
-function roman(n: number): string {
-  const map: [number, string][] = [
-    [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
-  ]
-  let out = ""
-  for (const [v, s] of map) while (n >= v) { out += s; n -= v }
-  return out
-}
-
 /* Distancia envuelta más corta en un loop de N slots → [-N/2, N/2) */
 function wrapDist(d: number, n: number): number {
   d = ((d % n) + n) % n
@@ -52,6 +42,9 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const touchAxisRef       = useRef<Axis>(null)
   const touchVelocityRef   = useRef(0)
   const touchLastMoveRef   = useRef(Date.now())
+  const touchOriginRef     = useRef(0)
+  const wheelOriginRef     = useRef(0)
+  const lastWheelRef       = useRef(0)
   const navigatingRef  = useRef(false)
 
   const [active, setActive] = useState(0)
@@ -114,10 +107,16 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
       // Horizontal → navega entre proyectos (y salta el aviso inicial si sigue ahí)
       dismissIntro()
-      lastInput.current = Date.now()
+      const now = Date.now()
+      // Gesto nuevo (pausa > 200ms desde el último wheel) → reinicia el origen del tope
+      if (now - lastWheelRef.current > 200) {
+        wheelOriginRef.current = Math.round(currentRef.current)
+      }
+      lastWheelRef.current = now
+      lastInput.current = now
       let t = targetRef.current + dx * 0.0011
-      // no permitir vuelos de más de 3 proyectos de golpe
-      t = Math.max(currentRef.current - 3, Math.min(currentRef.current + 3, t))
+      // Un gesto (por fuerte o rápido que sea) mueve como máximo un proyecto
+      t = Math.max(wheelOriginRef.current - 1, Math.min(wheelOriginRef.current + 1, t))
       targetRef.current = t
     }
 
@@ -127,6 +126,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       touchAxisRef.current = null
       touchVelocityRef.current = 0
       touchLastMoveRef.current = Date.now()
+      touchOriginRef.current = Math.round(currentRef.current)
     }
     function onTouchMove(e: TouchEvent) {
       const start = touchStartRef.current
@@ -149,7 +149,11 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         const dxRaw = start.x - t.clientX
         if (dt > 0) touchVelocityRef.current = dxRaw / dt
         touchLastMoveRef.current = now
-        targetRef.current += dxRaw / (window.innerWidth * SWIPE_FRACTION)
+        let nt = targetRef.current + dxRaw / (window.innerWidth * SWIPE_FRACTION)
+        // Un swipe mueve como máximo un proyecto, sin importar qué tan lejos o
+        // fuerte se arrastre
+        nt = Math.max(touchOriginRef.current - 1, Math.min(touchOriginRef.current + 1, nt))
+        targetRef.current = nt
         touchStartRef.current = { x: t.clientX, y: t.clientY }
       }
       // eje vertical: no mueve el carrusel, se decide en touchend
@@ -350,7 +354,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
           <div className={styles.railWrap}>
             <div className={styles.projectTitle} key={active}>{av?.title}</div>
             <div className={styles.rail}>
-              <span className={styles.roman} key={active}>{roman(active + 1)}</span>
+              <span className={styles.counter} key={active}>{active + 1} de {N}</span>
               <div className={styles.railLine}>
                 <div ref={lineRef} className={styles.railFill} />
               </div>
