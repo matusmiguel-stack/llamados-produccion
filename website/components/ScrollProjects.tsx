@@ -57,6 +57,9 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const [phase,  setPhase]  = useState<Phase>("visible")
   const [modal,  setModal]  = useState<string | null>(null)
   const [intro,  setIntro]  = useState<"show" | "hide" | "gone">("show")
+  // Cambia al cerrar el modal para remontar los iframes de fondo: el navegador
+  // los pausa mientras el modal (con sonido) está abierto y no los reanuda solo
+  const [bgKey, setBgKey] = useState(0)
   // Iframes montados: ventana alrededor del activo, acumulativa (una vez cargado, se queda)
   const [mounted, setMounted] = useState<Set<number>>(
     () => new Set(Array.from({ length: Math.min(3, N) }, (_, i) => i).concat(N > 3 ? [N - 1] : []))
@@ -252,6 +255,11 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
     if (v?.id && phaseRef.current !== "moving") setModal(v.id)
   }
 
+  function closeModal() {
+    setModal(null)
+    setBgKey(k => k + 1)
+  }
+
   // Botones ‹ › — misma acción que ArrowLeft/ArrowRight, para quien no
   // pueda hacer swipe horizontal (mouse, o para descartar si es tema de gesto)
   function goPrev() {
@@ -293,6 +301,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
               )}
               {v.id && mounted.has(i) && (
                 <iframe
+                  key={bgKey}
                   className={styles.frame}
                   src={`https://player.vimeo.com/video/${v.id}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
                   allow="autoplay"
@@ -350,7 +359,7 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         </div>
       </section>
 
-      {modal && <VideoModal videoId={modal} onClose={() => setModal(null)} />}
+      {modal && <VideoModal videoId={modal} onClose={closeModal} />}
 
       {intro !== "gone" && (
         <div className={`${styles.intro} ${intro === "hide" ? styles.introHide : ""}`} aria-hidden>

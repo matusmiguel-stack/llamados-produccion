@@ -7,6 +7,10 @@
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.25s ease;
+  /* En Proyectos, el modal cuelga del .content del layout (reel), que es
+     pointer-events:none — sin esto ni el iframe de Vimeo ni el botón de
+     cerrar reciben clics. */
+  pointer-events: auto;
 }
 
 @keyframes fadeIn {
@@ -37,8 +41,11 @@
 
 .close {
   position: fixed;
-  top: 22px;
+  /* Debajo de la barra de navegación (que mide ~64px) para no encimarse
+     con el botón de hamburguesa */
+  top: 84px;
   right: 28px;
+  z-index: 201;
   background: none;
   border: none;
   color: rgba(232, 228, 220, 0.5);
