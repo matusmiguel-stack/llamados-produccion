@@ -142,7 +142,7 @@
   font-family: var(--fd);
   font-style: italic;
   font-weight: 400;
-  font-size: clamp(11px, 1.3vw, 15px);
+  font-size: clamp(22px, 2.6vw, 30px);
   letter-spacing: 0.02em;
   color: var(--fg);
   text-align: center;
@@ -218,7 +218,7 @@
    Mobile
 ══════════════════════════════════════ */
 @media (max-width: 640px) {
-  .projectTitle { max-width: 86vw; font-size: 12px; }
+  .projectTitle { max-width: 86vw; font-size: 24px; }
   .hint  { font-size: 38px; }
 }
 

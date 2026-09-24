@@ -7,7 +7,7 @@
   font-family: var(--fd);
   font-style: italic;
   font-weight: 400;
-  font-size: clamp(32px, 6vw, 72px);
+  font-size: clamp(16px, 3vw, 36px);
   color: var(--fg);
   pointer-events: none;
 }
@@ -16,6 +16,6 @@
   .title {
     top: 72px;
     left: 24px;
-    font-size: clamp(26px, 8vw, 44px);
+    font-size: clamp(13px, 4vw, 22px);
   }
 }
