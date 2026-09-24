@@ -26,22 +26,21 @@ function wrapDist(d: number, n: number): number {
 type Phase = "moving" | "visible" | "idle"
 type Axis = "x" | "y" | null
 
-const TRAVEL_VW  = 130   // recorrido horizontal de cada item (en vw) por slot
-const PARALLAX   = 0.9   // el título contra-viaja a 0.9 → velocidad neta 0.1x
 const LERP       = 0.075 // factor de suavizado del scroll virtual
 const SNAP_MS    = 150   // sin input durante esto → snap al proyecto más cercano
 const IDLE_MS    = 1300  // sin input durante esto → se esconde el UI
 const EXIT_COOLDOWN_MS = 700 // ignora el scroll vertical justo al entrar (inercia del gesto anterior)
 const INTRO_MS      = 5000 // tiempo que se muestra el aviso de "desplaza…" al entrar
 const INTRO_FADE_MS = 700  // duración del fade out del aviso
+const SWIPE_FRACTION  = 0.5  // fracción del ancho de pantalla para un swipe completo (antes 0.85, muy pronunciado)
+const FLICK_VELOCITY  = 0.6  // px/ms — un swipe rápido y corto también cambia de proyecto
 
 export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const N = videos.length
   const router = useRouter()
 
   const stageRef  = useRef<HTMLElement>(null)
-  const itemRefs  = useRef<(HTMLDivElement | null)[]>([])
-  const titleRefs = useRef<(HTMLDivElement | null)[]>([])
+  const figureRefs = useRef<(HTMLElement | null)[]>([])
   const lineRef   = useRef<HTMLDivElement>(null)
 
   const targetRef      = useRef(0)
@@ -51,6 +50,8 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
   const activeRef        = useRef(0)
   const touchStartRef      = useRef<{ x: number; y: number } | null>(null)
   const touchAxisRef       = useRef<Axis>(null)
+  const touchVelocityRef   = useRef(0)
+  const touchLastMoveRef   = useRef(Date.now())
   const navigatingRef  = useRef(false)
 
   const [active, setActive] = useState(0)
@@ -124,6 +125,8 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       const t = e.touches[0]
       touchStartRef.current = { x: t.clientX, y: t.clientY }
       touchAxisRef.current = null
+      touchVelocityRef.current = 0
+      touchLastMoveRef.current = Date.now()
     }
     function onTouchMove(e: TouchEvent) {
       const start = touchStartRef.current
@@ -141,7 +144,12 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         e.preventDefault()
         dismissIntro()
         lastInput.current = Date.now()
-        targetRef.current += (start.x - t.clientX) / (window.innerWidth * 0.85)
+        const now = Date.now()
+        const dt = now - touchLastMoveRef.current
+        const dxRaw = start.x - t.clientX
+        if (dt > 0) touchVelocityRef.current = dxRaw / dt
+        touchLastMoveRef.current = now
+        targetRef.current += dxRaw / (window.innerWidth * SWIPE_FRACTION)
         touchStartRef.current = { x: t.clientX, y: t.clientY }
       }
       // eje vertical: no mueve el carrusel, se decide en touchend
@@ -152,6 +160,16 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
         const t = e.changedTouches[0]
         const dy = start.y - t.clientY
         if (Math.abs(dy) > 60) exitSection(dy > 0 ? "down" : "up")
+      } else if (touchAxisRef.current === "x") {
+        // Swipe corto pero rápido ("flick") también cambia de proyecto,
+        // aunque no haya recorrido la fracción completa de la pantalla
+        const v = touchVelocityRef.current
+        if (Math.abs(v) > FLICK_VELOCITY) {
+          const dir = v > 0 ? 1 : -1
+          targetRef.current = dir > 0
+            ? Math.floor(currentRef.current) + 1
+            : Math.ceil(currentRef.current) - 1
+        }
       }
       touchStartRef.current = null
       touchAxisRef.current = null
@@ -196,21 +214,18 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
       const cur = ((c % N) + N) % N
 
-      // Transformaciones por item: la estructura vuela, el título flota (parallax)
+      // Wipe: cada video se desliza horizontalmente según su distancia al activo,
+      // así el cambio entre proyectos se lee claramente como un barrido, no un crossfade
       for (let i = 0; i < N; i++) {
-        const el = itemRefs.current[i]
-        const ti = titleRefs.current[i]
-        if (!el || !ti) continue
+        const fig = figureRefs.current[i]
+        if (!fig) continue
         const d = wrapDist(i - cur, N)
-        if (Math.abs(d) > 1.25) {
-          el.style.visibility = "hidden"
+        if (Math.abs(d) > 1.15) {
+          fig.style.visibility = "hidden"
           continue
         }
-        el.style.visibility = "visible"
-        el.style.transform = `translate3d(${d * TRAVEL_VW}vw, 0, 0)`
-        ti.style.transform = `translate3d(${-d * TRAVEL_VW * PARALLAX}vw, 0, 0)`
-        const op = Math.max(0, Math.min(1, 1 - (Math.abs(d) - 0.1) / 0.28))
-        ti.style.opacity = String(op)
+        fig.style.visibility = "visible"
+        fig.style.transform = `translate3d(${d * 100}vw, 0, 0)`
       }
 
       // Línea de progreso global (0→1 a través del set)
@@ -293,8 +308,8 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
           {videos.map((v, i) => (
             <figure
               key={v.id || i}
+              ref={el => { figureRefs.current[i] = el }}
               className={styles.figure}
-              style={{ opacity: i === active ? 1 : 0 }}
             >
               {v.thumbnail && (
                 <div className={styles.poster} style={{ backgroundImage: `url(${v.thumbnail})` }} />
@@ -331,30 +346,15 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
 
         {/* ── UI: se esconde en idle ── */}
         <div className={styles.ui}>
-          {/* Riel de progreso horizontal con numeral romano, abajo centrado */}
-          <div className={styles.rail}>
-            <span className={styles.roman} key={active}>{roman(active + 1)}</span>
-            <div className={styles.railLine}>
-              <div ref={lineRef} className={styles.railFill} />
-            </div>
-          </div>
-
-          {/* Títulos voladores con parallax */}
-          <div className={styles.items}>
-            {videos.map((v, i) => (
-              <div
-                key={v.id || i}
-                ref={el => { itemRefs.current[i] = el }}
-                className={styles.item}
-              >
-                <div
-                  ref={el => { titleRefs.current[i] = el }}
-                  className={styles.itemInner}
-                >
-                  <h2 className={styles.title}>“{v.title}”</h2>
-                </div>
+          {/* Título del proyecto (chico) + riel de progreso horizontal, abajo centrado */}
+          <div className={styles.railWrap}>
+            <div className={styles.projectTitle} key={active}>{av?.title}</div>
+            <div className={styles.rail}>
+              <span className={styles.roman} key={active}>{roman(active + 1)}</span>
+              <div className={styles.railLine}>
+                <div ref={lineRef} className={styles.railFill} />
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>

@@ -79,7 +79,7 @@
   position: absolute;
   inset: 0;
   margin: 0;
-  transition: opacity 0.4s ease;
+  will-change: transform;
 }
 
 .poster {
@@ -125,17 +125,39 @@
 }
 .ph_idle .ui { opacity: 0; }
 
-/* ── Riel de progreso horizontal con numeral romano (abajo, centrado) ── */
-.rail {
+/* ── Título chico + riel de progreso horizontal (abajo, centrado) ── */
+.railWrap {
   position: absolute;
   left: 50%;
   bottom: clamp(24px, 4.5vh, 44px);
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 4;
+}
+
+.projectTitle {
+  font-family: var(--fd);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(11px, 1.3vw, 15px);
+  letter-spacing: 0.02em;
+  color: var(--fg);
+  text-align: center;
+  max-width: 70vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: romanIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rail {
   width: clamp(140px, 22vw, 260px);
   display: flex;
   align-items: center;
   gap: 14px;
-  z-index: 4;
 }
 
 .roman {
@@ -191,50 +213,11 @@
   50%      { opacity: 0.95; transform: translateY(-50%) translateX(-8px); }
 }
 
-/* ── Items voladores ── */
-.items {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-}
-
-/* El contenedor vuela rápido (230vh por slot) */
-.item {
-  position: absolute;
-  inset: 0;
-  will-change: transform;
-  visibility: hidden;
-}
-
-/* El título contra-viaja a 0.9 → flota lento mientras la estructura vuela */
-.itemInner {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  will-change: transform, opacity;
-  opacity: 0;
-}
-
-.title {
-  font-family: var(--fd);
-  font-style: italic;
-  font-weight: 400;
-  font-size: clamp(30px, 5.2vw, 78px);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: var(--fg);
-  text-align: center;
-  max-width: 78vw;
-  text-wrap: balance;
-}
-
 /* ══════════════════════════════════════
    Mobile
 ══════════════════════════════════════ */
 @media (max-width: 640px) {
-  .title { max-width: 86vw; font-size: clamp(26px, 8vw, 44px); }
+  .projectTitle { max-width: 86vw; font-size: 12px; }
   .hint  { font-size: 38px; }
 }
 
