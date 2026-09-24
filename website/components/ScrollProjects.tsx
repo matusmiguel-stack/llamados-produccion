@@ -220,13 +220,9 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
       if (ai !== activeRef.current) {
         activeRef.current = ai
         setActive(ai)
-        setMounted(prev => {
-          const add = [-1, 0, 1, 2].map(k => ((ai + k) % N + N) % N).filter(x => !prev.has(x))
-          if (add.length === 0) return prev
-          const next = new Set(prev)
-          add.forEach(x => next.add(x))
-          return next
-        })
+        // Ventana chica y fija (no acumulativa): evita ir cargando cada vez
+        // más iframes de Vimeo a la vez, que en móvil termina tronando la página
+        setMounted(new Set([-1, 0, 1].map(k => ((ai + k) % N + N) % N)))
       }
 
       // Fase: moviéndose / UI visible / idle (UI escondido, video limpio)

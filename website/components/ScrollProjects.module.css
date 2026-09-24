@@ -9,6 +9,11 @@
   background: var(--bg);
   overscroll-behavior: none;
   outline: none;
+  /* El layout (reel) que envuelve esta página deja su .content en
+     pointer-events: none para que el clic le llegue al video de fondo en
+     Home/Nosotros — Proyectos sí necesita sus propios clics, así que los
+     reclama de vuelta aquí. */
+  pointer-events: auto;
 }
 .stage:focus-visible {
   outline: 2px dashed rgba(232, 228, 220, 0.4);
