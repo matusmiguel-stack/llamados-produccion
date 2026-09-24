@@ -2,9 +2,36 @@
   position: relative;
   min-height: 100dvh;
   padding: 148px 48px 96px;
+  overflow: hidden;
+}
+
+/* ── Video de fondo, en loop ── */
+.videoBg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.videoIframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100vw, 177.78dvh);
+  height: max(100dvh, 56.25vw);
+  transform: translate(-50%, -50%);
+  border: none;
+  pointer-events: none;
+}
+.videoOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(6, 6, 8, 0.55) 0%, rgba(6, 6, 8, 0.72) 45%, rgba(6, 6, 8, 0.92) 100%);
 }
 
 .inner {
+  position: relative;
+  z-index: 1;
   max-width: 1080px;
   margin: 0 auto;
 }
@@ -44,14 +71,20 @@
 }
 .infoList a:hover { color: var(--red); }
 
-/* ── Dos columnas: formulario / reclutamiento ── */
+/* ── Dos columnas: formulario / reclutamiento, con línea divisora ── */
 .columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 64px;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 48px;
+}
+.divider {
+  width: 1px;
+  background: var(--b2);
+  align-self: stretch;
 }
 @media (max-width: 860px) {
   .columns { grid-template-columns: 1fr; gap: 64px; }
+  .divider { display: none; }
 }
 
 .sub {

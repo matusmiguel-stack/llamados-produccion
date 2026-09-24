@@ -10,6 +10,8 @@ const EMAIL = "paulina@retrocasaproductora.com"
 const PHONE_DISPLAY = "55 5277 6158"
 const PHONE_HREF = "+525552776158"
 const ADDRESS = "Benjamín Franklin 233, Col. Hipódromo Condesa, CDMX, México."
+const BG_VIMEO_ID = "1229379326"
+const BG_VIMEO_HASH = "aeb1e744f0"
 
 function MailIcon() {
   return (
@@ -91,6 +93,16 @@ export default function ContactoContent() {
   return (
     <PageTransition>
       <main className={styles.main}>
+        <div className={styles.videoBg} aria-hidden>
+          <iframe
+            className={styles.videoIframe}
+            src={`https://player.vimeo.com/video/${BG_VIMEO_ID}?h=${BG_VIMEO_HASH}&background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
+            allow="autoplay"
+            tabIndex={-1}
+          />
+          <div className={styles.videoOverlay} />
+        </div>
+
         <SectionTitle>Contacto</SectionTitle>
 
         <div className={styles.inner}>
@@ -111,6 +123,8 @@ export default function ContactoContent() {
               <Field label="Comentarios" textarea value={f1.comentarios} onChange={v => setF1(s => ({ ...s, comentarios: v }))} />
               <button type="submit" className={styles.submit}>Enviar →</button>
             </form>
+
+            <div className={styles.divider} aria-hidden />
 
             <div>
               <h2 className={styles.heading}>¿Quieres formar parte del equipo?</h2>
