@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import VideoModal from "./VideoModal"
+import SectionTitle from "./SectionTitle"
 import styles from "./ScrollProjects.module.css"
 import type { VimeoVideo } from "@/lib/vimeo"
 
@@ -332,6 +333,8 @@ export default function ScrollProjects({ videos }: { videos: VimeoVideo[] }) {
           ))}
           <div className={styles.overlay} />
         </div>
+
+        <SectionTitle>Proyectos</SectionTitle>
 
         {/* Indicadores de scroll horizontal — también sirven de botón; siempre
             visibles, no se esconden en idle como el resto del UI */}

@@ -1,6 +1,7 @@
 "use client"
 
 import PageTransition from "@/components/PageTransition"
+import SectionTitle from "@/components/SectionTitle"
 import { useScrollExit } from "@/components/useScrollExit"
 import styles from "./nosotros.module.css"
 
@@ -11,8 +12,8 @@ export default function NosotrosContent() {
   return (
     <PageTransition>
       <div className={styles.wrap}>
+        <SectionTitle>Nosotros</SectionTitle>
         <div className={styles.content}>
-          <p className={styles.eyebrow}>Nosotros</p>
           <p className={styles.text}>
             Somos una fusión de Agencia creativa y Casa Productora, los clientes son nuestros aliados
             y con ellos hacemos equipo para poder realizar campañas publicitarias, pero principalmente

@@ -1,0 +1,21 @@
+.title {
+  position: absolute;
+  top: 84px;
+  left: 48px;
+  z-index: 5;
+  margin: 0;
+  font-family: var(--fd);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(32px, 6vw, 72px);
+  color: var(--fg);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .title {
+    top: 72px;
+    left: 24px;
+    font-size: clamp(26px, 8vw, 44px);
+  }
+}

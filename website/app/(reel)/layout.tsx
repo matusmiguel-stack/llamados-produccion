@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import VideoModal from "@/components/VideoModal"
 import styles from "./reel-bg.module.css"
 
@@ -13,6 +14,18 @@ export default function ReelLayout({ children }: { children: React.ReactNode }) 
   const [showModal, setShowModal] = useState(false)
   // Cambia al cerrar el modal para remontar el iframe de fondo y que vuelva a arrancar
   const [bgKey, setBgKey] = useState(0)
+
+  const pathname = usePathname()
+  const prevPathRef = useRef(pathname)
+  useEffect(() => {
+    // En Proyectos este iframe queda tapado por el carrusel (que tiene sus
+    // propios videos) y el navegador lo pausa por estar oculto; al volver
+    // se remonta para que retome la reproducción en vez de quedar estático.
+    if (prevPathRef.current === "/proyectos" && pathname !== "/proyectos") {
+      setBgKey(k => k + 1)
+    }
+    prevPathRef.current = pathname
+  }, [pathname])
 
   function closeModal() {
     setShowModal(false)
