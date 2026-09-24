@@ -1,18 +1,11 @@
-"use client"
-
 import PageTransition from "@/components/PageTransition"
-import SectionTitle from "@/components/SectionTitle"
-import { useScrollExit } from "@/components/useScrollExit"
+import FilmsCarousel from "@/components/FilmsCarousel"
+import { FILMS } from "@/lib/films"
 
 export default function FilmsContent() {
-  // Scroll o swipe: abajo → Live, arriba → regresa a Proyectos
-  useScrollExit("/live", "/proyectos")
-
   return (
     <PageTransition>
-      <main style={{ position: "relative", minHeight: "100dvh" }}>
-        <SectionTitle>Films</SectionTitle>
-      </main>
+      <FilmsCarousel films={FILMS} />
     </PageTransition>
   )
 }
