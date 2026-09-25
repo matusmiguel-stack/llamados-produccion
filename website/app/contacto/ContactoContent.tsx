@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useRouter } from "next/navigation"
 import PageTransition from "@/components/PageTransition"
 import SectionTitle from "@/components/SectionTitle"
-import { useScrollExit } from "@/components/useScrollExit"
 import styles from "./contacto.module.css"
+
+const EXIT_COOLDOWN_MS = 700
 
 const EMAIL = "paulina@retrocasaproductora.com"
 const PHONE_DISPLAY = "55 5277 6158"
@@ -68,8 +70,47 @@ function Field({
 }
 
 export default function ContactoContent() {
-  // Contacto es el último de la secuencia — arriba regresa a Live
-  useScrollExit(null, "/live")
+  const router = useRouter()
+  const mainRef = useRef<HTMLElement>(null)
+
+  // Contacto es el último de la secuencia — arriba regresa a Live, pero solo
+  // cuando ya se está arriba del todo (el scroll interno con snap entre
+  // "Contacto comercial" y los dos formularios no debe disparar la salida)
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    const mountedAt = Date.now()
+    let navigating = false
+
+    function tryExit() {
+      if (navigating) return
+      if (Date.now() - mountedAt < EXIT_COOLDOWN_MS) return
+      if (el!.scrollTop > 4) return
+      navigating = true
+      router.push("/live", { transitionTypes: ["nav-back"] })
+    }
+
+    function onWheel(e: WheelEvent) {
+      if (e.deltaY < -60) tryExit()
+    }
+    let touchStartY: number | null = null
+    function onTouchStart(e: TouchEvent) { touchStartY = e.touches[0].clientY }
+    function onTouchEnd(e: TouchEvent) {
+      if (touchStartY === null) return
+      const dy = touchStartY - e.changedTouches[0].clientY
+      if (dy < -60) tryExit()
+      touchStartY = null
+    }
+
+    el.addEventListener("wheel", onWheel, { passive: true })
+    el.addEventListener("touchstart", onTouchStart, { passive: true })
+    el.addEventListener("touchend", onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener("wheel", onWheel)
+      el.removeEventListener("touchstart", onTouchStart)
+      el.removeEventListener("touchend", onTouchEnd)
+    }
+  }, [router])
 
   const [f1, setF1] = useState({ asunto: "", nombre: "", mail: "", comentarios: "" })
   const [f2, setF2] = useState({ nombre: "", mail: "", reel: "", comentarios: "" })
@@ -92,7 +133,7 @@ export default function ContactoContent() {
 
   return (
     <PageTransition>
-      <main className={styles.main}>
+      <main ref={mainRef} className={styles.main}>
         <div className={styles.videoBg} aria-hidden>
           <iframe
             className={styles.videoIframe}
@@ -106,7 +147,7 @@ export default function ContactoContent() {
         <SectionTitle>Contacto</SectionTitle>
 
         <div className={styles.inner}>
-          <section>
+          <section className={styles.snap}>
             <h2 className={styles.heading}>Contacto comercial</h2>
             <ul className={styles.infoList}>
               <li><MailIcon /><a href={`mailto:${EMAIL}`}>{EMAIL}</a></li>
@@ -116,7 +157,7 @@ export default function ContactoContent() {
           </section>
 
           <div className={styles.columns}>
-            <form className={styles.form} onSubmit={submitContacto}>
+            <form className={`${styles.form} ${styles.snap}`} onSubmit={submitContacto}>
               <Field label="Asunto" value={f1.asunto} onChange={v => setF1(s => ({ ...s, asunto: v }))} required />
               <Field label="Nombre" value={f1.nombre} onChange={v => setF1(s => ({ ...s, nombre: v }))} required />
               <Field label="Mail" type="email" value={f1.mail} onChange={v => setF1(s => ({ ...s, mail: v }))} required />
@@ -126,7 +167,7 @@ export default function ContactoContent() {
 
             <div className={styles.divider} aria-hidden />
 
-            <div>
+            <div className={styles.snap}>
               <h2 className={styles.heading}>¿Quieres formar parte del equipo?</h2>
               <p className={styles.sub}>Envía tu reel o cv</p>
               <form className={styles.form} onSubmit={submitEquipo}>

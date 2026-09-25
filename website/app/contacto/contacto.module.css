@@ -1,8 +1,9 @@
 .main {
   position: relative;
-  min-height: 100dvh;
+  height: 100dvh;
   padding: 148px 48px 96px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ── Video de fondo, en loop ── */
@@ -85,6 +86,19 @@
 @media (max-width: 860px) {
   .columns { grid-template-columns: 1fr; gap: 64px; }
   .divider { display: none; }
+
+  /* En mobile, "Contacto comercial" y cada formulario se apilan y ocupan
+     su propia pantalla: el scroll hace snap al inicio de cada uno para
+     que nunca se quede a la mitad, tapado por la barra fija */
+  .main { scroll-snap-type: y mandatory; }
+  .snap {
+    scroll-snap-align: start;
+    scroll-margin-top: 88px;
+    min-height: calc(100dvh - 88px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 }
 
 .sub {
