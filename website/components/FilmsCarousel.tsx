@@ -2,26 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import Script from "next/script"
 import VideoModal from "./VideoModal"
 import SectionTitle from "./SectionTitle"
 import styles from "./FilmsCarousel.module.css"
 import type { Film } from "@/lib/films"
-
-type VimeoPlayer = {
-  setCurrentTime: (t: number) => Promise<number>
-  play: () => Promise<void>
-  on: (event: string, cb: () => void) => void
-  unload: () => Promise<void>
-}
-
-declare global {
-  interface Window {
-    Vimeo?: {
-      Player: new (el: HTMLIFrameElement) => VimeoPlayer
-    }
-  }
-}
 
 /* Distancia envuelta más corta en un loop de N slots → [-N/2, N/2) */
 function wrapDist(d: number, n: number): number {
@@ -39,7 +23,7 @@ const IDLE_MS    = 1300
 const EXIT_COOLDOWN_MS = 700
 const SWIPE_FRACTION  = 0.5
 const FLICK_VELOCITY  = 0.6
-const LOOP_START_S    = 2 // el fondo arranca (y cada vuelta del loop vuelve a) el segundo 2
+const LOOP_START_S    = 3 // el fondo se muestra a partir del segundo 3 al aparecer
 
 export default function FilmsCarousel({ films }: { films: Film[] }) {
   const N = films.length
@@ -47,9 +31,8 @@ export default function FilmsCarousel({ films }: { films: Film[] }) {
 
   const stageRef   = useRef<HTMLElement>(null)
   const figureRefs = useRef<(HTMLElement | null)[]>([])
-  const iframeRefs = useRef<(HTMLIFrameElement | null)[]>([])
+  const maskRefs   = useRef<(HTMLDivElement | null)[]>([])
   const lineRef    = useRef<HTMLDivElement>(null)
-  const playersRef = useRef<Map<number, VimeoPlayer>>(new Map())
 
   const targetRef      = useRef(0)
   const currentRef     = useRef(0)
@@ -68,7 +51,6 @@ export default function FilmsCarousel({ films }: { films: Film[] }) {
   const [active, setActive] = useState(0)
   const [phase,  setPhase]  = useState<Phase>("visible")
   const [modal,  setModal]  = useState<string | null>(null)
-  const [sdkReady, setSdkReady] = useState(false)
   // Cambia al cerrar el modal para remontar los iframes de fondo: el navegador
   // los pausa mientras el modal (con sonido) está abierto y no los reanuda solo
   const [bgKey, setBgKey] = useState(0)
@@ -246,29 +228,24 @@ export default function FilmsCarousel({ films }: { films: Film[] }) {
     }
   }, [N, router])
 
-  // El fondo arranca (y cada vez que el clip termina, vuelve a arrancar) en
-  // LOOP_START_S: se maneja con el SDK de Vimeo en vez de loop=1 nativo, que
-  // siempre reinicia en 0.
+  // El fondo se tapa los primeros LOOP_START_S segundos al aparecer (no se
+  // usa el SDK de Vimeo para controlar el player: conectarlo — aunque sea
+  // solo para escuchar, sin mandarle ni un comando — le corta el autoplay a
+  // este embed y lo deja trabado).
   useEffect(() => {
-    if (!sdkReady || typeof window === "undefined" || !window.Vimeo) return
-    const Vimeo = window.Vimeo
-
+    const timers: number[] = []
     mounted.forEach(i => {
-      const iframe = iframeRefs.current[i]
-      if (!iframe || playersRef.current.has(i)) return
-      const player = new Vimeo.Player(iframe)
-      playersRef.current.set(i, player)
-      player.setCurrentTime(LOOP_START_S).catch(() => {})
-      player.on("ended", () => {
-        player.setCurrentTime(LOOP_START_S).then(() => player.play()).catch(() => {})
-      })
+      const el = maskRefs.current[i]
+      if (!el) return
+      el.style.opacity = "1"
+      const t = window.setTimeout(() => {
+        const el2 = maskRefs.current[i]
+        if (el2) el2.style.opacity = "0"
+      }, LOOP_START_S * 1000)
+      timers.push(t)
     })
-
-    return () => {
-      playersRef.current.forEach(p => { try { p.unload?.() } catch {} })
-      playersRef.current.clear()
-    }
-  }, [sdkReady, mounted, bgKey])
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [mounted, bgKey])
 
   function openActive() {
     const f = films[activeRef.current]
@@ -293,8 +270,6 @@ export default function FilmsCarousel({ films }: { films: Film[] }) {
 
   return (
     <>
-      <Script src="https://player.vimeo.com/api/player.js" strategy="afterInteractive" onLoad={() => setSdkReady(true)} />
-
       <section
         ref={stageRef}
         className={`${styles.stage} ${styles["ph_" + phase] ?? ""}`}
@@ -316,13 +291,15 @@ export default function FilmsCarousel({ films }: { films: Film[] }) {
               {mounted.has(i) && (
                 <iframe
                   key={bgKey}
-                  ref={el => { iframeRefs.current[i] = el }}
                   className={styles.frame}
-                  src={`https://player.vimeo.com/video/${f.vimeoId}?background=1&autoplay=1&muted=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
+                  src={`https://player.vimeo.com/video/${f.vimeoId}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
                   allow="autoplay"
                   tabIndex={-1}
                   aria-hidden
                 />
+              )}
+              {mounted.has(i) && (
+                <div ref={el => { maskRefs.current[i] = el }} className={styles.frameMask} aria-hidden />
               )}
 
               <div className={styles.card}>

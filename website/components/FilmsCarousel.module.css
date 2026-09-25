@@ -45,6 +45,18 @@
   pointer-events: none;
 }
 
+/* Tapa los primeros segundos de cada vuelta del loop (ver LOOP_START_S en el
+   componente) — no toca el player, solo lo cubre visualmente */
+.frameMask {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--bg);
+  opacity: 1;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
 /* Overlay oscuro: da legibilidad al póster/ficha sobre el video */
 .overlay {
   position: absolute;
@@ -73,7 +85,7 @@
 }
 
 .poster {
-  width: clamp(96px, 12vw, 168px);
+  width: clamp(120px, 15vw, 210px);
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: 3px;
@@ -114,7 +126,7 @@
 .fichaRow dt {
   flex-shrink: 0;
   width: 80px;
-  color: var(--fg2);
+  color: var(--red);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 9px;
@@ -231,7 +243,7 @@
     max-height: 62dvh;
     overflow: hidden;
   }
-  .poster { width: 84px; }
+  .poster { width: 104px; }
   .fichaTitle { font-size: 22px; }
   .fichaRow { font-size: 10px; }
   .fichaRow dt { width: 64px; }
