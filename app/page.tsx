@@ -3758,6 +3758,35 @@ function openEditVacation() {
                       <div style={formModalValueStyle}>—</div>
                     )}
                   </div>
+
+                  {selectedJunta.external_emails && selectedJunta.external_emails.length > 0 && (
+                    <div>
+                      <span style={formModalLabelStyle}>
+                        Invitados externos ({selectedJunta.external_emails.length})
+                      </span>
+                      <div style={{ ...formModalPillGridStyle, marginTop: 6 }}>
+                        {selectedJunta.external_emails.map((email: string) => (
+                          <span
+                            key={email}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 8px",
+                              borderRadius: 6,
+                              background: "rgba(148,163,184,0.14)",
+                              border: "1px solid rgba(148,163,184,0.28)",
+                              color: "#f8fafc",
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {email}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
