@@ -398,12 +398,10 @@ export default function Home() {
       .select("*")
       .order("fecha", { ascending: true })
 
-    const { data: juntaAttendeesData } = await supabase
-      .from("junta_attendees")
-      .select("junta_id, employee_id")
+    const juntaAttendeesData = await fetchAllJuntaAttendees()
 
     const attMap: Record<string, string[]> = {}
-    for (const ja of juntaAttendeesData || []) {
+    for (const ja of juntaAttendeesData) {
       if (!attMap[ja.junta_id]) attMap[ja.junta_id] = []
       attMap[ja.junta_id].push(ja.employee_id)
     }
@@ -1645,9 +1643,9 @@ function openEditVacation() {
     resetForm()
 
     const { data: juntasData } = await supabase.from("juntas").select("*").order("fecha")
-    const { data: juntaAttendeesData } = await supabase.from("junta_attendees").select("junta_id, employee_id")
+    const juntaAttendeesData = await fetchAllJuntaAttendees()
     const attMap: Record<string, string[]> = {}
-    for (const ja of juntaAttendeesData || []) {
+    for (const ja of juntaAttendeesData) {
       if (!attMap[ja.junta_id]) attMap[ja.junta_id] = []
       attMap[ja.junta_id].push(ja.employee_id)
     }
@@ -4609,6 +4607,28 @@ function addDaysToDateString(dateStr: string, days: number) {
   const date = new Date(`${dateStr}T12:00:00`)
   date.setDate(date.getDate() + days)
   return toDateInputValue(date)
+}
+
+// Supabase/PostgREST corta cada select en 1000 filas por default. junta_attendees
+// ya superó ese tope, así que un .select() sin paginar pierde asistentes en
+// silencio (sin error) — se pagina en bloques hasta traer la tabla completa.
+async function fetchAllJuntaAttendees(): Promise<{ junta_id: string; employee_id: string }[]> {
+  const pageSize = 1000
+  const rows: { junta_id: string; employee_id: string }[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("junta_attendees")
+      .select("junta_id, employee_id")
+      .range(from, from + pageSize - 1)
+    if (error || !data) break
+    rows.push(...data)
+    if (data.length < pageSize) break
+    from += pageSize
+  }
+
+  return rows
 }
 
 function datesOverlapInclusive(
