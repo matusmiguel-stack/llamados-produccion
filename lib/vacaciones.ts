@@ -44,6 +44,17 @@ export function businessDaysInclusive(startISO: string, endISO: string): number 
   return count
 }
 
+// Antigüedad automática a partir de la fecha de ingreso — mismo criterio que
+// periodoActual (por mes de ingreso, no por día exacto): si ya se cruzó el mes
+// de ingreso este año, el período actual arrancó este año; si no, el anterior.
+export function antiguedadDesdeIngreso(fechaIngreso: string, today = new Date()): { anios: number; mesReseteo: number } {
+  const [y, m] = fechaIngreso.split("-").map(Number)
+  const mesReseteo = m
+  const curMonth = today.getMonth() + 1
+  const startYear = curMonth >= mesReseteo ? today.getFullYear() : today.getFullYear() - 1
+  return { anios: startYear - y, mesReseteo }
+}
+
 // Período de vacaciones actual según el mes de reseteo
 export function periodoActual(mesReseteo: number, today = new Date()): { startISO: string; endISO: string; startYear: number } {
   const mes = mesReseteo || 1

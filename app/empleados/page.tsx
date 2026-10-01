@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
-import { resumenVacaciones, diasPorAnios, MESES } from "../../lib/vacaciones"
+import { resumenVacaciones, diasPorAnios, antiguedadDesdeIngreso, MESES } from "../../lib/vacaciones"
 
 type Employee = {
   id: string
@@ -45,8 +45,6 @@ type EmployeeForm = {
   sueldo_mensual: string
   fecha_ingreso: string
   cumpleanos: string
-  vac_anios: string
-  vac_mes_reseteo: string
   vac_dias_base: string
 }
 
@@ -60,8 +58,6 @@ const emptyForm: EmployeeForm = {
   sueldo_mensual: "",
   fecha_ingreso: "",
   cumpleanos: "",
-  vac_anios: "",
-  vac_mes_reseteo: "",
   vac_dias_base: "0",
 }
 
@@ -214,6 +210,8 @@ export default function EmpleadosPage() {
       return null
     }
 
+    const { anios, mesReseteo } = antiguedadDesdeIngreso(values.fecha_ingreso)
+
     return {
       nombre: values.nombre.trim(),
       apellido_paterno: values.apellido_paterno.trim(),
@@ -223,8 +221,8 @@ export default function EmpleadosPage() {
       puesto: values.puesto.trim(),
       fecha_ingreso: values.fecha_ingreso,
       cumpleanos: values.cumpleanos.trim() || null,
-      vac_anios: values.vac_anios.trim() !== "" ? parseInt(values.vac_anios) : null,
-      vac_mes_reseteo: values.vac_mes_reseteo.trim() !== "" ? parseInt(values.vac_mes_reseteo) : null,
+      vac_anios: anios,
+      vac_mes_reseteo: mesReseteo,
       vac_dias_base: values.vac_dias_base.trim() !== "" ? parseFloat(values.vac_dias_base) : 0,
     }
   }
@@ -258,8 +256,6 @@ export default function EmpleadosPage() {
       sueldo_mensual: String(employee.sueldo_mensual),
       fecha_ingreso: employee.fecha_ingreso,
       cumpleanos: employee.cumpleanos || "",
-      vac_anios: employee.vac_anios != null ? String(employee.vac_anios) : "",
-      vac_mes_reseteo: employee.vac_mes_reseteo != null ? String(employee.vac_mes_reseteo) : "",
       vac_dias_base: employee.vac_dias_base != null ? String(employee.vac_dias_base) : "0",
     })
   }
@@ -272,10 +268,11 @@ export default function EmpleadosPage() {
   async function saveEmployee(id: string) {
     let payload: Record<string, unknown> | null
     if (vacOnly) {
-      // Editor premium: solo actualiza vacaciones
+      // Editor premium: solo puede corregir los días ya tomados; años/mes se derivan de fecha_ingreso
+      const { anios, mesReseteo } = antiguedadDesdeIngreso(editForm.fecha_ingreso)
       payload = {
-        vac_anios: editForm.vac_anios.trim() !== "" ? parseInt(editForm.vac_anios) : null,
-        vac_mes_reseteo: editForm.vac_mes_reseteo.trim() !== "" ? parseInt(editForm.vac_mes_reseteo) : null,
+        vac_anios: anios,
+        vac_mes_reseteo: mesReseteo,
         vac_dias_base: editForm.vac_dias_base.trim() !== "" ? parseFloat(editForm.vac_dias_base) : 0,
       }
     } else {
@@ -732,20 +729,8 @@ function EmployeeFormFields({
           Vacaciones de <strong style={{ color: "#e2e8f0" }}>{values.nombre} {values.apellido_paterno}</strong>
         </p>
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr" }}>
-          <Field label="Años laborados">
-            <input type="number" min="0" value={values.vac_anios}
-              onChange={(e) => updateField("vac_anios", e.target.value)} placeholder="ej. 5" style={inputStyle} />
-            {values.vac_anios.trim() !== "" && (
-              <span style={{ fontSize: 11, color: "#34d399", marginTop: 4 }}>
-                Le corresponden {diasPorAnios(parseInt(values.vac_anios) || 0)} días
-              </span>
-            )}
-          </Field>
-          <Field label="Mes de reseteo">
-            <select value={values.vac_mes_reseteo} onChange={(e) => updateField("vac_mes_reseteo", e.target.value)} style={inputStyle}>
-              <option value="">—</option>
-              {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-            </select>
+          <Field label="Antigüedad (automática)">
+            <AntiguedadAuto fechaIngreso={values.fecha_ingreso} />
           </Field>
           <Field label="Días ya tomados (este período)">
             <input type="number" min="0" step="0.5" value={values.vac_dias_base}
@@ -878,27 +863,8 @@ function EmployeeFormFields({
           gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
         }}
       >
-        <Field label="Años laborados">
-          <input
-            type="number" min="0" value={values.vac_anios}
-            onChange={(e) => updateField("vac_anios", e.target.value)}
-            placeholder="ej. 5" style={inputStyle}
-          />
-          {values.vac_anios.trim() !== "" && (
-            <span style={{ fontSize: 11, color: "#34d399", marginTop: 4 }}>
-              Le corresponden {diasPorAnios(parseInt(values.vac_anios) || 0)} días
-            </span>
-          )}
-        </Field>
-        <Field label="Mes de reseteo">
-          <select
-            value={values.vac_mes_reseteo}
-            onChange={(e) => updateField("vac_mes_reseteo", e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">—</option>
-            {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
+        <Field label="Antigüedad (automática)">
+          <AntiguedadAuto fechaIngreso={values.fecha_ingreso} />
         </Field>
         <Field label="Días ya tomados (este período)">
           <input
@@ -910,6 +876,23 @@ function EmployeeFormFields({
       </div>
 
       <div style={formActionRowStyle}>{action}</div>
+    </div>
+  )
+}
+
+// Antigüedad/días que corresponden, calculados en vivo a partir de la fecha de
+// ingreso — ya no se capturan a mano (ver lib/vacaciones.ts: antiguedadDesdeIngreso).
+function AntiguedadAuto({ fechaIngreso }: { fechaIngreso: string }) {
+  if (!fechaIngreso) {
+    return <div style={{ ...inputStyle, color: "#6b7c93", cursor: "default" }}>Captura la fecha de ingreso primero</div>
+  }
+  const { anios, mesReseteo } = antiguedadDesdeIngreso(fechaIngreso)
+  return (
+    <div style={{ ...inputStyle, display: "grid", gap: 2, cursor: "default" }}>
+      <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+        {anios} año{anios === 1 ? "" : "s"} · resetea en {MESES[mesReseteo - 1]}
+      </span>
+      <span style={{ fontSize: 11, color: "#34d399" }}>Le corresponden {diasPorAnios(anios)} días</span>
     </div>
   )
 }
