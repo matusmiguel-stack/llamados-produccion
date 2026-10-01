@@ -6,6 +6,7 @@ import Image from "next/image"
 import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { navItems, NavIcon } from "../../components/AppSidebar"
+import { GlobalSearch } from "../../components/GlobalSearch"
 
 // Una pestaña: `src` es la URL con la que se monta el iframe (NO se vuelve a
 // tocar para no recargarlo); `title` se recalcula al navegar dentro del iframe.
@@ -150,6 +151,10 @@ export default function WorkspacePage() {
       <aside style={sidebarStyle}>
         <div style={{ padding: "4px 8px 14px" }}>
           <Image src="/logo-retro.png" alt="Retro" width={116} height={42} style={{ objectFit: "contain", height: "auto" }} priority />
+        </div>
+
+        <div style={{ padding: "0 2px 10px" }}>
+          <GlobalSearch onResultHref={navigateActiveTab} />
         </div>
 
         <nav style={{ display: "grid", gap: 2, overflowY: "auto", flex: 1, alignContent: "start" }}>

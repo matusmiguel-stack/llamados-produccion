@@ -51,7 +51,14 @@ function accentInsensitivePattern(q: string): string {
   return clean.replace(/[a-z]/g, (ch) => groups[ch] ?? ch)
 }
 
-export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
+export function GlobalSearch({
+  onNavigate,
+  onResultHref,
+}: {
+  onNavigate?: () => void
+  /** Si se pasa, se usa en vez de router.push — ej. para navegar dentro de una pestaña del Escritorio. */
+  onResultHref?: (href: string) => void
+}) {
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SearchResult[]>([])
@@ -201,14 +208,16 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   function navigate(result: SearchResult) {
-    if (result.kind === "client") {
-      router.push(`/proyectos?client=${result.id}`)
-    } else if (result.kind === "project") {
-      router.push(`/proyectos/${result.id}`)
-    } else if (result.kind === "empleado") {
-      router.push(`/empleados`)
+    const href =
+      result.kind === "client" ? `/proyectos?client=${result.id}` :
+      result.kind === "project" ? `/proyectos/${result.id}` :
+      result.kind === "empleado" ? `/empleados` :
+      `/proveedores/${result.id}`
+
+    if (onResultHref) {
+      onResultHref(href)
     } else {
-      router.push(`/proveedores/${result.id}`)
+      router.push(href)
     }
     setOpen(false)
     setQuery("")
