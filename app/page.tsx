@@ -439,30 +439,98 @@ export default function Home() {
   // ── Realtime: sincronización en vivo con todos los usuarios ────────────────
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    let hasSubscribed = false
+    let lastLoad = Date.now()
+    let lastDay = toDateInputValue(new Date())
+
+    function reload() {
+      lastLoad = Date.now()
+      loadAll()
+    }
 
     function scheduleReload() {
       if (timer) clearTimeout(timer)
       // Debounce 400ms: agrupa múltiples eventos del mismo guardado
-      timer = setTimeout(() => { loadAll() }, 400)
+      timer = setTimeout(reload, 400)
     }
 
-    const channel = supabase
-      .channel("calendar-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "shoots" },             scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_employees" },    scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "shoot_resources" },    scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "vacations" },          scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "vacation_employees" }, scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "juntas" },             scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "junta_attendees" },    scheduleReload)
-      .on("postgres_changes", { event: "*", schema: "public", table: "ensayos" },            scheduleReload)
-      .subscribe((status) => {
-        setLiveConnected(status === "SUBSCRIBED")
-      })
+    // Si el canal se une antes de que el cliente tenga el token del usuario, entra
+    // como "anon": las políticas RLS (to authenticated) no le dejan pasar ningún
+    // evento aunque el indicador diga EN VIVO. Por eso se fija el token primero.
+    async function connect() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+      if (session?.access_token) await supabase.realtime.setAuth(session.access_token)
+      if (cancelled) return
+
+      channel = supabase
+        .channel("calendar-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "shoots" },             scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "shoot_employees" },    scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "shoot_resources" },    scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "vacations" },          scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "vacation_employees" }, scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "juntas" },             scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "junta_attendees" },    scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "ensayos" },            scheduleReload)
+        .subscribe((status) => {
+          setLiveConnected(status === "SUBSCRIBED")
+          // Al reconectar (laptop dormida, red caída) se pudieron perder eventos: resincroniza.
+          if (status === "SUBSCRIBED") {
+            if (hasSubscribed) scheduleReload()
+            hasSubscribed = true
+          }
+        })
+    }
+    connect()
+
+    // Mantiene el token del canal al día cuando la sesión se renueva.
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token && (event === "TOKEN_REFRESHED" || event === "SIGNED_IN")) {
+        supabase.realtime.setAuth(session.access_token)
+      }
+    })
+
+    // Si ya pasó la medianoche y el calendario estaba mostrando "hoy", avanza al día nuevo.
+    function checkDayRollover() {
+      const today = toDateInputValue(new Date())
+      if (today === lastDay) return
+      const api = calendarRef.current?.getApi()
+      if (api) {
+        const prev = new Date(`${lastDay}T12:00:00`)
+        if (prev >= api.view.activeStart && prev < api.view.activeEnd) api.today()
+      }
+      setMobileSelectedDay((sel) => (sel === lastDay ? today : sel))
+      lastDay = today
+    }
+
+    // Al volver a la pestaña/ventana: cambia de día si hace falta y recarga lo que pasó mientras no se veía.
+    function onBackInView() {
+      if (document.visibilityState !== "visible") return
+      checkDayRollover()
+      if (Date.now() - lastLoad > 15_000) scheduleReload()
+    }
+    document.addEventListener("visibilitychange", onBackInView)
+    window.addEventListener("focus", onBackInView)
+    window.addEventListener("online", onBackInView)
+
+    // Red de seguridad: si el websocket muere sin avisar, el calendario igual se refresca solo.
+    const tick = setInterval(() => {
+      checkDayRollover()
+      if (document.visibilityState === "visible" && Date.now() - lastLoad > 120_000) reload()
+    }, 60_000)
 
     return () => {
+      cancelled = true
       if (timer) clearTimeout(timer)
-      supabase.removeChannel(channel)
+      clearInterval(tick)
+      document.removeEventListener("visibilitychange", onBackInView)
+      window.removeEventListener("focus", onBackInView)
+      window.removeEventListener("online", onBackInView)
+      authSub.subscription.unsubscribe()
+      if (channel) supabase.removeChannel(channel)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
