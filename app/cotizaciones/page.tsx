@@ -170,11 +170,27 @@ function fmtPct(n: number): string {
   return `${n.toFixed(1)}%`
 }
 
+// Orden de presentación de los conceptos de un rubro (predefinidos y adicionales
+// mezclados). `saved` es el orden que dejó el usuario con drag and drop; lo que
+// ya no existe se descarta y lo nuevo (conceptos recién agregados) va al final.
+function orderedRowKeys(rubro: RubroDef, extraList: ExtraItem[], saved: string[] | undefined): string[] {
+  const defaults = [...rubro.items.map((i) => i.id), ...extraList.map((e) => e.tempId)]
+  const valid = new Set(defaults)
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const k of saved || []) {
+    if (valid.has(k) && !seen.has(k)) { out.push(k); seen.add(k) }
+  }
+  for (const k of defaults) if (!seen.has(k)) out.push(k)
+  return out
+}
+
 // Serializa el estado persistible de la cotización para detectar cambios reales
 // (autosave) sin depender de closures de React que pueden quedar obsoletos.
 function buildQuoteSnapshot(s: {
   values: Record<string, ItemValues>
   extras: Record<string, ExtraItem[]>
+  rowOrder: Record<string, string[]>
   quoteName: string
   atencion: string
   entregables: string
@@ -213,6 +229,8 @@ export default function CotizacionesPage() {
   const [status, setStatus] = useState<"draft" | "sent" | "approved">("draft")
   const [values, setValues] = useState<Record<string, ItemValues>>(initValues())
   const [extras, setExtras] = useState<Record<string, ExtraItem[]>>({})
+  // Orden de presentación por rubro (ids de predefinidos + tempId de adicionales)
+  const [rowOrder, setRowOrder] = useState<Record<string, string[]>>({})
   const [commissionPct, setCommissionPct] = useState("30")
   const [commissionMarkup, setCommissionMarkup] = useState("0")
   const [markupGeneral, setMarkupGeneral] = useState("0")
@@ -433,24 +451,34 @@ export default function CotizacionesPage() {
 
       const newValues = { ...initValues() }
       const newExtras: Record<string, ExtraItem[]> = {}
+      const newRowOrder: Record<string, string[]> = {}
       let newCommPct = "30"
       let newCommMarkup = "0"
 
       for (const rubro of RUBROS) {
         const sec = (secs as any[]).find((s: any) => s.name === rubro.label)
         if (!sec) continue
-        const secItems = (dbItems as any[] || []).filter((i: any) => i.section_id === sec.id)
+        const secItems = ((dbItems as any[]) || [])
+          .filter((i: any) => i.section_id === sec.id)
+          .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0))
+        // Cotizaciones guardadas con template_key: el concepto predefinido se
+        // reconoce por su clave. Las anteriores no la tienen y se reconocen por
+        // su POSICIÓN en la plantilla (no por el texto, para poder renombrarlos).
+        const hasKeys = secItems.some((i: any) => i.template_key)
+        const keys: string[] = []
         for (const dbItem of secItems) {
-          // Identificar el ítem predefinido por su POSICIÓN (no por el texto),
-          // para que se puedan renombrar sin romper la carga.
           const oi = dbItem.order_index
-          const predefined = (typeof oi === "number" && oi >= 0 && oi < rubro.items.length)
-            ? rubro.items[oi]
-            : null
+          const predefined = hasKeys
+            ? (rubro.items.find((it) => it.id === dbItem.template_key) ?? null)
+            : (typeof oi === "number" && oi >= 0 && oi < rubro.items.length)
+              ? rubro.items[oi]
+              : null
 
           if (predefined?.special === "agency_commission" || (dbItem.description as string).startsWith("Comisión de agencia")) {
             newCommPct = dbItem.supplier || "30"
             newCommMarkup = String(dbItem.released_expense)
+            const commItem = rubro.items.find((it) => it.special === "agency_commission")
+            if (commItem) keys.push(commItem.id)
             continue
           }
 
@@ -463,10 +491,12 @@ export default function CotizacionesPage() {
               isInternal: dbItem.real_expense === 1,
               label: dbItem.description, // nombre guardado (posiblemente editado)
             }
+            keys.push(predefined.id)
           } else {
             if (!newExtras[rubro.id]) newExtras[rubro.id] = []
+            const tempId = crypto.randomUUID()
             newExtras[rubro.id].push({
-              tempId: crypto.randomUUID(),
+              tempId,
               description: dbItem.description,
               qty: String(dbItem.qty),
               days: String(dbItem.days),
@@ -474,12 +504,15 @@ export default function CotizacionesPage() {
               markup: String(dbItem.released_expense),
               isInternal: dbItem.real_expense === 1,
             })
+            keys.push(tempId)
           }
         }
+        newRowOrder[rubro.id] = keys
       }
 
       setValues(newValues)
       setExtras(newExtras)
+      setRowOrder(newRowOrder)
       setCommissionPct(newCommPct)
       setCommissionMarkup(newCommMarkup)
       // Snapshot de lo recién cargado: el autosave solo guardará si esto cambia,
@@ -487,6 +520,7 @@ export default function CotizacionesPage() {
       savedSnapshotRef.current = buildQuoteSnapshot({
         values: newValues,
         extras: newExtras,
+        rowOrder: newRowOrder,
         quoteName: quote.name,
         atencion: quote.atencion || "",
         entregables: quote.entregables || "",
@@ -530,6 +564,7 @@ export default function CotizacionesPage() {
       lastSyncJson.current = JSON.stringify(payload)
       if (payload.values !== undefined) setValues(payload.values)
       if (payload.extras !== undefined) setExtras(payload.extras)
+      if (payload.rowOrder !== undefined) setRowOrder(payload.rowOrder)
       if (payload.quoteName !== undefined) setQuoteName(payload.quoteName)
       if (payload.atencion !== undefined) setAtencion(payload.atencion)
       if (payload.entregables !== undefined) setEntregables(payload.entregables)
@@ -565,7 +600,7 @@ export default function CotizacionesPage() {
   useEffect(() => {
     if (!liveChannel.current) return
     if (!initialLoadDone.current) return // no broadcast hasta que la carga inicial esté lista
-    const payload = { values, extras, quoteName, atencion, entregables, markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status }
+    const payload = { values, extras, rowOrder, quoteName, atencion, entregables, markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status }
     const json = JSON.stringify(payload)
     if (json === lastSyncJson.current) return // sin cambios reales (o viene de remoto)
     if (broadcastTimer.current) clearTimeout(broadcastTimer.current)
@@ -573,7 +608,7 @@ export default function CotizacionesPage() {
       lastSyncJson.current = json
       liveChannel.current?.send({ type: "broadcast", event: "state", payload })
     }, 250)
-  }, [values, extras, quoteName, atencion, entregables, markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status])
+  }, [values, extras, rowOrder, quoteName, atencion, entregables, markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status])
 
   async function handleCreateClient() {
     if (!newClientName.trim()) return
@@ -722,7 +757,29 @@ export default function CotizacionesPage() {
       // fuera), lo ya borrado no volvía y el resto de rubros no llegaba a
       // insertarse, dejando la cotización con solo los primeros rubros.
       const sectionsPayload = RUBROS.map((rubro, ri) => {
-        const predefinedRows = rubro.items.map((item, ii) => {
+        const extraList = extras[rubro.id] || []
+        // Cada concepto se guarda con su posición real (order_index) y, si es
+        // predefinido, con su clave (template_key) para reconocerlo al reabrir.
+        const rows = orderedRowKeys(rubro, extraList, rowOrder[rubro.id]).map((key, pos) => {
+          const extra = extraList.find((e) => e.tempId === key)
+          if (extra) {
+            const desc = extra.description || "Concepto adicional"
+            const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
+            return {
+              description: desc,
+              qty: parseFloat(extra.qty) || 0,
+              days: parseFloat(extra.days) || 0,
+              unit_price: parseFloat(extra.cost) || 0,
+              released_expense: parseFloat(extra.markup) || 0,
+              real_expense: extra.isInternal ? 1 : 0,
+              supplier: null,
+              order_index: pos,
+              template_key: null,
+              ...prev,
+            }
+          }
+
+          const item = rubro.items.find((it) => it.id === key)!
           if (item.special === "agency_commission") {
             const desc = `Comisión de agencia (${commissionPct}%)`
             const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
@@ -734,7 +791,8 @@ export default function CotizacionesPage() {
               released_expense: parseFloat(commissionMarkup) || 0,
               real_expense: 0,
               supplier: commissionPct,
-              order_index: ii,
+              order_index: pos,
+              template_key: item.id,
               ...prev,
             }
           }
@@ -749,28 +807,13 @@ export default function CotizacionesPage() {
             released_expense: parseFloat(v.markup) || 0,
             real_expense: v.isInternal ? 1 : 0,
             supplier: null,
-            order_index: ii,
+            order_index: pos,
+            template_key: item.id,
             ...prev,
           }
         })
 
-        const extraRows = (extras[rubro.id] || []).map((item, ei) => {
-          const desc = item.description || "Concepto adicional"
-          const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
-          return {
-            description: desc,
-            qty: parseFloat(item.qty) || 0,
-            days: parseFloat(item.days) || 0,
-            unit_price: parseFloat(item.cost) || 0,
-            released_expense: parseFloat(item.markup) || 0,
-            real_expense: item.isInternal ? 1 : 0,
-            supplier: null,
-            order_index: rubro.items.length + ei,
-            ...prev,
-          }
-        })
-
-        return { name: rubro.label, order_index: ri, items: [...predefinedRows, ...extraRows] }
+        return { name: rubro.label, order_index: ri, items: rows }
       })
 
       const { error: replaceErr } = await supabase.rpc("replace_quote_sections", {
@@ -801,7 +844,7 @@ export default function CotizacionesPage() {
   // (Se ejecuta en cada render, así que nunca queda obsoleto.)
   handleSaveRef.current = handleSave
   liveSnapshotRef.current = buildQuoteSnapshot({
-    values, extras, quoteName, atencion, entregables,
+    values, extras, rowOrder, quoteName, atencion, entregables,
     markupGeneral, financiamientoGeneral, commissionPct, commissionMarkup, status, projectId, clientId,
   })
 
@@ -870,7 +913,7 @@ export default function CotizacionesPage() {
         if (!newSec) continue
         const { data: its } = await supabase
           .from("quote_items")
-          .select("description, qty, days, unit_price, released_expense, real_expense, supplier, order_index, is_extra")
+          .select("description, qty, days, unit_price, released_expense, real_expense, supplier, order_index, is_extra, template_key")
           .eq("section_id", sec.id).order("order_index")
         if (its && its.length > 0) {
           await supabase.from("quote_items").insert(
@@ -994,7 +1037,20 @@ export default function CotizacionesPage() {
     const date = new Intl.DateTimeFormat("es-MX", { dateStyle: "long" }).format(new Date())
 
     const rubros: QuoteRubroPDF[] = RUBROS.map((rubro) => {
-      const items = rubro.items.map((item) => {
+      const extraList = extras[rubro.id] || []
+      const items = orderedRowKeys(rubro, extraList, rowOrder[rubro.id]).map((key) => {
+        const extra = extraList.find((e) => e.tempId === key)
+        if (extra) {
+          return {
+            label: extra.description || "Concepto adicional",
+            qty: extra.qty,
+            days: extra.days,
+            cost: extra.cost,
+            markup: extra.markup,
+            isInternal: extra.isInternal,
+          }
+        }
+        const item = rubro.items.find((it) => it.id === key)!
         if (item.special === "agency_commission") {
           return {
             label: item.label,
@@ -1010,19 +1066,11 @@ export default function CotizacionesPage() {
         const v = values[item.id] || DEFAULT_ITEM
         return { label: (v.label && v.label.trim()) ? v.label.trim() : item.label, qty: v.qty, days: v.days, cost: v.cost, markup: v.markup, isInternal: v.isInternal }
       })
-      const extraItems = (extras[rubro.id] || []).map((e) => ({
-        label: e.description || "Concepto adicional",
-        qty: e.qty,
-        days: e.days,
-        cost: e.cost,
-        markup: e.markup,
-        isInternal: e.isInternal,
-      }))
       return {
         num: rubro.num,
         label: rubro.label,
         hexColor: rubro.color,
-        items: [...items, ...extraItems],
+        items,
         financials: getRubroFinancials(rubro),
       }
     })
@@ -1262,11 +1310,11 @@ export default function CotizacionesPage() {
           <div style={{ display: "grid", gap: 12 }}>
 
             {/* R1 */}
-            <RubroCard rubro={RUBROS[0]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[0])} extras={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[0].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[0].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[0]} rowOrder={rowOrder[RUBROS[0].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[0].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[0])} extras={extras[RUBROS[0].id] || []} onAddExtra={() => addExtra(RUBROS[0].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[0].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[0].id, t)} isMobile={isMobile} />
 
             {/* R2 */}
             <RubroCard
-              rubro={RUBROS[1]}
+              rubro={RUBROS[1]} rowOrder={rowOrder[RUBROS[1].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[1].id]: k }))}
               values={values}
               onUpdate={updateItem}
               financials={getRubroFinancials(RUBROS[1])}
@@ -1278,20 +1326,20 @@ export default function CotizacionesPage() {
             />
 
             {/* R3 */}
-            <RubroCard rubro={RUBROS[2]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[2])} extras={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[2].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[2].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[2]} rowOrder={rowOrder[RUBROS[2].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[2].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[2])} extras={extras[RUBROS[2].id] || []} onAddExtra={() => addExtra(RUBROS[2].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[2].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[2].id, t)} isMobile={isMobile} />
 
             {/* R4 */}
-            <RubroCard rubro={RUBROS[3]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[3])} extras={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[3].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[3].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[3]} rowOrder={rowOrder[RUBROS[3].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[3].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[3])} extras={extras[RUBROS[3].id] || []} onAddExtra={() => addExtra(RUBROS[3].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[3].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[3].id, t)} isMobile={isMobile} />
 
             {/* R5 */}
-            <RubroCard rubro={RUBROS[4]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[4])} extras={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[4].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[4].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[4]} rowOrder={rowOrder[RUBROS[4].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[4].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[4])} extras={extras[RUBROS[4].id] || []} onAddExtra={() => addExtra(RUBROS[4].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[4].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[4].id, t)} isMobile={isMobile} />
 
             {/* R6 */}
-            <RubroCard rubro={RUBROS[5]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[5])} extras={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[5].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[5].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[5]} rowOrder={rowOrder[RUBROS[5].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[5].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[5])} extras={extras[RUBROS[5].id] || []} onAddExtra={() => addExtra(RUBROS[5].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[5].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[5].id, t)} isMobile={isMobile} />
 
             {/* R7 solo (comisión de agencia) */}
             <RubroCard
-              rubro={RUBROS[6]}
+              rubro={RUBROS[6]} rowOrder={rowOrder[RUBROS[6].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[6].id]: k }))}
               values={values}
               onUpdate={updateItem}
               financials={getRubroFinancials(RUBROS[6])}
@@ -1308,10 +1356,10 @@ export default function CotizacionesPage() {
             />
 
             {/* R8 */}
-            <RubroCard rubro={RUBROS[7]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[7]} rowOrder={rowOrder[RUBROS[7].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[7].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[7])} extras={extras[RUBROS[7].id] || []} onAddExtra={() => addExtra(RUBROS[7].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[7].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[7].id, t)} isMobile={isMobile} />
 
             {/* R9 */}
-            <RubroCard rubro={RUBROS[8]} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[8])} extras={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[8].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[8].id, t)} isMobile={isMobile} />
+            <RubroCard rubro={RUBROS[8]} rowOrder={rowOrder[RUBROS[8].id]} onSetRowOrder={(k) => setRowOrder((p) => ({ ...p, [RUBROS[8].id]: k }))} values={values} onUpdate={updateItem} financials={getRubroFinancials(RUBROS[8])} extras={extras[RUBROS[8].id] || []} onAddExtra={() => addExtra(RUBROS[8].id)} onUpdateExtra={(t, p) => updateExtra(RUBROS[8].id, t, p)} onRemoveExtra={(t) => removeExtra(RUBROS[8].id, t)} isMobile={isMobile} />
           </div>
 
           {/* Resumen financiero global */}
@@ -1659,6 +1707,7 @@ function RubroCard({
   commissionPct, commissionMarkup, commissionGasto,
   onCommissionPctChange, onCommissionMarkupChange,
   extras, onAddExtra, onUpdateExtra, onRemoveExtra,
+  rowOrder, onSetRowOrder,
 }: {
   rubro: RubroDef
   values: Record<string, ItemValues>
@@ -1674,12 +1723,218 @@ function RubroCard({
   onAddExtra: () => void
   onUpdateExtra: (tempId: string, patch: Partial<ExtraItem>) => void
   onRemoveExtra: (tempId: string) => void
+  rowOrder: string[] | undefined
+  onSetRowOrder: (keys: string[]) => void
 }) {
-  const items = rubro.items
-  const col1 = items
-  const col2: typeof items = []
+  const [dragKey, setDragKey] = useState<string | null>(null)
+  const [overKey, setOverKey] = useState<string | null>(null)
 
+  const keys = orderedRowKeys(rubro, extras, rowOrder)
   const hasValue = financials.venta > 0
+
+  function moveTo(fromKey: string, toKey: string) {
+    const fromIdx = keys.indexOf(fromKey)
+    const toIdx = keys.indexOf(toKey)
+    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return
+    const next = keys.filter((k) => k !== fromKey)
+    next.splice(toIdx, 0, fromKey)
+    onSetRowOrder(next)
+  }
+
+  function moveBy(key: string, delta: number) {
+    const idx = keys.indexOf(key)
+    const j = idx + delta
+    if (idx < 0 || j < 0 || j >= keys.length) return
+    const next = [...keys]
+    ;[next[idx], next[j]] = [next[j], next[idx]]
+    onSetRowOrder(next)
+  }
+
+  function endDrag() {
+    setDragKey(null)
+    setOverKey(null)
+  }
+
+  // Envuelve cada fila con su asa de arrastre (escritorio) o flechas (móvil).
+  function sortableRow(key: string, idx: number, content: React.ReactNode) {
+    const fromIdx = dragKey ? keys.indexOf(dragKey) : -1
+    const isOver = overKey === key && dragKey !== null && dragKey !== key
+    const edge = isOver ? (fromIdx < idx ? "bottom" : "top") : null
+    return (
+      <div
+        key={key}
+        data-row
+        onDragOver={(e) => {
+          if (!dragKey) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = "move"
+          if (overKey !== key) setOverKey(key)
+        }}
+        onDrop={(e) => {
+          if (!dragKey) return
+          e.preventDefault()
+          moveTo(dragKey, key)
+          endDrag()
+        }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          opacity: dragKey === key ? 0.4 : 1,
+          boxShadow: edge === "top" ? `0 -2px 0 0 ${rubro.color}` : edge === "bottom" ? `0 2px 0 0 ${rubro.color}` : "none",
+        }}
+      >
+        {isMobile ? (
+          <div style={{ display: "grid", flexShrink: 0 }}>
+            <button onClick={() => moveBy(key, -1)} disabled={idx === 0} style={moveArrowStyle(idx === 0)} aria-label="Subir">▲</button>
+            <button onClick={() => moveBy(key, 1)} disabled={idx === keys.length - 1} style={moveArrowStyle(idx === keys.length - 1)} aria-label="Bajar">▼</button>
+          </div>
+        ) : (
+          <span
+            draggable
+            title="Arrastra para cambiar el orden"
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move"
+              e.dataTransfer.setData("text/plain", key)
+              const rowEl = (e.currentTarget as HTMLElement).closest("[data-row]")
+              if (rowEl) e.dataTransfer.setDragImage(rowEl, 8, 12)
+              setDragKey(key)
+            }}
+            onDragEnd={endDrag}
+            style={dragHandleStyle}
+          >
+            ⋮⋮
+          </span>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>{content}</div>
+      </div>
+    )
+  }
+
+  function renderRow(key: string, idx: number) {
+    const isLast = idx === keys.length - 1
+    const extra = extras.find((e) => e.tempId === key)
+
+    if (extra) {
+      const item = extra
+      const c = calcItem(item)
+
+      if (isMobile) {
+        return sortableRow(key, idx,
+          <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+              <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1 }} />
+              <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
+              <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle}>✕</button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+              <span style={sepStyle}>×</span>
+              <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+              <span style={sepStyle}>×</span>
+              <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
+              <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
+              <span style={sepStyle}>%</span>
+              <span style={{ color: item.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
+            </div>
+          </div>
+        )
+      }
+
+      return sortableRow(key, idx,
+        <div style={{ ...itemRowStyle, gap: 6, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
+          <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1, minWidth: 80 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
+            <span style={sepStyle}>×</span>
+            <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
+            <span style={sepStyle}>×</span>
+            <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
+            <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34 }} title="Markup %" placeholder="0" />
+            <span style={sepStyle}>%</span>
+            <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
+            <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
+            <span style={{ ...ventaStyle, color: item.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
+            <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
+          </div>
+        </div>
+      )
+    }
+
+    const item = rubro.items.find((it) => it.id === key)
+    if (!item) return null
+
+    if (item.special === "agency_commission") {
+      const cg = commissionGasto || 0
+      const commCalc = calcCommission(cg, commissionMarkup || "0")
+      const cv = commCalc.venta
+      return sortableRow(key, idx,
+        <div style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+          <span style={itemLabelStyle}>{item.label}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <input type="number" value={commissionPct} onChange={(e) => onCommissionPctChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% comisión" />
+            <span style={sepStyle}>%  ·  Mkp</span>
+            <input type="number" value={commissionMarkup} onChange={(e) => onCommissionMarkupChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% markup" />
+            <span style={sepStyle}>%</span>
+            <span style={gastoStyle}>{fmt(cg)}</span>
+            <span style={ventaStyle}>{fmt(cv)}</span>
+          </div>
+        </div>
+      )
+    }
+
+    const v = values[item.id] || DEFAULT_ITEM
+    const c = calcItem(v)
+
+    if (isMobile) {
+      return sortableRow(key, idx,
+        <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5, gap: 8 }}>
+            <input
+              value={v.label != null ? v.label : item.label}
+              onChange={(e) => onUpdate(item.id, { label: e.target.value })}
+              title="Editar nombre del concepto"
+              style={{ ...editableLabelStyle, fontSize: 12, flex: 1 }}
+            />
+            <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)}>INT</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+            <span style={sepStyle}>×</span>
+            <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
+            <span style={sepStyle}>×</span>
+            <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
+            <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
+            <span style={sepStyle}>%</span>
+            <span style={{ color: v.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
+          </div>
+        </div>
+      )
+    }
+
+    return sortableRow(key, idx,
+      <div style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
+        <input
+          value={v.label != null ? v.label : item.label}
+          onChange={(e) => onUpdate(item.id, { label: e.target.value })}
+          title="Editar nombre del concepto"
+          style={editableLabelStyle}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
+          <span style={sepStyle}>×</span>
+          <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
+          <span style={sepStyle}>×</span>
+          <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
+          <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34 }} title="Markup %" placeholder="0" />
+          <span style={sepStyle}>%</span>
+          <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
+          <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
+          <span style={{ ...ventaStyle, color: v.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={rubroCardStyle(rubro.color)}>
@@ -1721,143 +1976,39 @@ function RubroCard({
         </div>
       )}
 
-      {/* Columnas predefinidas */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2px 16px" }}>
-        {[col1, col2].map((col, ci) => (
-          <div key={ci} style={{ display: "grid", gap: 0 }}>
-            {col.map((item, idx) => {
-              const isLast = idx === col.length - 1
-
-              if (item.special === "agency_commission") {
-                const cg = commissionGasto || 0
-                const commCalc = calcCommission(cg, commissionMarkup || "0")
-                const cv = commCalc.venta
-                return (
-                  <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
-                    <span style={itemLabelStyle}>{item.label}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                      <input type="number" value={commissionPct} onChange={(e) => onCommissionPctChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% comisión" />
-                      <span style={sepStyle}>%  ·  Mkp</span>
-                      <input type="number" value={commissionMarkup} onChange={(e) => onCommissionMarkupChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% markup" />
-                      <span style={sepStyle}>%</span>
-                      <span style={gastoStyle}>{fmt(cg)}</span>
-                      <span style={ventaStyle}>{fmt(cv)}</span>
-                    </div>
-                  </div>
-                )
-              }
-
-              const v = values[item.id] || DEFAULT_ITEM
-              const c = calcItem(v)
-
-              if (isMobile) {
-                return (
-                  <div key={item.id} style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5, gap: 8 }}>
-                      <input
-                        value={v.label != null ? v.label : item.label}
-                        onChange={(e) => onUpdate(item.id, { label: e.target.value })}
-                        title="Editar nombre del concepto"
-                        style={{ ...editableLabelStyle, fontSize: 12, flex: 1 }}
-                      />
-                      <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)}>INT</button>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
-                      <span style={sepStyle}>×</span>
-                      <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
-                      <span style={sepStyle}>×</span>
-                      <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
-                      <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
-                      <span style={sepStyle}>%</span>
-                      <span style={{ color: v.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
-                    </div>
-                  </div>
-                )
-              }
-
-              return (
-                <div key={item.id} style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
-                  <input
-                    value={v.label != null ? v.label : item.label}
-                    onChange={(e) => onUpdate(item.id, { label: e.target.value })}
-                    title="Editar nombre del concepto"
-                    style={editableLabelStyle}
-                  />
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                    <input type="number" value={v.qty} onChange={(e) => onUpdate(item.id, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
-                    <span style={sepStyle}>×</span>
-                    <input type="number" value={v.days} onChange={(e) => onUpdate(item.id, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
-                    <span style={sepStyle}>×</span>
-                    <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
-                    <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34 }} title="Markup %" placeholder="0" />
-                    <span style={sepStyle}>%</span>
-                    <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
-                    <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
-                    <span style={{ ...ventaStyle, color: v.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ))}
+      {/* Conceptos (predefinidos y adicionales, en el orden elegido) */}
+      <div style={{ display: "grid", gap: 0 }}>
+        {keys.map((key, idx) => renderRow(key, idx))}
       </div>
-
-      {/* Conceptos adicionales */}
-      {extras.length > 0 && (
-        <div style={{ display: "grid", gap: 2, paddingTop: 6, borderTop: "1px dashed rgba(148,163,184,0.12)" }}>
-          {extras.map((item) => {
-            const c = calcItem(item)
-
-            if (isMobile) {
-              return (
-                <div key={item.tempId} style={{ borderBottom: "1px solid rgba(148,163,184,0.08)", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                    <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1 }} />
-                    <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
-                    <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle}>✕</button>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
-                    <span style={sepStyle}>×</span>
-                    <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="1" />
-                    <span style={sepStyle}>×</span>
-                    <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
-                    <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
-                    <span style={sepStyle}>%</span>
-                    <span style={{ color: item.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
-                  </div>
-                </div>
-              )
-            }
-
-            return (
-              <div key={item.tempId} style={{ ...itemRowStyle, gap: 6, background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
-                <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1, minWidth: 80 }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                  <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
-                  <span style={sepStyle}>×</span>
-                  <input type="number" value={item.days} onChange={(e) => onUpdateExtra(item.tempId, { days: e.target.value })} min="0" style={numInputStyle} title="Días" />
-                  <span style={sepStyle}>×</span>
-                  <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={costInputStyle} placeholder="0" title="Costo real" />
-                  <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 34 }} title="Markup %" placeholder="0" />
-                  <span style={sepStyle}>%</span>
-                  <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
-                  <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
-                  <span style={{ ...ventaStyle, color: item.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
-                  <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
 
       <button onClick={onAddExtra} style={addExtraButtonStyle(rubro.color)}>
         + Agregar concepto
       </button>
     </div>
   )
+}
+
+const dragHandleStyle: React.CSSProperties = {
+  cursor: "grab",
+  color: "#64748b",
+  fontSize: 14,
+  lineHeight: 1,
+  letterSpacing: -2,
+  padding: "6px 3px",
+  userSelect: "none",
+  flexShrink: 0,
+}
+
+function moveArrowStyle(disabled: boolean): React.CSSProperties {
+  return {
+    background: "transparent",
+    border: "none",
+    color: disabled ? "#334155" : "#94a3b8",
+    fontSize: 9,
+    lineHeight: 1,
+    padding: "3px 4px",
+    cursor: disabled ? "default" : "pointer",
+  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
