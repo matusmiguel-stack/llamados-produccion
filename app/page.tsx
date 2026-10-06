@@ -24,6 +24,7 @@ import {
   buildBirthdayCalendarEvents,
   employeeDisplayName,
 } from "../lib/employee-dates"
+import { puedeEventosPersonales } from "../lib/eventos-personales"
 
 const VACATION_COLOR = "#9333ea"
 const VACATION_EVENT_PREFIX = "vacation:"
@@ -33,6 +34,8 @@ const JUNTA_EVENT_PREFIX = "junta:"
 const JUNTA_COLOR = "#0891b2"
 const ENSAYO_EVENT_PREFIX = "ensayo:"
 const ENSAYO_COLOR = "#db2777"
+const PERSONAL_EVENT_PREFIX = "personal:"
+const PERSONAL_COLOR = "#334155"
 
 // Nombre completo de un empleado (para el valor guardado de responsable)
 function fullEmployeeName(e: { nombre: string; apellido_paterno?: string | null; apellido_materno?: string | null }) {
@@ -179,7 +182,7 @@ export default function Home() {
   const [duplicating, setDuplicating] = useState(false)
   const [liveConnected, setLiveConnected] = useState(false)
 
-  const [entryMode, setEntryMode] = useState<"shoot" | "vacation" | "junta" | "ensayo">("shoot")
+  const [entryMode, setEntryMode] = useState<"shoot" | "vacation" | "junta" | "ensayo" | "personal">("shoot")
   const [vacationStartDate, setVacationStartDate] = useState("")
   const [vacationEndDate, setVacationEndDate] = useState("")
 
@@ -192,6 +195,7 @@ export default function Home() {
   const [showVacaciones, setShowVacaciones] = useState(true)
   const [showJuntas, setShowJuntas] = useState(true)
   const [showEnsayos, setShowEnsayos] = useState(true)
+  const [showPersonal, setShowPersonal] = useState(true)
   const [showCumpleanos, setShowCumpleanos] = useState(true)
   const [showAniversarios, setShowAniversarios] = useState(true)
 
@@ -255,6 +259,17 @@ export default function Home() {
   const [ensayoEndTime, setEnsayoEndTime] = useState("")
   const [ensayoAllDay, setEnsayoAllDay] = useState(false)
 
+  // ── Eventos personales (privados, solo para su dueño — ver lib/eventos-personales.ts) ──
+  const [allPersonal, setAllPersonal] = useState<any[]>([])
+  const [selectedPersonal, setSelectedPersonal] = useState<any>(null)
+  const [personalDetailsOpen, setPersonalDetailsOpen] = useState(false)
+  const [personalTitulo, setPersonalTitulo] = useState("")
+  const [personalDate, setPersonalDate] = useState("")
+  const [personalStartTime, setPersonalStartTime] = useState("09:00")
+  const [personalEndTime, setPersonalEndTime] = useState("")
+  const [personalAllDay, setPersonalAllDay] = useState(false)
+  const [personalNotas, setPersonalNotas] = useState("")
+
   // ── Crear cliente inline ──────────────────────────────────────────────────
   const [showAddClient, setShowAddClient] = useState(false)
   const [newClientName, setNewClientName] = useState("")
@@ -282,6 +297,20 @@ export default function Home() {
   const canJunta = canEdit || isProductorRole
   const canManageJuntas = canJunta // admin, editor, editor_premium y productor pueden crear/editar/borrar juntas
   const canManageVacations = isAdmin || profile?.role === "editor_premium"
+  const canPersonal = puedeEventosPersonales(profile?.email)
+  // loadAll vive en el closure del primer render (profile aún null): el ref sí está al día.
+  const canPersonalRef = useRef(false)
+  canPersonalRef.current = canPersonal
+
+  async function loadPersonalEvents() {
+    const { data } = await supabase.from("personal_events").select("*").order("fecha", { ascending: true })
+    setAllPersonal(data || [])
+  }
+
+  // Al saber quién es el usuario (tras la primera carga) trae sus eventos personales.
+  useEffect(() => {
+    if (canPersonal) loadPersonalEvents()
+  }, [canPersonal])
 
   useEffect(() => {
     function checkMobile() {
@@ -413,6 +442,8 @@ export default function Home() {
       .select("*")
       .order("fecha", { ascending: true })
     setAllEnsayos(ensayosData || [])
+
+    if (canPersonalRef.current) await loadPersonalEvents()
 
     // Memoria de emails externos para autocompletar invitaciones
     const { data: contactsData } = await supabase
@@ -644,6 +675,19 @@ export default function Home() {
       editable: false,
     }))
 
+    // Personales: solo existen para su dueño (RLS) y no tienen cliente/participantes.
+    const personalEvents = (filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allPersonal).map((e) => ({
+      id: `${PERSONAL_EVENT_PREFIX}${e.id}`,
+      title: `🔒 ${e.titulo || "Personal"}`,
+      start: !e.all_day && e.hora_inicio ? `${e.fecha}T${e.hora_inicio}` : e.fecha,
+      end:   !e.all_day && e.hora_fin    ? `${e.fecha}T${e.hora_fin}`    : undefined,
+      allDay: !!e.all_day || !e.hora_inicio,
+      backgroundColor: PERSONAL_COLOR,
+      borderColor:     "#94a3b8",
+      textColor: "#e2e8f0",
+      editable: false,
+    }))
+
     setEvents([
       ...(showLlamados ? shootEvents : []),
       ...(showVacaciones ? vacationEvents : []),
@@ -651,12 +695,14 @@ export default function Home() {
       ...(showAniversarios ? anniversaryEvents : []),
       ...(showJuntas ? juntaEvents : []),
       ...(showEnsayos ? ensayoEvents : []),
+      ...(showPersonal ? personalEvents : []),
     ])
   }, [
     allShoots,
     allVacations,
     allJuntas,
     allEnsayos,
+    allPersonal,
     juntaAttendeeMap,
     employees,
     shootResources,
@@ -674,6 +720,7 @@ export default function Home() {
     showVacaciones,
     showJuntas,
     showEnsayos,
+    showPersonal,
     showCumpleanos,
     showAniversarios,
   ])
@@ -931,6 +978,14 @@ export default function Home() {
     setEnsayoAllDay(false)
     setSelectedEnsayo(null)
     setEnsayoDetailsOpen(false)
+    setPersonalTitulo("")
+    setPersonalDate("")
+    setPersonalStartTime("09:00")
+    setPersonalEndTime("")
+    setPersonalAllDay(false)
+    setPersonalNotas("")
+    setSelectedPersonal(null)
+    setPersonalDetailsOpen(false)
   }
 
   function clearFilters() {
@@ -971,12 +1026,14 @@ export default function Home() {
     setVacationEndDate(endDate)
     setJuntaDate(startDate)
     setEnsayoDate(startDate)
+    setPersonalDate(startDate)
 
     const isMultiDay = endDate > startDate
 
     if (isMultiDay || info.allDay) {
       setAllDay(true)
       setEnsayoAllDay(true)
+      setPersonalAllDay(true)
     } else {
       const st = info.start.toTimeString().slice(0, 5)
       setStartTime(st)
@@ -985,6 +1042,9 @@ export default function Home() {
       setEnsayoStartTime(st)
       setEnsayoEndTime(info.end.toTimeString().slice(0, 5))
       setEnsayoAllDay(false)
+      setPersonalStartTime(st)
+      setPersonalEndTime(info.end.toTimeString().slice(0, 5))
+      setPersonalAllDay(false)
     }
 
     setModalOpen(true)
@@ -1015,6 +1075,13 @@ export default function Home() {
       const vacation = allVacations.find((item) => item.id === vacationId)
       setSelectedVacation(vacation || null)
       setVacationDetailsOpen(true)
+      return
+    }
+
+    if (eventId.startsWith(PERSONAL_EVENT_PREFIX)) {
+      const personalId = eventId.slice(PERSONAL_EVENT_PREFIX.length)
+      setSelectedPersonal(allPersonal.find((item) => item.id === personalId) || null)
+      setPersonalDetailsOpen(true)
       return
     }
 
@@ -1128,7 +1195,7 @@ export default function Home() {
       const emp = employees.find((e: any) => e.id === empId)
       return emp ? [employeeDisplayName(emp)] : []
     }
-    if (id.startsWith(ENSAYO_EVENT_PREFIX)) return []
+    if (id.startsWith(ENSAYO_EVENT_PREFIX) || id.startsWith(PERSONAL_EVENT_PREFIX)) return []
     // Llamado
     return getShootEmployees(id).map((e: any) => employeeDisplayName(e))
   }
@@ -1785,7 +1852,62 @@ function openEditVacation() {
     setModalOpen(true)
   }
 
+  async function savePersonal() {
+    if (savingEntry) return
+    if (!canPersonal) return
+    if (!personalDate) { alert("Selecciona una fecha"); return }
+    setSavingEntry(true)
+
+    const payload = {
+      titulo:      personalTitulo.trim() || null,
+      fecha:       personalDate,
+      all_day:     personalAllDay,
+      hora_inicio: personalAllDay ? null : (personalStartTime || "09:00"),
+      hora_fin:    personalAllDay ? null : (personalEndTime || null),
+      notas:       personalNotas.trim() || null,
+      updated_at:  new Date().toISOString(),
+    }
+
+    const { error } = selectedPersonal
+      ? await supabase.from("personal_events").update(payload).eq("id", selectedPersonal.id)
+      : await supabase.from("personal_events").insert(payload)
+    if (error) { setSavingEntry(false); alert(error.message); return }
+
+    setModalOpen(false)
+    setPersonalDetailsOpen(false)
+    resetForm()
+    await loadPersonalEvents()
+    setSavingEntry(false)
+  }
+
+  async function deletePersonal(id: string) {
+    if (!canPersonal) return
+    if (!confirm("¿Eliminar este evento personal?")) return
+    await supabase.from("personal_events").delete().eq("id", id)
+    setPersonalDetailsOpen(false)
+    setSelectedPersonal(null)
+    await loadPersonalEvents()
+  }
+
+  function openEditPersonal() {
+    if (!selectedPersonal || !canPersonal) return
+    setPersonalTitulo(selectedPersonal.titulo || "")
+    setPersonalDate(selectedPersonal.fecha)
+    setPersonalAllDay(!!selectedPersonal.all_day)
+    setPersonalStartTime(selectedPersonal.hora_inicio || "09:00")
+    setPersonalEndTime(selectedPersonal.hora_fin || "")
+    setPersonalNotas(selectedPersonal.notas || "")
+    setEntryMode("personal")
+    setPersonalDetailsOpen(false)
+    setModalOpen(true)
+  }
+
   async function saveEntry() {
+    if (entryMode === "personal") {
+      await savePersonal()
+      return
+    }
+
     if (entryMode === "junta") {
       await saveJunta()
       return
@@ -2307,6 +2429,7 @@ function openEditVacation() {
               { key: "vacaciones", label: "🏖️ Vacaciones", color: "#9333ea", active: showVacaciones, set: setShowVacaciones },
               { key: "juntas",     label: "📋 Juntas",     color: "#0891b2", active: showJuntas,     set: setShowJuntas },
               { key: "ensayos",    label: "🎭 Ensayos",    color: "#db2777", active: showEnsayos,    set: setShowEnsayos },
+              ...(canPersonal ? [{ key: "personal", label: "🔒 Personal", color: "#64748b", active: showPersonal, set: setShowPersonal }] : []),
               { key: "cumple",     label: "🎂 Cumpleaños", color: "#f59e0b", active: showCumpleanos, set: setShowCumpleanos },
               { key: "aniv",       label: "🎉 Aniversarios", color: "#14b8a6", active: showAniversarios, set: setShowAniversarios },
             ] as const).map(({ key, label, color, active, set }) => (
@@ -2545,6 +2668,8 @@ function openEditVacation() {
                         ? "Editar vacaciones"
                         : selectedShoot
                           ? "Editar llamado"
+                          : entryMode === "personal"
+                            ? (selectedPersonal ? "Editar evento personal" : "Nuevo evento personal")
                           : entryMode === "ensayo"
                             ? (selectedEnsayo ? "Editar ensayo" : "Nuevo ensayo")
                             : entryMode === "junta"
@@ -2576,10 +2701,10 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
-                {!selectedShoot && !selectedVacation && !selectedJunta && !selectedEnsayo && (canEdit || isProductorRole) && (
+                {!selectedShoot && !selectedVacation && !selectedJunta && !selectedEnsayo && !selectedPersonal && (canEdit || isProductorRole) && (
                   <div style={{
                     ...entryModeSwitchWrapStyle,
-                    gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (canEdit ? 1 : 0)}, 1fr)`,
+                    gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (canEdit ? 1 : 0) + (canPersonal ? 1 : 0)}, 1fr)`,
                   }}>
                     {canEdit && (
                       <button
@@ -2645,10 +2770,92 @@ function openEditVacation() {
                         Ensayo
                       </button>
                     )}
+                    {canPersonal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedDate) setPersonalDate(selectedDate)
+                          setEntryMode("personal")
+                        }}
+                        style={{
+                          ...entryModeSwitchButtonStyle,
+                          ...(entryMode === "personal" ? entryModeSwitchActiveStyle : {}),
+                        }}
+                      >
+                        🔒 Personal
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {entryMode === "ensayo" && !selectedShoot && !selectedVacation && !selectedJunta ? (
+                {entryMode === "personal" && canPersonal && !selectedShoot && !selectedVacation && !selectedJunta ? (
+                  <div style={formModalColumnStyle}>
+                    <p style={formModalSectionLabelStyle}>{selectedPersonal ? "Editar evento personal" : "Nuevo evento personal"}</p>
+                    <p style={{ margin: 0, color: "#94a3b8", fontSize: 12 }}>
+                      🔒 Solo tú ves este evento. No se avisa ni se muestra a nadie más.
+                    </p>
+
+                    <div>
+                      <label style={formModalLabelStyle}>Título</label>
+                      <input
+                        type="text"
+                        value={personalTitulo}
+                        onChange={(e) => setPersonalTitulo(e.target.value)}
+                        placeholder="Ej. Dentista, comida con familia..."
+                        style={formModalInputStyle}
+                      />
+                    </div>
+
+                    <DatePickerField
+                      label="Fecha"
+                      value={personalDate}
+                      labelStyle={formModalLabelStyle}
+                      onChange={setPersonalDate}
+                    />
+
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#cbd5e1", fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={personalAllDay}
+                        onChange={(e) => setPersonalAllDay(e.target.checked)}
+                      />
+                      Todo el día
+                    </label>
+
+                    {!personalAllDay && (
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={formModalLabelStyle}>Hora inicio</label>
+                          <input
+                            type="time"
+                            value={personalStartTime}
+                            onChange={(e) => setPersonalStartTime(e.target.value)}
+                            style={formModalInputStyle}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={formModalLabelStyle}>Hora fin</label>
+                          <input
+                            type="time"
+                            value={personalEndTime}
+                            onChange={(e) => setPersonalEndTime(e.target.value)}
+                            style={formModalInputStyle}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={formModalLabelStyle}>Notas (opcional)</label>
+                      <textarea
+                        value={personalNotas}
+                        onChange={(e) => setPersonalNotas(e.target.value)}
+                        rows={3}
+                        style={{ ...formModalInputStyle, resize: "vertical", minHeight: 72 }}
+                      />
+                    </div>
+                  </div>
+                ) : entryMode === "ensayo" && !selectedShoot && !selectedVacation && !selectedJunta ? (
                   <div style={formModalColumnStyle}>
                     <p style={formModalSectionLabelStyle}>{selectedEnsayo ? "Editar ensayo" : "Nuevo ensayo"}</p>
 
@@ -3520,6 +3727,10 @@ function openEditVacation() {
                 >
                   {savingEntry
                     ? "Guardando..."
+                    : entryMode === "personal"
+                    ? selectedPersonal
+                      ? "Guardar evento"
+                      : "Crear evento"
                     : entryMode === "ensayo"
                     ? selectedEnsayo
                       ? "Guardar ensayo"
@@ -3897,6 +4108,41 @@ function openEditVacation() {
                     Borrar
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {personalDetailsOpen && selectedPersonal && canPersonal && (
+          <div style={overlayStyle} className="modal-overlay">
+            <div
+              style={{ ...formModalStyle, maxWidth: 400, borderRadius: 16 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={formModalHeaderStyle}>
+                <div>
+                  <h2 style={formModalTitleStyle}>🔒 {selectedPersonal.titulo || "Personal"}</h2>
+                  <p style={formModalMetaStyle}>
+                    {formatVacationDate(selectedPersonal.fecha)}
+                    {selectedPersonal.all_day || !selectedPersonal.hora_inicio
+                      ? " · Todo el día"
+                      : ` · ${selectedPersonal.hora_inicio}${selectedPersonal.hora_fin ? ` – ${selectedPersonal.hora_fin}` : ""} hrs`}
+                  </p>
+                </div>
+                <button onClick={() => { setPersonalDetailsOpen(false); setSelectedPersonal(null) }} style={formModalCloseStyle} aria-label="Cerrar">×</button>
+              </div>
+              <div style={formModalBodyStyle}>
+                <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(100,116,139,0.12)", border: "1px solid rgba(148,163,184,0.25)" }}>
+                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: 13 }}>🔒 Evento personal: solo tú lo ves.</p>
+                </div>
+                {selectedPersonal.notas && (
+                  <FormModalPreviewField label="Notas" value={selectedPersonal.notas} multiline />
+                )}
+              </div>
+              <div style={formModalFooterStyle}>
+                <button onClick={() => { setPersonalDetailsOpen(false); setSelectedPersonal(null) }} style={formModalSecondaryButtonStyle}>Cerrar</button>
+                <button onClick={openEditPersonal} style={formModalPrimaryButtonStyle}>Editar</button>
+                <button onClick={() => deletePersonal(selectedPersonal.id)} style={formModalDangerButtonStyle}>Borrar</button>
               </div>
             </div>
           </div>
