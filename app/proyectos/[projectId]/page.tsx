@@ -451,9 +451,14 @@ export default function ProjectDetailPage() {
             <div
               style={{
                 ...moduleGridStyle,
-                gridTemplateColumns: isMobile || visibleModules.length === 1
+                // En teléfono van en 2 columnas compactas (sin descripción) para
+                // no tener que bajar ~700px antes de llegar al contenido.
+                gridTemplateColumns: visibleModules.length === 1
                   ? "1fr"
-                  : "repeat(3, 1fr)",
+                  : isMobile
+                    ? "repeat(2, minmax(0, 1fr))"
+                    : "repeat(3, 1fr)",
+                ...(isMobile ? { gap: 8 } : {}),
               }}
             >
               {visibleModules.map((module) => {
@@ -477,6 +482,7 @@ export default function ProjectDetailPage() {
                     }}
                     style={{
                       ...moduleCardStyle,
+                      ...(isMobile && visibleModules.length > 1 ? { padding: "10px", gridTemplateColumns: "auto minmax(0, 1fr)", alignItems: "center", gap: 8 } : {}),
                       ...(isActive ? moduleCardActiveStyle : {}),
                     }}
                   >
@@ -484,9 +490,11 @@ export default function ProjectDetailPage() {
                       <ModuleIcon type={module.icon} />
                     </span>
                     <span style={moduleLabelStyle}>{module.label}</span>
-                    <span style={moduleDescriptionStyle}>
-                      {module.description}
-                    </span>
+                    {!(isMobile && visibleModules.length > 1) && (
+                      <span style={moduleDescriptionStyle}>
+                        {module.description}
+                      </span>
+                    )}
                     {module.comingSoon && (
                       <span style={comingSoonBadgeStyle}>Próximamente</span>
                     )}
@@ -1120,7 +1128,7 @@ function QuotesPanel({
           </Link>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8 }}>
           {quotes.map((q) => (
             <button
               key={q.id}
@@ -1349,8 +1357,10 @@ function QuoteModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal header */}
-        <div style={modalHeaderStyle}>
-          <div>
+        {/* En teléfono las acciones bajan a su propia fila y la ✕ queda fija
+            arriba a la derecha (antes se salían de la pantalla). */}
+        <div style={{ ...modalHeaderStyle, ...(isMobile ? { flexDirection: "column", position: "relative", padding: "16px 14px", gap: 12 } : {}) }}>
+          <div style={isMobile ? { minWidth: 0, paddingRight: 44 } : undefined}>
             <p style={modalEyebrowStyle}>Cotización</p>
             <h2 style={modalTitleStyle}>{quote.name}</h2>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
@@ -1363,7 +1373,7 @@ function QuoteModal({
               </span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: isMobile ? 1 : 0, flexWrap: "wrap" }}>
             <Link href={`/cotizaciones?quoteId=${quote.id}`} style={editQuoteBtnStyle}>
               ✏ Editar
             </Link>
@@ -1404,7 +1414,7 @@ function QuoteModal({
             <button onClick={handleExportPdf} disabled={exporting} style={pdfExportButtonStyle}>
               {exporting ? "Generando..." : "↓ PDF"}
             </button>
-            <button onClick={onClose} style={modalCloseStyle} aria-label="Cerrar">
+            <button onClick={onClose} style={{ ...modalCloseStyle, ...(isMobile ? { position: "absolute", top: 14, right: 14 } : {}) }} aria-label="Cerrar">
               ✕
             </button>
           </div>
@@ -2232,6 +2242,7 @@ const newQuoteButtonStyle: React.CSSProperties = {
 const quoteRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
+  minWidth: 0,
   gap: 12,
   padding: "12px 14px",
   borderRadius: 12,

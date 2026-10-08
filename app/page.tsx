@@ -2704,7 +2704,10 @@ function openEditVacation() {
                 {!selectedShoot && !selectedVacation && !selectedJunta && !selectedEnsayo && !selectedPersonal && (canEdit || isProductorRole) && (
                   <div style={{
                     ...entryModeSwitchWrapStyle,
-                    gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (canEdit ? 1 : 0) + (canPersonal ? 1 : 0)}, 1fr)`,
+                    // En teléfono las pestañas no caben en una fila: se acomodan en dos.
+                    ...(isMobile
+                      ? { display: "flex", flexWrap: "wrap" as const, gap: 6, alignSelf: "start" }
+                      : { gridTemplateColumns: `repeat(${(canEdit ? 1 : 0) + (canManageVacations ? 1 : 0) + 1 + (canEdit ? 1 : 0) + (canPersonal ? 1 : 0)}, 1fr)` }),
                   }}>
                     {canEdit && (
                       <button
@@ -4364,7 +4367,7 @@ function openEditVacation() {
                   onClick={shareSelectedShoot}
                   style={formModalWhatsAppButtonStyle}
                 >
-                  Compartir por WhatsApp
+                  {isMobile ? "WhatsApp" : "Compartir por WhatsApp"}
                 </button>
 
                 {canEdit && (
@@ -5703,6 +5706,9 @@ const formModalBodyStyle: React.CSSProperties = {
   overflowY: "auto",
   padding: "14px 16px",
   display: "grid",
+  // minmax(0, …): sin esto un hijo ancho (pestañas, selects) ensancha todo el
+  // formulario y en teléfono los campos se salen de la ventana.
+  gridTemplateColumns: "minmax(0, 1fr)",
   gap: 14,
 }
 
@@ -5713,6 +5719,7 @@ const formModalColumnsStyle: React.CSSProperties = {
 
 const formModalColumnStyle: React.CSSProperties = {
   display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
   gap: 8,
   alignContent: "start",
 }
@@ -5741,7 +5748,7 @@ const formModalLabelStyle: React.CSSProperties = {
 
 const formModalRowStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
   gap: 8,
 }
 
@@ -5831,6 +5838,9 @@ const formModalFooterStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
+  // Con 4–5 botones no caben en una fila de teléfono: bajan a otra línea en
+  // vez de empujar "Cerrar" fuera de la pantalla.
+  flexWrap: "wrap",
   gap: 8,
   padding: "12px 16px",
   borderTop: "1px solid rgba(148,163,184,0.10)",
@@ -5952,6 +5962,8 @@ const entryModeSwitchWrapStyle: React.CSSProperties = {
 }
 
 const entryModeSwitchButtonStyle: React.CSSProperties = {
+  flex: "1 1 auto",
+  whiteSpace: "nowrap",
   padding: "8px 12px",
   borderRadius: 8,
   border: "1px solid transparent",
