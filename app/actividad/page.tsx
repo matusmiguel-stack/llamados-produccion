@@ -256,10 +256,14 @@ export default function ActividadPage() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "rgba(2,6,23,0.35)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 10 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
-              <span style={dateLabelStyle}>del</span>
-              <input type="date" value={fFrom} onChange={e => setFFrom(e.target.value)} max={fTo || undefined} style={dateInputStyle} />
-              <span style={dateLabelStyle}>al</span>
-              <input type="date" value={fTo} onChange={e => setFTo(e.target.value)} min={fFrom || undefined} style={dateInputStyle} />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span style={dateLabelStyle}>del</span>
+                <input type="date" value={fFrom} onChange={e => setFFrom(e.target.value)} max={fTo || undefined} style={dateInputStyle} />
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span style={dateLabelStyle}>al</span>
+                <input type="date" value={fTo} onChange={e => setFTo(e.target.value)} min={fFrom || undefined} style={dateInputStyle} />
+              </span>
             </div>
             <input
               value={search}
