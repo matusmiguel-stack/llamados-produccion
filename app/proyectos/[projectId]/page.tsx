@@ -663,19 +663,19 @@ export default function ProjectDetailPage() {
             style={{ ...modalPanelStyle, maxWidth: isMobile ? "100%" : "min(1200px, 95vw)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={modalHeaderStyle}>
-              <div>
+            <div style={{ ...modalHeaderStyle, ...(isMobile ? { padding: "16px 14px", gap: 10 } : {}) }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={modalEyebrowStyle}>Proyecto · {project?.name}</p>
                 <h2 style={modalTitleStyle}>Control de egresos</h2>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10, flexShrink: 0 }}>
                 {isAdmin && !esGastosInternos && (
                   <button
                     onClick={toggleEgresosDirectos}
                     title="Permite capturar egresos a mano (sin cotización) y crear sub-listas, como en gastos retro. Ideal para proyectos por iguala."
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 7,
-                      padding: "7px 14px", borderRadius: 999, cursor: "pointer",
+                      padding: isMobile ? "7px 10px" : "7px 14px", borderRadius: 999, cursor: "pointer",
                       fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
                       border: esEgresosDirectos ? "1px solid rgba(52,211,153,0.45)" : "1px solid rgba(148,163,184,0.25)",
                       background: esEgresosDirectos ? "rgba(52,211,153,0.14)" : "transparent",
@@ -683,7 +683,7 @@ export default function ProjectDetailPage() {
                     }}
                   >
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: esEgresosDirectos ? "#34d399" : "#475569" }} />
-                    Egresos directos (iguala)
+                    {isMobile ? "Iguala" : "Egresos directos (iguala)"}
                   </button>
                 )}
                 <button

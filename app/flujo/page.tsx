@@ -550,7 +550,7 @@ export default function FlujoPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {flujo.semanas.map(sem => (
-              <div key={sem.lunes} style={{ ...semanaCardStyle, ...(sem.alerta ? { border: "1px solid rgba(248,113,113,0.35)" } : {}) }}>
+              <div key={sem.lunes} style={{ ...semanaCardStyle, ...(isMobile ? { padding: "14px 12px" } : {}), ...(sem.alerta ? { border: "1px solid rgba(248,113,113,0.35)" } : {}) }}>
                 {/* Header semana */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>
@@ -565,7 +565,23 @@ export default function FlujoPage() {
                   </div>
                 </div>
 
-                {/* Días */}
+                {/* Días — en teléfono las 5 columnas no caben: cada día va apilado */}
+                {isMobile ? (
+                  <div>
+                    {sem.dias.map(dia => (
+                      <DiaMovil
+                        key={dia.fecha}
+                        dia={dia}
+                        alertaMin={flujo.saldoMinimo}
+                        expandido={expanded.has(dia.fecha)}
+                        onToggle={() => toggleDay(dia.fecha)}
+                        onDeleteMov={deleteMov}
+                        esHoy={dia.fecha === hoy}
+                        mostrarEmpresa={tab === "combinado"}
+                      />
+                    ))}
+                  </div>
+                ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr>
@@ -589,6 +605,7 @@ export default function FlujoPage() {
                     ))}
                   </tbody>
                 </table>
+                )}
               </div>
             ))}
           </div>
@@ -737,6 +754,59 @@ function FragmentoDia({ dia, alertaMin, expandido, onToggle, onDeleteMov, esHoy,
         </tr>
       ))}
     </>
+  )
+}
+
+function DiaMovil({ dia, alertaMin, expandido, onToggle, onDeleteMov, esHoy, mostrarEmpresa }: {
+  dia: { fecha: string; entradas: number; salidas: number; neto: number; saldo: number; eventos: Evento[]; alerta: boolean }
+  alertaMin: number
+  expandido: boolean
+  onToggle: () => void
+  onDeleteMov: (id: string) => void
+  esHoy: boolean
+  mostrarEmpresa: boolean
+}) {
+  const mono: React.CSSProperties = { fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }
+  return (
+    <div style={{ borderBottom: "1px solid rgba(148,163,184,0.07)", background: dia.alerta ? "rgba(239,68,68,0.07)" : "transparent" }}>
+      <button
+        onClick={onToggle}
+        style={{ display: "grid", gap: 4, width: "100%", padding: "10px 6px", background: "none", border: "none", textAlign: "left", cursor: "pointer", color: "inherit" }}
+      >
+        <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: esHoy ? "#a78bfa" : "#e2e8f0" }}>
+            {fmtDia(dia.fecha)}{esHoy ? " · HOY" : ""}
+          </span>
+          <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: dia.saldo < alertaMin ? "#f87171" : "#f8fafc", whiteSpace: "nowrap" }}>
+            {fmt(dia.saldo)} <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 400 }}>{expandido ? "▲" : "▼"}</span>
+          </span>
+        </span>
+        <span style={{ ...mono, display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11 }}>
+          <span style={{ color: dia.entradas > 0 ? "#4ade80" : "#475569" }}>{dia.entradas > 0 ? `+${fmt(dia.entradas)}` : "+—"}</span>
+          <span style={{ color: dia.salidas > 0 ? "#f87171" : "#475569" }}>{dia.salidas > 0 ? `–${fmt(dia.salidas)}` : "–—"}</span>
+          <span style={{ color: dia.neto >= 0 ? "#4ade80" : "#f87171", fontWeight: 600 }}>= {dia.neto >= 0 ? "+" : ""}{fmt(dia.neto)}</span>
+        </span>
+        {dia.eventos.some(e => e.atrasado) && <span style={{ fontSize: 10, color: "#f87171" }}>⚠ incluye atrasados</span>}
+      </button>
+      {expandido && dia.eventos.map((e, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 6px 8px 12px", background: "rgba(255,255,255,0.015)", borderTop: "1px solid rgba(148,163,184,0.05)" }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#cbd5e1", overflowWrap: "anywhere" }}>
+            <span style={{ display: "inline-block", padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, marginRight: 6, background: `${FUENTE_META[e.fuente].color}22`, color: FUENTE_META[e.fuente].color, border: `1px solid ${FUENTE_META[e.fuente].color}44` }}>
+              {FUENTE_META[e.fuente].label}
+            </span>
+            {e.concepto}
+            {mostrarEmpresa && <span style={{ marginLeft: 6, fontSize: 10, color: "#7d8ca3" }}>{EMPRESA_LABEL[e.empresa]}</span>}
+            {e.atrasado && <span style={{ display: "block", marginTop: 2, fontSize: 10, color: "#f87171" }}>⚠ venció {fmtDia(e.fechaOriginal)}</span>}
+          </div>
+          <span style={{ ...mono, fontSize: 12, whiteSpace: "nowrap", color: e.tipo === "ingreso" ? "#4ade80" : "#f87171" }}>
+            {e.tipo === "ingreso" ? "+" : "–"}{fmt(e.monto)}
+          </span>
+          {e.fuente === "manual" && e.movId && (
+            <button onClick={() => onDeleteMov(e.movId!)} aria-label="Borrar movimiento" style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>✕</button>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }
 

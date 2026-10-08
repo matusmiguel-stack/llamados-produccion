@@ -1110,6 +1110,9 @@ export default function CotizacionesPage() {
     window.location.href = "/login"
   }
 
+  // En teléfono las 3 columnas de importes no caben a 90px: se compactan.
+  const summaryColMobile: React.CSSProperties = isMobile ? { minWidth: 58, fontSize: 11 } : {}
+
   const twoCol = { display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }
 
   return (
@@ -1368,15 +1371,15 @@ export default function CotizacionesPage() {
               <p style={panelTitleStyle}>Resumen financiero</p>
             </div>
 
-            <div style={{ display: "grid", gap: isMobile ? 20 : 0, gridTemplateColumns: isMobile ? "1fr" : "1fr auto" }}>
+            <div style={{ display: "grid", gap: isMobile ? 20 : 0, gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "1fr auto" }}>
               {/* Breakdown por rubro */}
-              <div style={{ paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
+              <div style={{ minWidth: 0, paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
                 {/* Header */}
                 <div style={summaryHeaderRowStyle}>
                   <span style={{ flex: 1, color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Rubro</span>
-                  <span style={summaryColHeaderStyle}>Gasto</span>
-                  <span style={summaryColHeaderStyle}>Utilidad</span>
-                  <span style={summaryColHeaderStyle}>Venta</span>
+                  <span style={{ ...summaryColHeaderStyle, ...summaryColMobile }}>Gasto</span>
+                  <span style={{ ...summaryColHeaderStyle, ...summaryColMobile }}>Utilidad</span>
+                  <span style={{ ...summaryColHeaderStyle, ...summaryColMobile }}>Venta</span>
                 </div>
 
                 {RUBROS.map((r) => {
@@ -1390,16 +1393,16 @@ export default function CotizacionesPage() {
                           {r.num}. {r.label}
                         </span>
                       </div>
-                      <span style={{ ...summaryColStyle, color: hasValue ? "#94a3b8" : "#334155" }}>{fmt(f.gasto)}</span>
-                      <span style={{ ...summaryColStyle, color: hasValue ? "#34d399" : "#334155" }}>{fmt(f.utilidad)}</span>
-                      <span style={{ ...summaryColStyle, color: hasValue ? "#e2e8f0" : "#334155", fontWeight: hasValue ? 600 : 400 }}>{fmt(f.venta)}</span>
+                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#94a3b8" : "#334155" }}>{fmt(f.gasto)}</span>
+                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#34d399" : "#334155" }}>{fmt(f.utilidad)}</span>
+                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#e2e8f0" : "#334155", fontWeight: hasValue ? 600 : 400 }}>{fmt(f.venta)}</span>
                     </div>
                   )
                 })}
               </div>
 
               {/* Totales globales + guardar */}
-              <div style={{ paddingLeft: isMobile ? 0 : 32, display: "grid", gap: 0, alignContent: "start", minWidth: 240 }}>
+              <div style={{ paddingLeft: isMobile ? 0 : 32, display: "grid", gap: 0, alignContent: "start", minWidth: isMobile ? 0 : 240 }}>
                 <TotalBlock label="Total gasto" value={fmt(globalFinancials.gasto)} color="#94a3b8" />
                 <TotalBlock label="Total utilidad" value={fmt(globalFinancials.utilidad)} color="#34d399" />
                 <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />

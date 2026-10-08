@@ -627,12 +627,13 @@ export function MatrizPanel({
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: 16,
           paddingBottom: 14,
           borderBottom: "1px solid rgba(148,163,184,0.10)",
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: "1 1 180px", minWidth: 0 }}>
           {editing ? (
             <input
               type="text"

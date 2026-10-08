@@ -573,3 +573,54 @@ html {
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* ── Control de egresos en teléfono ──────────────────────────────────────────
+   La tabla (7 columnas, ~1000px) obligaba a deslizar de lado para llegar al
+   status y a los botones. En pantallas angostas cada fila se apila como
+   tarjeta; el contenido de las celdas es el mismo, solo cambia el acomodo. */
+@media (max-width: 767px) {
+  table.egresos-table,
+  table.egresos-table tbody,
+  table.egresos-table tfoot,
+  table.egresos-table tr,
+  table.egresos-table td {
+    display: block;
+    width: auto !important;
+    max-width: none !important;
+  }
+  table.egresos-table thead { display: none; }
+  table.egresos-table tbody tr {
+    padding: 12px 12px 10px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16) !important;
+  }
+  table.egresos-table td {
+    padding: 4px 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+  }
+  table.egresos-table tbody td::before {
+    display: block;
+    margin-bottom: 2px;
+    color: #6b7c93;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  table.egresos-table tbody td:nth-child(1)::before { content: "Sección"; }
+  table.egresos-table tbody td:nth-child(2) { font-size: 14px !important; font-weight: 600; }
+  table.egresos-table tbody td:nth-child(3)::before { content: "Proveedor / Empleado"; }
+  table.egresos-table tbody td:nth-child(4)::before { content: "P. unitario"; }
+  table.egresos-table tbody td:nth-child(5)::before { content: "Monto"; }
+  table.egresos-table tbody td:nth-child(6)::before { content: "Status"; }
+  table.egresos-table tbody td:nth-child(7) { padding-top: 8px !important; }
+  table.egresos-table tfoot tr {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  table.egresos-table tfoot td:empty { display: none; }
+}

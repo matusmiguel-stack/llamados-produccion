@@ -831,7 +831,7 @@ export function EgresosPanel({
     const quoteTotal = qItems.reduce((s, i) => s + montoEgreso(i), 0)
     return (
       <div style={tableWrapStyle}>
-        <table style={{ ...tableStyle, width: isMobile ? "100%" : "auto" }}>
+        <table className="egresos-table" style={{ ...tableStyle, width: isMobile ? "100%" : "auto" }}>
           <thead>
             <tr>
               {([

@@ -831,6 +831,106 @@ export default function IngresosPage() {
             </p>
             <button onClick={openCreate} style={{ ...newBtnStyle, marginTop: 12 }}>+ Agregar primero</button>
           </div>
+        ) : isMobile ? (
+          // En teléfono la tabla (12 columnas) obligaba a arrastrar de lado para
+          // llegar a los botones: cada ingreso se muestra como tarjeta.
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ color: "#7d8ca3", fontSize: 12, flexShrink: 0 }}>Ordenar por</span>
+              <select
+                value={sortKey || "cliente"}
+                onChange={(e) => { setSortKey(e.target.value); setSortDir("asc") }}
+                style={mobileSortSelectStyle}
+              >
+                <option value="cliente">Cliente</option>
+                <option value="estatus">Estatus</option>
+                <option value="proyecto">Proyecto</option>
+                <option value="subtotal">Subtotal</option>
+                <option value="fecha">Fecha de pago</option>
+                <option value="responsable">Responsable</option>
+                <option value="mes">Mes de cierre</option>
+              </select>
+              <button
+                onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+                style={mobileSortDirStyle}
+                aria-label="Cambiar dirección del orden"
+              >
+                {sortDir === "asc" ? "▲" : "▼"}
+              </button>
+            </div>
+
+            {rows.map((r) => {
+              const cfg = ESTATUS[r.estatus]
+              const fechaRef = r.fecha_pago || r.fecha_aprox_pago
+              const isPaid = r.estatus === "pagado"
+              const isOverdue = !isPaid && !!fechaRef && fechaRef < today
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    ...mobileCardStyle,
+                    background: isPaid ? "#0f211d" : isOverdue ? "#1d151a" : "#0d1117",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={estatusBadgeStyle(cfg)}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block", marginRight: 5, flexShrink: 0 }} />
+                      {cfg.label}
+                    </span>
+                    {isOverdue && <span style={overdueBadgeStyle}>⚠ Vencido</span>}
+                  </div>
+
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: 0, color: "#e2e8f0", fontWeight: 600, fontSize: 14, overflowWrap: "anywhere" }}>{clienteLabel(r)}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, color: "#94a3b8", overflowWrap: "anywhere" }}>
+                      {(r.project_id || r.liquidacion_project_id) ? (
+                        <Link href={`/proyectos/${r.project_id || r.liquidacion_project_id}`} style={{ color: "#a78bfa", textDecoration: "none" }}>
+                          {proyectoLabel(r)}
+                        </Link>
+                      ) : (
+                        proyectoLabel(r)
+                      )}
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ color: "#f8fafc", fontSize: 18, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(r.subtotal)}</span>
+                    <span style={{ color: "#a78bfa", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>c/IVA {fmt(r.subtotal + r.iva)}</span>
+                  </div>
+
+                  <div style={mobileMetaGridStyle}>
+                    <MobileMeta label="Fecha pago" value={fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)} color={r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : undefined} />
+                    <MobileMeta label="Mes cierre" value={r.mes_cierre || "—"} />
+                    <MobileMeta label="Factura" value={r.numero_factura || "—"} />
+                    <MobileMeta label="ODC" value={r.odc || "—"} />
+                    <MobileMeta label="Responsable" value={responsableLabel(r.responsable)} />
+                    <MobileMeta label="IVA" value={fmt(r.iva)} />
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {r.estatus !== "facturado" && r.estatus !== "pagado" && (
+                      <button onClick={() => openFacturarModal(r)} style={{ ...facturarBtnStyle, ...mobileActionStyle }}>✓ Facturar</button>
+                    )}
+                    {r.estatus !== "pagado" && (
+                      <button onClick={() => openPayModal(r)} style={{ ...marcarPagoBtnStyle, ...mobileActionStyle }}>✓ Marcar Pago</button>
+                    )}
+                    <button onClick={() => openEdit(r)} style={{ ...actionBtnStyle, ...mobileActionStyle, marginLeft: "auto", minWidth: 36 }} aria-label="Editar">✎</button>
+                    {(isAdmin || !r.project_id) && (
+                      <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, ...mobileActionStyle, color: "#f87171", minWidth: 36 }} aria-label="Borrar">✕</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            <div style={{ ...mobileCardStyle, background: "#11151b" }}>
+              <span style={{ color: "#7d8ca3", fontSize: 12 }}>{rows.length} registro{rows.length !== 1 ? "s" : ""}</span>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ color: "#f8fafc", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(rows.reduce((s, r) => s + r.subtotal, 0))}</span>
+                <span style={{ color: "#a78bfa", fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>c/IVA {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}</span>
+              </div>
+            </div>
+          </div>
         ) : (
           <div style={tableWrapStyle}>
             <table style={tableStyle}>
@@ -1417,7 +1517,8 @@ const layoutStyle: React.CSSProperties = {
 
 const mainStyle = (isMobile: boolean): React.CSSProperties => ({
   flex: 1,
-  padding: isMobile ? "20px 14px 40px" : "32px 36px 48px",
+  // En móvil el botón de menú flota arriba a la izquierda: se deja libre esa franja.
+  padding: isMobile ? "64px 14px 40px" : "32px 36px 48px",
   overflowX: "hidden",
   minWidth: 0,
 })
@@ -1544,6 +1645,61 @@ const statusPillActiveStyle: React.CSSProperties = {
   background: "rgba(148,163,184,0.12)",
   color: "#f8fafc",
   border: "1px solid rgba(148,163,184,0.22)",
+}
+
+function MobileMeta({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <p style={{ margin: 0, color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</p>
+      <p style={{ margin: "1px 0 0", color: color || "#cbd5e1", fontSize: 12, overflowWrap: "anywhere" }}>{value}</p>
+    </div>
+  )
+}
+
+const mobileCardStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  padding: "12px 14px",
+  borderRadius: 12,
+  border: "1px solid rgba(148,163,184,0.12)",
+  minWidth: 0,
+}
+
+const mobileMetaGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+  gap: "8px 12px",
+  paddingTop: 8,
+  borderTop: "1px solid rgba(148,163,184,0.08)",
+}
+
+// Botones con alto cómodo para el dedo (≥ 36px).
+const mobileActionStyle: React.CSSProperties = {
+  minHeight: 36,
+  padding: "8px 12px",
+  fontSize: 13,
+}
+
+const mobileSortSelectStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.16)",
+  background: "rgba(2,6,23,0.55)",
+  color: "#f8fafc",
+  fontSize: 13,
+}
+
+const mobileSortDirStyle: React.CSSProperties = {
+  width: 38,
+  height: 36,
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.16)",
+  background: "transparent",
+  color: "#a78bfa",
+  cursor: "pointer",
+  flexShrink: 0,
 }
 
 const tableWrapStyle: React.CSSProperties = {
