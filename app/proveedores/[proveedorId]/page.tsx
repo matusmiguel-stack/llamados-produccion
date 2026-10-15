@@ -43,6 +43,9 @@ type EgresoRow = {
   quote_id: string
   quote_name: string
   section_name: string
+  project_code: string | null
+  pago_estado: string | null
+  pago_fecha: string | null
 }
 
 type FacturaRow = {
@@ -85,6 +88,13 @@ const FAC_STATUS: Record<string, { label: string; bg: string; border: string; te
   aceptada:  { label: "Por pagar", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#fbbf24" },
   pagada:    { label: "Pagada",    bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#34d399" },
   rechazada: { label: "Rechazada", bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#f87171" },
+}
+
+const ORIGEN_LABEL: Record<string, string> = {
+  anticipo: "Anticipo",
+  comprobacion: "Comprobación",
+  reembolso: "Reembolso",
+  pago_directo: "Pago sin factura",
 }
 
 function initials(nombre: string, apellido: string) {
@@ -175,28 +185,30 @@ export default function ProveedorDetailPage() {
 
       // Facturas del proveedor (espejo de Finanzas) — RLS solo deja leerlas a
       // admin/finanzas; para otros roles regresa vacío sin error.
-      if (["admin", "finanzas"].includes(auth.profile.role)) {
-        const { data: facs } = await supabase
-          .from("facturas")
-          .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, xml_path, pdf_path, es_historico, projects(name, code)")
-          .eq("proveedor_id", proveedorId)
-          .order("created_at", { ascending: false })
-        setFacturas((facs || []).map((f: any) => ({
-          id: f.id, subtotal: f.subtotal, total: f.total ?? null, status: f.status,
-          fecha_pago: f.fecha_pago, paid_at: f.paid_at, concepto: f.concepto,
-          origen: f.origen, forma_pago: f.forma_pago, motivo_rechazo: f.motivo_rechazo,
-          created_at: f.created_at, codigo_proyecto: f.codigo_proyecto,
-          comprobante_path: f.comprobante_path ?? null,
-          xml_path: f.xml_path ?? null, pdf_path: f.pdf_path ?? null,
-          project_name: f.projects?.name ?? null, project_code: f.projects?.code ?? null,
-          es_historico: !!f.es_historico,
-        })))
-      }
+      if (["admin", "finanzas"].includes(auth.profile.role)) await loadFacturas()
 
       setLoading(false)
     }
     load()
   }, [proveedorId])
+
+  async function loadFacturas() {
+    const { data: facs } = await supabase
+      .from("facturas")
+      .select("id, subtotal, total, status, fecha_pago, paid_at, concepto, origen, forma_pago, motivo_rechazo, created_at, codigo_proyecto, comprobante_path, xml_path, pdf_path, es_historico, projects(name, code)")
+      .eq("proveedor_id", proveedorId)
+      .order("created_at", { ascending: false })
+    setFacturas((facs || []).map((f: any) => ({
+      id: f.id, subtotal: f.subtotal, total: f.total ?? null, status: f.status,
+      fecha_pago: f.fecha_pago, paid_at: f.paid_at, concepto: f.concepto,
+      origen: f.origen, forma_pago: f.forma_pago, motivo_rechazo: f.motivo_rechazo,
+      created_at: f.created_at, codigo_proyecto: f.codigo_proyecto,
+      comprobante_path: f.comprobante_path ?? null,
+      xml_path: f.xml_path ?? null, pdf_path: f.pdf_path ?? null,
+      project_name: f.projects?.name ?? null, project_code: f.projects?.code ?? null,
+      es_historico: !!f.es_historico,
+    })))
+  }
 
   async function loadEgresos(provs: ProvCatalog[], emps: EmpCatalog[]) {
     const { data: items } = await supabase
@@ -204,11 +216,12 @@ export default function ProveedorDetailPage() {
       .select(`
         id, description, qty, days, unit_price,
         actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id,
+        pago_estado, pago_fecha,
         quote_sections!inner(
           name,
           quotes!inner(
             id, name, project_id,
-            projects!inner(id, name, clients!inner(name))
+            projects!inner(id, name, code, clients!inner(name))
           )
         )
       `)
@@ -238,6 +251,9 @@ export default function ProveedorDetailPage() {
         client_name: proj.clients?.name || "",
         quote_id: quote.id, quote_name: quote.name,
         section_name: sec.name,
+        project_code: proj.code ?? null,
+        pago_estado: item.pago_estado ?? null,
+        pago_fecha: item.pago_fecha ?? null,
       })
     }
 
@@ -308,6 +324,73 @@ export default function ProveedorDetailPage() {
       window.open(data.url, "_blank")
     } catch (err: any) {
       alert("Error al descargar: " + err.message)
+    }
+  }
+
+  // Pagar un egreso directamente (proveedores que no suben factura por el
+  // portal): la factura es opcional; el comprobante del banco sigue siendo
+  // obligatorio salvo en efectivo (misma regla que Control de egresos).
+  const [payEgreso, setPayEgreso] = useState<EgresoRow | null>(null)
+  const [eMonto, setEMonto] = useState("")
+  const [eFecha, setEFecha] = useState("")
+  const [eForma, setEForma] = useState("")
+  const [eComp, setEComp] = useState<File | null>(null)
+  const [eXml, setEXml] = useState<File | null>(null)
+  const [ePdf, setEPdf] = useState<File | null>(null)
+  const [ePaying, setEPaying] = useState(false)
+
+  function openPayEgreso(row: EgresoRow) {
+    setPayEgreso(row)
+    setEMonto(String(Math.round(row.monto * 100) / 100))
+    setEFecha(new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" }))
+    setEForma("")
+    setEComp(null); setEXml(null); setEPdf(null)
+  }
+
+  async function confirmPayEgreso() {
+    if (!payEgreso) return
+    const monto = parseFloat(eMonto)
+    if (!monto || monto <= 0) { alert("Indica el monto pagado"); return }
+    if (!eFecha) { alert("Indica la fecha en que se realizó el pago"); return }
+    if (!eForma) { alert("Indica de dónde salió el pago"); return }
+    if (eForma !== "Efectivo" && !eComp) { alert("Sube el comprobante de pago del banco (PDF o JPG)"); return }
+    const row = payEgreso
+    setEPaying(true)
+    try {
+      const comprobantePath = eComp ? await uploadComprobante(eComp, row.project_code) : ""
+      const fd = new FormData()
+      fd.append("itemId", row.id)
+      fd.append("tipo", "pago")
+      fd.append("monto", String(monto))
+      fd.append("concepto", row.description)
+      fd.append("proveedorId", proveedorId)
+      fd.append("projectId", row.project_id)
+      if (row.project_code) fd.append("codigo", row.project_code)
+      fd.append("formaPago", eForma)
+      fd.append("fechaPago", eFecha)
+      if (comprobantePath) fd.append("comprobantePath", comprobantePath)
+      if (eXml) fd.append("xml", eXml)
+      if (ePdf) fd.append("pdf", ePdf)
+      const { data: { session } } = await supabase.auth.getSession()
+      let res: Response
+      try {
+        res = await fetch("/api/egresos/pay", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+          body: fd,
+        })
+      } catch {
+        throw new Error(mensajeDeRed("No se pudo registrar el pago"))
+      }
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data.error) throw new Error(data.error || `No se pudo registrar el pago (error ${res.status})`)
+      setEgresos(prev => prev.map(x => x.id === row.id ? { ...x, pago_estado: "pagado", pago_fecha: eFecha } : x))
+      if (["admin", "finanzas"].includes(profile?.role)) await loadFacturas()
+      setPayEgreso(null)
+    } catch (err: any) {
+      alert("Error al registrar el pago: " + err.message)
+    } finally {
+      setEPaying(false)
     }
   }
 
@@ -601,8 +684,15 @@ export default function ProveedorDetailPage() {
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{days}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{price != null ? fmt(price) : "—"}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(row.monto)}</td>
-                                <td style={{ ...tdStyle, textAlign: "right" }}>
-                                  {canEdit && <button onClick={() => startEdit(row)} style={editBtnStyle}>✎ Editar</button>}
+                                <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
+                                  {row.pago_estado === "pagado" ? (
+                                    <span style={{ ...facPillStyle("#34d399"), marginRight: 8 }} title="Pago registrado">
+                                      ✓ Pagado{row.pago_fecha ? ` ${fmtDate(row.pago_fecha)}` : ""}
+                                    </span>
+                                  ) : isThisProv && (
+                                    <button onClick={() => openPayEgreso(row)} style={payEgresoBtnStyle}>💳 Pagar</button>
+                                  )}
+                                  {canEdit && row.pago_estado !== "pagado" && <button onClick={() => startEdit(row)} style={editBtnStyle}>✎ Editar</button>}
                                 </td>
                               </tr>
                             )
@@ -691,7 +781,7 @@ export default function ProveedorDetailPage() {
                             {f.status === "pagada" && <span style={facPillStyle("#34d399")}>✓ Pagada{f.paid_at ? ` ${fmtDate(f.paid_at)}` : ""}</span>}
                             {f.status === "rechazada" && <span style={facPillStyle("#f87171")}>Rechazada</span>}
                             {f.es_historico && <span style={facPillStyle("#fb923c")}>PASADO</span>}
-                            {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 400 }}>{f.origen}</span>}
+                            {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 400 }}>{ORIGEN_LABEL[f.origen] || f.origen}</span>}
                           </p>
                           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
                             {proyecto}
@@ -829,9 +919,96 @@ export default function ProveedorDetailPage() {
             </div>
           </div>
         )}
+
+        {/* ── Pagar egreso (factura opcional) ── */}
+        {payEgreso && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+            onClick={() => !ePaying && setPayEgreso(null)}
+          >
+            <div
+              style={{
+                width: "100%", maxWidth: 460, maxHeight: "calc(100vh - 32px)", overflowY: "auto",
+                background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
+                borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.5)", boxSizing: "border-box",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#34d399" }}>Pagar egreso</p>
+              <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{payEgreso.description}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>{payEgreso.project_name} · {payEgreso.quote_name}</p>
+
+              <p style={payEgresoLabelStyle}>Monto pagado *</p>
+              <input type="number" min="0" step="0.01" value={eMonto} onChange={e => setEMonto(e.target.value)} style={payEgresoInputStyle} />
+
+              <p style={payEgresoLabelStyle}>Fecha en que se realizó el pago *</p>
+              <input type="date" value={eFecha} max={new Date().toLocaleDateString("sv", { timeZone: "America/Mexico_City" })}
+                onChange={e => setEFecha(e.target.value)} style={{ ...payEgresoInputStyle, colorScheme: "dark" }} />
+
+              <p style={payEgresoLabelStyle}>¿De dónde salió el pago? *</p>
+              <select value={eForma} onChange={e => setEForma(e.target.value)} style={payEgresoInputStyle}>
+                <option value="">Selecciona…</option>
+                <option value="Retro Studio">Retro Studio</option>
+                <option value="Retro Films">Retro Films</option>
+                <option value="Konfio">Konfio</option>
+                <option value="Banregio">Banregio</option>
+                <option value="Efectivo">Efectivo</option>
+              </select>
+
+              <p style={payEgresoLabelStyle}>
+                Comprobante de pago del banco {eForma === "Efectivo" ? "(opcional)" : <span style={{ color: "#f87171" }}>*</span>}
+              </p>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                onChange={e => setEComp(e.target.files?.[0] || null)} style={payEgresoFileStyle} />
+
+              <div style={{ marginTop: 16, padding: "12px 12px 10px", borderRadius: 10, border: "1px dashed rgba(148,163,184,0.22)" }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>Factura del proveedor (opcional)</p>
+                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
+                  Súbela si el proveedor te la dio. Si se le pagó sin factura (p. ej. en efectivo), déjalo vacío.
+                </p>
+                <p style={{ ...payEgresoLabelStyle, marginTop: 0 }}>XML (CFDI)</p>
+                <input type="file" accept=".xml,text/xml" onChange={e => setEXml(e.target.files?.[0] || null)} style={payEgresoFileStyle} />
+                <p style={payEgresoLabelStyle}>PDF</p>
+                <input type="file" accept=".pdf,application/pdf" onChange={e => setEPdf(e.target.files?.[0] || null)} style={payEgresoFileStyle} />
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 18, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setPayEgreso(null)}
+                  disabled={ePaying}
+                  style={{ padding: "8px 16px", borderRadius: 8, cursor: "pointer", border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmPayEgreso}
+                  disabled={ePaying}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    cursor: ePaying ? "not-allowed" : "pointer", opacity: ePaying ? 0.6 : 1,
+                    border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.14)", color: "#34d399",
+                  }}
+                >
+                  {ePaying ? "Guardando…" : "✓ Registrar pago"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
+}
+
+const payEgresoLabelStyle: React.CSSProperties = { margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }
+const payEgresoInputStyle: React.CSSProperties = {
+  width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.2)", background: "rgba(2,6,23,0.55)", color: "#f8fafc", fontSize: 13, outline: "none",
+}
+const payEgresoFileStyle: React.CSSProperties = { fontSize: 12, color: "#94a3b8", width: "100%" }
+const payEgresoBtnStyle: React.CSSProperties = {
+  padding: "5px 12px", borderRadius: 7, marginRight: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
+  border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", color: "#34d399",
 }
 
 // ─── SupplierCombobox ─────────────────────────────────────────────────────────

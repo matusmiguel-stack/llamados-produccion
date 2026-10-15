@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiUser } from "../../../../lib/api-auth"
+import { parseUuidFiscal } from "../../../../lib/cfdi"
 
 const STAFF_ROLES = ["admin", "editor", "editor_premium"]
+// Finanzas también puede registrar el pago normal de un egreso (desde el
+// detalle del proveedor); anticipos y comprobaciones siguen siendo de staff.
+const PAGO_ROLES = [...STAFF_ROLES, "finanzas"]
 
 // Formas de pago que sí obligan a adjuntar la factura del anticipo.
 // Debe coincidir con FORMAS_CON_FACTURA en EgresosPanel.tsx.
@@ -15,8 +19,8 @@ async function requireStaff(req: Request) {
   const admin = createAdminClient(user.id)
   const { data: profile } = await admin
     .from("profiles").select("role").eq("id", user.id).single()
-  if (!profile || !STAFF_ROLES.includes(profile.role)) return null
-  return { user, admin }
+  if (!profile || !PAGO_ROLES.includes(profile.role)) return null
+  return { user, admin, role: profile.role as string }
 }
 
 function todayISO(): string {
@@ -28,11 +32,13 @@ export async function POST(req: Request) {
   try {
     const auth = await requireStaff(req)
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    const { admin } = auth
+    const { admin, role } = auth
 
     const form = await req.formData()
     const itemId = String(form.get("itemId") || "")
-    const tipo = String(form.get("tipo") || "")            // 'anticipo' | 'comprobacion'
+    // 'anticipo' | 'comprobacion' (control de egresos) | 'pago' (pago normal del
+    // egreso a un proveedor que no factura por el portal; factura opcional)
+    const tipo = String(form.get("tipo") || "")
     const monto = parseFloat(String(form.get("monto") || "0"))
     const concepto = String(form.get("concepto") || "").trim()
     const proveedorId = String(form.get("proveedorId") || "") || null
@@ -50,6 +56,12 @@ export async function POST(req: Request) {
     // grandes no pueden viajar por Vercel: corta requests > 4.5 MB)
     const compPathParam = String(form.get("comprobantePath") || "").trim() || null
 
+    if (!["anticipo", "comprobacion", "pago"].includes(tipo)) {
+      return NextResponse.json({ error: "Tipo de pago no válido" }, { status: 400 })
+    }
+    if (tipo !== "pago" && !STAFF_ROLES.includes(role)) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
     if (!itemId || !tipo || !monto || monto <= 0) {
       return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 })
     }
@@ -77,6 +89,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "El comprobante debe ser PDF, JPG o PNG" }, { status: 400 })
     }
 
+    // Pago normal: no pagar dos veces el mismo egreso, y si suben el XML que no
+    // sea una factura ya registrada (p.ej. que después llegue por el portal).
+    let uuidFiscal: string | null = null
+    if (tipo === "pago") {
+      const { data: item } = await admin.from("quote_items").select("pago_estado").eq("id", itemId).maybeSingle()
+      if (!item) return NextResponse.json({ error: "No se encontró el egreso" }, { status: 404 })
+      if (item.pago_estado === "pagado") {
+        return NextResponse.json({ error: "Este egreso ya está marcado como pagado" }, { status: 409 })
+      }
+      if (xmlFile && xmlFile.size > 0) {
+        if (!/\.xml$/i.test(xmlFile.name)) {
+          return NextResponse.json({ error: "La factura XML debe ser un archivo .xml" }, { status: 400 })
+        }
+        uuidFiscal = parseUuidFiscal(await xmlFile.text())
+        if (uuidFiscal) {
+          const { data: dup } = await admin.from("facturas").select("id").eq("uuid_fiscal", uuidFiscal).neq("status", "rechazada").limit(1)
+          if (dup && dup.length > 0) {
+            return NextResponse.json({ error: `Esta factura (folio fiscal ${uuidFiscal}) ya está registrada` }, { status: 409 })
+          }
+        }
+      }
+      if (pdfFile && pdfFile.size > 0 && !/\.pdf$/i.test(pdfFile.name)) {
+        return NextResponse.json({ error: "La factura PDF debe ser un archivo .pdf" }, { status: 400 })
+      }
+    }
+
     // Email del proveedor (para el registro en facturas)
     let proveedorEmail: string | null = null
     if (proveedorId) {
@@ -98,6 +136,21 @@ export async function POST(req: Request) {
       const pdfUp = await admin.storage.from("facturas")
         .upload(`${folder}/anticipo-${stamp}-${safe(pdfFile.name)}`, Buffer.from(await pdfFile.arrayBuffer()), { contentType: "application/pdf" })
       if (!pdfUp.error) pdfPath = pdfUp.data.path
+    }
+    // Pago normal: la factura es opcional y se puede subir solo XML, solo PDF o ambos.
+    if (tipo === "pago") {
+      if (xmlFile && xmlFile.size > 0) {
+        const up = await admin.storage.from("facturas")
+          .upload(`${folder}/pago-${stamp}-${safe(xmlFile.name)}`, Buffer.from(await xmlFile.arrayBuffer()), { contentType: "text/xml" })
+        if (up.error) return NextResponse.json({ error: `No se pudo guardar el XML: ${up.error.message}` }, { status: 500 })
+        xmlPath = up.data.path
+      }
+      if (pdfFile && pdfFile.size > 0) {
+        const up = await admin.storage.from("facturas")
+          .upload(`${folder}/pago-${stamp}-${safe(pdfFile.name)}`, Buffer.from(await pdfFile.arrayBuffer()), { contentType: "application/pdf" })
+        if (up.error) return NextResponse.json({ error: `No se pudo guardar el PDF: ${up.error.message}` }, { status: 500 })
+        pdfPath = up.data.path
+      }
     }
 
     // Comprobante de pago del banco (obligatorio salvo efectivo, validado arriba)
@@ -129,7 +182,10 @@ export async function POST(req: Request) {
         subtotal: monto,
         total: monto, // pago interno: el monto capturado es el que sale de caja
         status: "pagada",
-        origen: tipo,
+        // Pago normal con factura = factura del proveedor (subida por nosotros);
+        // sin factura (p.ej. efectivo) queda como "pago sin factura".
+        origen: tipo === "pago" ? (xmlPath || pdfPath ? "proveedor" : "pago_directo") : tipo,
+        ...(tipo === "pago" ? { quote_item_id: itemId, uuid_fiscal: uuidFiscal } : {}),
         forma_pago: formaPago,
         // Fecha real del pago (puede ser días antes de hoy).
         fecha_pago: fechaPago,

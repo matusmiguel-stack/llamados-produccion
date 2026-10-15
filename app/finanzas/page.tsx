@@ -26,7 +26,7 @@ type Factura = {
   comprobante_path: string | null
   created_at: string
   concepto: string | null
-  origen: "proveedor" | "anticipo" | "comprobacion" | "reembolso" | null
+  origen: "proveedor" | "anticipo" | "comprobacion" | "reembolso" | "pago_directo" | null
   forma_pago: string | null
   es_historico: boolean
   proveedores: { nombre: string; apellido: string; empresa: string | null } | null
@@ -38,6 +38,7 @@ const ORIGEN_LABEL: Record<string, string> = {
   comprobacion: "Comprobación",
   reembolso: "Reembolso",
   proveedor: "Factura proveedor",
+  pago_directo: "Pago sin factura",
 }
 
 const fmtMx = (n: number) =>
