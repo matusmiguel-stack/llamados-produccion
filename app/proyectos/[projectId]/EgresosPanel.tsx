@@ -35,7 +35,7 @@ type EgresoItem = {
   pago_fecha: string | null
 }
 
-type EditState = { qty: string; days: string; unit_price: string; contact: string; fecha_pago: string; section_id: string; pago_modo: string }
+type EditState = { description: string; qty: string; days: string; unit_price: string; contact: string; fecha_pago: string; section_id: string; pago_modo: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,7 +104,7 @@ export function EgresosPanel({
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [employees, setEmployees]   = useState<Employee[]>([])
   const [editingId, setEditingId]   = useState<string | null>(null)
-  const [editState, setEditState]   = useState<EditState>({ qty: "", days: "", unit_price: "", contact: "", fecha_pago: "", section_id: "", pago_modo: "" })
+  const [editState, setEditState]   = useState<EditState>({ description: "", qty: "", days: "", unit_price: "", contact: "", fecha_pago: "", section_id: "", pago_modo: "" })
   const [saving, setSaving]         = useState(false)
   // Sub-listas de egresos (secciones de la cotización contenedora) + alta de gasto
   const [subLists, setSubLists]           = useState<{ id: string; name: string; order_index: number }[]>([])
@@ -359,6 +359,7 @@ export function EgresosPanel({
       ? `prov:${item.actual_supplier_id}`
       : item.actual_employee_id ? `emp:${item.actual_employee_id}` : ""
     setEditState({
+      description: item.description,
       qty:        item.actual_qty        != null ? String(item.actual_qty)        : "",
       days:       item.actual_days       != null ? String(item.actual_days)       : "",
       unit_price: item.actual_unit_price != null ? String(item.actual_unit_price) : "",
@@ -435,10 +436,15 @@ export function EgresosPanel({
       // Permite mover el gasto a otra sub-lista (sección de la contenedora).
       const section_id = editState.section_id || undefined
       const newSectionName = subLists.find((s) => s.id === section_id)?.name
+      // La descripción solo se edita en gastos cargados directo (no en partidas de cotización).
+      const item = items.find(it => it.id === itemId)
+      const editableDesc = !!(item && containerQuoteId && item.quote_id === containerQuoteId)
+      const description = editableDesc ? editState.description.trim() : undefined
+      if (editableDesc && !description) { alert("Escribe la descripción del gasto"); return }
 
       const { error } = await supabase
         .from("quote_items")
-        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha, pago_modo, ...(section_id ? { section_id } : {}) })
+        .update({ actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, pago_fecha, pago_modo, ...(section_id ? { section_id } : {}), ...(description ? { description } : {}) })
         .eq("id", itemId)
       if (error) throw error
 
@@ -446,7 +452,7 @@ export function EgresosPanel({
       const { label: supplierLabel, type: supplierType } = resolveLabel(proveedores, employees, editState.contact)
       setItems(prev => prev.map(it => {
         if (it.id !== itemId) return it
-        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha, pago_modo,
+        const updated = { ...it, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id, supplierLabel, supplierType, pago_fecha, pago_modo, ...(description ? { description } : {}),
           ...(section_id ? { section_id, section_name: newSectionName ?? it.section_name } : {}) }
         // Recalcular monto — si queda en 0 lo quitamos
         const q2 = actual_qty        != null ? actual_qty        : Math.max(it.qty, 1)
@@ -892,7 +898,18 @@ export function EgresosPanel({
                       )}
                     </td>
                     <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
-                      {item.description}
+                      {containerQuoteId && item.quote_id === containerQuoteId ? (
+                        <input
+                          type="text"
+                          value={editState.description}
+                          onChange={e => setEditState(s => ({ ...s, description: e.target.value }))}
+                          onKeyDown={e => { if (e.key === "Enter") saveEdit(item.id) }}
+                          title="Descripción del gasto"
+                          style={{ ...editInputStyle, textAlign: "left", width: "100%", minWidth: 140 }}
+                        />
+                      ) : (
+                        <span title="Viene de la cotización; se cambia desde la cotización">{item.description}</span>
+                      )}
                     </td>
                     <td style={tdStyle}>
                       <SupplierCombobox
