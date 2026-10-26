@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     if (aprobar) {
       const { data: emp } = await admin
         .from("employees")
-        .select("id, nombre, apellido_paterno, nickname, email, puesto, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
+        .select("id, nombre, apellido_paterno, nickname, email, puesto, fecha_ingreso, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
         .eq("id", solicitud.employee_id)
         .maybeSingle()
       if (!emp) {
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
       }
 
       restantes = saldo.disponibles - consumenSaldo
-      reseteoISO = proximoReseteoISO(emp.vac_mes_reseteo || 1)
+      reseteoISO = proximoReseteoISO(emp)
       puesto = emp.puesto || null
     }
 

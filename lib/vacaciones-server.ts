@@ -1,6 +1,6 @@
 // Lógica de vacaciones compartida por las API routes (usa service role).
 
-import { contarDiasHabiles, isWeekend, periodoActual, resumenVacaciones } from "./vacaciones"
+import { contarDiasHabiles, isWeekend, periodoDelEmpleado, resumenVacaciones } from "./vacaciones"
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -10,6 +10,7 @@ export type EmployeeVac = {
   apellido_paterno: string
   nickname: string | null
   email: string
+  fecha_ingreso: string | null
   vac_anios: number | null
   vac_mes_reseteo: number | null
   vac_dias_base: number | null
@@ -54,7 +55,7 @@ export async function buscarEmpleadoPorEmail(admin: any, email: string): Promise
   if (!email?.trim()) return null
   const { data } = await admin
     .from("employees")
-    .select("id, nombre, apellido_paterno, nickname, email, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
+    .select("id, nombre, apellido_paterno, nickname, email, fecha_ingreso, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
     .eq("email", email.trim().toLowerCase())
     .maybeSingle()
   return (data as EmployeeVac) || null
@@ -76,7 +77,7 @@ export async function rangosDelEmpleado(admin: any, employeeId: string) {
 export async function calcularSaldo(admin: any, emp: EmployeeVac, excluirRequestId?: string) {
   const rangos = await rangosDelEmpleado(admin, emp.id)
   const resumen = resumenVacaciones(emp, rangos)
-  const { startISO, endISO } = periodoActual(emp.vac_mes_reseteo || 1)
+  const { startISO, endISO } = periodoDelEmpleado(emp)
 
   let query = admin
     .from("vacation_requests")

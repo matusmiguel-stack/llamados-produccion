@@ -6,7 +6,7 @@ import { AppSidebar } from "../../components/AppSidebar"
 import { PageLoader } from "../../components/PageLoader"
 import { requireSessionProfile } from "../../lib/session-profile"
 import {
-  MESES,
+  diaMesLargo,
   STATUS_INFO,
   agruparDiasEnRangos,
   describirRango,
@@ -67,7 +67,7 @@ export default function SolicitudesVacacionesPage() {
       supabase.from("vacation_requests").select("*").order("created_at", { ascending: false }),
       supabase
         .from("employees")
-        .select("id, nombre, apellido_paterno, nickname, puesto, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio"),
+        .select("id, nombre, apellido_paterno, nickname, puesto, fecha_ingreso, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio"),
       supabase.from("vacation_employees").select("employee_id, vacations(start_date, end_date)"),
     ])
 
@@ -247,7 +247,7 @@ export default function SolicitudesVacacionesPage() {
                             {resumen.restantes}
                           </strong> de {resumen.corresponden} días
                           {esPendiente && ` · quedarían ${resumen.restantes - dias}`}
-                          {" · resetea "}{MESES[resumen.mesReseteo - 1]}
+                          {" · resetea el "}{diaMesLargo(resumen.reseteoISO)}
                         </p>
                       )}
                     </div>

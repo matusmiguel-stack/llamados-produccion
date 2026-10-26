@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabase"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DatePickerField } from "../../components/DatePickerField"
-import { resumenVacaciones, diasPorAnios, antiguedadDesdeIngreso, MESES } from "../../lib/vacaciones"
+import { resumenVacaciones, diasPorAnios, antiguedadDesdeIngreso, periodoPorIngreso, diaMesLargo } from "../../lib/vacaciones"
 
 type Employee = {
   id: string
@@ -600,7 +600,7 @@ export default function EmpleadosPage() {
                               <div style={{ width: `${pct}%`, height: "100%", background: barColor }} />
                             </div>
                             <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: "auto" }}>
-                              {r.anios} año{r.anios !== 1 ? "s" : ""} · resetea {MESES[r.mesReseteo - 1]}
+                              {r.anios} año{r.anios !== 1 ? "s" : ""} · resetea el {diaMesLargo(r.reseteoISO)}
                             </span>
                           </div>
                         )
@@ -886,11 +886,15 @@ function AntiguedadAuto({ fechaIngreso }: { fechaIngreso: string }) {
   if (!fechaIngreso) {
     return <div style={{ ...inputStyle, color: "#6b7c93", cursor: "default" }}>Captura la fecha de ingreso primero</div>
   }
-  const { anios, mesReseteo } = antiguedadDesdeIngreso(fechaIngreso)
+  const { anios } = antiguedadDesdeIngreso(fechaIngreso)
+  const { endISO } = periodoPorIngreso(fechaIngreso)
+  const sig = new Date(`${endISO}T12:00:00`)
+  sig.setDate(sig.getDate() + 1)
+  const reseteoISO = sig.toLocaleDateString("sv")
   return (
     <div style={{ ...inputStyle, display: "grid", gap: 2, cursor: "default" }}>
       <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
-        {anios} año{anios === 1 ? "" : "s"} · resetea en {MESES[mesReseteo - 1]}
+        {anios} año{anios === 1 ? "" : "s"} · resetea el {diaMesLargo(reseteoISO)}
       </span>
       <span style={{ fontSize: 11, color: "#34d399" }}>Le corresponden {diasPorAnios(anios)} días</span>
     </div>

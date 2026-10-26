@@ -44,18 +44,36 @@ export function businessDaysInclusive(startISO: string, endISO: string): number 
   return count
 }
 
-// Antigüedad automática a partir de la fecha de ingreso — mismo criterio que
-// periodoActual (por mes de ingreso, no por día exacto): si ya se cruzó el mes
-// de ingreso este año, el período actual arrancó este año; si no, el anterior.
-export function antiguedadDesdeIngreso(fechaIngreso: string, today = new Date()): { anios: number; mesReseteo: number } {
-  const [y, m] = fechaIngreso.split("-").map(Number)
-  const mesReseteo = m
-  const curMonth = today.getMonth() + 1
-  const startYear = curMonth >= mesReseteo ? today.getFullYear() : today.getFullYear() - 1
-  return { anios: startYear - y, mesReseteo }
+// Aniversario laboral de un año dado. Si entró un 29 de febrero, en años no
+// bisiestos el aniversario cae el 28.
+function aniversario(year: number, mes: number, dia: number): Date {
+  const ultimoDiaDelMes = new Date(year, mes, 0).getDate()
+  return new Date(year, mes - 1, Math.min(dia, ultimoDiaDelMes))
 }
 
-// Período de vacaciones actual según el mes de reseteo
+// Período de vacaciones vigente: va del último aniversario de ingreso (día y
+// mes exactos) al día anterior al siguiente. P.ej. ingreso 15-may → del 15-may
+// al 14-may del año siguiente.
+export function periodoPorIngreso(fechaIngreso: string, today = new Date()): { startISO: string; endISO: string; startYear: number } {
+  const [, m, d] = fechaIngreso.split("T")[0].split("-").map(Number)
+  const hoy = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const startYear = hoy >= aniversario(hoy.getFullYear(), m, d) ? hoy.getFullYear() : hoy.getFullYear() - 1
+  const start = aniversario(startYear, m, d)
+  const end = aniversario(startYear + 1, m, d)
+  end.setDate(end.getDate() - 1)
+  return { startISO: toISO(start), endISO: toISO(end), startYear }
+}
+
+// Antigüedad automática a partir de la fecha de ingreso: años cumplidos al
+// inicio del período vigente (cambia justo el día del aniversario).
+export function antiguedadDesdeIngreso(fechaIngreso: string, today = new Date()): { anios: number; mesReseteo: number } {
+  const [y, m] = fechaIngreso.split("T")[0].split("-").map(Number)
+  const { startYear } = periodoPorIngreso(fechaIngreso, today)
+  return { anios: startYear - y, mesReseteo: m }
+}
+
+// Período de vacaciones por mes de reseteo (respaldo para registros sin fecha
+// de ingreso; con fecha de ingreso se usa periodoPorIngreso).
 export function periodoActual(mesReseteo: number, today = new Date()): { startISO: string; endISO: string; startYear: number } {
   const mes = mesReseteo || 1
   const curMonth = today.getMonth() + 1
@@ -66,10 +84,18 @@ export function periodoActual(mesReseteo: number, today = new Date()): { startIS
 }
 
 export type VacEmp = {
+  fecha_ingreso?: string | null
   vac_anios: number | null
   vac_mes_reseteo: number | null
   vac_dias_base: number | null
   vac_ultimo_reset_anio: number | null
+}
+
+// Período del empleado: por día exacto de ingreso si se conoce; si no, por mes.
+export function periodoDelEmpleado(emp: VacEmp, today = new Date()): { startISO: string; endISO: string; startYear: number } {
+  return emp.fecha_ingreso
+    ? periodoPorIngreso(emp.fecha_ingreso, today)
+    : periodoActual(emp.vac_mes_reseteo || 1, today)
 }
 
 // Días tomados en el calendario dentro del período (días hábiles, intersección con el período)
@@ -87,7 +113,7 @@ export function diasTomadosCalendario(
   return total
 }
 
-// Resumen de vacaciones de un empleado (con reinicio automático si pasó el mes de reseteo)
+// Resumen de vacaciones de un empleado (con reinicio automático si ya pasó su aniversario)
 export function resumenVacaciones(
   emp: VacEmp,
   vacationRanges: { start_date: string; end_date: string }[],
@@ -101,12 +127,13 @@ export function resumenVacaciones(
   restantes: number
   startISO: string
   endISO: string
+  reseteoISO: string
   needsReset: boolean
   newAnios: number
 } {
   const configurado = emp.vac_mes_reseteo != null && emp.vac_anios != null
   const mesReseteo = emp.vac_mes_reseteo || 1
-  const { startISO, endISO, startYear } = periodoActual(mesReseteo, today)
+  const { startISO, endISO, startYear } = periodoDelEmpleado(emp, today)
 
   // ¿Pasó un nuevo período desde el último reinicio aplicado?
   const ultimo = emp.vac_ultimo_reset_anio ?? startYear
@@ -120,9 +147,13 @@ export function resumenVacaciones(
   const tomados = base + diasTomadosCalendario(vacationRanges, startISO, endISO)
   const restantes = corresponden - tomados
 
+  // Próximo reseteo = día siguiente al fin del período (aniversario exacto)
+  const sig = parseISO(endISO)
+  sig.setDate(sig.getDate() + 1)
+
   return {
     configurado, anios, mesReseteo, corresponden, tomados, restantes,
-    startISO, endISO, needsReset, newAnios: anios,
+    startISO, endISO, reseteoISO: toISO(sig), needsReset, newAnios: anios,
   }
 }
 
@@ -193,16 +224,24 @@ function siguienteDiaHabil(iso: string): string {
   return toISO(d)
 }
 
-// Día en que se reinician las vacaciones del período actual (1° del mes de reseteo)
-export function proximoReseteoISO(mesReseteo: number, today = new Date()): string {
-  const { startYear } = periodoActual(mesReseteo || 1, today)
-  return toISO(new Date(startYear + 1, (mesReseteo || 1) - 1, 1))
+// Día en que se reinician las vacaciones: el siguiente aniversario de ingreso
+// (o el 1° del mes de reseteo si no hay fecha de ingreso).
+export function proximoReseteoISO(emp: VacEmp, today = new Date()): string {
+  const { endISO } = periodoDelEmpleado(emp, today)
+  const d = parseISO(endISO)
+  d.setDate(d.getDate() + 1)
+  return toISO(d)
 }
 
 export function formatFechaLarga(iso: string): string {
   return parseISO(iso).toLocaleDateString("es-MX", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   })
+}
+
+// "15 de mayo"
+export function diaMesLargo(iso: string): string {
+  return parseISO(iso).toLocaleDateString("es-MX", { day: "numeric", month: "long" })
 }
 
 export function formatFechaCorta(iso: string): string {

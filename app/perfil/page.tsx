@@ -6,7 +6,7 @@ import { AppSidebar } from "../../components/AppSidebar"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { VacacionesPicker } from "../../components/VacacionesPicker"
 import {
-  MESES,
+  diaMesLargo,
   STATUS_INFO,
   agruparDiasEnRangos,
   describirRango,
@@ -62,7 +62,7 @@ export default function ProfilePage() {
     const { data: emp } = correo
       ? await supabase
           .from("employees")
-          .select("id, nombre, apellido_paterno, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
+          .select("id, nombre, apellido_paterno, fecha_ingreso, vac_anios, vac_mes_reseteo, vac_dias_base, vac_ultimo_reset_anio")
           .eq("email", correo)
           .maybeSingle()
       : { data: null }
@@ -204,7 +204,7 @@ export default function ProfilePage() {
     0,
   )
   const disponibles = resumenVac ? Math.max(0, resumenVac.restantes - diasEnEspera) : 0
-  const reseteoISO = vacConfigurado ? proximoReseteoISO(employee.vac_mes_reseteo) : null
+  const reseteoISO = vacConfigurado ? proximoReseteoISO(employee) : null
 
   // Días que ya no se pueden volver a pedir (aprobados o en espera)
   const ocupados: Record<string, "aprobada" | "pendiente"> = {}
@@ -315,7 +315,7 @@ export default function ProfilePage() {
                   </div>
 
                   <p style={vacResetStyle}>
-                    Se reinician el <strong style={{ color: "#e2e8f0" }}>1 de {MESES[resumenVac!.mesReseteo - 1]}
+                    Se reinician el <strong style={{ color: "#e2e8f0" }}>{diaMesLargo(reseteoISO!)}
                     {" "}de {reseteoISO!.slice(0, 4)}</strong>
                     {diasEnEspera > 0 && ` · puedes solicitar ${disponibles} día${disponibles !== 1 ? "s" : ""} más`}
                   </p>
