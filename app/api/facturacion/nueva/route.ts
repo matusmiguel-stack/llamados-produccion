@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
-import { INGRESO_FACTURA_COLS, registrarFacturaIngreso } from "../../../../lib/ingresos-factura"
-import { crearFactura, descargarFactura, enviarFacturaPorCorreo, esModoPruebas } from "../../../../lib/facturapi"
+import { crearFactura, enviarFacturaPorCorreo, esModoPruebas } from "../../../../lib/facturapi"
+import { guardarArchivosIndependiente } from "../../../../lib/facturas-independientes"
 
 const EMPRESAS = ["retro_studio", "retro_films"]
 const r2 = (n: number) => Math.round(n * 100) / 100
 
-// POST JSON → factura "desde cero": crea la línea en el control de ingresos
-// (manual, sin proyecto), timbra el CFDI con varios conceptos y lo registra
-// igual que una factura timbrada desde un ingreso.
+// POST JSON → factura "desde cero" con varios conceptos. NO toca el control de
+// ingresos (suelen ser préstamos entre Retro Studio y Retro Films): se guarda
+// en facturas_independientes.
 export async function POST(req: Request) {
   try {
     const user = await verifyApiRole(req, ["admin", "finanzas"])
@@ -19,14 +19,10 @@ export async function POST(req: Request) {
     const b = await req.json()
     const empresa = String(b.empresa || "")
     const receptorId = String(b.receptorId || "")
-    const clienteAgencia = String(b.clienteAgencia || "").trim()
-    const proyecto = String(b.proyecto || "").trim()
-    const responsable = String(b.responsable || "").trim() || null
-    const mesCierre = String(b.mesCierre || "").trim() || null
     const uso = String(b.uso || "G03")
-    const metodoPago = b.metodoPago === "PPD" ? "PPD" : "PUE"
     const formaPago = String(b.formaPago || "03")
     const ivaTasa = Number(b.ivaTasa) === 0 ? 0 : 0.16
+    const notas = String(b.notas || "").trim() || null
     const email = String(b.email || "").trim()
     const conceptos = (Array.isArray(b.conceptos) ? b.conceptos : []).map((c: any) => ({
       descripcion: String(c?.descripcion || "").trim(),
@@ -37,7 +33,6 @@ export async function POST(req: Request) {
 
     if (!EMPRESAS.includes(empresa)) return NextResponse.json({ error: "Elige si factura Retro Studio o Retro Films" }, { status: 400 })
     if (!receptorId) return NextResponse.json({ error: "Elige a quién se le factura" }, { status: 400 })
-    if (!clienteAgencia || !proyecto) return NextResponse.json({ error: "Escribe el cliente y el nombre con que aparece en Ingresos" }, { status: 400 })
     if (conceptos.length === 0) return NextResponse.json({ error: "Agrega al menos un concepto" }, { status: 400 })
     for (const [i, c] of conceptos.entries()) {
       const n = `Concepto ${i + 1}`
@@ -51,86 +46,68 @@ export async function POST(req: Request) {
     if (!receptor) return NextResponse.json({ error: "No se encontró el cliente a facturar" }, { status: 404 })
     const { data: emisor } = await admin.from("emisores_fiscales").select("serie").eq("empresa", empresa).maybeSingle()
 
+    const factura = await crearFactura(empresa, {
+      receptor: { rfc: receptor.rfc, razon_social: receptor.razon_social, regimen_fiscal: receptor.regimen_fiscal, cp: receptor.cp, email: receptor.email },
+      conceptos,
+      ivaTasa,
+      uso,
+      formaPago,
+      metodoPago: "PUE",
+      serie: emisor?.serie || null,
+    })
+    const numero = `${factura.series || ""}${factura.folio_number ?? ""}` || factura.uuid.slice(0, 8)
     const subtotal = r2(conceptos.reduce((s: number, c: { precio: number }) => s + c.precio, 0))
-    const ivaEstimado = r2(conceptos.reduce((s: number, c: { precio: number }) => s + r2(c.precio * ivaTasa), 0))
 
-    // La línea del ingreso va primero: si después algo falla, el facturapi_id
-    // queda guardado en ella y "✓ Facturar → Timbrar" la recupera sin duplicar.
-    const { data: ingreso, error: insErr } = await admin.from("ingresos").insert({
+    // Ya está timbrada: se registra de inmediato para que nunca se pierda. Si
+    // fallan los archivos, la lista los vuelve a bajar de Facturapi al abrirlos.
+    const { data: fila, error: insErr } = await admin.from("facturas_independientes").insert({
       empresa,
-      cliente_agencia: clienteAgencia,
-      proyecto,
-      responsable,
-      mes_cierre: mesCierre,
-      subtotal,
-      iva: ivaEstimado,
-      estatus: "en_produccion",
       receptor_fiscal_id: receptor.id,
+      receptor_rfc: receptor.rfc,
+      receptor_nombre: receptor.razon_social,
+      conceptos: conceptos.map((c: any) => ({ descripcion: c.descripcion, clave_prod_serv: c.clave_prod_serv, clave_unidad: c.clave_unidad, subtotal: c.precio })),
+      subtotal,
+      iva: r2(factura.total - subtotal),
+      total: factura.total,
+      metodo_pago: "PUE",
+      forma_pago: formaPago,
+      uso_cfdi: uso,
+      notas,
+      facturapi_id: factura.id,
+      uuid: factura.uuid || null,
+      numero,
+      created_by: user.id,
+    }).select("id").single()
+    if (insErr || !fila) {
+      throw new Error(`La factura ${numero} SÍ se timbró, pero no se pudo registrar en la app (${insErr?.message}). Búscala en Facturapi; no la vuelvas a timbrar.`)
+    }
+
+    try {
+      await guardarArchivosIndependiente(admin, { id: fila.id, empresa, facturapi_id: factura.id, numero })
+    } catch (e: any) {
+      console.error("[facturacion/nueva] archivos:", e.message)
+    }
+
+    await admin.from("receptores_fiscales").update({
+      ultima_forma_pago: formaPago,
+      uso_cfdi: uso,
       updated_at: new Date().toISOString(),
-    }).select(INGRESO_FACTURA_COLS).single()
-    if (insErr || !ingreso) return NextResponse.json({ error: `No se pudo crear el ingreso: ${insErr?.message}` }, { status: 500 })
+    }).eq("id", receptor.id)
 
-    let factura
-    try {
-      factura = await crearFactura(empresa, {
-        receptor: { rfc: receptor.rfc, razon_social: receptor.razon_social, regimen_fiscal: receptor.regimen_fiscal, cp: receptor.cp, email: receptor.email },
-        conceptos,
-        ivaTasa,
-        uso,
-        formaPago,
-        metodoPago,
-        serie: emisor?.serie || null,
-      })
-    } catch (e: any) {
-      // No se timbró nada: se quita la línea para no dejar un ingreso huérfano
-      await admin.from("ingresos").delete().eq("id", ingreso.id)
-      throw e
-    }
-
-    try {
-      await admin.from("ingresos").update({ facturapi_id: factura.id }).eq("id", ingreso.id)
-      const [xml, pdf] = await Promise.all([
-        descargarFactura(empresa, factura.id, "xml"),
-        descargarFactura(empresa, factura.id, "pdf"),
-      ])
-      const numeroFactura = `${factura.series || ""}${factura.folio_number ?? ""}` || factura.uuid.slice(0, 8)
-      // El IVA real es el que calculó el PAC (puede variar por centavos)
-      const iva = Number.isFinite(factura.total) ? r2(factura.total - subtotal) : ivaEstimado
-      await registrarFacturaIngreso(admin, ingreso as any, {
-        xml, pdf,
-        xmlName: `${numeroFactura}.xml`,
-        pdfName: `${numeroFactura}.pdf`,
-        numeroFactura,
-        uuidFiscal: factura.uuid || null,
-        parcial: null,
-        label: proyecto,
-        extra: { facturapi_id: factura.id, factura_metodo_pago: metodoPago, iva },
-      })
-
-      await admin.from("receptores_fiscales").update({
-        ultima_forma_pago: metodoPago === "PPD" ? receptor.ultima_forma_pago : formaPago,
-        ultimo_metodo_pago: metodoPago,
-        uso_cfdi: uso,
-        updated_at: new Date().toISOString(),
-      }).eq("id", receptor.id)
-
-      let correo: string | null = null
-      if (email) {
-        try {
-          await enviarFacturaPorCorreo(empresa, factura.id, email)
-          correo = email
-        } catch (e: any) {
-          console.error("[facturacion/nueva] correo:", e.message)
-        }
+    let correo: string | null = null
+    if (email) {
+      try {
+        await enviarFacturaPorCorreo(empresa, factura.id, email)
+        correo = email
+      } catch (e: any) {
+        console.error("[facturacion/nueva] correo:", e.message)
       }
-
-      return NextResponse.json({
-        ok: true, numeroFactura, uuid: factura.uuid, total: factura.total, remanente: null,
-        correo, correoFallo: !!email && !correo, pruebas: esModoPruebas(empresa),
-      })
-    } catch (e: any) {
-      throw new Error(`La factura SÍ se timbró, pero no se terminó de guardar (${e.message}). Quedó la línea "${proyecto}" en Ingresos: dale ✓ Facturar → Timbrar en la app y la recupera sin timbrar otra.`)
     }
+
+    return NextResponse.json({
+      ok: true, numeroFactura: numero, total: factura.total,
+      correo, correoFallo: !!email && !correo, pruebas: esModoPruebas(empresa),
+    })
   } catch (err: any) {
     console.error("[facturacion/nueva] error:", err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })

@@ -12,7 +12,7 @@ import { nombreLiquidacion } from "../../lib/liquidacion"
 import { FORMAS_PAGO, MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
 import { TimbrarPanel, type TimbrarResultado } from "../../components/facturacion/TimbrarPanel"
 import { DatosFiscalesModal } from "../../components/facturacion/DatosFiscalesModal"
-import { NuevaFacturaModal } from "../../components/facturacion/NuevaFacturaModal"
+import { FacturasIndependientesModal } from "../../components/facturacion/FacturasIndependientesModal"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ export default function IngresosPage() {
   const [facModo, setFacModo]       = useState<"timbrar" | "subir">("timbrar")
   const [facAmbiente, setFacAmbiente] = useState<Record<string, "pruebas" | "real" | null>>({})
   const [datosFiscalesOpen, setDatosFiscalesOpen] = useState(false)
-  const [nuevaFacturaOpen, setNuevaFacturaOpen] = useState(false)
+  const [independientesOpen, setIndependientesOpen] = useState(false)
   const [cancelModal, setCancelModal] = useState<{ row: Ingreso; label: string; motivo: string } | null>(null)
   const [cancelando, setCancelando] = useState(false)
   // Complementos de pago (facturas PPD): ingresos que ya tienen el suyo
@@ -577,7 +577,6 @@ export default function IngresosPage() {
     if (d.remanente) partes.push(`Se creó "${d.remanente.proyecto}" por ${fmt(d.remanente.subtotal)}.`)
     alert(partes.join("\n"))
     setFacturarModal(null)
-    setNuevaFacturaOpen(false)
     loadPage()
   }
 
@@ -928,8 +927,8 @@ export default function IngresosPage() {
             <button onClick={() => setDatosFiscalesOpen(true)} style={secondaryBtnStyle} title="Datos fiscales de clientes y de Retro Studio / Films">
               🧾 Datos fiscales
             </button>
-            <button onClick={() => setNuevaFacturaOpen(true)} style={secondaryBtnStyle} title="Timbrar una factura que no está en el control de ingresos">
-              🧾 Nueva factura
+            <button onClick={() => setIndependientesOpen(true)} style={secondaryBtnStyle} title="Facturas que no van al control de ingresos (préstamos entre empresas, etc.)">
+              🧾 Facturas independientes
             </button>
             {/* Admin y finanzas pueden capturar ingresos manuales (sin proyecto) */}
             <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
@@ -1257,16 +1256,11 @@ export default function IngresosPage() {
 
       {datosFiscalesOpen && <DatosFiscalesModal onClose={() => setDatosFiscalesOpen(false)} />}
 
-      {nuevaFacturaOpen && (
-        <NuevaFacturaModal
+      {independientesOpen && (
+        <FacturasIndependientesModal
           empresaInicial={activeEmpresa}
           ambiente={facAmbiente}
-          responsables={empleados.map(e => ({ value: empFullName(e), label: empNick(e) }))}
-          clientes={[...new Set(ingresos.map(clienteLabel).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
-          mesActual={MESES[new Date().getMonth()]}
-          meses={MESES}
-          onDone={onTimbrado}
-          onClose={() => setNuevaFacturaOpen(false)}
+          onClose={() => setIndependientesOpen(false)}
         />
       )}
 

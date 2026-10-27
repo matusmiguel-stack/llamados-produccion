@@ -1,9 +1,8 @@
 "use client"
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
-import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
+import { FORMAS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
-import type { TimbrarResultado } from "./TimbrarPanel"
 import {
   EMPRESA_LABEL, FField, FRow, fBody, fBtnGhost, fBtnPrimary, fBtnSmall, fClose, fHeader, fInput, fModal, fNote, fOverlay,
   type Emisor, type Receptor,
@@ -14,26 +13,26 @@ const r2 = (n: number) => Math.round(n * 100) / 100
 
 type Concepto = { key: number; descripcion: string; clave: string; unidad: string; subtotal: string }
 
-// Factura "desde cero": para lo que no está cargado en el control de ingresos.
-// Se captura concepto por concepto; al timbrar se crea también su línea en
-// Ingresos (ya facturada) para darle seguimiento al cobro.
+export type NuevaFacturaResultado = {
+  numeroFactura: string
+  total: number
+  correo: string | null
+  correoFallo: boolean
+  pruebas: boolean
+}
+
+// Factura "desde cero" (independiente): se captura concepto por concepto y NO
+// entra al control de ingresos — casi siempre son préstamos entre Retro
+// Studio y Retro Films. Solo PUE: estas facturas no llevan complemento.
 export function NuevaFacturaModal({
   empresaInicial,
   ambiente,
-  responsables,
-  clientes,
-  mesActual,
-  meses,
   onDone,
   onClose,
 }: {
   empresaInicial: string
   ambiente: Record<string, "pruebas" | "real" | null>
-  responsables: { value: string; label: string }[]
-  clientes: string[]               // nombres de cliente ya usados en Ingresos
-  mesActual: string
-  meses: string[]
-  onDone: (r: TimbrarResultado) => void
+  onDone: (r: NuevaFacturaResultado) => void
   onClose: () => void
 }) {
   const [empresa, setEmpresa] = useState(empresaInicial)
@@ -44,14 +43,8 @@ export function NuevaFacturaModal({
   const [conceptos, setConceptos] = useState<Concepto[]>([{ key: 1, descripcion: "", clave: "", unidad: "E48", subtotal: "" }])
   const [iva, setIva] = useState(0.16)
   const [uso, setUso] = useState("G03")
-  const [metodo, setMetodo] = useState<"PUE" | "PPD">("PUE")
   const [forma, setForma] = useState("03")
-  const [cliente, setCliente] = useState("")
-  const [clienteTocado, setClienteTocado] = useState(false)
-  const [proyecto, setProyecto] = useState("")
-  const [proyectoTocado, setProyectoTocado] = useState(false)
-  const [responsable, setResponsable] = useState("")
-  const [mes, setMes] = useState(mesActual)
+  const [notas, setNotas] = useState("")
   const [enviar, setEnviar] = useState(false)
   const [email, setEmail] = useState("")
   const [timbrando, setTimbrando] = useState(false)
@@ -87,31 +80,37 @@ export function NuevaFacturaModal({
   }
   const emisor = emisores.find(e => e.empresa === empresa) || null
 
-  async function elegir(id: string, lista = receptores) {
+  function elegir(id: string, lista = receptores) {
     setReceptorId(id)
     const r = lista.find(x => x.id === id)
     if (!r) return
     setUso(r.uso_cfdi || "G03")
-    setMetodo(r.ultimo_metodo_pago === "PPD" ? "PPD" : "PUE")
     if (r.ultima_forma_pago && r.ultima_forma_pago !== "99") setForma(r.ultima_forma_pago)
     setEmail(r.email || "")
-    if (clienteTocado) return
-    // Nombre del cliente como aparece en Ingresos: el de facturas anteriores
-    // a ese RFC, o el de su carpeta en Proyectos, o la razón social.
-    let nombre = r.razon_social
-    const { data: prev } = await supabase.from("ingresos").select("cliente_agencia")
-      .eq("receptor_fiscal_id", r.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
-    if (prev?.cliente_agencia) nombre = prev.cliente_agencia
-    else if (r.client_id) {
-      const { data: c } = await supabase.from("clients").select("name").eq("id", r.client_id).maybeSingle()
-      if (c?.name) nombre = c.name
+  }
+
+  // Préstamos entre empresas: la otra empresa como receptor, con sus datos
+  // fiscales (se da de alta como cliente si todavía no existe).
+  const otra = emisores.find(e => e.empresa !== empresa && e.rfc) || null
+  async function facturarAOtra() {
+    if (!otra?.rfc) return
+    const existente = receptores.find(r => r.rfc === otra.rfc)
+    if (existente) { elegir(existente.id); return }
+    if (!otra.razon_social || !otra.regimen_fiscal || !otra.cp) {
+      alert(`Faltan datos fiscales de ${EMPRESA_LABEL[otra.empresa]}; captúrala con ＋ Nuevo`)
+      return
     }
-    setCliente(nombre)
+    const { data, error } = await supabase.from("receptores_fiscales").insert({
+      rfc: otra.rfc, razon_social: otra.razon_social, regimen_fiscal: otra.regimen_fiscal, cp: otra.cp, uso_cfdi: "G03",
+    }).select("*").single()
+    if (error || !data) { alert(error?.message || "No se pudo dar de alta"); return }
+    const lista = [...receptores, data as Receptor].sort((a, b) => a.razon_social.localeCompare(b.razon_social))
+    setReceptores(lista)
+    elegir(data.id, lista)
   }
 
   function cambiar(key: number, campo: keyof Concepto, valor: string) {
     setConceptos(cs => cs.map(c => (c.key === key ? { ...c, [campo]: valor } : c)))
-    if (campo === "descripcion" && !proyectoTocado && conceptos[0]?.key === key) setProyecto(valor.split("\n")[0].slice(0, 120))
   }
   function agregar() {
     setConceptos(cs => [...cs, {
@@ -139,10 +138,9 @@ export function NuevaFacturaModal({
       if (!/^\d{8}$/.test(c.clave)) { alert(`Concepto ${i + 1}: la clave SAT debe tener 8 dígitos`); return }
       if (!((parseFloat(c.subtotal) || 0) > 0)) { alert(`Concepto ${i + 1}: escribe el subtotal`); return }
     }
-    if (!cliente.trim() || !proyecto.trim()) { alert("Escribe el cliente y el nombre con que aparecerá en Ingresos"); return }
     if (enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return }
     const aviso = amb === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
-    const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · ${metodo}`
+    const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · PUE`
     if (!confirm(`${aviso}:\n\n${resumen}\n\n¿Continuar?`)) return
     setTimbrando(true)
     try {
@@ -156,18 +154,14 @@ export function NuevaFacturaModal({
           conceptos: conceptos.map(c => ({ descripcion: c.descripcion.trim(), claveProdServ: c.clave, claveUnidad: c.unidad, subtotal: parseFloat(c.subtotal) })),
           ivaTasa: iva,
           uso,
-          metodoPago: metodo,
           formaPago: forma,
-          clienteAgencia: cliente.trim(),
-          proyecto: proyecto.trim(),
-          responsable,
-          mesCierre: mes,
+          notas: notas.trim(),
           email: enviar ? email.trim() : "",
         }),
       })
       const d = await res.json()
       if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
-      onDone(d as TimbrarResultado)
+      onDone(d as NuevaFacturaResultado)
     } catch (e: any) {
       alert("No se pudo timbrar: " + e.message)
     } finally {
@@ -224,6 +218,11 @@ export function NuevaFacturaModal({
                 </select>
                 <button onClick={() => setNuevo(true)} style={fBtnSmall} title="Capturar datos fiscales de un cliente nuevo">＋ Nuevo</button>
               </div>
+              {otra && receptor?.rfc !== otra.rfc && (
+                <div>
+                  <button onClick={facturarAOtra} style={fBtnSmall}>↔ Facturar a {EMPRESA_LABEL[otra.empresa]}</button>
+                </div>
+              )}
               {receptor && (
                 <span style={fNote()}>
                   RFC <span style={{ fontFamily: "var(--font-mono)" }}>{receptor.rfc}</span> · Régimen {receptor.regimen_fiscal} · C.P. {receptor.cp}
@@ -289,22 +288,11 @@ export function NuevaFacturaModal({
                 </select>
               </FField>
             </div>
-            <div style={{ flex: "1 1 160px" }}>
-              <FField label="Método de pago">
-                <select value={metodo} onChange={e => setMetodo(e.target.value as "PUE" | "PPD")} style={fInput}>
-                  {METODOS_PAGO.map(m => <option key={m.clave} value={m.clave}>{m.nombre}</option>)}
+            <div style={{ flex: "1 1 220px" }}>
+              <FField label="Forma de pago (PUE)">
+                <select value={forma} onChange={e => setForma(e.target.value)} style={fInput}>
+                  {FORMAS_PAGO.filter(f => f.clave !== "99").map(f => <option key={f.clave} value={f.clave}>{f.clave} · {f.nombre}</option>)}
                 </select>
-              </FField>
-            </div>
-            <div style={{ flex: "1 1 160px" }}>
-              <FField label="Forma de pago">
-                {metodo === "PPD" ? (
-                  <input value="99 · Por definir" disabled style={{ ...fInput, opacity: 0.6 }} />
-                ) : (
-                  <select value={forma} onChange={e => setForma(e.target.value)} style={fInput}>
-                    {FORMAS_PAGO.filter(f => f.clave !== "99").map(f => <option key={f.clave} value={f.clave}>{f.clave} · {f.nombre}</option>)}
-                  </select>
-                )}
               </FField>
             </div>
           </FRow>
@@ -315,43 +303,10 @@ export function NuevaFacturaModal({
             </select>
           </FField>
 
-          {/* ── Cómo queda en el control de ingresos ── */}
-          <div style={{ display: "grid", gap: 10, padding: "12px 14px", borderRadius: 12, background: "rgba(124,58,237,0.05)", border: "1px solid rgba(167,139,250,0.16)" }}>
-            <p style={fNote("#94a3b8")}>Se agrega al control de ingresos como facturado, para darle seguimiento al cobro.</p>
-            <FRow>
-              <div style={{ flex: "1 1 200px" }}>
-                <FField label="Cliente / agencia *">
-                  <input value={cliente} onChange={e => { setCliente(e.target.value); setClienteTocado(true) }} list="nueva-factura-clientes" placeholder="ej. Compartamos Banco" style={fInput} />
-                  <datalist id="nueva-factura-clientes">
-                    {clientes.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </FField>
-              </div>
-              <div style={{ flex: "1 1 200px" }}>
-                <FField label="Proyecto *">
-                  <input value={proyecto} onChange={e => { setProyecto(e.target.value); setProyectoTocado(true) }} placeholder="Nombre con que aparece en Ingresos" style={fInput} />
-                </FField>
-              </div>
-            </FRow>
-            <FRow>
-              <div style={{ flex: "1 1 180px" }}>
-                <FField label="Responsable">
-                  <select value={responsable} onChange={e => setResponsable(e.target.value)} style={fInput}>
-                    <option value="">— Sin asignar —</option>
-                    {responsables.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
-                </FField>
-              </div>
-              <div style={{ flex: "1 1 140px" }}>
-                <FField label="Mes de cierre">
-                  <select value={mes} onChange={e => setMes(e.target.value)} style={fInput}>
-                    <option value="">—</option>
-                    {meses.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </FField>
-              </div>
-            </FRow>
-          </div>
+          <FField label="Nota interna (opcional)">
+            <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="ej. Préstamo de Retro Studio a Retro Films" style={fInput} />
+          </FField>
+          <p style={fNote("#94a3b8")}>Esta factura no se suma al control de ingresos; queda en la lista de facturas independientes.</p>
 
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
             <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />
