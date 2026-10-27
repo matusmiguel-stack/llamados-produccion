@@ -40,3 +40,57 @@ export function parseNumeroFactura(xml: string): string | null {
   const numero = `${serie}${folio}`.trim()
   return numero || null
 }
+
+// Atributo de la primera etiqueta <cfdi:Tag …> (con o sin prefijo)
+function attrOf(xml: string, tag: string, attr: string): string | null {
+  const el = xml.match(new RegExp(`<(?:cfdi:)?${tag}\\s[^>]*>`, "i"))?.[0]
+  if (!el) return null
+  const v = el.match(new RegExp(`\\s${attr}="([^"]*)"`, "i"))?.[1]
+  return v != null ? decodeXmlEntities(v.trim()) : null
+}
+
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+}
+
+// Lo que se aprovecha de un CFDI emitido para llenar los datos fiscales de
+// emisores y receptores (importación de las facturas que venían de Orderly).
+export type CfdiResumen = {
+  fecha: string | null
+  serie: string | null
+  formaPago: string | null
+  metodoPago: string | null
+  lugarExpedicion: string | null
+  emisor: { rfc: string | null; nombre: string | null; regimen: string | null }
+  receptor: { rfc: string | null; nombre: string | null; regimen: string | null; cp: string | null; uso: string | null }
+  concepto: { claveProdServ: string | null; claveUnidad: string | null; descripcion: string | null }
+}
+
+export function parseCfdiResumen(xml: string): CfdiResumen {
+  return {
+    fecha: attrOf(xml, "Comprobante", "Fecha"),
+    serie: attrOf(xml, "Comprobante", "Serie"),
+    formaPago: attrOf(xml, "Comprobante", "FormaPago"),
+    metodoPago: attrOf(xml, "Comprobante", "MetodoPago"),
+    lugarExpedicion: attrOf(xml, "Comprobante", "LugarExpedicion"),
+    emisor: {
+      rfc: attrOf(xml, "Emisor", "Rfc")?.toUpperCase() ?? null,
+      nombre: attrOf(xml, "Emisor", "Nombre"),
+      regimen: attrOf(xml, "Emisor", "RegimenFiscal"),
+    },
+    receptor: {
+      rfc: attrOf(xml, "Receptor", "Rfc")?.toUpperCase() ?? null,
+      nombre: attrOf(xml, "Receptor", "Nombre"),
+      regimen: attrOf(xml, "Receptor", "RegimenFiscalReceptor"),
+      cp: attrOf(xml, "Receptor", "DomicilioFiscalReceptor"),
+      uso: attrOf(xml, "Receptor", "UsoCFDI"),
+    },
+    concepto: {
+      claveProdServ: attrOf(xml, "Concepto", "ClaveProdServ"),
+      claveUnidad: attrOf(xml, "Concepto", "ClaveUnidad"),
+      descripcion: attrOf(xml, "Concepto", "Descripcion"),
+    },
+  }
+}

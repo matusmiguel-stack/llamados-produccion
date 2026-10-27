@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiUser } from "../../../../lib/api-auth"
 import { parseNumeroFactura, parseUuidFiscal } from "../../../../lib/cfdi"
-import { nombreLiquidacion } from "../../../../lib/liquidacion"
+import { INGRESO_FACTURA_COLS, registrarFacturaIngreso, validarParcial } from "../../../../lib/ingresos-factura"
 
 // Mismos roles que pueden tocar ingresos en la app
 const ROLES = ["admin", "finanzas"]
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     const { data: ingreso, error: findErr } = await auth.admin
       .from("ingresos")
-      .select("id, proyecto, estatus, subtotal, iva, empresa, cliente_agencia, responsable, mes_cierre, created_at, project_id, liquidacion_project_id")
+      .select(INGRESO_FACTURA_COLS)
       .eq("id", ingresoId)
       .single()
     if (findErr || !ingreso) {
@@ -59,21 +59,8 @@ export async function POST(req: Request) {
     }
 
     // Validar el monto parcial contra el subtotal original
-    const subtotalOriginal = Number(ingreso.subtotal ?? 0)
-    const ivaOriginal = Number(ingreso.iva ?? 0)
-    let parcial: number | null = null
-    if (parcialRaw) {
-      parcial = Math.round(parseFloat(parcialRaw) * 100) / 100
-      if (!Number.isFinite(parcial) || parcial <= 0) {
-        return NextResponse.json({ error: "El monto parcial no es válido" }, { status: 400 })
-      }
-      if (parcial >= subtotalOriginal) {
-        return NextResponse.json(
-          { error: "El monto parcial debe ser menor al subtotal del ingreso; para facturar todo deja la parcialidad vacía" },
-          { status: 400 },
-        )
-      }
-    }
+    const { parcial, error: parcialErr } = validarParcial(parcialRaw, Number(ingreso.subtotal ?? 0))
+    if (parcialErr) return NextResponse.json({ error: parcialErr }, { status: 400 })
 
     // Número de factura: el del formulario manda; si viene vacío se intenta leer
     // del CFDI (Serie + Folio). Muchos CFDI omiten la Serie, así que no siempre
@@ -104,83 +91,16 @@ export async function POST(req: Request) {
       }
     }
 
-    // Guardar archivos
-    const stamp = Date.now()
-    const safe = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const folder = `ingresos/${numeroFactura}`
-
-    const xmlUp = await auth.admin.storage.from("facturas")
-      .upload(`${folder}/${stamp}-${safe(xmlFile.name)}`, Buffer.from(await xmlFile.arrayBuffer()), {
-        contentType: "text/xml",
-      })
-    if (xmlUp.error) {
-      return NextResponse.json({ error: `No se pudo guardar el XML: ${xmlUp.error.message}` }, { status: 500 })
-    }
-    const pdfUp = await auth.admin.storage.from("facturas")
-      .upload(`${folder}/${stamp}-${safe(pdfFile.name)}`, Buffer.from(await pdfFile.arrayBuffer()), {
-        contentType: "application/pdf",
-      })
-    if (pdfUp.error) {
-      return NextResponse.json({ error: `No se pudo guardar el PDF: ${pdfUp.error.message}` }, { status: 500 })
-    }
-
-    // Parcial: el IVA se prorratea para que las dos líneas sumen el original
-    const ivaParcial = parcial != null && subtotalOriginal > 0
-      ? Math.round(ivaOriginal * (parcial / subtotalOriginal) * 100) / 100
-      : null
-
-    const { error: updErr } = await auth.admin
-      .from("ingresos")
-      .update({
-        estatus: "facturado",
-        numero_factura: numeroFactura,
-        factura_uuid: uuidFiscal,
-        factura_xml_path: xmlUp.data.path,
-        factura_pdf_path: pdfUp.data.path,
-        ...(parcial != null ? { subtotal: parcial, iva: ivaParcial } : {}),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", ingresoId)
-    if (updErr) {
-      return NextResponse.json({ error: updErr.message }, { status: 500 })
-    }
-
-    // Crear la línea del remanente ("… - Liquidación"). Va DESVINCULADA de
-    // proyecto y cotización: solo vive en el control de ingresos, así no toca
-    // egresos ni cotizaciones, y finanzas puede corregirla como ingreso manual.
-    let remanente: { proyecto: string; subtotal: number } | null = null
-    if (parcial != null) {
-      const nombreBase = label || ingreso.proyecto || ""
-      const nombreRem = nombreLiquidacion(nombreBase)
-      const subtotalRem = Math.round((subtotalOriginal - parcial) * 100) / 100
-      const ivaRem = Math.round((ivaOriginal - (ivaParcial ?? 0)) * 100) / 100
-      // created_at un segundo antes del original: la lista ordena por fecha
-      // descendente, así el remanente queda justo ABAJO de la línea facturada.
-      const createdRem = new Date(new Date(ingreso.created_at).getTime() - 1000).toISOString()
-      const { error: insErr } = await auth.admin.from("ingresos").insert({
-        empresa: ingreso.empresa,
-        cliente_agencia: ingreso.cliente_agencia,
-        responsable: ingreso.responsable,
-        proyecto: nombreRem,
-        // Hipervínculo al proyecto de origen (o el heredado, si esto ya es una
-        // Liquidación encadenada). NO es project_id: la línea sigue siendo manual.
-        liquidacion_project_id: ingreso.project_id ?? ingreso.liquidacion_project_id ?? null,
-        subtotal: subtotalRem,
-        iva: ivaRem,
-        estatus: "en_produccion",
-        mes_cierre: ingreso.mes_cierre,
-        notas: `Remanente de la factura ${numeroFactura}`,
-        created_at: createdRem,
-        updated_at: new Date().toISOString(),
-      })
-      if (insErr) {
-        return NextResponse.json(
-          { error: `La factura se guardó, pero no se pudo crear la línea de liquidación: ${insErr.message}` },
-          { status: 500 },
-        )
-      }
-      remanente = { proyecto: nombreRem, subtotal: subtotalRem }
-    }
+    const { remanente } = await registrarFacturaIngreso(auth.admin, ingreso as any, {
+      xml: Buffer.from(xmlText, "utf8"),
+      pdf: Buffer.from(await pdfFile.arrayBuffer()),
+      xmlName: xmlFile.name,
+      pdfName: pdfFile.name,
+      numeroFactura,
+      uuidFiscal,
+      parcial,
+      label,
+    })
 
     return NextResponse.json({ ok: true, numeroFactura, remanente })
   } catch (err: any) {
