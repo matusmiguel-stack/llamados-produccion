@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { uploadComprobante, mensajeDeRed } from "../../../lib/upload-comprobante"
+import { ContactChip } from "../../../components/ContactChip"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -979,14 +980,15 @@ export function EgresosPanel({
                   <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 170, wordBreak: "break-word", whiteSpace: "normal" }}>
                     {item.description}
                   </td>
-                  <td style={{ ...tdStyle, maxWidth: 150, whiteSpace: "normal" }}>
+                  <td style={{ ...tdStyle, maxWidth: 190, whiteSpace: "normal" }}>
                     {item.supplierType === "none" ? (
                       <span style={{ color: "#6b7c93", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
                     ) : (
-                      <span style={{ ...supplierBadgeStyle(item.supplierType), whiteSpace: "normal", wordBreak: "break-word" }}>
-                        {item.supplierType === "empleado" ? "👤 " : "🏢 "}
-                        {item.supplierLabel}
-                      </span>
+                      <ContactChip
+                        label={item.supplierLabel}
+                        icon={item.supplierType === "empleado" ? "👤" : "🏢"}
+                        color={item.supplierType === "empleado" ? "#34d399" : "#a78bfa"}
+                      />
                     )}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{fmt(price)}</td>
@@ -1570,14 +1572,3 @@ function SupplierCombobox({
   )
 }
 
-function supplierBadgeStyle(type: "proveedor" | "empleado" | "none"): React.CSSProperties {
-  const isEmp = type === "empleado"
-  return {
-    display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: 999,
-    fontSize: 11, fontWeight: 600,
-    color:      isEmp ? "#34d399" : "#a78bfa",
-    background: isEmp ? "rgba(52,211,153,0.10)"  : "rgba(124,58,237,0.12)",
-    border:     isEmp ? "1px solid rgba(52,211,153,0.22)" : "1px solid rgba(167,139,250,0.22)",
-    whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis",
-  }
-}

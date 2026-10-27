@@ -8,6 +8,7 @@ import { requireSessionProfile } from "../../../lib/session-profile"
 import { uploadComprobante, mensajeDeRed } from "../../../lib/upload-comprobante"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { PageLoader } from "../../../components/PageLoader"
+import { ContactChip } from "../../../components/ContactChip"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -678,7 +679,7 @@ export default function ProveedorDetailPage() {
                                 <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12 }}>{row.section_name}</td>
                                 <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
                                 <td style={tdStyle}>
-                                  <span style={isThisProv ? currentProvBadge : otherProvBadge}>{isThisProv ? "🏢 " : "👤 "}{contactLabel}</span>
+                                  <ContactChip label={contactLabel} icon={isThisProv ? "🏢" : "👤"} color={isThisProv ? "#fbbf24" : "#34d399"} style={{ maxWidth: 220 }} />
                                 </td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{qty}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{days}</td>
@@ -1300,16 +1301,3 @@ const editBtnStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.04)", color: "#94a3b8", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
 }
 
-const currentProvBadge: React.CSSProperties = {
-  display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: 999,
-  fontSize: 11, fontWeight: 600, color: "#fbbf24",
-  background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.22)",
-  whiteSpace: "nowrap", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis",
-}
-
-const otherProvBadge: React.CSSProperties = {
-  display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: 999,
-  fontSize: 11, fontWeight: 600, color: "#34d399",
-  background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.22)",
-  whiteSpace: "nowrap", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis",
-}
