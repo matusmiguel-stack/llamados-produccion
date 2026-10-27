@@ -18,11 +18,11 @@ export async function POST(req: Request) {
 
     const { data: ingresos, error } = await admin
       .from("ingresos")
-      .select("id, empresa, factura_xml_path, receptor_fiscal_id, project_id, projects:project_id(client_id)")
+      .select("id, empresa, factura_xml_path, factura_metodo_pago, receptor_fiscal_id, project_id, projects:project_id(client_id)")
       .not("factura_xml_path", "is", null)
     if (error) throw new Error(error.message)
 
-    type Leido = { ingresoId: string; empresa: string; clientId: string | null; cfdi: CfdiResumen }
+    type Leido = { ingresoId: string; empresa: string; clientId: string | null; metodo: string | null; cfdi: CfdiResumen }
     const leidos: Leido[] = []
     let fallidos = 0
     for (const ing of ingresos || []) {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       if (dlErr || !file) { fallidos++; continue }
       const cfdi = parseCfdiResumen(await file.text())
       if (!cfdi.receptor.rfc) { fallidos++; continue }
-      leidos.push({ ingresoId: ing.id, empresa: ing.empresa, clientId: (ing as any).projects?.client_id ?? null, cfdi })
+      leidos.push({ ingresoId: ing.id, empresa: ing.empresa, clientId: (ing as any).projects?.client_id ?? null, metodo: ing.factura_metodo_pago, cfdi })
     }
 
     // ── Receptores: el más reciente por RFC ─────────────────────────────────
@@ -60,10 +60,13 @@ export async function POST(req: Request) {
       nuevos++
     }
 
-    // Vincular cada ingreso con su receptor
+    // Vincular cada ingreso con su receptor y guardar si su factura es PUE o PPD
     for (const l of leidos) {
       const rid = idPorRfc.get(l.cfdi.receptor.rfc!)
       if (rid) await admin.from("ingresos").update({ receptor_fiscal_id: rid }).eq("id", l.ingresoId).is("receptor_fiscal_id", null)
+      if (!l.metodo && l.cfdi.metodoPago) {
+        await admin.from("ingresos").update({ factura_metodo_pago: l.cfdi.metodoPago }).eq("id", l.ingresoId)
+      }
     }
 
     // ── Emisores: datos y valores más usados por empresa ────────────────────

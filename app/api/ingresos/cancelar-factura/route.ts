@@ -17,12 +17,21 @@ export async function POST(req: Request) {
     if (!["02", "03"].includes(motivo)) return NextResponse.json({ error: "Motivo de cancelación no válido" }, { status: 400 })
 
     const { data: ingreso } = await admin
-      .from("ingresos").select("id, empresa, estatus, facturapi_id, numero_factura").eq("id", ingresoId).single()
+      .from("ingresos").select("id, empresa, estatus, facturapi_id, numero_factura, factura_uuid").eq("id", ingresoId).single()
     if (!ingreso?.facturapi_id) {
       return NextResponse.json({ error: "Esta factura no se timbró desde la app; cancélala donde se emitió" }, { status: 400 })
     }
     if (ingreso.estatus === "pagado") {
       return NextResponse.json({ error: "El ingreso ya está pagado; no se puede cancelar su factura desde aquí" }, { status: 400 })
+    }
+
+    // El SAT no deja cancelar una factura con pagos registrados
+    if (ingreso.factura_uuid) {
+      const { count } = await admin.from("complementos_pago")
+        .select("id", { count: "exact", head: true }).eq("factura_uuid", ingreso.factura_uuid)
+      if (count) {
+        return NextResponse.json({ error: "Esta factura ya tiene complementos de pago; no se puede cancelar" }, { status: 400 })
+      }
     }
 
     const r = await cancelarFactura(ingreso.empresa, ingreso.facturapi_id, motivo)

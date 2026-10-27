@@ -60,6 +60,10 @@ function decodeXmlEntities(s: string): string {
 export type CfdiResumen = {
   fecha: string | null
   serie: string | null
+  folio: string | null
+  moneda: string | null
+  subtotal: number | null
+  total: number | null
   formaPago: string | null
   metodoPago: string | null
   lugarExpedicion: string | null
@@ -72,6 +76,10 @@ export function parseCfdiResumen(xml: string): CfdiResumen {
   return {
     fecha: attrOf(xml, "Comprobante", "Fecha"),
     serie: attrOf(xml, "Comprobante", "Serie"),
+    folio: attrOf(xml, "Comprobante", "Folio"),
+    moneda: attrOf(xml, "Comprobante", "Moneda"),
+    subtotal: parseSubtotal(xml),
+    total: parseTotal(xml),
     formaPago: attrOf(xml, "Comprobante", "FormaPago"),
     metodoPago: attrOf(xml, "Comprobante", "MetodoPago"),
     lugarExpedicion: attrOf(xml, "Comprobante", "LugarExpedicion"),

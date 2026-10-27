@@ -9,7 +9,7 @@ import { AppSidebar } from "../../components/AppSidebar"
 import { downloadIngresosTemplate, parseIngresosExcel } from "../../lib/ingresos-import"
 import { parseNumeroFactura } from "../../lib/cfdi"
 import { nombreLiquidacion } from "../../lib/liquidacion"
-import { MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
+import { FORMAS_PAGO, MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
 import { TimbrarPanel, type TimbrarResultado } from "../../components/facturacion/TimbrarPanel"
 import { DatosFiscalesModal } from "../../components/facturacion/DatosFiscalesModal"
 
@@ -47,6 +47,10 @@ type Ingreso = {
   // Factura timbrada desde la app (Facturapi); null si vino de Orderly
   facturapi_id: string | null
   receptor_fiscal_id: string | null
+  factura_uuid: string | null
+  factura_xml_path: string | null
+  factura_pdf_path: string | null
+  factura_metodo_pago: string | null   // PUE | PPD (PPD lleva complemento al cobrar)
 }
 
 type IngresoForm = {
@@ -90,6 +94,9 @@ const ESTATUS: Record<Estatus, { label: string; color: string; bg: string; borde
   factorado:        { label: "Factorado",            color: "#f472b6", bg: "rgba(236,72,153,0.12)", border: "rgba(244,114,182,0.25)" },
   pagado:           { label: "Pagado",               color: "#4ade80", bg: "rgba(16,185,129,0.15)", border: "rgba(74,222,128,0.25)" },
 }
+
+// Día desde el que la app emite complementos de pago (antes se hacían en Orderly)
+const COMPLEMENTOS_DESDE = "2026-10-27"
 
 const MESES = [
   "Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -191,6 +198,12 @@ export default function IngresosPage() {
   const [datosFiscalesOpen, setDatosFiscalesOpen] = useState(false)
   const [cancelModal, setCancelModal] = useState<{ row: Ingreso; label: string; motivo: string } | null>(null)
   const [cancelando, setCancelando] = useState(false)
+  // Complementos de pago (facturas PPD): ingresos que ya tienen el suyo
+  const [conComplemento, setConComplemento] = useState<Set<string>>(new Set())
+  const [payComplemento, setPayComplemento] = useState(true)
+  const [payForma, setPayForma] = useState("03")
+  const [complementoModal, setComplementoModal] = useState<{ row: Ingreso; label: string; forma: string } | null>(null)
+  const [emitiendo, setEmitiendo] = useState(false)
   const [facXml, setFacXml]         = useState<File | null>(null)
   const [facPdf, setFacPdf]         = useState<File | null>(null)
   const [facNumero, setFacNumero]   = useState("")
@@ -217,11 +230,13 @@ export default function IngresosPage() {
     setProfile(auth.profile)
     setUser(auth.session.user)
 
-    const [{ data }, { data: projs }, { data: emps }] = await Promise.all([
+    const [{ data }, { data: projs }, { data: emps }, { data: comps }] = await Promise.all([
       supabase.from("ingresos").select("*").order("created_at", { ascending: false }),
       supabase.from("projects").select("id, name, code, responsable, clients(name)").order("name"),
       supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, nickname").order("nombre"),
+      supabase.from("complementos_pago").select("ingreso_id"),
     ])
+    setConComplemento(new Set((comps || []).map((c: any) => c.ingreso_id)))
     setEmpleados(emps || [])
     setIngresos((data || []) as Ingreso[])
     setProjects((projs || []).map((p: any) => ({
@@ -553,6 +568,44 @@ export default function IngresosPage() {
     setPayMonto("")
     setPayPct("")
     setPaySinIva(false)
+    setPayComplemento(true)
+    setPayForma("03")
+  }
+
+  // ¿Esta línea cobrada necesita complemento de pago? (factura PPD con XML)
+  const esPPD = (r: Ingreso) => r.factura_metodo_pago === "PPD" && !!r.factura_xml_path
+  // Solo pagos desde que la app emite complementos: los anteriores se hicieron en Orderly
+  const faltaComplemento = (r: Ingreso) =>
+    r.estatus === "pagado" && esPPD(r) && !conComplemento.has(r.id) && (r.fecha_pago || "") >= COMPLEMENTOS_DESDE
+
+  // Emite el complemento de pago de un ingreso ya pagado. Devuelve el mensaje
+  // para el usuario (no lanza: el pago ya quedó guardado).
+  async function emitirComplemento(ingresoId: string, formaPago: string): Promise<{ ok: boolean; msg: string }> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/ingresos/complemento-pago", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ingresoId, formaPago }),
+      })
+      const d = await res.json()
+      if (!res.ok || d.error) return { ok: false, msg: d.error || `Error ${res.status}` }
+      return {
+        ok: true,
+        msg: `Complemento de pago ${d.numero} emitido${d.pruebas ? " (modo pruebas)" : ""}: parcialidad ${d.parcialidad}, pagado ${fmt(d.monto)}, saldo pendiente de la factura ${fmt(d.saldoInsoluto)}.`,
+      }
+    } catch (e: any) {
+      return { ok: false, msg: e.message }
+    }
+  }
+
+  async function confirmarComplemento() {
+    if (!complementoModal) return
+    setEmitiendo(true)
+    const r = await emitirComplemento(complementoModal.row.id, complementoModal.forma)
+    setEmitiendo(false)
+    alert(r.ok ? r.msg : "No se pudo emitir el complemento: " + r.msg)
+    if (r.ok) { setComplementoModal(null); loadPage() }
   }
 
   function onPayMonto(v: string) {
@@ -656,6 +709,17 @@ export default function IngresosPage() {
         // Conserva el estatus que traía: si ya estaba facturado, lo que falta
         // sigue facturado y pendiente de cobro.
         estatus: r.estatus,
+        // Si ya estaba facturado, lo que falta sigue amparado por la misma
+        // factura (para su complemento de pago cuando se cobre).
+        ...(r.factura_uuid ? {
+          numero_factura: r.numero_factura,
+          factura_uuid: r.factura_uuid,
+          factura_xml_path: r.factura_xml_path,
+          factura_pdf_path: r.factura_pdf_path,
+          facturapi_id: r.facturapi_id,
+          factura_metodo_pago: r.factura_metodo_pago,
+          receptor_fiscal_id: r.receptor_fiscal_id,
+        } : {}),
         mes_cierre: r.mes_cierre,
         fecha_aprox_pago: r.fecha_aprox_pago,
         notas: `Remanente del pago del ${payModal.fecha}`,
@@ -673,6 +737,12 @@ export default function IngresosPage() {
 
     setPaying(false)
     await notifyIngresoPaid(payModal.row.id)
+
+    // Factura PPD: complemento de pago por lo cobrado
+    if (esPPD(r) && payComplemento && !paySinIva) {
+      const c = await emitirComplemento(r.id, payForma)
+      alert(c.ok ? c.msg : `El pago se guardó, pero no se pudo emitir el complemento de pago: ${c.msg}\n\nPuedes reintentarlo con el botón 🧾 Complemento de la línea.`)
+    }
 
     setPayModal(null)
     loadPage()
@@ -984,6 +1054,9 @@ export default function IngresosPage() {
                     {r.facturapi_id && r.estatus !== "pagado" && (
                       <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02" })} style={{ ...cancelarCfdiBtnStyle, ...mobileActionStyle }}>⊘ Cancelar factura</button>
                     )}
+                    {faltaComplemento(r) && (
+                      <button onClick={() => setComplementoModal({ row: r, label: proyectoLabel(r), forma: "03" })} style={{ ...complementoBtnStyle, ...mobileActionStyle }}>🧾 Complemento</button>
+                    )}
                     <button onClick={() => openEdit(r)} style={{ ...actionBtnStyle, ...mobileActionStyle, marginLeft: "auto", minWidth: 36 }} aria-label="Editar">✎</button>
                     {(isAdmin || !r.project_id) && (
                       <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, ...mobileActionStyle, color: "#f87171", minWidth: 36 }} aria-label="Borrar">✕</button>
@@ -1099,6 +1172,11 @@ export default function IngresosPage() {
                             ⊘
                           </button>
                         )}
+                        {faltaComplemento(r) && (
+                          <button onClick={() => setComplementoModal({ row: r, label: proyectoLabel(r), forma: "03" })} style={complementoBtnStyle} title="Factura PPD cobrada sin complemento de pago">
+                            🧾 Complemento
+                          </button>
+                        )}
                         <button onClick={() => openEdit(r)} style={actionBtnStyle}>✎</button>
                         {/* Borrar: admin cualquiera; finanzas solo ingresos manuales (sin proyecto) */}
                         {(isAdmin || !r.project_id) && (
@@ -1132,6 +1210,37 @@ export default function IngresosPage() {
       </main>
 
       {datosFiscalesOpen && <DatosFiscalesModal onClose={() => setDatosFiscalesOpen(false)} />}
+
+      {/* ── Complemento de pago pendiente ── */}
+      {complementoModal && (
+        <div style={overlayStyle}>
+          <div style={{ ...modalStyle(isMobile), maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div style={modalHeaderStyle}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Complemento de pago</h2>
+              <button onClick={() => setComplementoModal(null)} style={closeBtnStyle}>✕</button>
+            </div>
+            <div style={modalBodyStyle}>
+              <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+                {complementoModal.label} · factura {complementoModal.row.numero_factura} (PPD)<br />
+                Pagado el {fmtDateField(complementoModal.row.fecha_pago)} por {fmt(complementoModal.row.subtotal + complementoModal.row.iva)} con IVA
+              </p>
+              <FormField label="¿Cómo se recibió el pago?">
+                <select value={complementoModal.forma} onChange={e => setComplementoModal(m => m && { ...m, forma: e.target.value })} style={inputStyle}>
+                  {FORMAS_PAGO.filter(f => f.clave !== "99").map(f => <option key={f.clave} value={f.clave}>{f.clave} · {f.nombre}</option>)}
+                </select>
+              </FormField>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setComplementoModal(null)} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+                <button onClick={confirmarComplemento} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.12)", color: "#38bdf8", fontSize: 13, fontWeight: 700, cursor: emitiendo ? "not-allowed" : "pointer", opacity: emitiendo ? 0.6 : 1 }}>
+                  {emitiendo ? "Emitiendo…" : "🧾 Emitir complemento"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Cancelar factura timbrada ── */}
       {cancelModal && (
@@ -1421,6 +1530,28 @@ export default function IngresosPage() {
                       </p>
                     )
                   })()}
+                </div>
+              )}
+
+              {/* ── Complemento de pago (factura PPD) ── */}
+              {esPPD(payModal.row) && !paySinIva && (
+                <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 10, background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.22)", display: "grid", gap: 10 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                    <input
+                      type="checkbox"
+                      checked={payComplemento}
+                      onChange={e => setPayComplemento(e.target.checked)}
+                      style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
+                    />
+                    Emitir complemento de pago (factura {payModal.row.numero_factura} es PPD)
+                  </label>
+                  {payComplemento && (
+                    <FormField label="¿Cómo se recibió el pago?">
+                      <select value={payForma} onChange={e => setPayForma(e.target.value)} style={inputStyle}>
+                        {FORMAS_PAGO.filter(f => f.clave !== "99").map(f => <option key={f.clave} value={f.clave}>{f.clave} · {f.nombre}</option>)}
+                      </select>
+                    </FormField>
+                  )}
                 </div>
               )}
 
@@ -1972,6 +2103,19 @@ const actionBtnStyle: React.CSSProperties = {
   color: "#6b7c93",
   cursor: "pointer",
   fontSize: 13,
+}
+
+const complementoBtnStyle: React.CSSProperties = {
+  padding: "4px 10px",
+  marginRight: 8,
+  borderRadius: 7,
+  border: "1px solid rgba(56,189,248,0.35)",
+  background: "rgba(56,189,248,0.10)",
+  color: "#38bdf8",
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 }
 
 const cancelarCfdiBtnStyle: React.CSSProperties = {

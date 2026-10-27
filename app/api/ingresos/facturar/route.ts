@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiUser } from "../../../../lib/api-auth"
-import { parseNumeroFactura, parseUuidFiscal } from "../../../../lib/cfdi"
+import { parseCfdiResumen, parseNumeroFactura, parseUuidFiscal } from "../../../../lib/cfdi"
 import { INGRESO_FACTURA_COLS, registrarFacturaIngreso, validarParcial } from "../../../../lib/ingresos-factura"
 
 // Mismos roles que pueden tocar ingresos en la app
@@ -82,6 +82,7 @@ export async function POST(req: Request) {
         .select("id, proyecto")
         .eq("factura_uuid", uuidFiscal)
         .neq("id", ingresoId)
+        .limit(1)
         .maybeSingle()
       if (dupe) {
         return NextResponse.json(
@@ -100,6 +101,8 @@ export async function POST(req: Request) {
       uuidFiscal,
       parcial,
       label,
+      // PUE/PPD: decide si al cobrar se emite complemento de pago
+      extra: { factura_metodo_pago: parseCfdiResumen(xmlText).metodoPago },
     })
 
     return NextResponse.json({ ok: true, numeroFactura, remanente })

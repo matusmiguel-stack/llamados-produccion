@@ -99,6 +99,54 @@ export async function crearFactura(empresa: string, f: FacturaInput): Promise<Fa
   return { id: j.id, uuid: String(j.uuid || "").toUpperCase(), series: j.series ?? null, folio_number: j.folio_number ?? null, total: Number(j.total) }
 }
 
+// Complemento de pago (CFDI tipo P) de una factura PPD
+export async function crearComplementoPago(empresa: string, c: {
+  receptor: FacturaInput["receptor"]
+  formaPago: string
+  fecha: string                 // YYYY-MM-DD
+  factura: { uuid: string; serie: string | null; folio: string | null; moneda: string }
+  monto: number                 // importe pagado, con IVA
+  parcialidad: number
+  saldoAnterior: number
+  ivaTasa: number
+  serie?: string | null
+}): Promise<FacturaEmitida> {
+  const base = Math.round((c.monto / (1 + c.ivaTasa)) * 100) / 100
+  const folioNum = c.factura.folio && /^\d+$/.test(c.factura.folio) ? Number(c.factura.folio) : undefined
+  const body = {
+    type: "P",
+    customer: {
+      legal_name: c.receptor.razon_social,
+      tax_id: c.receptor.rfc,
+      tax_system: c.receptor.regimen_fiscal,
+      address: { zip: c.receptor.cp },
+      ...(c.receptor.email ? { email: c.receptor.email } : {}),
+    },
+    ...(c.serie ? { series: c.serie } : {}),
+    complements: [{
+      type: "pago",
+      data: [{
+        payment_form: c.formaPago,
+        // Mediodía en CDMX para que la fecha no se corra de día
+        date: `${c.fecha}T12:00:00-06:00`,
+        currency: c.factura.moneda || "MXN",
+        related_documents: [{
+          uuid: c.factura.uuid,
+          amount: c.monto,
+          installment: c.parcialidad,
+          last_balance: c.saldoAnterior,
+          ...(c.factura.serie ? { series: c.factura.serie } : {}),
+          ...(folioNum != null ? { folio_number: folioNum } : {}),
+          taxes: [{ base, type: "IVA", rate: c.ivaTasa }],
+        }],
+      }],
+    }],
+  }
+  const res = await call(empresa, "POST", "/invoices", body)
+  const j = await res.json()
+  return { id: j.id, uuid: String(j.uuid || "").toUpperCase(), series: j.series ?? null, folio_number: j.folio_number ?? null, total: Number(j.total) }
+}
+
 export async function obtenerFactura(empresa: string, id: string): Promise<FacturaEmitida & { status: string }> {
   const res = await call(empresa, "GET", `/invoices/${encodeURIComponent(id)}`)
   const j = await res.json()
