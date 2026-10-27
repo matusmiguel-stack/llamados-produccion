@@ -44,7 +44,7 @@ async function call(empresa: string, method: string, path: string, body?: unknow
 
 export type FacturaInput = {
   receptor: { rfc: string; razon_social: string; regimen_fiscal: string; cp: string; email?: string | null }
-  concepto: { descripcion: string; clave_prod_serv: string; clave_unidad: string; precio: number; cantidad?: number }
+  conceptos: { descripcion: string; clave_prod_serv: string; clave_unidad: string; precio: number; cantidad?: number }[]
   ivaTasa: number                 // 0.16 o 0
   retencionIva?: number | null    // p. ej. 0.106667
   retencionIsr?: number | null    // p. ej. 0.10 o 0.0125
@@ -77,17 +77,17 @@ export async function crearFactura(empresa: string, f: FacturaInput): Promise<Fa
       address: { zip: f.receptor.cp },
       ...(f.receptor.email ? { email: f.receptor.email } : {}),
     },
-    items: [{
-      quantity: f.concepto.cantidad ?? 1,
+    items: f.conceptos.map(c => ({
+      quantity: c.cantidad ?? 1,
       product: {
-        description: f.concepto.descripcion,
-        product_key: f.concepto.clave_prod_serv,
-        unit_key: f.concepto.clave_unidad,
-        price: f.concepto.precio,
+        description: c.descripcion,
+        product_key: c.clave_prod_serv,
+        unit_key: c.clave_unidad,
+        price: c.precio,
         tax_included: false,
         taxes,
       },
-    }],
+    })),
     use: f.uso,
     payment_form: f.metodoPago === "PPD" ? "99" : f.formaPago,
     payment_method: f.metodoPago,

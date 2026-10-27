@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     } else {
       factura = await crearFactura(ingreso.empresa, {
         receptor: { rfc: receptor.rfc, razon_social: receptor.razon_social, regimen_fiscal: receptor.regimen_fiscal, cp: receptor.cp, email: receptor.email },
-        concepto: { descripcion, clave_prod_serv: claveProdServ, clave_unidad: claveUnidad, precio },
+        conceptos: [{ descripcion, clave_prod_serv: claveProdServ, clave_unidad: claveUnidad, precio }],
         ivaTasa,
         uso,
         formaPago,
