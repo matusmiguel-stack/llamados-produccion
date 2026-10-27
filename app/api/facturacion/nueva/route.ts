@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
-import { crearFactura, enviarFacturaPorCorreo, esModoPruebas } from "../../../../lib/facturapi"
+import { crearFactura, descargarFactura, esModoPruebas } from "../../../../lib/facturapi"
+import { enviarFacturaCliente } from "../../../../lib/factura-email"
 import { guardarArchivosIndependiente } from "../../../../lib/facturas-independientes"
 
 const EMPRESAS = ["retro_studio", "retro_films"]
@@ -82,8 +83,9 @@ export async function POST(req: Request) {
       throw new Error(`La factura ${numero} SÍ se timbró, pero no se pudo registrar en la app (${insErr?.message}). Búscala en Facturapi; no la vuelvas a timbrar.`)
     }
 
+    let archivos: { xml: Buffer; pdf: Buffer } | null = null
     try {
-      await guardarArchivosIndependiente(admin, { id: fila.id, empresa, facturapi_id: factura.id, numero })
+      archivos = await guardarArchivosIndependiente(admin, { id: fila.id, empresa, facturapi_id: factura.id, numero })
     } catch (e: any) {
       console.error("[facturacion/nueva] archivos:", e.message)
     }
@@ -97,7 +99,14 @@ export async function POST(req: Request) {
     let correo: string | null = null
     if (email) {
       try {
-        await enviarFacturaPorCorreo(empresa, factura.id, email)
+        if (!archivos) {
+          const [xml, pdf] = await Promise.all([descargarFactura(empresa, factura.id, "xml"), descargarFactura(empresa, factura.id, "pdf")])
+          archivos = { xml, pdf }
+        }
+        await enviarFacturaCliente({
+          para: email, empresa, numero, receptor: receptor.razon_social,
+          total: factura.total, uuid: factura.uuid || null, pdf: archivos.pdf, xml: archivos.xml,
+        })
         correo = email
       } catch (e: any) {
         console.error("[facturacion/nueva] correo:", e.message)

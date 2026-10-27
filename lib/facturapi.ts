@@ -163,7 +163,3 @@ export async function cancelarFactura(empresa: string, id: string, motivo: strin
   const j = await res.json()
   return { status: j.status, cancellation_status: j.cancellation_status }
 }
-
-export async function enviarFacturaPorCorreo(empresa: string, id: string, email: string): Promise<void> {
-  await call(empresa, "POST", `/invoices/${encodeURIComponent(id)}/email`, { email })
-}

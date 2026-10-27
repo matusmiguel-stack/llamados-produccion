@@ -6,7 +6,7 @@ import { descargarFactura } from "./facturapi"
 export async function guardarArchivosIndependiente(
   admin: SupabaseClient,
   f: { id: string; empresa: string; facturapi_id: string; numero: string | null },
-): Promise<{ xml_path: string; pdf_path: string }> {
+): Promise<{ xml_path: string; pdf_path: string; xml: Buffer; pdf: Buffer }> {
   const [xml, pdf] = await Promise.all([
     descargarFactura(f.empresa, f.facturapi_id, "xml"),
     descargarFactura(f.empresa, f.facturapi_id, "pdf"),
@@ -20,5 +20,5 @@ export async function guardarArchivosIndependiente(
   const rutas = { xml_path: xmlUp.data.path, pdf_path: pdfUp.data.path }
   const { error } = await admin.from("facturas_independientes").update(rutas).eq("id", f.id)
   if (error) throw new Error(error.message)
-  return rutas
+  return { ...rutas, xml, pdf }
 }

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
 import { INGRESO_FACTURA_COLS, registrarFacturaIngreso, validarParcial } from "../../../../lib/ingresos-factura"
-import { crearFactura, descargarFactura, enviarFacturaPorCorreo, esModoPruebas, obtenerFactura, type FacturaEmitida } from "../../../../lib/facturapi"
+import { crearFactura, descargarFactura, esModoPruebas, obtenerFactura, type FacturaEmitida } from "../../../../lib/facturapi"
+import { enviarFacturaCliente } from "../../../../lib/factura-email"
 
 // POST JSON → timbra el CFDI del ingreso en Facturapi, guarda XML y PDF y lo
 // marca como facturado (mismo registro que cuando se sube desde Orderly).
@@ -98,7 +99,10 @@ export async function POST(req: Request) {
     let correo: string | null = null
     if (email) {
       try {
-        await enviarFacturaPorCorreo(ingreso.empresa, factura.id, email)
+        await enviarFacturaCliente({
+          para: email, empresa: ingreso.empresa, numero: numeroFactura, receptor: receptor.razon_social,
+          total: factura.total, uuid: factura.uuid || null, pdf, xml,
+        })
         correo = email
       } catch (e: any) {
         console.error("[ingresos/timbrar] correo:", e.message)
