@@ -200,6 +200,7 @@ export default function IngresosPage() {
   const [cancelando, setCancelando] = useState(false)
   // Complementos de pago (facturas PPD): ingresos que ya tienen el suyo
   const [conComplemento, setConComplemento] = useState<Set<string>>(new Set())
+  const [complementoArchivos, setComplementoArchivos] = useState<Record<string, { numero: string | null; pdf: string | null; xml: string | null }>>({})
   const [payComplemento, setPayComplemento] = useState(true)
   const [payForma, setPayForma] = useState("03")
   const [complementoModal, setComplementoModal] = useState<{ row: Ingreso; label: string; forma: string } | null>(null)
@@ -234,9 +235,10 @@ export default function IngresosPage() {
       supabase.from("ingresos").select("*").order("created_at", { ascending: false }),
       supabase.from("projects").select("id, name, code, responsable, clients(name)").order("name"),
       supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, nickname").order("nombre"),
-      supabase.from("complementos_pago").select("ingreso_id"),
+      supabase.from("complementos_pago").select("ingreso_id, numero, pdf_path, xml_path"),
     ])
     setConComplemento(new Set((comps || []).map((c: any) => c.ingreso_id)))
+    setComplementoArchivos(Object.fromEntries((comps || []).map((c: any) => [c.ingreso_id, { numero: c.numero, pdf: c.pdf_path, xml: c.xml_path }])))
     setEmpleados(emps || [])
     setIngresos((data || []) as Ingreso[])
     setProjects((projs || []).map((p: any) => ({
@@ -250,6 +252,44 @@ export default function IngresosPage() {
   }, [])
 
   useEffect(() => { loadPage() }, [loadPage])
+
+  // Abre el PDF/XML de una factura (o complemento) guardado en storage.
+  // La pestaña se abre antes del fetch para que Safari no la bloquee.
+  async function abrirArchivo(path: string) {
+    const w = window.open("", "_blank")
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch("/api/facturas/admin", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "download", path }),
+      })
+      const d = await res.json()
+      if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
+      if (w) w.location.href = d.url
+      else window.open(d.url, "_blank")
+    } catch (e: any) {
+      w?.close()
+      alert("No se pudo abrir el archivo: " + e.message)
+    }
+  }
+
+  // Folio de la factura: abre el PDF; al lado, el XML y el complemento de pago si hay.
+  function facturaLinks(r: Ingreso) {
+    if (!r.numero_factura) return "—"
+    const comp = complementoArchivos[r.id]
+    const link = (path: string, label: string, title: string) => (
+      <button onClick={() => abrirArchivo(path)} style={archivoLinkStyle} title={title}>{label}</button>
+    )
+    return (
+      <span style={{ display: "inline-flex", gap: 6, alignItems: "baseline", flexWrap: "wrap" }}>
+        {r.factura_pdf_path ? link(r.factura_pdf_path, r.numero_factura, "Abrir el PDF de la factura") : r.numero_factura}
+        {r.factura_xml_path && link(r.factura_xml_path, "XML", "Descargar el XML de la factura")}
+        {comp?.pdf && link(comp.pdf, "Compl.", `Complemento de pago${comp.numero ? " " + comp.numero : ""} (PDF)`)}
+        {comp?.xml && link(comp.xml, "XML", `Complemento de pago${comp.numero ? " " + comp.numero : ""} (XML)`)}
+      </span>
+    )
+  }
 
   // ¿Qué empresas ya tienen Facturapi conectado (y en qué ambiente)?
   useEffect(() => {
@@ -1038,7 +1078,7 @@ export default function IngresosPage() {
                   <div style={mobileMetaGridStyle}>
                     <MobileMeta label="Fecha pago" value={fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)} color={r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : undefined} />
                     <MobileMeta label="Mes cierre" value={r.mes_cierre || "—"} />
-                    <MobileMeta label="Factura" value={r.numero_factura || "—"} />
+                    <MobileMeta label="Factura" value={facturaLinks(r)} />
                     <MobileMeta label="ODC" value={r.odc || "—"} />
                     <MobileMeta label="Responsable" value={responsableLabel(r.responsable)} />
                     <MobileMeta label="IVA" value={fmt(r.iva)} />
@@ -1151,7 +1191,7 @@ export default function IngresosPage() {
                       <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", whiteSpace: "nowrap", fontWeight: isOverdue ? 600 : undefined }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
-                      <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{r.numero_factura || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{facturaLinks(r)}</td>
                       <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11 }}>{r.odc || "—"}</td>
                       <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
                       <td style={{ ...tdStyle, color: "#7d8ca3", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
@@ -1963,13 +2003,25 @@ const statusPillActiveStyle: React.CSSProperties = {
   border: "1px solid rgba(148,163,184,0.22)",
 }
 
-function MobileMeta({ label, value, color }: { label: string; value: string; color?: string }) {
+function MobileMeta({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
     <div style={{ minWidth: 0 }}>
       <p style={{ margin: 0, color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</p>
       <p style={{ margin: "1px 0 0", color: color || "#cbd5e1", fontSize: 12, overflowWrap: "anywhere" }}>{value}</p>
     </div>
   )
+}
+
+const archivoLinkStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  color: "#a78bfa",
+  fontSize: 11,
+  fontFamily: "var(--font-mono)",
+  textDecoration: "underline",
+  textUnderlineOffset: 2,
+  cursor: "pointer",
 }
 
 const mobileCardStyle: React.CSSProperties = {
