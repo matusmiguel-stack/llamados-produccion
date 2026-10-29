@@ -674,15 +674,6 @@ export default function CotizacionesPage() {
     try {
       let quoteId: string
 
-      type ActualSnapshot = {
-        actual_qty: number | null
-        actual_days: number | null
-        actual_unit_price: number | null
-        actual_supplier_id: string | null
-        actual_employee_id: string | null
-      }
-      const savedActuals: Record<string, ActualSnapshot> = {}
-
       if (editQuoteId) {
         // ── Modo edición ───────────────────────────────────────────────────
         const { error: updErr } = await supabase
@@ -691,30 +682,20 @@ export default function CotizacionesPage() {
           .eq("id", editQuoteId)
         if (updErr) throw updErr
 
-        // Guardar valores de liberación antes de borrar (preservar progreso)
+        // Total guardado hasta ahora: alimenta la salvaguarda anti-borrado.
         const { data: oldSecs } = await supabase
           .from("quote_sections")
-          .select("id, name")
+          .select("id")
           .eq("quote_id", editQuoteId)
 
         let oldTotal = 0
         if (oldSecs && oldSecs.length > 0) {
-          for (const sec of oldSecs) {
-            const { data: oldItems } = await supabase
-              .from("quote_items")
-              .select("description, qty, days, unit_price, actual_qty, actual_days, actual_unit_price, actual_supplier_id, actual_employee_id")
-              .eq("section_id", sec.id)
-            for (const it of oldItems || []) {
-              oldTotal += (Number(it.qty) || 0) * (Number(it.days) || 0) * (Number(it.unit_price) || 0)
-              const key = `${sec.name}|${it.description}`
-              savedActuals[key] = {
-                actual_qty: it.actual_qty,
-                actual_days: it.actual_days,
-                actual_unit_price: it.actual_unit_price,
-                actual_supplier_id: it.actual_supplier_id,
-                actual_employee_id: it.actual_employee_id,
-              }
-            }
+          const { data: oldItems } = await supabase
+            .from("quote_items")
+            .select("qty, days, unit_price")
+            .in("section_id", oldSecs.map((s: any) => s.id))
+          for (const it of oldItems || []) {
+            oldTotal += (Number(it.qty) || 0) * (Number(it.days) || 0) * (Number(it.unit_price) || 0)
           }
 
           // 🛡️ Salvaguarda anti-borrado: nunca sustituir una cotización que YA tenía
@@ -751,11 +732,12 @@ export default function CotizacionesPage() {
       }
 
       // Construir secciones + items en memoria y mandarlos en una sola llamada
-      // (replace_quote_sections) que borra lo anterior y reinserta todo dentro
-      // de UNA transacción en la base. Antes cada rubro se insertaba con su
-      // propia llamada a Supabase; si una fallaba a la mitad (red, lo que
-      // fuera), lo ya borrado no volvía y el resto de rubros no llegaba a
-      // insertarse, dejando la cotización con solo los primeros rubros.
+      // (replace_quote_sections) que los sincroniza EN SITIO dentro de UNA
+      // transacción: cada rubro conserva su id y todo lo que el control de
+      // egresos le colgó (reales, pagos, facturas, instrucciones enviadas).
+      // Antes borraba y reinsertaba todo, y con eso se perdían los pagos y se
+      // desligaban las facturas de proveedor (RS3045, 2026-10-29). Por eso
+      // aquí NO se mandan los reales (actual_*): no son de la cotización.
       const sectionsPayload = RUBROS.map((rubro, ri) => {
         const extraList = extras[rubro.id] || []
         // Cada concepto se guarda con su posición real (order_index) y, si es
@@ -764,7 +746,6 @@ export default function CotizacionesPage() {
           const extra = extraList.find((e) => e.tempId === key)
           if (extra) {
             const desc = extra.description || "Concepto adicional"
-            const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
             return {
               description: desc,
               qty: parseFloat(extra.qty) || 0,
@@ -775,14 +756,12 @@ export default function CotizacionesPage() {
               supplier: null,
               order_index: pos,
               template_key: null,
-              ...prev,
             }
           }
 
           const item = rubro.items.find((it) => it.id === key)!
           if (item.special === "agency_commission") {
             const desc = `Comisión de agencia (${commissionPct}%)`
-            const prev = savedActuals?.[`${rubro.label}|${desc}`] ?? {}
             return {
               description: desc,
               qty: 1,
@@ -793,12 +772,10 @@ export default function CotizacionesPage() {
               supplier: commissionPct,
               order_index: pos,
               template_key: item.id,
-              ...prev,
             }
           }
           const v = values[item.id] || DEFAULT_ITEM
           const itemLabel = (v.label && v.label.trim()) ? v.label.trim() : item.label
-          const prev = savedActuals?.[`${rubro.label}|${itemLabel}`] ?? savedActuals?.[`${rubro.label}|${item.label}`] ?? {}
           return {
             description: itemLabel,
             qty: parseFloat(v.qty) || 0,
@@ -809,7 +786,6 @@ export default function CotizacionesPage() {
             supplier: null,
             order_index: pos,
             template_key: item.id,
-            ...prev,
           }
         })
 
