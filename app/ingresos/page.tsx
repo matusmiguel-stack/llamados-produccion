@@ -717,7 +717,7 @@ export default function IngresosPage() {
     const ivaPagado = paySinIva ? 0 : ivaProporcional
 
     setPaying(true)
-    const { error } = await supabase
+    const { data: guardado, error } = await supabase
       .from("ingresos")
       .update({
         estatus: "pagado",
@@ -728,7 +728,24 @@ export default function IngresosPage() {
         updated_at: new Date().toISOString(),
       })
       .eq("id", payModal.row.id)
+      .select("subtotal, iva")
+      .single()
     if (error) { setPaying(false); alert(error.message); return }
+
+    // Seguro: la base puede revertir el monto en silencio (así pasó con el
+    // candado de finanzas en ingresos ligados). Si el monto guardado no es el
+    // esperado, se deshace el pago antes de crear el remanente, para no dejar
+    // la línea "pagada" con el monto completo y un remanente aparte.
+    const subtotalEsperado = parcial ?? subtotalOriginal
+    const ivaEsperado = (parcial != null || paySinIva) ? ivaPagado : ivaOriginal
+    if (Math.abs(Number(guardado?.subtotal) - subtotalEsperado) > 0.009 || Math.abs(Number(guardado?.iva) - ivaEsperado) > 0.009) {
+      await supabase.from("ingresos")
+        .update({ estatus: r.estatus, fecha_pago: r.fecha_pago, updated_at: new Date().toISOString() })
+        .eq("id", payModal.row.id)
+      setPaying(false)
+      alert("No se registró el pago: la base no aceptó el cambio de monto de la línea (quedó como estaba). Avísale a Miguel.")
+      return
+    }
 
     // Línea del remanente ("… - Liquidación"), con el mismo hipervínculo al
     // proyecto. Va DESVINCULADA (liquidacion_project_id, no project_id), así no
