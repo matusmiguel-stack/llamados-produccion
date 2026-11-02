@@ -29,7 +29,7 @@ type EgresoItem = {
   supplierLabel: string; supplierType: "proveedor" | "empleado" | "none"
   section_id: string; section_name: string; quote_id: string; quote_name: string
   billing_sent_at: string | null
-  pago_tipo: "anticipo" | "comprobacion" | null
+  pago_tipo: "anticipo" | "comprobacion" | "pago" | null
   pago_estado: "pagado" | "pendiente_cierre" | null
   monto_comprobado: number | null
   pago_modo: "anticipo" | "comprobacion" | null
@@ -37,6 +37,21 @@ type EgresoItem = {
 }
 
 type EditState = { description: string; qty: string; days: string; unit_price: string; contact: string; fecha_pago: string; section_id: string; pago_modo: string }
+
+// Pago ya registrado (lo devuelve GET /api/egresos/pay); los archivos traen
+// una liga temporal para abrirlos.
+type ArchivoPago = { nombre: string | null; url: string | null }
+type PagoDetalle = {
+  facturaId: string
+  tipo: "anticipo" | "comprobacion" | "pago"
+  monto: number
+  montoReal: number | null
+  formaPago: string
+  fechaPago: string
+  concepto: string
+  archivos: { xml: ArchivoPago | null; pdf: ArchivoPago | null; comprobante: ArchivoPago | null }
+}
+type ClaveArchivo = keyof PagoDetalle["archivos"]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -172,6 +187,13 @@ export function EgresosPanel({
   const [payForma, setPayForma] = useState("")
   const [payFecha, setPayFecha] = useState("")
   const [paying, setPaying] = useState(false)
+
+  // ── Corregir un pago ya registrado (archivo equivocado, monto, fecha, forma) ──
+  const [editPago, setEditPago] = useState<{ item: EgresoItem; detalle: PagoDetalle | null; error: string | null } | null>(null)
+  const [epForm, setEpForm] = useState({ monto: "", montoReal: "", forma: "", fecha: "" })
+  const [epFiles, setEpFiles] = useState<Record<ClaveArchivo, File | null>>({ xml: null, pdf: null, comprobante: null })
+  const [epQuitar, setEpQuitar] = useState<Record<ClaveArchivo, boolean>>({ xml: false, pdf: false, comprobante: false })
+  const [epSaving, setEpSaving] = useState(false)
 
   async function load() {
       setLoading(true)
@@ -632,6 +654,93 @@ export function EgresosPanel({
     }
   }
 
+  // ── Corregir un pago registrado ───────────────────────────────────────────
+  async function openEditPago(item: EgresoItem) {
+    setEditPago({ item, detalle: null, error: null })
+    setEpForm({ monto: "", montoReal: "", forma: "", fecha: "" })
+    setEpFiles({ xml: null, pdf: null, comprobante: null })
+    setEpQuitar({ xml: false, pdf: false, comprobante: false })
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`/api/egresos/pay?itemId=${encodeURIComponent(item.id)}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data.error) throw new Error(data.error || `No se pudo cargar el pago (error ${res.status})`)
+      const d: PagoDetalle = data.pago
+      setEpForm({ monto: String(d.monto), montoReal: d.montoReal != null ? String(d.montoReal) : "", forma: d.formaPago, fecha: d.fechaPago })
+      // Si mientras cargaba cerraron el modal o abrieron otro pago, no pisarlo.
+      setEditPago(prev => (prev && prev.item.id === item.id ? { ...prev, detalle: d } : prev))
+    } catch (err: any) {
+      setEditPago(prev => (prev && prev.item.id === item.id ? { ...prev, error: err.message } : prev))
+    }
+  }
+
+  // ¿Quedará archivo tras guardar? El nuevo, o el actual si no se quitó.
+  function archivoFinal(clave: ClaveArchivo): boolean {
+    if (epFiles[clave]) return true
+    if (epQuitar[clave]) return false
+    return !!editPago?.detalle?.archivos[clave]
+  }
+
+  async function submitEditPago() {
+    if (!editPago?.detalle) return
+    const { item, detalle } = editPago
+    const monto = parseFloat(epForm.monto)
+    if (!monto || monto <= 0) { alert("Indica el monto del pago"); return }
+    const montoReal = parseFloat(epForm.montoReal)
+    if (detalle.tipo === "comprobacion" && (!montoReal || montoReal <= 0)) { alert("Indica el monto real comprobado"); return }
+    if (!epForm.forma) { alert("Selecciona de dónde salió el pago"); return }
+    if (!epForm.fecha) { alert("Indica la fecha en que se realizó el pago"); return }
+    // Mismas reglas que al registrar el pago.
+    if (detalle.tipo === "anticipo" && facturaRequerida(epForm.forma) && (!archivoFinal("xml") || !archivoFinal("pdf"))) {
+      alert(`Para un anticipo pagado por ${epForm.forma} debe quedar el XML y el PDF de la factura`)
+      return
+    }
+    if (comprobanteRequerido(epForm.forma) && !archivoFinal("comprobante")) {
+      alert("Sube el comprobante de pago del banco (PDF o JPG)")
+      return
+    }
+    setEpSaving(true)
+    try {
+      // El comprobante se sube aparte (los archivos grandes truenan por la API).
+      const comprobantePath = epFiles.comprobante ? await uploadComprobante(epFiles.comprobante, projectCode || null) : ""
+      const { data: { session } } = await supabase.auth.getSession()
+      const fd = new FormData()
+      fd.append("itemId", item.id)
+      fd.append("monto", String(monto))
+      if (detalle.tipo === "comprobacion") fd.append("montoReal", String(montoReal))
+      fd.append("formaPago", epForm.forma)
+      fd.append("fechaPago", epForm.fecha)
+      if (epFiles.xml) fd.append("xml", epFiles.xml)
+      if (epFiles.pdf) fd.append("pdf", epFiles.pdf)
+      if (comprobantePath) fd.append("comprobantePath", comprobantePath)
+      if (epQuitar.xml) fd.append("quitarXml", "1")
+      if (epQuitar.pdf) fd.append("quitarPdf", "1")
+      if (epQuitar.comprobante) fd.append("quitarComprobante", "1")
+      let res: Response
+      try {
+        res = await fetch("/api/egresos/pay", {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+          body: fd,
+        })
+      } catch {
+        throw new Error(mensajeDeRed(comprobantePath ? "El comprobante sí se subió, pero no se pudieron guardar los cambios" : "No se pudieron guardar los cambios"))
+      }
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `No se pudieron guardar los cambios (error ${res.status})`)
+      }
+      setEditPago(null)
+      await load()
+    } catch (err: any) {
+      alert("Error: " + err.message)
+    } finally {
+      setEpSaving(false)
+    }
+  }
+
   // ── Filtro de estatus ──────────────────────────────────────────────────────
   function passesFilter(it: EgresoItem): boolean {
     switch (statusFilter) {
@@ -818,6 +927,125 @@ export function EgresosPanel({
       </div>
     </div>
   )
+
+  // Modal para corregir un pago ya registrado: archivos, monto, fecha y forma.
+  const editPagoUI = editPago && (() => {
+    const { item, detalle, error } = editPago
+    const tipo = detalle?.tipo || item.pago_tipo || "pago"
+    const titulo = tipo === "anticipo" ? "Editar anticipo" : tipo === "comprobacion" ? "Editar comprobación" : "Editar pago"
+    const color = tipo === "anticipo" ? "#34d399" : tipo === "comprobacion" ? "#fbbf24" : "#67e8f9"
+
+    const archivoUI = (clave: ClaveArchivo, etiqueta: string, requerido: boolean, accept: string) => {
+      const actual = detalle?.archivos[clave] || null
+      const nuevo = epFiles[clave]
+      const quitado = epQuitar[clave]
+      return (
+        <div style={{ marginTop: 14 }}>
+          <label style={payLabelStyle}>{etiqueta} {requerido ? "*" : "(opcional)"}</label>
+          {nuevo ? (
+            <div style={epArchivoRowStyle}>
+              <span style={{ ...epArchivoNombreStyle, color: "#6ee7b7" }} title={nuevo.name}>⬆ {nuevo.name}</span>
+              <button type="button" onClick={() => setEpFiles(f => ({ ...f, [clave]: null }))} style={epLinkBtnStyle}>Cancelar</button>
+            </div>
+          ) : actual && !quitado ? (
+            <div style={epArchivoRowStyle}>
+              {actual.url ? (
+                <a href={actual.url} target="_blank" rel="noreferrer" title="Abrir el archivo actual"
+                  style={{ ...epArchivoNombreStyle, color: "#93c5fd" }}>📎 {actual.nombre}</a>
+              ) : (
+                <span style={{ ...epArchivoNombreStyle, color: "#94a3b8" }}>📎 {actual.nombre}</span>
+              )}
+              {!requerido && (
+                <button type="button" onClick={() => setEpQuitar(q => ({ ...q, [clave]: true }))} style={{ ...epLinkBtnStyle, color: "#f87171" }}>Quitar</button>
+              )}
+            </div>
+          ) : (
+            <div style={{ ...epArchivoRowStyle, color: "#7d8ca3", fontStyle: "italic" }}>
+              <span>{quitado ? "Se quitará al guardar" : "Sin archivo"}</span>
+              {quitado && (
+                <button type="button" onClick={() => setEpQuitar(q => ({ ...q, [clave]: false }))} style={epLinkBtnStyle}>Deshacer</button>
+              )}
+            </div>
+          )}
+          {!nuevo && (
+            <input type="file" accept={accept}
+              onChange={(e) => setEpFiles(f => ({ ...f, [clave]: e.target.files?.[0] || null }))}
+              title={actual && !quitado ? "Elegir otro archivo (reemplaza el actual al guardar)" : "Subir archivo"}
+              style={{ ...payFileStyle, marginTop: 6 }} />
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div style={payOverlayStyle}>
+        <div style={{ ...payPanelStyle, maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color }}>{titulo}</p>
+          <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{item.description}</p>
+          <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>{item.supplierLabel}</p>
+
+          {error ? (
+            <p style={{ margin: 0, color: "#fca5a5", fontSize: 13 }}>{error}</p>
+          ) : !detalle ? (
+            <p style={{ margin: 0, color: "#7d8ca3", fontSize: 13 }}>Cargando el pago…</p>
+          ) : (
+            <>
+              <label style={payLabelStyle}>{tipo === "comprobacion" ? "Monto pagado" : "Monto del pago"}</label>
+              <input type="number" value={epForm.monto} onChange={(e) => setEpForm(f => ({ ...f, monto: e.target.value }))} style={payInputStyle} />
+              {tipo === "comprobacion" && (() => {
+                const pagado = parseFloat(epForm.monto) || 0
+                const real = parseFloat(epForm.montoReal) || 0
+                return (
+                  <>
+                    <label style={{ ...payLabelStyle, marginTop: 14 }}>Monto real comprobado</label>
+                    <input type="number" value={epForm.montoReal} onChange={(e) => setEpForm(f => ({ ...f, montoReal: e.target.value }))} style={payInputStyle} />
+                    {real > pagado + 0.009 && (
+                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#fbbf24" }}>
+                        Diferencia de {fmt(real - pagado)}. Al editar no se genera ni se ajusta la línea de reembolso; si cambió, corrígela a mano en el control de egresos.
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
+
+              <label style={{ ...payLabelStyle, marginTop: 14 }}>Fecha en que se realizó el pago *</label>
+              <input type="date" value={epForm.fecha} max={hoyMx} onChange={(e) => setEpForm(f => ({ ...f, fecha: e.target.value }))} style={payInputStyle} />
+
+              <label style={{ ...payLabelStyle, marginTop: 14 }}>¿De dónde salió el pago? *</label>
+              <select value={epForm.forma} onChange={(e) => setEpForm(f => ({ ...f, forma: e.target.value }))} style={payInputStyle}>
+                <option value="">Selecciona…</option>
+                <option value="Retro Studio">Retro Studio</option>
+                <option value="Retro Films">Retro Films</option>
+                <option value="Konfio">Konfio</option>
+                <option value="Banregio">Banregio</option>
+                <option value="Efectivo">Efectivo</option>
+              </select>
+
+              {tipo !== "comprobacion" && (
+                <>
+                  {archivoUI("xml", "Factura XML (CFDI)", tipo === "anticipo" && facturaRequerida(epForm.forma), ".xml,text/xml")}
+                  {archivoUI("pdf", "Factura PDF", tipo === "anticipo" && facturaRequerida(epForm.forma), ".pdf,application/pdf")}
+                </>
+              )}
+              {archivoUI("comprobante", "Comprobante de pago del banco", comprobanteRequerido(epForm.forma), ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png")}
+              <p style={{ margin: "10px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                Abre el archivo actual para revisarlo; si está mal, elige otro y se reemplaza al guardar. Los cambios quedan en el historial.
+              </p>
+            </>
+          )}
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
+            <button onClick={() => setEditPago(null)} disabled={epSaving} style={payCancelStyle}>Cancelar</button>
+            {detalle && !error && (
+              <button onClick={submitEditPago} disabled={epSaving} style={{ ...payConfirmStyle, opacity: epSaving ? 0.6 : 1 }}>
+                {epSaving ? "Guardando…" : "✓ Guardar cambios"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  })()
 
   if (items.length === 0) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1017,6 +1245,7 @@ export function EgresosPanel({
                     <div style={actionGridStyle}>
                       <div style={actionColStyle}>
                         {item.pago_estado === "pagado" ? (
+                          <>
                           <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
                             <span style={paidBadgeStyle} title={item.pago_fecha ? `Pago realizado el ${fechaCorta(item.pago_fecha)}` : item.pago_tipo === "anticipo" ? "Pagado por anticipo" : "Comprobación pagada"}>
                               ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
@@ -1025,6 +1254,15 @@ export function EgresosPanel({
                               <span style={{ fontSize: 10, color: "#7d8ca3", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
                             )}
                           </span>
+                          {/* Solo pagos registrados desde la app (anticipo, comprobación o pago
+                              directo). Los marcados por Finanzas desde la factura del proveedor no. */}
+                          {item.pago_tipo && (
+                            <button onClick={() => openEditPago(item)} style={editPagoBtnStyle}
+                              title="Corregir el monto, la fecha, de dónde salió o los archivos de este pago">
+                              ✎ Editar pago
+                            </button>
+                          )}
+                          </>
                         ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
                           <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
                         ) : item.pago_modo === "comprobacion" && item.supplierType !== "none" ? (
@@ -1284,6 +1522,9 @@ export function EgresosPanel({
           </div>
         </div>
       )}
+
+      {/* Modal para corregir un pago registrado */}
+      {editPagoUI}
     </div>
   )
 }
@@ -1354,6 +1595,24 @@ const editBtnStyle: React.CSSProperties = {
   padding: "4px 10px", borderRadius: 6,
   border: "1px solid rgba(148,163,184,0.18)", background: "rgba(255,255,255,0.04)",
   color: "#94a3b8", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+}
+
+const editPagoBtnStyle: React.CSSProperties = {
+  ...editBtnStyle,
+  border: "1px solid rgba(52,211,153,0.22)", background: "rgba(52,211,153,0.06)", color: "#6ee7b7",
+}
+// Renglón de archivo en el modal de corrección de pago
+const epArchivoRowStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0,
+  padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(148,163,184,0.14)", fontSize: 12,
+}
+const epArchivoNombreStyle: React.CSSProperties = {
+  flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "none",
+}
+const epLinkBtnStyle: React.CSSProperties = {
+  background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
+  fontSize: 11, fontWeight: 600, padding: 0, flexShrink: 0,
 }
 
 const actionStackStyle: React.CSSProperties = {
