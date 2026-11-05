@@ -172,6 +172,7 @@ export default function ProjectDetailPage() {
   const [quotesLoaded, setQuotesLoaded] = useState(false)
   const [selectedQuote, setSelectedQuote] = useState<QuoteDetail | null>(null)
   const [loadingQuote, setLoadingQuote] = useState(false)
+  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
   const [showMatriz, setShowMatriz] = useState(false)
   const [showHoja, setShowHoja] = useState(false)
   const [showGeneral, setShowGeneral] = useState(false)
@@ -305,6 +306,70 @@ export default function ProjectDetailPage() {
     if (error) return alert(error.message)
     setQuotes(data || [])
     setQuotesLoaded(true)
+  }
+
+  // Borrar una versión de cotización (las que no se quedaron). No se borra la
+  // aprobada (alimenta el control de ingresos), una liberada, ni una con datos
+  // en el control de egresos o con ingreso ligado. La BD además impide borrar
+  // rubros pagados o con factura (trg_quote_items_no_borrar_pagados), y el
+  // historial de actividad conserva lo borrado.
+  async function deleteQuote(q: Quote) {
+    if (!isAdmin || deletingQuoteId) return
+    if (q.status === "approved") {
+      alert(`“${q.name}” es la cotización aprobada del proyecto y alimenta el control de ingresos. Borra las otras versiones, no esta.`)
+      return
+    }
+    if (q.released) {
+      alert(`“${q.name}” ya está liberada (tiene control de egresos). No se puede borrar.`)
+      return
+    }
+    setDeletingQuoteId(q.id)
+    try {
+      const { data: secs, error: secErr } = await supabase
+        .from("quote_sections").select("id").eq("quote_id", q.id)
+      if (secErr) throw secErr
+      const secIds = (secs || []).map((s) => s.id)
+      if (secIds.length > 0) {
+        const { data: usados, error: itemsErr } = await supabase
+          .from("quote_items")
+          .select("id")
+          .in("section_id", secIds)
+          .or(
+            "actual_qty.not.is.null,actual_days.not.is.null,actual_unit_price.not.is.null," +
+            "actual_supplier_id.not.is.null,actual_employee_id.not.is.null,pago_estado.not.is.null," +
+            "pago_tipo.not.is.null,factura_id.not.is.null,billing_sent_at.not.is.null,monto_comprobado.gt.0"
+          )
+          .limit(1)
+        if (itemsErr) throw itemsErr
+        if ((usados || []).length > 0) {
+          alert(`“${q.name}” ya tiene datos en el control de egresos (montos reales, pagos o facturas). No se puede borrar.`)
+          return
+        }
+      }
+      // Ingreso ligado. Solo admin y editor_premium pueden leer ingresos; para
+      // editor el conteo sale en 0 y queda la protección por estatus aprobado.
+      const { count } = await supabase
+        .from("ingresos").select("id", { count: "exact", head: true }).eq("quote_id", q.id)
+      if ((count || 0) > 0) {
+        alert(`“${q.name}” está ligada a un ingreso del control de ingresos. No se puede borrar.`)
+        return
+      }
+      if (!window.confirm(`¿Borrar la cotización “${q.name}”?\n\nSe eliminan también sus secciones y rubros. Esta acción no se puede deshacer desde la app.`)) return
+      const { data: borradas, error } = await supabase
+        .from("quotes").delete().eq("id", q.id).select("id")
+      if (error) throw error
+      if (!borradas || borradas.length === 0) {
+        alert("No se pudo borrar la cotización (sin permiso o ya no existe).")
+        return
+      }
+      setQuotes((prev) => prev.filter((x) => x.id !== q.id))
+      setSelectedQuote((prev) => (prev && prev.quote.id === q.id ? null : prev))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(msg.includes("No se puede borrar el rubro") ? msg : "Error al borrar la cotización: " + msg)
+    } finally {
+      setDeletingQuoteId(null)
+    }
   }
 
   async function openQuoteDetail(quote: Quote) {
@@ -511,6 +576,9 @@ export default function ProjectDetailPage() {
                   loaded={quotesLoaded}
                   loadingQuote={loadingQuote}
                   onOpenQuote={openQuoteDetail}
+                  canDelete={isAdmin}
+                  deletingId={deletingQuoteId}
+                  onDeleteQuote={deleteQuote}
                   projectId={projectId}
                   clientId={project?.client_id}
                   subfolderId={project?.subfolder_id}
@@ -1073,11 +1141,25 @@ const budgetValueStyle: React.CSSProperties = {
   color: "#94a3b8", fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums",
 }
 
+function TrashIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  )
+}
+
 function QuotesPanel({
   quotes,
   loaded,
   loadingQuote,
   onOpenQuote,
+  canDelete,
+  deletingId,
+  onDeleteQuote,
   projectId,
   clientId,
   subfolderId,
@@ -1086,6 +1168,9 @@ function QuotesPanel({
   loaded: boolean
   loadingQuote: boolean
   onOpenQuote: (q: Quote) => void
+  canDelete: boolean
+  deletingId: string | null
+  onDeleteQuote: (q: Quote) => void
   projectId: string
   clientId?: string
   subfolderId?: string
@@ -1129,34 +1214,59 @@ function QuotesPanel({
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8 }}>
-          {quotes.map((q) => (
-            <button
-              key={q.id}
-              onClick={() => !loadingQuote && onOpenQuote(q)}
-              style={quoteRowStyle}
-              disabled={loadingQuote}
-            >
-              <div style={quoteRowIconStyle}>
-                <QuoteIcon />
+          {quotes.map((q) => {
+            const protegida = q.status === "approved" || !!q.released
+            return (
+              <div key={q.id} style={{ ...quoteRowStyle, cursor: "default" }}>
+                <button
+                  onClick={() => !loadingQuote && onOpenQuote(q)}
+                  style={quoteRowMainBtnStyle}
+                  disabled={loadingQuote}
+                >
+                  <div style={quoteRowIconStyle}>
+                    <QuoteIcon />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                    <p style={quoteRowNameStyle}>{q.name}</p>
+                    <p style={quoteRowMetaStyle}>
+                      {new Date(q.created_at).toLocaleDateString("es-MX", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}{" "}
+                      · Markup {q.markup_percentage}%
+                      {(q.financiamiento_percentage || 0) > 0 ? ` · Financiamiento ${q.financiamiento_percentage}%` : ""}
+                    </p>
+                  </div>
+                  <span style={statusBadgeStyle(q.status)}>
+                    {q.status === "approved" ? "APROBADO" : "DRAFT"}
+                  </span>
+                  <span style={quoteRowArrowStyle}>→</span>
+                </button>
+                {canDelete && (
+                  <button
+                    onClick={() => onDeleteQuote(q)}
+                    disabled={deletingId !== null}
+                    title={
+                      q.status === "approved"
+                        ? "La cotización aprobada no se puede borrar"
+                        : q.released
+                          ? "Una cotización liberada no se puede borrar"
+                          : "Borrar esta cotización"
+                    }
+                    aria-label={`Borrar la cotización ${q.name}`}
+                    style={{
+                      ...deleteQuoteBtnStyle,
+                      ...(protegida ? { opacity: 0.4 } : {}),
+                      ...(deletingId === q.id ? { opacity: 0.5, cursor: "wait" } : {}),
+                    }}
+                  >
+                    <TrashIcon />
+                  </button>
+                )}
               </div>
-              <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-                <p style={quoteRowNameStyle}>{q.name}</p>
-                <p style={quoteRowMetaStyle}>
-                  {new Date(q.created_at).toLocaleDateString("es-MX", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}{" "}
-                  · Markup {q.markup_percentage}%
-                  {(q.financiamiento_percentage || 0) > 0 ? ` · Financiamiento ${q.financiamiento_percentage}%` : ""}
-                </p>
-              </div>
-              <span style={statusBadgeStyle(q.status)}>
-                {q.status === "approved" ? "APROBADO" : "DRAFT"}
-              </span>
-              <span style={quoteRowArrowStyle}>→</span>
-            </button>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -2283,6 +2393,36 @@ const quoteRowMetaStyle: React.CSSProperties = {
 const quoteRowArrowStyle: React.CSSProperties = {
   color: "#6b7c93",
   fontSize: 16,
+  flexShrink: 0,
+}
+
+// Área clicable de la fila (abre el detalle); el botón de borrar va aparte
+const quoteRowMainBtnStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  font: "inherit",
+  textAlign: "left",
+  cursor: "pointer",
+}
+
+const deleteQuoteBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  border: "1px solid rgba(248,113,113,0.25)",
+  background: "rgba(248,113,113,0.08)",
+  color: "#f87171",
+  cursor: "pointer",
   flexShrink: 0,
 }
 
