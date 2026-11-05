@@ -4,6 +4,7 @@ import { PageLoader } from "../../components/PageLoader"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
+import { correoDeProveedorOcupado } from "../../lib/proveedores"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 
@@ -132,6 +133,8 @@ export default function ProveedoresPage() {
   async function createProveedor() {
     const payload = buildPayload(form)
     if (!payload) return
+    // Un correo por proveedor: el portal de facturas identifica al proveedor por email.
+    if (await correoDeProveedorOcupado(payload.email)) return
 
     const { error } = await supabase.from("proveedores").insert(payload)
 
@@ -161,6 +164,7 @@ export default function ProveedoresPage() {
   async function saveProveedor(id: string) {
     const payload = buildPayload(editForm)
     if (!payload) return
+    if (await correoDeProveedorOcupado(payload.email, id)) return
 
     const { error } = await supabase.from("proveedores").update(payload).eq("id", id)
 

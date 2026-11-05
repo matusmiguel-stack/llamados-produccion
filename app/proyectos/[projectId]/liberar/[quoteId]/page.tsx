@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "../../../../../lib/supabase"
+import { correoDeProveedorOcupado } from "../../../../../lib/proveedores"
 import { requireSessionProfile } from "../../../../../lib/session-profile"
 import { AppSidebar } from "../../../../../components/AppSidebar"
 
@@ -501,6 +502,9 @@ export default function LiberarPage() {
       alert("Nombre, apellido y actividad son requeridos")
       return
     }
+    // Un correo por proveedor: el portal de facturas identifica al proveedor por email.
+    const emailNuevo = newProv.email.trim().toLowerCase()
+    if (emailNuevo && (await correoDeProveedorOcupado(emailNuevo))) return
     setSavingProv(true)
     try {
       const { data, error } = await supabase
@@ -510,7 +514,7 @@ export default function LiberarPage() {
           apellido: newProv.apellido.trim(),
           empresa: newProv.empresa.trim() || null,
           actividad: newProv.actividad.trim(),
-          email: newProv.email.trim() || null,
+          email: emailNuevo || null,
           telefono: newProv.telefono.trim() || null,
         })
         .select("id, nombre, apellido, empresa, actividad")

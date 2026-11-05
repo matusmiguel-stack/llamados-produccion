@@ -231,19 +231,35 @@ export async function POST(req: Request) {
 
     const admin = createAdminClient()
 
-    // 2. Identificar proveedor por email
-    const { data: prov } = await admin
+    // 2. Identificar proveedor por email. El correo debe estar en UN solo
+    //    registro: con dos o más no se sabe quién factura. Antes eso fallaba en
+    //    silencio con "no encontramos un proveedor" (Flor Locutores, 5-nov-2026).
+    const { data: provRows, error: provError } = await admin
       .from("proveedores")
       .select("id, nombre, apellido, empresa, email")
       .ilike("email", email)
-      .maybeSingle()
+    if (provError) throw provError
 
-    if (!prov) {
+    // ilike trata "_" y "%" como comodines: aquí se confirma el correo exacto.
+    type ProveedorRow = { id: string; nombre: string | null; apellido: string | null; empresa: string | null; email: string }
+    const coincidencias = ((provRows || []) as ProveedorRow[]).filter(
+      (p) => (p.email || "").trim().toLowerCase() === email
+    )
+
+    if (coincidencias.length === 0) {
       return NextResponse.json(
         { error: "No encontramos un proveedor registrado con ese email. Verifica que sea el mismo con el que te dimos de alta." },
         { status: 404 }
       )
     }
+    if (coincidencias.length > 1) {
+      console.warn(`[facturas-submit] el correo ${email} está en ${coincidencias.length} proveedores`)
+      return NextResponse.json(
+        { error: "Ese email está dado de alta en más de un proveedor y no podemos saber cuál eres. Pídele al productor del proyecto que lo corrija en el catálogo de proveedores y vuelve a intentarlo." },
+        { status: 409 }
+      )
+    }
+    const prov = coincidencias[0]
 
     const proveedorNombre = prov.empresa || `${prov.nombre} ${prov.apellido}`
     const xmlText = await xmlFile.text()
