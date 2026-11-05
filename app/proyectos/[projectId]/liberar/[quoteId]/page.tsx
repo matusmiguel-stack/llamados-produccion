@@ -162,6 +162,72 @@ function employeeLabel(e: Employee): string {
   return `${e.nombre} ${ap} · ${e.puesto}`
 }
 
+// ── Borrador local y cambios sin guardar ────────────────────────────────────
+// Lo que se captura aquí (montos reales, proveedor, descripción y monto de los
+// gastos no contemplados, gastos extra) solo vive en memoria hasta oprimir
+// "Guardar". Para no perder una captura larga por cambiar de página o cerrar
+// la pestaña (pasó con RS3062 el 5-nov-2026):
+//  1) a cada cambio se guarda un borrador en localStorage (por cotización) y
+//     al volver a entrar se ofrece recuperarlo;
+//  2) si hay cambios sin guardar se avisa antes de salir, tanto por los links
+//     de la app (navegación del lado del cliente) como al cerrar o recargar.
+type Borrador = {
+  v: 1
+  quoteId: string
+  savedAt: string
+  actuals: Record<string, Partial<ItemActual>>
+  extraExpenses: string
+  extraDesc: Record<string, string>
+}
+
+type LineaBase = { items: Record<string, string>; extra: string }
+
+const BORRADOR_VERSION = 1
+const borradorKey = (quoteId: string) => `liberar:borrador:${quoteId}`
+const aTexto = (v: unknown): string => (typeof v === "string" ? v : v == null ? "" : String(v))
+
+function leerBorrador(quoteId: string): Borrador | null {
+  try {
+    const raw = localStorage.getItem(borradorKey(quoteId))
+    if (!raw) return null
+    const b = JSON.parse(raw)
+    if (!b || b.v !== BORRADOR_VERSION || b.quoteId !== quoteId) return null
+    if (typeof b.actuals !== "object" || b.actuals === null) return null
+    return {
+      v: 1,
+      quoteId,
+      savedAt: aTexto(b.savedAt),
+      actuals: b.actuals,
+      extraExpenses: aTexto(b.extraExpenses),
+      extraDesc: typeof b.extraDesc === "object" && b.extraDesc !== null ? b.extraDesc : {},
+    }
+  } catch {
+    return null
+  }
+}
+
+function escribirBorrador(b: Borrador) {
+  try { localStorage.setItem(borradorKey(b.quoteId), JSON.stringify(b)) } catch { /* sin almacenamiento (modo privado, cuota) */ }
+}
+
+function borrarBorrador(quoteId: string) {
+  try { localStorage.removeItem(borradorKey(quoteId)) } catch { /* nada */ }
+}
+
+// Huella de lo capturable de un rubro; si cambia respecto a la línea base
+// (lo que hay en la BD) es que hay algo sin guardar.
+function huellaItem(a: Partial<ItemActual> | undefined, desc: string, isExtra: boolean): string {
+  return [aTexto(a?.qty), aTexto(a?.days), aTexto(a?.unit_price), aTexto(a?.supplier_id), isExtra ? desc : ""].join("\u0001")
+}
+
+function fechaBorrador(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ""
+  return d.toLocaleString("es-MX", {
+    timeZone: "America/Mexico_City", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  })
+}
+
 export default function LiberarPage() {
   const params = useParams()
   const projectId = String(params.projectId || "")
@@ -184,6 +250,12 @@ export default function LiberarPage() {
   const [extraExpenses, setExtraExpenses] = useState("")
   // Revelar rubros vacíos (ocultos por defecto) para poder agregarles gastos no contemplados
   const [showEmptyRubros, setShowEmptyRubros] = useState(false)
+
+  // Línea base (lo que está en la BD) para detectar cambios sin guardar,
+  // borrador encontrado al entrar, y bandera de "ya confirmó que se va".
+  const [lineaBase, setLineaBase] = useState<LineaBase>({ items: {}, extra: "" })
+  const [borradorPendiente, setBorradorPendiente] = useState<Borrador | null>(null)
+  const saliendoRef = useRef(false)
 
   // ── Add-proveedor modal ──────────────────────────────────────────────────
   const [showAddProv, setShowAddProv] = useState(false)
@@ -280,6 +352,34 @@ export default function LiberarPage() {
       setSections(loadedSections)
       setActuals(initialActuals)
 
+      const base: Record<string, string> = {}
+      for (const sec of loadedSections) {
+        for (const item of sec.items) base[item.id] = huellaItem(initialActuals[item.id], item.description, item.is_extra)
+      }
+      const baseExtra = quoteData.actual_extra_expenses ? String(quoteData.actual_extra_expenses) : ""
+      setLineaBase({ items: base, extra: baseExtra })
+
+      // ¿Quedó un borrador de una captura anterior en este navegador? Solo se
+      // ofrece si trae algo distinto a lo que ya está guardado en la BD.
+      const borrador = leerBorrador(quoteId)
+      if (borrador) {
+        const difiere = () => {
+          if (borrador.extraExpenses !== baseExtra) return true
+          for (const sec of loadedSections) {
+            for (const item of sec.items) {
+              const ba = borrador.actuals[item.id]
+              const bd = borrador.extraDesc[item.id]
+              if (ba == null && bd == null) continue
+              const h = huellaItem(ba ?? initialActuals[item.id], bd != null ? aTexto(bd) : item.description, item.is_extra)
+              if (h !== base[item.id]) return true
+            }
+          }
+          return false
+        }
+        if (difiere()) setBorradorPendiente(borrador)
+        else borrarBorrador(quoteId)
+      }
+
       const [{ data: provsData }, { data: empsData }] = await Promise.all([
         supabase.from("proveedores").select("id, nombre, apellido, empresa, actividad").order("nombre"),
         supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, puesto, nickname").order("nombre"),
@@ -323,6 +423,11 @@ export default function LiberarPage() {
       .single()
     if (error) { alert("Error al agregar gasto: " + error.message); return }
     const newItem = data as QuoteItemRow
+    // El renglón ya existe en la BD; cuenta como "sin guardar" solo cuando se capture algo
+    setLineaBase((prev) => ({
+      ...prev,
+      items: { ...prev.items, [newItem.id]: huellaItem({ qty: "1", days: "1", unit_price: "", supplier_id: "" }, "", true) },
+    }))
     setSections((prev) => prev.map((s) =>
       s.id === sectionId ? { ...s, items: [...s.items, newItem] } : s
     ))
@@ -336,6 +441,11 @@ export default function LiberarPage() {
     if (!confirm("¿Eliminar este gasto no contemplado?")) return
     const { error } = await supabase.from("quote_items").delete().eq("id", itemId)
     if (error) { alert("Error al eliminar: " + error.message); return }
+    setLineaBase((prev) => {
+      const items = { ...prev.items }
+      delete items[itemId]
+      return { ...prev, items }
+    })
     setSections((prev) => prev.map((s) =>
       s.id === sectionId ? { ...s, items: s.items.filter((i) => i.id !== itemId) } : s
     ))
@@ -455,6 +565,106 @@ export default function LiberarPage() {
     return { libGasto, libUtilidad, libVenta: libVentaFinal, markupAmt, markupPct, realGasto: realGastoTotal, extraAmt, realUtilidad, libPct, realPct }
   }, [sections, actuals, extraExpenses])
 
+  // ¿Hay algo capturado que todavía no está en la BD?
+  const hayCambios = useMemo(() => {
+    if (loading) return false
+    if (extraExpenses !== lineaBase.extra) return true
+    for (const sec of sections) {
+      for (const item of sec.items) {
+        if (huellaItem(actuals[item.id], item.description, item.is_extra) !== lineaBase.items[item.id]) return true
+      }
+    }
+    return false
+  }, [loading, sections, actuals, extraExpenses, lineaBase])
+
+  // Borrador automático en este navegador (se escribe poco después de cada
+  // cambio; se borra cuando ya no hay nada pendiente). Mientras se ofrece un
+  // borrador anterior no se sobrescribe, para no perderlo con la primera tecla.
+  useEffect(() => {
+    if (loading || borradorPendiente) return
+    if (!hayCambios) { borrarBorrador(quoteId); return }
+    const t = setTimeout(() => {
+      const extraDesc: Record<string, string> = {}
+      for (const sec of sections) {
+        for (const item of sec.items) if (item.is_extra) extraDesc[item.id] = item.description
+      }
+      escribirBorrador({ v: 1, quoteId, savedAt: new Date().toISOString(), actuals, extraExpenses, extraDesc })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [loading, borradorPendiente, hayCambios, sections, actuals, extraExpenses, quoteId])
+
+  // Aviso antes de salir con cambios sin guardar.
+  useEffect(() => {
+    if (!hayCambios) return
+    const aviso =
+      "Tienes cambios sin guardar en la liberación. Si sales ahora no quedarán en la base de datos " +
+      "(se conserva un borrador en este navegador para recuperarlos después). ¿Salir de todos modos?"
+    // Cerrar o recargar la pestaña, escribir otra dirección, links externos.
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saliendoRef.current) return
+      e.preventDefault()
+      e.returnValue = "" // el navegador muestra su propio aviso genérico
+    }
+    // Los links de la app navegan del lado del cliente (sin beforeunload): se
+    // interceptan en fase de captura, antes de que Next.js procese el clic.
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null
+      if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return
+      let url: URL
+      try { url = new URL(a.href, window.location.href) } catch { return }
+      if (url.origin !== window.location.origin) return // externo: lo cubre beforeunload
+      if (url.pathname === window.location.pathname && url.search === window.location.search) return
+      if (window.confirm(aviso)) {
+        saliendoRef.current = true
+        setTimeout(() => { saliendoRef.current = false }, 3000)
+        return
+      }
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    window.addEventListener("beforeunload", onBeforeUnload)
+    document.addEventListener("click", onClick, true)
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload)
+      document.removeEventListener("click", onClick, true)
+    }
+  }, [hayCambios])
+
+  function recuperarBorrador() {
+    const b = borradorPendiente
+    if (!b) return
+    const provIds = new Set(proveedores.map((p) => p.id))
+    const empIds = new Set(employees.map((e) => e.id))
+    setActuals((prev) => {
+      const next = { ...prev }
+      for (const [id, a] of Object.entries(b.actuals)) {
+        if (!next[id] || !a || typeof a !== "object") continue
+        let supplier = aTexto(a.supplier_id)
+        // Contacto que ya no existe (o valor raro): vacío, en vez de romper el guardado
+        if (supplier.startsWith("prov:")) { if (!provIds.has(supplier.slice(5))) supplier = "" }
+        else if (supplier.startsWith("emp:")) { if (!empIds.has(supplier.slice(4))) supplier = "" }
+        else supplier = ""
+        next[id] = { qty: aTexto(a.qty), days: aTexto(a.days), unit_price: aTexto(a.unit_price), supplier_id: supplier }
+      }
+      return next
+    })
+    setSections((prev) => prev.map((s) => ({
+      ...s,
+      items: s.items.map((i) =>
+        i.is_extra && b.extraDesc[i.id] != null ? { ...i, description: aTexto(b.extraDesc[i.id]) } : i
+      ),
+    })))
+    setExtraExpenses(b.extraExpenses)
+    setSaved(false)
+    setBorradorPendiente(null)
+  }
+
+  function descartarBorrador() {
+    borrarBorrador(quoteId)
+    setBorradorPendiente(null)
+  }
+
   async function handleSave() {
     setSaving(true)
     try {
@@ -495,6 +705,13 @@ export default function LiberarPage() {
         .update({ released: true, actual_extra_expenses: parseFloat(extraExpenses) || 0 })
         .eq("id", quoteId)
 
+      // Ya está en la BD: esta captura es la nueva línea base y el borrador sobra
+      const base: Record<string, string> = {}
+      for (const sec of sections) {
+        for (const item of sec.items) base[item.id] = huellaItem(actuals[item.id], item.description, item.is_extra)
+      }
+      setLineaBase({ items: base, extra: extraExpenses })
+      borrarBorrador(quoteId)
       setSaved(true)
     } catch (err: any) {
       alert("Error al guardar: " + err.message)
@@ -581,14 +798,41 @@ export default function LiberarPage() {
                 )}
               </p>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={saved ? saveBtnSavedStyle : saveBtnStyle}
-            >
-              {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar"}
-            </button>
+            <div style={saveAreaStyle}>
+              {hayCambios && !saving && (
+                <span style={sinGuardarStyle} title="Hay un borrador en este navegador, pero para que quede registrado hay que oprimir Guardar">
+                  ● Cambios sin guardar
+                </span>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={saved ? saveBtnSavedStyle : saveBtnStyle}
+              >
+                {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar"}
+              </button>
+            </div>
           </div>
+
+          {/* Borrador sin guardar de una visita anterior */}
+          {borradorPendiente && (
+            <div style={borradorBannerStyle}>
+              <div style={{ flex: 1, minWidth: 240 }}>
+                <p style={{ margin: 0, color: "#fbbf24", fontWeight: 700, fontSize: 13 }}>
+                  Hay un borrador sin guardar de esta liberación
+                </p>
+                <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: 12, lineHeight: 1.5 }}>
+                  Se guardó en este navegador{fechaBorrador(borradorPendiente.savedAt) ? ` el ${fechaBorrador(borradorPendiente.savedAt)}` : ""}.
+                  Lo que ves ahora es lo que está en la base de datos; al recuperarlo se reemplaza con lo del borrador
+                  y después hay que oprimir “Guardar” para que quede registrado.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={recuperarBorrador} style={borradorBtnPrimaryStyle}>Recuperar borrador</button>
+                <button onClick={descartarBorrador} style={borradorBtnSecondaryStyle}>Descartar</button>
+              </div>
+            </div>
+          )}
 
           {/* Legend */}
           <div style={legendStyle}>
@@ -1314,13 +1558,20 @@ export default function LiberarPage() {
               marginTop: 20,
             }}
           >
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={saved ? saveBtnSavedStyle : saveBtnStyle}
-            >
-              {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar"}
-            </button>
+            <div style={saveAreaStyle}>
+              {hayCambios && !saving && (
+                <span style={sinGuardarStyle} title="Hay un borrador en este navegador, pero para que quede registrado hay que oprimir Guardar">
+                  ● Cambios sin guardar
+                </span>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={saved ? saveBtnSavedStyle : saveBtnStyle}
+              >
+                {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar"}
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -1805,6 +2056,54 @@ const saveBtnSavedStyle: React.CSSProperties = {
   ...saveBtnStyle,
   background: "linear-gradient(135deg, #059669, #34d399)",
   boxShadow: "0 8px 24px rgba(52,211,153,0.20)",
+}
+
+const saveAreaStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  flexShrink: 0,
+}
+
+const sinGuardarStyle: React.CSSProperties = {
+  color: "#fbbf24",
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+}
+
+const borradorBannerStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 14,
+  flexWrap: "wrap",
+  padding: "12px 16px",
+  borderRadius: 10,
+  border: "1px solid rgba(251,191,36,0.35)",
+  background: "rgba(251,191,36,0.08)",
+}
+
+const borradorBtnPrimaryStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "none",
+  background: "linear-gradient(135deg, #d97706, #fbbf24)",
+  color: "#1c1917",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 700,
+}
+
+const borradorBtnSecondaryStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "1px solid rgba(148,163,184,0.25)",
+  background: "rgba(255,255,255,0.04)",
+  color: "#cbd5e1",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 500,
 }
 
 const legendStyle: React.CSSProperties = {
