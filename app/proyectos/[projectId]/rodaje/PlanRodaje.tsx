@@ -10,8 +10,8 @@ import { cargarPlan, crearPlan, type DatosPlan } from "../../../../lib/rodaje/da
 import { aplicarCambios, siguientePos, type CambioOrden } from "../../../../lib/rodaje/orden"
 import { armarTandas, escenasSinTexto, leerTandas, type Progreso } from "../../../../lib/rodaje/lectura"
 import {
-  ETIQUETAS, puedeEditarRodaje,
-  type Etiqueta, type RodajeDia, type RodajeEscena, type RodajeGuion,
+  ETIQUETAS, MAX_TOMAS_POR_ESCENA, puedeEditarRodaje,
+  type Etiqueta, type FilaToma, type RodajeDia, type RodajeEscena, type RodajeGuion, type RodajeToma,
 } from "../../../../lib/rodaje/tipos"
 import { BarraProgreso } from "./comun"
 import { C, aviso, avisoAmbar, avisoError, boton, botonChico, botonPrimario, botonVioleta, panel, vacio } from "./estilos"
@@ -21,6 +21,7 @@ import { ModoOrdenar } from "./ModoOrdenar"
 import { SubirGuiones } from "./SubirGuiones"
 import { GuionModal } from "./GuionModal"
 import { EditarEscena, EditarGuion } from "./Editores"
+import { EditarTomas } from "./Tomas"
 
 export type CamposEscena = Pick<
   RodajeEscena,
@@ -43,6 +44,8 @@ export type Acciones = {
   actualizarEscena: (id: string, campos: Partial<CamposEscena>) => void
   borrarEscena: (id: string) => void
   cambiarEtiqueta: (etiqueta: Etiqueta) => void
+  /** Reemplaza las tomas de la escena por las del formulario (los renglones vacíos se descartan) */
+  guardarTomas: (escenaId: string, filas: FilaToma[]) => void
   leerTextoPendiente: () => void
 }
 
@@ -63,6 +66,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
   const [guionAbierto, setGuionAbierto] = useState<{ id: string; lista: string[] } | null>(null)
   const [editEscena, setEditEscena] = useState<{ escena: RodajeEscena | null; guionId: string } | null>(null)
   const [editGuion, setEditGuion] = useState<RodajeGuion | null>(null)
+  const [tomasDe, setTomasDe] = useState<string | null>(null)
 
   const datosRef = useRef<DatosPlan | null>(null)
   const lecturaRef = useRef({ activa: false, cancelada: false })
@@ -160,7 +164,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
 
       const tablas = [
         "rodaje_planes", "rodaje_archivos", "rodaje_guiones",
-        "rodaje_dias", "rodaje_escenas", "rodaje_separadores",
+        "rodaje_dias", "rodaje_escenas", "rodaje_separadores", "rodaje_tomas",
       ]
       let c = supabase.channel(`rodaje-${projectId}`)
       for (const table of tablas) {
@@ -370,6 +374,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
             ...x,
             guiones: x.guiones.filter((g) => g.id !== guionId),
             escenas: x.escenas.filter((e) => e.guion_id !== guionId),
+            tomas: x.tomas.filter((t) => x.escenas.some((e) => e.id === t.escena_id && e.guion_id !== guionId)),
           }),
           () => supabase.from("rodaje_guiones").delete().eq("id", guionId),
           "borrar"
@@ -418,9 +423,53 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
 
       borrarEscena(escenaId) {
         mutar(
-          (x) => ({ ...x, escenas: x.escenas.filter((e) => e.id !== escenaId) }),
+          (x) => ({
+            ...x,
+            escenas: x.escenas.filter((e) => e.id !== escenaId),
+            tomas: x.tomas.filter((t) => t.escena_id !== escenaId),
+          }),
           () => supabase.from("rodaje_escenas").delete().eq("id", escenaId),
           "borrar la escena"
+        )
+      },
+
+      guardarTomas(escenaId, filas) {
+        const d = datosRef.current
+        if (!d) return
+        const limpio = (v: string, max: number) => (v || "").trim().slice(0, max)
+        const nuevas: RodajeToma[] = filas
+          .map((f) => ({
+            id: f.id,
+            emplazamiento: limpio(f.emplazamiento, 80),
+            buena: limpio(f.buena, 40),
+            proteccion: limpio(f.proteccion, 40),
+            notas: limpio(f.notas, 2000),
+          }))
+          .filter((f) => f.emplazamiento || f.buena || f.proteccion || f.notas)
+          .slice(0, MAX_TOMAS_POR_ESCENA)
+          .map((f, i) => ({
+            ...f,
+            id: f.id || id(),
+            plan_id: d.plan.id,
+            escena_id: escenaId,
+            orden: i,
+            updated_by: perfil.id,
+            updated_at: ahora(),
+          }))
+        const quedan = nuevas.map((t) => t.id)
+        mutar(
+          (x) => ({ ...x, tomas: [...x.tomas.filter((t) => t.escena_id !== escenaId), ...nuevas] }),
+          async () => {
+            // Primero se guardan los renglones y después se quitan los que ya
+            // no están: si algo falla a medias, no se pierde lo capturado.
+            if (nuevas.length) {
+              const r = await supabase.from("rodaje_tomas").upsert(nuevas)
+              if (r.error) return r
+            }
+            const borrar = supabase.from("rodaje_tomas").delete().eq("escena_id", escenaId)
+            return quedan.length ? borrar.not("id", "in", `(${quedan.join(",")})`) : borrar
+          },
+          "guardar las tomas"
         )
       },
 
@@ -496,6 +545,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
   }
 
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
+  const escenaDeTomas = tomasDe && puedeEditar ? datos.escenas.find((e) => e.id === tomasDe) : undefined
   const hayGuiones = datos.guiones.length > 0
   const vistaReal: Vista = !hayGuiones ? "subir" : !puedeEditar && (vista === "ordenar" || vista === "subir") ? "plan" : vista
   const pendientesTexto = puedeEditar ? escenasSinTexto(datos.escenas, datos.guiones).length : 0
@@ -582,6 +632,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
           acc={acc}
           onGuion={(id, lista) => setGuionAbierto({ id, lista })}
           onEditarEscena={(e) => setEditEscena({ escena: e, guionId: e.guion_id })}
+          onTomas={(e) => setTomasDe(e.id)}
           onOrdenar={() => setVista("ordenar")}
         />
       )}
@@ -593,6 +644,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
           acc={acc}
           onGuion={(id, lista) => setGuionAbierto({ id, lista })}
           onEditarEscena={(e) => setEditEscena({ escena: e, guionId: e.guion_id })}
+          onTomas={(e) => setTomasDe(e.id)}
           onNuevaEscena={(guionId) => setEditEscena({ escena: null, guionId })}
           onEditarGuion={(g) => setEditGuion(g)}
         />
@@ -610,6 +662,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
           puedeEditar={puedeEditar}
           acc={acc}
           onCambiar={(id) => setGuionAbierto({ id, lista: guionAbierto.lista })}
+          onTomas={(id) => setTomasDe(id)}
           onCerrar={() => setGuionAbierto(null)}
         />
       )}
@@ -626,6 +679,10 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
 
       {editGuion && (
         <EditarGuion datos={datos} guion={editGuion} acc={acc} onCerrar={() => setEditGuion(null)} />
+      )}
+
+      {escenaDeTomas && (
+        <EditarTomas datos={datos} escena={escenaDeTomas} acc={acc} onCerrar={() => setTomasDe(null)} />
       )}
     </div>
   )

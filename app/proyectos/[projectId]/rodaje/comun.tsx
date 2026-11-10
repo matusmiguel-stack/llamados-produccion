@@ -4,7 +4,7 @@
 
 import { useEffect, type CSSProperties, type ReactNode } from "react"
 import { slugEscena } from "../../../../lib/rodaje/orden"
-import type { RodajeEscena, RodajeGuion } from "../../../../lib/rodaje/tipos"
+import type { RodajeEscena, RodajeGuion, RodajeToma } from "../../../../lib/rodaje/tipos"
 import {
   C, MONO, botonChico, chip, chipVerde, chipVioleta, eyebrow,
   modalCabeza, modalCaja, modalCuerpo, modalFondo,
@@ -15,28 +15,45 @@ export function numeroEscena(e: RodajeEscena, g: RodajeGuion | undefined, varias
   return varias && g ? `${g.numero}.${e.numero}` : e.numero
 }
 
+// Ventanas abiertas, de abajo hacia arriba: Esc solo cierra la de hasta arriba.
+const pilaModales: symbol[] = []
+
+/** true si hay una ventana abierta encima de la que pregunta (o cualquiera, si no se pasa id). */
+export function hayModalEncima(id?: symbol): boolean {
+  if (!pilaModales.length) return false
+  return id ? pilaModales[pilaModales.length - 1] !== id : true
+}
+
 export function Modal(props: {
   titulo: ReactNode
   sobre?: string
   ancho?: number
+  /** Formularios: no se cierra al tocar fuera, para no perder lo capturado */
+  fijo?: boolean
   onCerrar: () => void
   children: ReactNode
   pie?: ReactNode
 }) {
   const { onCerrar } = props
   useEffect(() => {
+    const id = Symbol("modal")
+    pilaModales.push(id)
     const tecla = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") onCerrar()
+      if (ev.key === "Escape" && !hayModalEncima(id)) onCerrar()
     }
     window.addEventListener("keydown", tecla)
-    return () => window.removeEventListener("keydown", tecla)
+    return () => {
+      window.removeEventListener("keydown", tecla)
+      const i = pilaModales.indexOf(id)
+      if (i >= 0) pilaModales.splice(i, 1)
+    }
   }, [onCerrar])
 
   return (
     <div
       style={modalFondo}
       onMouseDown={(ev) => {
-        if (ev.target === ev.currentTarget) onCerrar()
+        if (ev.target === ev.currentTarget && !props.fijo) onCerrar()
       }}
       role="dialog"
       aria-modal="true"
@@ -89,6 +106,52 @@ export function BarraProgreso({ hecho, total, color }: { hecho: number; total: n
   )
 }
 
+const sello: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "2px 8px",
+  borderRadius: 6,
+  fontFamily: MONO,
+  fontSize: 11.5,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+}
+
+export function tomasDeEscena(tomas: RodajeToma[], escenaId: string): RodajeToma[] {
+  return tomas.filter((t) => t.escena_id === escenaId).sort((a, b) => a.orden - b.orden)
+}
+
+/** Las tomas calificadas de una escena, un renglón por emplazamiento. */
+export function ResumenTomas({ tomas }: { tomas: RodajeToma[] }) {
+  if (!tomas.length) return null
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 5 }} data-tomas>
+      {tomas.map((t, i) => (
+        <div key={t.id} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", minWidth: 0 }}>
+          <span style={{ ...sello, background: C.violetaFondo, color: C.violetaClaro, whiteSpace: "normal" }}>
+            {t.emplazamiento || `Emplazamiento ${i + 1}`}
+          </span>
+          {t.buena && (
+            <span style={{ ...sello, background: C.verdeFondo, color: C.verdeClaro, border: `1px solid ${C.verdeBorde}` }}>
+              TOMA BUENA {t.buena}
+            </span>
+          )}
+          {t.proteccion && (
+            <span style={{ ...sello, background: C.ambarFondo, color: C.ambar, border: `1px solid ${C.ambarBorde}` }}>
+              PROTECCIÓN {t.proteccion}
+            </span>
+          )}
+          {t.notas && (
+            <span style={{ flexBasis: "100%", color: C.texto2, fontSize: 12.5, lineHeight: 1.4, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+              {t.notas}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const palomita: CSSProperties = {
   flexShrink: 0,
   width: 30,
@@ -109,11 +172,17 @@ export function TarjetaEscena(props: {
   puedeEditar: boolean
   /** Texto del día asignado; solo se muestra en la vista por guion */
   dia?: string
+  /** Tomas calificadas de esta escena, ya en orden */
+  tomas?: RodajeToma[]
   onFilmada: (valor: boolean) => void
   onGuion: () => void
   onEditar?: () => void
+  onTomas?: () => void
 }) {
   const { escena: e, guion, varias, puedeEditar } = props
+  const tomas = props.tomas || []
+  // Filmada y sin nada más que mostrar: un solo renglón.
+  const compacta = e.filmada && !tomas.length && !(puedeEditar && props.onTomas)
   const filmada = e.filmada
   const num = numeroEscena(e, guion, varias)
 
@@ -135,7 +204,7 @@ export function TarjetaEscena(props: {
       data-escena={e.id}
       style={{
         display: "flex",
-        alignItems: filmada ? "center" : "flex-start",
+        alignItems: compacta ? "center" : "flex-start",
         gap: 10,
         padding: filmada ? "7px 10px" : "10px 10px",
         borderRadius: 12,
@@ -181,6 +250,21 @@ export function TarjetaEscena(props: {
           <p style={{ margin: "4px 0 0", color: C.apagado, fontSize: 11.5, letterSpacing: 0.3 }}>
             {e.personajes.join(" · ")}
           </p>
+        )}
+        {(tomas.length > 0 || (puedeEditar && props.onTomas)) && (
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6, marginTop: 7, justifyItems: "start" }}>
+            <ResumenTomas tomas={tomas} />
+            {puedeEditar && props.onTomas && (
+              <button
+                type="button"
+                onClick={props.onTomas}
+                style={{ ...botonChico, padding: "4px 9px", fontSize: 11.5, letterSpacing: 0.4 }}
+                aria-label={tomas.length ? `Editar tomas de la escena ${num}` : `Agregar tomas a la escena ${num}`}
+              >
+                {tomas.length ? "EDITAR TOMAS" : "+ TOMAS"}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

@@ -113,6 +113,25 @@ export type RodajeSeparador = {
   pos: number
 }
 
+/** Un emplazamiento calificado de una escena: cuál toma es la buena y cuál la protección. */
+export type RodajeToma = {
+  id: string
+  plan_id: string
+  escena_id: string
+  orden: number
+  emplazamiento: string
+  buena: string
+  proteccion: string
+  notas: string
+  updated_by: string | null
+  updated_at: string
+}
+
+/** Lo que se captura en el formulario de tomas (id solo si el renglón ya existía). */
+export type FilaToma = Pick<RodajeToma, "emplazamiento" | "buena" | "proteccion" | "notas"> & { id?: string }
+
+export const MAX_TOMAS_POR_ESCENA = 30
+
 // ── Lo que devuelve la IA al leer un guion ────────────────────────────────────
 
 export type EscenaIA = {

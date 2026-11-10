@@ -6,10 +6,21 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { DatosPlan } from "../../../../lib/rodaje/datos"
 import { bloquesDia, diasVista, norm, secuenciaDia, slugEscena } from "../../../../lib/rodaje/orden"
-import { ETIQUETAS, type RodajeEscena } from "../../../../lib/rodaje/tipos"
+import { ETIQUETAS, type RodajeEscena, type RodajeToma } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
 import { BarraProgreso, TarjetaEscena } from "./comun"
 import { C, MONO, boton, botonChico, botonVioleta, campo, chip, chipAmbar, chipVerde, panel, vacio } from "./estilos"
+
+/** Tomas por escena, cada lista en su orden. */
+export function agruparTomas(tomas: RodajeToma[]): Map<string, RodajeToma[]> {
+  const m = new Map<string, RodajeToma[]>()
+  for (const t of [...tomas].sort((a, b) => a.orden - b.orden)) {
+    const lista = m.get(t.escena_id)
+    if (lista) lista.push(t)
+    else m.set(t.escena_id, [t])
+  }
+  return m
+}
 
 /** Un conjunto de ids que se recuerda en este navegador (qué está colapsado). */
 export function useConjuntoGuardado(clave: string): [Set<string>, (id: string) => void, (ids: string[]) => void] {
@@ -51,6 +62,7 @@ export function VistaPlan(props: {
   acc: Acciones
   onGuion: (id: string, lista: string[]) => void
   onEditarEscena: (e: RodajeEscena) => void
+  onTomas: (e: RodajeEscena) => void
   onOrdenar: () => void
 }) {
   const { datos, puedeEditar, esMovil, acc } = props
@@ -94,6 +106,7 @@ export function VistaPlan(props: {
   }, [])
 
   const porGuion = useMemo(() => new Map(datos.guiones.map((g) => [g.id, g])), [datos.guiones])
+  const tomasPorEscena = useMemo(() => agruparTomas(datos.tomas), [datos.tomas])
   const varias = datos.guiones.length > 1
   const hayUnidades = datos.guiones.some((g) => g.unidad)
   const dias = useMemo(() => diasVista(datos.dias), [datos.dias])
@@ -283,9 +296,11 @@ export function VistaPlan(props: {
                     guion={g}
                     varias={varias}
                     puedeEditar={puedeEditar}
+                    tomas={tomasPorEscena.get(e.id)}
                     onFilmada={(v) => acc.marcarFilmada(e.id, v)}
                     onGuion={() => props.onGuion(e.id, lista)}
                     onEditar={() => props.onEditarEscena(e)}
+                    onTomas={() => props.onTomas(e)}
                   />
                 ))
                 if (!varias) return <div key={b.c.clave} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8 }}>{tarjetas}</div>

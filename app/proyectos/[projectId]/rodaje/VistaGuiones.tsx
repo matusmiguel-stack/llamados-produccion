@@ -13,7 +13,7 @@ import {
 } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
 import { TarjetaEscena } from "./comun"
-import { useConjuntoGuardado } from "./VistaPlan"
+import { agruparTomas, useConjuntoGuardado } from "./VistaPlan"
 import { C, MONO, boton, botonChico, botonVioleta, chip, chipAmbar, chipVerde, panel } from "./estilos"
 
 export function VistaGuiones(props: {
@@ -22,6 +22,7 @@ export function VistaGuiones(props: {
   acc: Acciones
   onGuion: (id: string, lista: string[]) => void
   onEditarEscena: (e: RodajeEscena) => void
+  onTomas: (e: RodajeEscena) => void
   onNuevaEscena: (guionId: string) => void
   onEditarGuion: (g: RodajeGuion) => void
 }) {
@@ -37,6 +38,7 @@ export function VistaGuiones(props: {
     [datos.escenas, datos.guiones]
   )
   const lista = useMemo(() => enOrden.map((e) => e.id), [enOrden])
+  const tomasPorEscena = useMemo(() => agruparTomas(datos.tomas), [datos.tomas])
   const diaDe = useMemo(() => {
     const m = new Map<string, string>()
     for (const d of diasVista(datos.dias)) if (d.id) m.set(d.id, `Día ${d.n}`)
@@ -163,9 +165,11 @@ export function VistaGuiones(props: {
                       varias={varias}
                       puedeEditar={puedeEditar}
                       dia={e.dia_id ? diaDe.get(e.dia_id) || "" : "Sin día"}
+                      tomas={tomasPorEscena.get(e.id)}
                       onFilmada={(v) => acc.marcarFilmada(e.id, v)}
                       onGuion={() => props.onGuion(e.id, lista)}
                       onEditar={() => props.onEditarEscena(e)}
+                      onTomas={() => props.onTomas(e)}
                     />
                   ))}
                 </div>

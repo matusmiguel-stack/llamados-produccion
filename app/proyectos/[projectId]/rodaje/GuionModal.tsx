@@ -8,7 +8,7 @@ import { leerTextoEscenas, textoDeEscena, type DatosPlan } from "../../../../lib
 import { slugEscena } from "../../../../lib/rodaje/orden"
 import { ETIQUETAS, type LineaGuion } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
-import { Modal, numeroEscena } from "./comun"
+import { Modal, ResumenTomas, numeroEscena, tomasDeEscena } from "./comun"
 import { C, MONO, avisoAmbar, avisoError, boton, botonVerde, botonVioleta, chipAmbar, vacio } from "./estilos"
 
 const ESTILO_LINEA: Record<LineaGuion["t"], CSSProperties> = {
@@ -40,6 +40,7 @@ export function GuionModal(props: {
   puedeEditar: boolean
   acc: Acciones
   onCambiar: (id: string) => void
+  onTomas: (escenaId: string) => void
   onCerrar: () => void
 }) {
   const { datos, escenaId, lista, puedeEditar, acc, onCambiar } = props
@@ -81,6 +82,8 @@ export function GuionModal(props: {
     const tecla = (ev: KeyboardEvent) => {
       const el = ev.target as HTMLElement | null
       if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return
+      // Con el formulario de tomas abierto encima, las flechas no cambian de escena.
+      if (document.querySelectorAll('[role="dialog"]').length > 1) return
       if (ev.key === "ArrowLeft" && anterior) onCambiar(anterior)
       if (ev.key === "ArrowRight" && siguiente) onCambiar(siguiente)
     }
@@ -113,6 +116,7 @@ export function GuionModal(props: {
   }
 
   const num = numeroEscena(escena, guion, varias)
+  const tomas = tomasDeEscena(datos.tomas, escena.id)
   const sobre = varias && guion ? `${etq.uno} ${guion.numero} · ${guion.titulo}` : guion?.titulo || "Guion"
 
   return (
@@ -138,6 +142,11 @@ export function GuionModal(props: {
             Siguiente →
           </button>
           {puedeEditar && (
+            <button type="button" style={boton} onClick={() => props.onTomas(escena.id)}>
+              {tomas.length ? "Editar tomas" : "+ Tomas"}
+            </button>
+          )}
+          {puedeEditar && (
             <button type="button" style={escena.filmada ? botonVerde : botonVioleta} onClick={() => acc.marcarFilmada(escena.id, !escena.filmada)}>
               {escena.filmada ? "✓ Filmada" : "Marcar filmada"}
             </button>
@@ -158,6 +167,15 @@ export function GuionModal(props: {
           {guion.notas.map((n, k) => (
             <span key={k} style={{ ...chipAmbar, whiteSpace: "normal", borderRadius: 8, padding: "3px 8px" }}>{n}</span>
           ))}
+        </div>
+      )}
+
+      {tomas.length > 0 && (
+        <div style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.lineaSuave}`, background: C.hueco }}>
+          <p style={{ margin: "0 0 7px", color: C.apagado, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.9, textTransform: "uppercase" }}>
+            Tomas
+          </p>
+          <ResumenTomas tomas={tomas} />
         </div>
       )}
 

@@ -15,6 +15,7 @@ import {
   type RodajeGuion,
   type RodajePlan,
   type RodajeSeparador,
+  type RodajeToma,
 } from "./tipos"
 
 export type DatosPlan = {
@@ -24,6 +25,7 @@ export type DatosPlan = {
   dias: RodajeDia[]
   escenas: RodajeEscena[]
   seps: RodajeSeparador[]
+  tomas: RodajeToma[]
 }
 
 /** Trae todas las filas de un plan, de mil en mil (el tope por consulta de Supabase). */
@@ -55,14 +57,20 @@ export async function cargarPlan(projectId: string): Promise<DatosPlan | null> {
   if (error) throw new Error(error.message)
   if (!plan) return null
 
-  const [archivos, guiones, dias, escenas, seps] = await Promise.all([
+  const [archivos, guiones, dias, escenas, seps, tomas] = await Promise.all([
     todas<RodajeArchivo>("rodaje_archivos", "*", plan.id, "created_at"),
     todas<RodajeGuion>("rodaje_guiones", "id, plan_id, archivo_id, orden, numero, titulo, resumen, notas, unidad", plan.id, "orden"),
     todas<RodajeDia>("rodaje_dias", "id, plan_id, fecha, nota, created_at", plan.id, "created_at"),
     todas<RodajeEscena>("rodaje_escenas", COLUMNAS_ESCENA, plan.id, "orden"),
     todas<RodajeSeparador>("rodaje_separadores", "id, plan_id, dia_id, titulo, pos", plan.id, "pos"),
+    todas<RodajeToma>(
+      "rodaje_tomas",
+      "id, plan_id, escena_id, orden, emplazamiento, buena, proteccion, notas, updated_by, updated_at",
+      plan.id,
+      "orden"
+    ),
   ])
-  return { plan: plan as RodajePlan, archivos, guiones, dias, escenas, seps }
+  return { plan: plan as RodajePlan, archivos, guiones, dias, escenas, seps, tomas }
 }
 
 export async function crearPlan(projectId: string, userId: string | null): Promise<void> {
