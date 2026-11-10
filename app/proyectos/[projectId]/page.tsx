@@ -68,7 +68,7 @@ type QuoteDetail = {
 }
 
 type ProjectModule = {
-  id: "general" | "cotizaciones" | "presupuesto" | "matriz" | "hoja-llamado" | "egresos"
+  id: "general" | "cotizaciones" | "presupuesto" | "matriz" | "hoja-llamado" | "egresos" | "rodaje"
   label: string
   description: string
   icon: string
@@ -111,6 +111,12 @@ const projectModules: ProjectModule[] = [
     label: "Control de egresos",
     description: "Proveedores y montos liberados por cotización",
     icon: "expenses",
+  },
+  {
+    id: "rodaje",
+    label: "Plan de rodaje",
+    description: "Guiones, escenas y plan de trabajo por día",
+    icon: "rodaje",
   },
 ]
 
@@ -229,7 +235,8 @@ export default function ProjectDetailPage() {
     : isProductor
       // En proyectos con egresos directos los productores también entran a
       // Control de Egresos (ellos generan las sub-listas y capturan gastos).
-      ? projectModules.filter((m) => m.id === "matriz" || (esEgresosDirectos && m.id === "egresos"))
+      // El plan de rodaje lo edita Editor Post (rol "productor"), así que también lo ve.
+      ? projectModules.filter((m) => m.id === "matriz" || m.id === "rodaje" || (esEgresosDirectos && m.id === "egresos"))
       : projectModules
 
   const activeModuleData = useMemo(
@@ -541,6 +548,9 @@ export default function ProjectDetailPage() {
                         setShowHoja(true)
                       } else if (module.id === "egresos") {
                         setShowEgresos(true)
+                      } else if (module.id === "rodaje") {
+                        // El plan de rodaje vive en su propia página.
+                        router.push(`/proyectos/${projectId}/rodaje`)
                       } else {
                         setActiveModule(module.id)
                       }
@@ -1872,6 +1882,32 @@ function QuoteModal({
 }
 
 function ModuleIcon({ type }: { type: string }) {
+  if (type === "rodaje") {
+    // Claqueta
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M4 10 3.3 6.6a1 1 0 0 1 .8-1.2l13.7-2.6a1 1 0 0 1 1.2.8L19.6 7 4 10Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <path
+          d="m8 4.6 2.2 4.2M12.6 3.7l2.2 4.2"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+
   if (type === "quotes") {
     return (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
