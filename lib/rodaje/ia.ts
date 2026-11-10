@@ -7,8 +7,10 @@
 //      botón GUION. Se pide por tandas chicas para que cada llamada sea corta.
 //
 // Variables de entorno:
-//   ANTHROPIC_API_KEY   (obligatoria) llave de console.anthropic.com
-//   RODAJE_IA_MODELO    (opcional)    modelo a usar; por defecto claude-sonnet-5-5
+//   ANTHROPIC_API_KEY       (obligatoria) llave creada en platform.claude.com
+//   ANTHROPIC_WORKSPACE_ID  (opcional)    solo si la llave NO se creó ligada a un
+//                                         workspace: id del workspace a usar
+//   RODAJE_IA_MODELO        (opcional)    modelo; por defecto claude-sonnet-5-5
 
 import Anthropic from "@anthropic-ai/sdk"
 import {
@@ -66,8 +68,19 @@ function cliente(): Anthropic {
       503
     )
   }
-  return new Anthropic({ apiKey, maxRetries: 2 })
+  // Una llave que no está ligada a un workspace necesita decir cuál usar en
+  // cada petición; si la llave ya trae workspace, la variable no hace falta.
+  const workspace = process.env.ANTHROPIC_WORKSPACE_ID?.trim()
+  return new Anthropic({
+    apiKey,
+    maxRetries: 2,
+    ...(workspace ? { defaultHeaders: { "anthropic-workspace-id": workspace } } : {}),
+  })
 }
+
+const SIN_WORKSPACE =
+  "La llave de Anthropic no está ligada a un workspace. Crea una llave nueva eligiendo un workspace " +
+  "(platform.claude.com/settings/keys) o define ANTHROPIC_WORKSPACE_ID en Vercel."
 
 // ── El documento ──────────────────────────────────────────────────────────────
 
@@ -289,8 +302,15 @@ function traducirError(err: unknown): ErrorIA {
           503
         )
       case 402:
-        return new ErrorIA("La cuenta de Anthropic no tiene saldo. Agrega crédito en console.anthropic.com.", "limite", 503)
+        return new ErrorIA("La cuenta de Anthropic no tiene saldo. Agrega crédito en platform.claude.com (Billing).", "limite", 503)
       case 404:
+        if (/workspace/i.test(detalle)) {
+          return new ErrorIA(
+            "El workspace de ANTHROPIC_WORKSPACE_ID no existe o la llave no tiene acceso a él. Revísalo en Vercel.",
+            "config",
+            503
+          )
+        }
         return new ErrorIA(`El modelo "${modeloIA()}" no existe o la llave no tiene acceso. Revisa RODAJE_IA_MODELO.`, "config", 503)
       case 413:
         return new ErrorIA("El archivo es demasiado grande para leerlo de una vez. Divídelo en partes.", "documento", 413)
@@ -301,8 +321,9 @@ function traducirError(err: unknown): ErrorIA {
       case 503:
         return new ErrorIA("La IA está saturada en este momento. Vuelve a intentar en unos minutos.", "limite", 503)
       case 400:
+        if (/workspace/i.test(detalle)) return new ErrorIA(SIN_WORKSPACE, "config", 503)
         if (/credit balance|billing/i.test(detalle)) {
-          return new ErrorIA("La cuenta de Anthropic no tiene saldo. Agrega crédito en console.anthropic.com.", "limite", 503)
+          return new ErrorIA("La cuenta de Anthropic no tiene saldo. Agrega crédito en platform.claude.com (Billing).", "limite", 503)
         }
         if (/too long|too large|maximum|pages|exceed/i.test(detalle)) {
           return new ErrorIA("El archivo es demasiado largo para leerlo de una vez. Divídelo en partes.", "documento", 413)
