@@ -92,7 +92,7 @@ export default function RodajePage() {
               Este proyecto ya no existe o no tienes acceso a él.
             </p>
           ) : perfil && proyecto ? (
-            <PlanRodaje projectId={projectId} perfil={perfil} esMovil={esMovil} />
+            <PlanRodaje projectId={projectId} proyecto={nombre} perfil={perfil} esMovil={esMovil} />
           ) : (
             <p style={{ color: C.apagado, fontSize: 14 }}>Cargando…</p>
           )}

@@ -22,6 +22,7 @@ import { SubirGuiones } from "./SubirGuiones"
 import { GuionModal } from "./GuionModal"
 import { EditarEscena, EditarGuion } from "./Editores"
 import { EditarTomas } from "./Tomas"
+import { ExportarPDF } from "./ExportarPDF"
 
 export type CamposEscena = Pick<
   RodajeEscena,
@@ -53,7 +54,13 @@ type Vista = "plan" | "guiones" | "ordenar" | "subir"
 type Lectura = Progreso & { activa: boolean; error: string | null }
 type Resultado = PromiseLike<{ error: { message: string } | null }>
 
-export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMovil: boolean }) {
+export function PlanRodaje(props: {
+  projectId: string
+  /** Nombre del proyecto, para el encabezado y el nombre de los PDF */
+  proyecto: string
+  perfil: AppProfile
+  esMovil: boolean
+}) {
   const { projectId, perfil, esMovil } = props
   const puedeEditar = puedeEditarRodaje(perfil.role)
 
@@ -67,6 +74,7 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
   const [editEscena, setEditEscena] = useState<{ escena: RodajeEscena | null; guionId: string } | null>(null)
   const [editGuion, setEditGuion] = useState<RodajeGuion | null>(null)
   const [tomasDe, setTomasDe] = useState<string | null>(null)
+  const [pdfAbierto, setPdfAbierto] = useState(false)
 
   const datosRef = useRef<DatosPlan | null>(null)
   const lecturaRef = useRef({ activa: false, cancelada: false })
@@ -568,9 +576,12 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {pestana("plan", "Plan")}
           {pestana("guiones", etq.varios)}
+          <span style={{ flex: 1 }} />
+          <button type="button" style={boton} onClick={() => setPdfAbierto(true)} title="Descargar el plan de trabajo o el reporte de tomas">
+            PDF
+          </button>
           {puedeEditar && (
             <>
-              <span style={{ flex: 1 }} />
               {pestana("ordenar", vistaReal === "ordenar" ? "Ordenando" : "Ordenar")}
               {pestana("subir", porRevisar ? `+ Subir guion (${porRevisar})` : "+ Subir guion")}
             </>
@@ -680,6 +691,8 @@ export function PlanRodaje(props: { projectId: string; perfil: AppProfile; esMov
       {editGuion && (
         <EditarGuion datos={datos} guion={editGuion} acc={acc} onCerrar={() => setEditGuion(null)} />
       )}
+
+      {pdfAbierto && <ExportarPDF datos={datos} proyecto={props.proyecto} onCerrar={() => setPdfAbierto(false)} />}
 
       {escenaDeTomas && (
         <EditarTomas datos={datos} escena={escenaDeTomas} acc={acc} onCerrar={() => setTomasDe(null)} />
