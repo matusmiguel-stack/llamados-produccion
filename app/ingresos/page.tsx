@@ -13,8 +13,20 @@ import { FORMAS_PAGO, MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
 import { TimbrarPanel, type TimbrarResultado } from "../../components/facturacion/TimbrarPanel"
 import { DatosFiscalesModal } from "../../components/facturacion/DatosFiscalesModal"
 import { FacturasIndependientesModal } from "../../components/facturacion/FacturasIndependientesModal"
+import { ComplementosPagoModal } from "../../components/facturacion/ComplementosPagoModal"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type ComplementoIngreso = {
+  id: string
+  ingreso_id: string | null
+  factura_uuid: string
+  numero: string | null
+  pdf_path: string | null
+  xml_path: string | null
+  monto: number
+  origen: "auto" | "manual"
+}
 
 type Empresa = "retro_studio" | "retro_films"
 type Estatus =
@@ -200,9 +212,10 @@ export default function IngresosPage() {
   const [independientesOpen, setIndependientesOpen] = useState(false)
   const [cancelModal, setCancelModal] = useState<{ row: Ingreso; label: string; motivo: string } | null>(null)
   const [cancelando, setCancelando] = useState(false)
-  // Complementos de pago (facturas PPD): ingresos que ya tienen el suyo
-  const [conComplemento, setConComplemento] = useState<Set<string>>(new Set())
-  const [complementoArchivos, setComplementoArchivos] = useState<Record<string, { numero: string | null; pdf: string | null; xml: string | null }>>({})
+  // Complementos de pago VIGENTES (facturas PPD): los automáticos van ligados a
+  // su línea (ingreso_id); los hechos a mano, solo a la factura (factura_uuid).
+  const [complementos, setComplementos] = useState<ComplementoIngreso[]>([])
+  const [complementosOpen, setComplementosOpen] = useState(false)
   const [payComplemento, setPayComplemento] = useState(true)
   const [payForma, setPayForma] = useState("03")
   const [complementoModal, setComplementoModal] = useState<{ row: Ingreso; label: string; forma: string } | null>(null)
@@ -237,10 +250,11 @@ export default function IngresosPage() {
       supabase.from("ingresos").select("*").order("created_at", { ascending: false }),
       supabase.from("projects").select("id, name, code, responsable, clients(name)").order("name"),
       supabase.from("employees").select("id, nombre, apellido_paterno, apellido_materno, nickname").order("nombre"),
-      supabase.from("complementos_pago").select("ingreso_id, numero, pdf_path, xml_path"),
+      supabase.from("complementos_pago")
+        .select("id, ingreso_id, factura_uuid, numero, pdf_path, xml_path, monto, origen")
+        .eq("estatus", "vigente").order("parcialidad"),
     ])
-    setConComplemento(new Set((comps || []).map((c: any) => c.ingreso_id)))
-    setComplementoArchivos(Object.fromEntries((comps || []).map((c: any) => [c.ingreso_id, { numero: c.numero, pdf: c.pdf_path, xml: c.xml_path }])))
+    setComplementos(((comps || []) as any[]).map(c => ({ ...c, monto: Number(c.monto) })))
     setEmpleados(emps || [])
     setIngresos((data || []) as Ingreso[])
     setProjects((projs || []).map((p: any) => ({
@@ -279,16 +293,21 @@ export default function IngresosPage() {
   // Folio de la factura: abre el PDF; al lado, el XML y el complemento de pago si hay.
   function facturaLinks(r: Ingreso) {
     if (!r.numero_factura) return "—"
-    const comp = complementoArchivos[r.id]
-    const link = (path: string, label: string, title: string) => (
-      <button onClick={() => abrirArchivo(path)} style={archivoLinkStyle} title={title}>{label}</button>
+    const comps = complementosDe(r)
+    const link = (path: string, label: string, title: string, key?: string) => (
+      <button key={key} onClick={() => abrirArchivo(path)} style={archivoLinkStyle} title={title}>{label}</button>
     )
     return (
       <span style={{ display: "inline-flex", gap: 6, alignItems: "baseline", flexWrap: "wrap" }}>
         {r.factura_pdf_path ? link(r.factura_pdf_path, r.numero_factura, "Abrir el PDF de la factura") : r.numero_factura}
         {r.factura_xml_path && link(r.factura_xml_path, "XML", "Descargar el XML de la factura")}
-        {comp?.pdf && link(comp.pdf, "Compl.", `Complemento de pago${comp.numero ? " " + comp.numero : ""} (PDF)`)}
-        {comp?.xml && link(comp.xml, "XML", `Complemento de pago${comp.numero ? " " + comp.numero : ""} (XML)`)}
+        {comps.flatMap(c => {
+          const nombre = `Complemento de pago${c.numero ? " " + c.numero : ""} por ${fmt(c.monto)}${c.origen === "manual" ? " (hecho a mano)" : ""}`
+          return [
+            c.pdf_path && link(c.pdf_path, comps.length > 1 && c.numero ? `Compl. ${c.numero}` : "Compl.", `${nombre} (PDF)`, `${c.id}-pdf`),
+            c.xml_path && link(c.xml_path, "XML", `${nombre} (XML)`, `${c.id}-xml`),
+          ]
+        })}
       </span>
     )
   }
@@ -302,6 +321,24 @@ export default function IngresosPage() {
       if (res.ok) setFacAmbiente(await res.json())
     })()
   }, [])
+
+  // Facturas de Orderly subidas sin leer su método de pago (PUE/PPD): se
+  // clasifican una vez para que las PPD pidan su complemento al cobrarse.
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      try {
+        const res = await fetch("/api/facturacion/complementos", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "sincronizar" }),
+        })
+        const d = await res.json()
+        if (res.ok && d.actualizados > 0) loadPage()
+      } catch { /* no bloquea la página */ }
+    })()
+  }, [loadPage])
 
   // ── Auto-calculate IVA ──────────────────────────────────────────────────────
   function handleSubtotalChange(val: string) {
@@ -610,15 +647,30 @@ export default function IngresosPage() {
     setPayMonto("")
     setPayPct("")
     setPaySinIva(false)
-    setPayComplemento(true)
+    // Si ya se le hizo un complemento a mano a esta factura, quizá ya ampara
+    // este cobro: no se emite otro salvo que lo marquen.
+    setPayComplemento(manualesDeFactura(r).length === 0)
     setPayForma("03")
   }
 
   // ¿Esta línea cobrada necesita complemento de pago? (factura PPD con XML)
   const esPPD = (r: Ingreso) => r.factura_metodo_pago === "PPD" && !!r.factura_xml_path
+  const mismaFactura = (a: string | null, b: string | null) => !!a && !!b && a.toUpperCase() === b.toUpperCase()
+  // Complementos de la línea: el suyo (automático) y los hechos a mano a su factura
+  const complementosDe = (r: Ingreso) =>
+    complementos.filter(c => c.ingreso_id === r.id || (!c.ingreso_id && mismaFactura(c.factura_uuid, r.factura_uuid)))
+  const manualesDeFactura = (r: Ingreso) => complementos.filter(c => c.origen === "manual" && mismaFactura(c.factura_uuid, r.factura_uuid))
+  // Saldo de la factura: lo que suman sus líneas menos lo ya amparado por complementos
+  const saldoFactura = (r: Ingreso) => {
+    if (!r.factura_uuid) return 0
+    const total = ingresos.filter(i => mismaFactura(i.factura_uuid, r.factura_uuid)).reduce((s, i) => s + Number(i.subtotal) + Number(i.iva), 0)
+    const pagado = complementos.filter(c => mismaFactura(c.factura_uuid, r.factura_uuid)).reduce((s, c) => s + c.monto, 0)
+    return Math.round((total - pagado) * 100) / 100
+  }
   // Solo pagos desde que la app emite complementos: los anteriores se hicieron en Orderly
   const faltaComplemento = (r: Ingreso) =>
-    r.estatus === "pagado" && esPPD(r) && !conComplemento.has(r.id) && (r.fecha_pago || "") >= COMPLEMENTOS_DESDE
+    r.estatus === "pagado" && esPPD(r) && !complementos.some(c => c.ingreso_id === r.id) &&
+    (r.fecha_pago || "") >= COMPLEMENTOS_DESDE && saldoFactura(r) > 0.01
 
   // Emite el complemento de pago de un ingreso ya pagado. Devuelve el mensaje
   // para el usuario (no lanza: el pago ya quedó guardado).
@@ -946,6 +998,9 @@ export default function IngresosPage() {
             </button>
             <button onClick={() => setIndependientesOpen(true)} style={secondaryBtnStyle} title="Facturas que no van al control de ingresos (préstamos entre empresas, etc.)">
               🧾 Facturas independientes
+            </button>
+            <button onClick={() => setComplementosOpen(true)} style={secondaryBtnStyle} title="Complementos de pago de facturas PPD: los automáticos y los que se hacen a mano">
+              🧾 Complementos de pago
             </button>
             {/* Admin y finanzas pueden capturar ingresos manuales (sin proyecto) */}
             <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
@@ -1278,6 +1333,14 @@ export default function IngresosPage() {
           empresaInicial={activeEmpresa}
           ambiente={facAmbiente}
           onClose={() => setIndependientesOpen(false)}
+        />
+      )}
+
+      {complementosOpen && (
+        <ComplementosPagoModal
+          ambiente={facAmbiente}
+          onChanged={loadPage}
+          onClose={() => setComplementosOpen(false)}
         />
       )}
 
@@ -1615,6 +1678,12 @@ export default function IngresosPage() {
                     />
                     Emitir complemento de pago (factura {payModal.row.numero_factura} es PPD)
                   </label>
+                  {manualesDeFactura(payModal.row).length > 0 && (
+                    <p style={{ margin: 0, fontSize: 12, color: "#fbbf24", lineHeight: 1.5 }}>
+                      Esta factura ya tiene complemento hecho a mano ({manualesDeFactura(payModal.row).map(c => `${c.numero || "sin folio"} por ${fmt(c.monto)}`).join(", ")}).
+                      Saldo pendiente de la factura: {fmt(Math.max(saldoFactura(payModal.row), 0))}. Si ese complemento ya ampara este cobro, deja la casilla sin marcar.
+                    </p>
+                  )}
                   {payComplemento && (
                     <FormField label="¿Cómo se recibió el pago?">
                       <select value={payForma} onChange={e => setPayForma(e.target.value)} style={inputStyle}>

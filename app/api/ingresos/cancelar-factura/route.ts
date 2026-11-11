@@ -28,9 +28,9 @@ export async function POST(req: Request) {
     // El SAT no deja cancelar una factura con pagos registrados
     if (ingreso.factura_uuid) {
       const { count } = await admin.from("complementos_pago")
-        .select("id", { count: "exact", head: true }).eq("factura_uuid", ingreso.factura_uuid)
+        .select("id", { count: "exact", head: true }).eq("factura_uuid", ingreso.factura_uuid).eq("estatus", "vigente")
       if (count) {
-        return NextResponse.json({ error: "Esta factura ya tiene complementos de pago; no se puede cancelar" }, { status: 400 })
+        return NextResponse.json({ error: "Esta factura tiene complementos de pago vigentes; cancélalos primero en 🧾 Complementos de pago" }, { status: 400 })
       }
     }
 

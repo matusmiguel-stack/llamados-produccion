@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const { action, id, tipo, motivo } = await req.json()
     const { data: f } = await admin.from("facturas_independientes")
-      .select("id, empresa, facturapi_id, numero, estatus, xml_path, pdf_path").eq("id", String(id || "")).single()
+      .select("id, empresa, facturapi_id, numero, estatus, xml_path, pdf_path, uuid").eq("id", String(id || "")).single()
     if (!f) return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 })
 
     if (action === "archivo") {
@@ -33,6 +33,14 @@ export async function POST(req: Request) {
     if (action === "cancelar") {
       if (!["02", "03"].includes(motivo)) return NextResponse.json({ error: "Motivo de cancelación no válido" }, { status: 400 })
       if (f.estatus === "cancelada") return NextResponse.json({ error: "Esta factura ya está cancelada" }, { status: 400 })
+      // El SAT no deja cancelar una factura PPD con pagos registrados
+      if (f.uuid) {
+        const { count } = await admin.from("complementos_pago")
+          .select("id", { count: "exact", head: true }).eq("factura_uuid", f.uuid).eq("estatus", "vigente")
+        if (count) {
+          return NextResponse.json({ error: "Esta factura tiene complementos de pago vigentes; cancélalos primero en 🧾 Complementos de pago" }, { status: 400 })
+        }
+      }
       const r = await cancelarFactura(f.empresa, f.facturapi_id, motivo)
       if (r.status !== "canceled") {
         return NextResponse.json({

@@ -10,7 +10,8 @@ const r2 = (n: number) => Math.round(n * 100) / 100
 
 // POST JSON → factura "desde cero" con varios conceptos. NO toca el control de
 // ingresos (suelen ser préstamos entre Retro Studio y Retro Films): se guarda
-// en facturas_independientes.
+// en facturas_independientes. PUE o PPD; las PPD llevan complemento de pago
+// cuando se cobran (🧾 Complemento en la lista de facturas independientes).
 export async function POST(req: Request) {
   try {
     const user = await verifyApiRole(req, ["admin", "finanzas"])
@@ -21,7 +22,9 @@ export async function POST(req: Request) {
     const empresa = String(b.empresa || "")
     const receptorId = String(b.receptorId || "")
     const uso = String(b.uso || "G03")
-    const formaPago = String(b.formaPago || "03")
+    const metodoPago: "PUE" | "PPD" = b.metodoPago === "PPD" ? "PPD" : "PUE"
+    // PPD: el SAT pide forma de pago 99 (Por definir); la real va en el complemento
+    const formaPago = metodoPago === "PPD" ? "99" : String(b.formaPago || "03")
     const ivaTasa = Number(b.ivaTasa) === 0 ? 0 : 0.16
     const notas = String(b.notas || "").trim() || null
     const email = String(b.email || "").trim()
@@ -35,6 +38,9 @@ export async function POST(req: Request) {
     if (!EMPRESAS.includes(empresa)) return NextResponse.json({ error: "Elige si factura Retro Studio o Retro Films" }, { status: 400 })
     if (!receptorId) return NextResponse.json({ error: "Elige a quién se le factura" }, { status: 400 })
     if (conceptos.length === 0) return NextResponse.json({ error: "Agrega al menos un concepto" }, { status: 400 })
+    if (metodoPago === "PUE" && (!/^\d{2}$/.test(formaPago) || formaPago === "99")) {
+      return NextResponse.json({ error: "Elige la forma de pago" }, { status: 400 })
+    }
     for (const [i, c] of conceptos.entries()) {
       const n = `Concepto ${i + 1}`
       if (!c.descripcion) return NextResponse.json({ error: `${n}: escribe la descripción` }, { status: 400 })
@@ -53,7 +59,7 @@ export async function POST(req: Request) {
       ivaTasa,
       uso,
       formaPago,
-      metodoPago: "PUE",
+      metodoPago,
       serie: emisor?.serie || null,
     })
     const numero = `${factura.series || ""}${factura.folio_number ?? ""}` || factura.uuid.slice(0, 8)
@@ -70,7 +76,7 @@ export async function POST(req: Request) {
       subtotal,
       iva: r2(factura.total - subtotal),
       total: factura.total,
-      metodo_pago: "PUE",
+      metodo_pago: metodoPago,
       forma_pago: formaPago,
       uso_cfdi: uso,
       notas,
@@ -91,7 +97,8 @@ export async function POST(req: Request) {
     }
 
     await admin.from("receptores_fiscales").update({
-      ultima_forma_pago: formaPago,
+      ...(metodoPago === "PUE" ? { ultima_forma_pago: formaPago } : {}),
+      ultimo_metodo_pago: metodoPago,
       uso_cfdi: uso,
       updated_at: new Date().toISOString(),
     }).eq("id", receptor.id)
@@ -114,7 +121,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      ok: true, numeroFactura: numero, total: factura.total,
+      ok: true, numeroFactura: numero, total: factura.total, metodoPago,
       correo, correoFallo: !!email && !correo, pruebas: esModoPruebas(empresa),
     })
   } catch (err: any) {

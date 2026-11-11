@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
-import { FORMAS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
+import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
 import {
   EMPRESA_LABEL, FField, FRow, fBody, fBtnGhost, fBtnPrimary, fBtnSmall, fClose, fHeader, fInput, fModal, fNote, fOverlay,
@@ -16,6 +16,7 @@ type Concepto = { key: number; descripcion: string; clave: string; unidad: strin
 export type NuevaFacturaResultado = {
   numeroFactura: string
   total: number
+  metodoPago: "PUE" | "PPD"
   correo: string | null
   correoFallo: boolean
   pruebas: boolean
@@ -23,7 +24,8 @@ export type NuevaFacturaResultado = {
 
 // Factura "desde cero" (independiente): se captura concepto por concepto y NO
 // entra al control de ingresos — casi siempre son préstamos entre Retro
-// Studio y Retro Films. Solo PUE: estas facturas no llevan complemento.
+// Studio y Retro Films. PUE o PPD: las PPD llevan complemento de pago cuando
+// se cobran (se emite desde la lista de facturas independientes).
 export function NuevaFacturaModal({
   empresaInicial,
   ambiente,
@@ -43,6 +45,7 @@ export function NuevaFacturaModal({
   const [conceptos, setConceptos] = useState<Concepto[]>([{ key: 1, descripcion: "", clave: "", unidad: "E48", subtotal: "" }])
   const [iva, setIva] = useState(0.16)
   const [uso, setUso] = useState("G03")
+  const [metodo, setMetodo] = useState<"PUE" | "PPD">("PUE")
   const [forma, setForma] = useState("03")
   const [notas, setNotas] = useState("")
   const [enviar, setEnviar] = useState(false)
@@ -85,6 +88,7 @@ export function NuevaFacturaModal({
     const r = lista.find(x => x.id === id)
     if (!r) return
     setUso(r.uso_cfdi || "G03")
+    setMetodo(r.ultimo_metodo_pago === "PPD" ? "PPD" : "PUE")
     if (r.ultima_forma_pago && r.ultima_forma_pago !== "99") setForma(r.ultima_forma_pago)
     setEmail(r.email || "")
   }
@@ -140,7 +144,7 @@ export function NuevaFacturaModal({
     }
     if (enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return }
     const aviso = amb === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
-    const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · PUE`
+    const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · ${metodo}${metodo === "PPD" ? " (lleva complemento de pago al cobrarse)" : ""}`
     if (!confirm(`${aviso}:\n\n${resumen}\n\n¿Continuar?`)) return
     setTimbrando(true)
     try {
@@ -154,7 +158,8 @@ export function NuevaFacturaModal({
           conceptos: conceptos.map(c => ({ descripcion: c.descripcion.trim(), claveProdServ: c.clave, claveUnidad: c.unidad, subtotal: parseFloat(c.subtotal) })),
           ivaTasa: iva,
           uso,
-          formaPago: forma,
+          metodoPago: metodo,
+          formaPago: metodo === "PPD" ? "99" : forma,
           notas: notas.trim(),
           email: enviar ? email.trim() : "",
         }),
@@ -288,14 +293,30 @@ export function NuevaFacturaModal({
                 </select>
               </FField>
             </div>
-            <div style={{ flex: "1 1 220px" }}>
-              <FField label="Forma de pago (PUE)">
-                <select value={forma} onChange={e => setForma(e.target.value)} style={fInput}>
-                  {FORMAS_PAGO.filter(f => f.clave !== "99").map(f => <option key={f.clave} value={f.clave}>{f.clave} · {f.nombre}</option>)}
+            <div style={{ flex: "1 1 200px" }}>
+              <FField label="Método de pago">
+                <select value={metodo} onChange={e => setMetodo(e.target.value as "PUE" | "PPD")} style={fInput}>
+                  {METODOS_PAGO.map(m => <option key={m.clave} value={m.clave}>{m.nombre}</option>)}
                 </select>
               </FField>
             </div>
+            <div style={{ flex: "1 1 200px" }}>
+              <FField label="Forma de pago">
+                {metodo === "PPD" ? (
+                  <input value="99 · Por definir" disabled style={{ ...fInput, opacity: 0.6 }} />
+                ) : (
+                  <select value={forma} onChange={e => setForma(e.target.value)} style={fInput}>
+                    {FORMAS_PAGO.filter(f => f.clave !== "99").map(f => <option key={f.clave} value={f.clave}>{f.clave} · {f.nombre}</option>)}
+                  </select>
+                )}
+              </FField>
+            </div>
           </FRow>
+          {metodo === "PPD" && (
+            <p style={fNote("#38bdf8")}>
+              PPD: cuando se cobre, emite su complemento de pago con 🧾 Complemento en la lista de facturas independientes.
+            </p>
+          )}
 
           <FField label="Uso de CFDI">
             <select value={uso} onChange={e => setUso(e.target.value)} style={fInput}>

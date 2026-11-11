@@ -99,6 +99,19 @@ export async function crearFactura(empresa: string, f: FacturaInput): Promise<Fa
   return { id: j.id, uuid: String(j.uuid || "").toUpperCase(), series: j.series ?? null, folio_number: j.folio_number ?? null, total: Number(j.total) }
 }
 
+// Fecha y hora del pago: mediodía en CDMX para que la fecha no se corra de
+// día. Si el pago es de hoy y todavía no es mediodía, la hora actual (el pago
+// no puede quedar después de la emisión del complemento).
+function fechaHoraPago(fecha: string): string {
+  const ahora = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Mexico_City", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).format(new Date())
+  const [hoy, hora] = ahora.split(" ")
+  if (fecha === hoy && hora && hora < "12:00:00") return `${fecha}T${hora}-06:00`
+  return `${fecha}T12:00:00-06:00`
+}
+
 // Complemento de pago (CFDI tipo P) de una factura PPD
 export async function crearComplementoPago(empresa: string, c: {
   receptor: FacturaInput["receptor"]
@@ -127,8 +140,7 @@ export async function crearComplementoPago(empresa: string, c: {
       type: "pago",
       data: [{
         payment_form: c.formaPago,
-        // Mediodía en CDMX para que la fecha no se corra de día
-        date: `${c.fecha}T12:00:00-06:00`,
+        date: fechaHoraPago(c.fecha),
         currency: c.factura.moneda || "MXN",
         related_documents: [{
           uuid: c.factura.uuid,
