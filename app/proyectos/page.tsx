@@ -83,6 +83,9 @@ export default function ProyectosPage() {
   const [creatingMoveSubfolder, setCreatingMoveSubfolder] = useState(false)
 
   const isAdmin = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
+  // Finanzas entra solo a consultar (presupuesto y control de egresos): no crea,
+  // renombra, mueve ni borra carpetas o proyectos.
+  const soloLectura = profile?.role === "finanzas"
 
   const currentClient = useMemo(
     () =>
@@ -149,7 +152,7 @@ export default function ProyectosPage() {
 
     const myProfile = auth.profile
 
-    if (!["admin", "editor", "editor_premium", "productor"].includes(myProfile.role)) {
+    if (!["admin", "editor", "editor_premium", "productor", "finanzas"].includes(myProfile.role)) {
       window.location.href = "/"
       return
     }
@@ -743,7 +746,7 @@ export default function ProyectosPage() {
                 </nav>
               </div>
 
-              <div style={driveActionsStyle}>
+              {!soloLectura && <div style={driveActionsStyle}>
                 {selectedItem && (
                   <>
                     <button onClick={openRenamePanel} style={secondaryButtonStyle}>
@@ -763,7 +766,7 @@ export default function ProyectosPage() {
                 <button onClick={openCreatePanel} style={primaryButtonStyle}>
                   + {createLabel}
                 </button>
-              </div>
+              </div>}
             </div>
 
             <p style={driveHintStyle}>

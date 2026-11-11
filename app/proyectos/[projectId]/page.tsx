@@ -189,6 +189,8 @@ export default function ProjectDetailPage() {
   const isAdmin     = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const isStrictAdmin = profile?.role === "admin"
   const isProductor = profile?.role === "productor"
+  // Finanzas: solo consulta Presupuesto y Control de egresos, sin editar nada
+  const isFinanzas = profile?.role === "finanzas"
 
   async function handleGenerarReporte(formato: "pdf" | "xlsx" = "pdf") {
     if (!project) return
@@ -232,6 +234,8 @@ export default function ProjectDetailPage() {
   }
   const visibleModules = esGastosInternos
     ? projectModules.filter((m) => m.id === "egresos")
+    : isFinanzas
+      ? projectModules.filter((m) => m.id === "presupuesto" || m.id === "egresos")
     : isProductor
       // En proyectos con egresos directos los productores también entran a
       // Control de Egresos (ellos generan las sub-listas y capturan gastos).
@@ -258,12 +262,14 @@ export default function ProjectDetailPage() {
     const auth = await requireSessionProfile()
     if (!auth) return
 
-    if (!["admin", "editor", "editor_premium", "productor"].includes(auth.profile.role)) {
+    if (!["admin", "editor", "editor_premium", "productor", "finanzas"].includes(auth.profile.role)) {
       window.location.href = "/"
       return
     }
 
     setProfile(auth.profile)
+    // Finanzas no ve Cotizaciones: abre directo en Presupuesto
+    if (auth.profile.role === "finanzas") setActiveModule("presupuesto")
 
     const { data: projectData, error: projectError } = await supabase
       .from("projects")
@@ -579,7 +585,7 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* Panel del módulo activo — oculto para productor (solo usa modal de Matriz) */}
-            <section style={modulePanelStyle} hidden={isProductor}>
+            <section style={modulePanelStyle} hidden={!profile || isProductor || (isFinanzas && esGastosInternos)}>
               {activeModule === "cotizaciones" ? (
                 <QuotesPanel
                   quotes={quotes}
@@ -599,7 +605,7 @@ export default function ProjectDetailPage() {
                   quotesLoaded={quotesLoaded}
                   projectId={projectId}
                   isMobile={isMobile}
-                  onEditarLiberacion={(quoteId) =>
+                  onEditarLiberacion={isFinanzas ? undefined : (quoteId) =>
                     router.push(`/proyectos/${projectId}/liberar/${quoteId}`)
                   }
                 />
@@ -797,6 +803,7 @@ export default function ProjectDetailPage() {
                 projectResponsable={project?.responsable ?? null}
                 gastosInternos={esGastosInternos}
                 egresosDirectos={esEgresosDirectos}
+                readOnly={isFinanzas}
               />
             </div>
           </div>
@@ -863,7 +870,8 @@ function PresupuestoPanel({
   quotesLoaded: boolean
   projectId: string
   isMobile: boolean
-  onEditarLiberacion: (quoteId: string) => void
+  // Sin él (finanzas, solo lectura) no aparece "Editar liberación"
+  onEditarLiberacion?: (quoteId: string) => void
 }) {
   const [sections, setSections] = useState<QuoteSection[]>([])
   const [secLoading, setSecLoading] = useState(false)
@@ -980,12 +988,14 @@ function PresupuestoPanel({
               )}
             </p>
           </div>
-          <button
-            onClick={() => onEditarLiberacion(releasedQuote.id)}
-            style={liberarBtnStyle}
-          >
-            ✎ Editar liberación
-          </button>
+          {onEditarLiberacion && (
+            <button
+              onClick={() => onEditarLiberacion(releasedQuote.id)}
+              style={liberarBtnStyle}
+            >
+              ✎ Editar liberación
+            </button>
+          )}
         </div>
       </div>
 

@@ -101,7 +101,7 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
 
 export function EgresosPanel({
   projectId, isMobile, projectName, projectCode, empresa, projectResponsable,
-  gastosInternos = false, egresosDirectos = false,
+  gastosInternos = false, egresosDirectos = false, readOnly = false,
 }: {
   projectId: string
   isMobile: boolean
@@ -111,6 +111,8 @@ export function EgresosPanel({
   projectResponsable: string | null
   gastosInternos?: boolean
   egresosDirectos?: boolean
+  // Solo consulta (rol finanzas): sin pagar, editar, borrar, facturar ni sub-listas
+  readOnly?: boolean
 }) {
   // Modo de captura directa de egresos (sin cotización), con sub-listas.
   // Aplica a gastos internos (RS0000) y a proyectos marcados como iguala.
@@ -806,10 +808,12 @@ export function EgresosPanel({
           </button>
         )
       })}
-      <button onClick={openCreateSubList} disabled={subBusy} style={subTabAddStyle}>
-        + Nueva sub-lista
-      </button>
-      {subLists.length === 0 && (
+      {!readOnly && (
+        <button onClick={openCreateSubList} disabled={subBusy} style={subTabAddStyle}>
+          + Nueva sub-lista
+        </button>
+      )}
+      {!readOnly && subLists.length === 0 && (
         <span style={{ fontSize: 11, color: "#7d8ca3" }}>
           Crea una sub-lista (ej. Recetas Julio, Salmón, Trends) para empezar a capturar gastos.
         </span>
@@ -818,7 +822,7 @@ export function EgresosPanel({
   ) : null
 
   // Formulario para dar de alta un gasto directo (gastos internos o iguala)
-  const addGastoUI = directEnabled ? (
+  const addGastoUI = directEnabled && !readOnly ? (
     <div style={{ border: "1px solid rgba(52,211,153,0.25)", borderRadius: 12, background: "rgba(52,211,153,0.04)", padding: addOpen ? 16 : 0 }}>
       {!addOpen ? (
         <button
@@ -1053,9 +1057,11 @@ export function EgresosPanel({
       {addGastoUI}
       <div style={{ textAlign: "center", padding: "36px 0", color: "#6b7c93" }}>
         <p style={{ fontSize: 15, marginBottom: 8 }}>No hay {directEnabled ? "gastos" : "egresos"} registrados en este proyecto.</p>
-        <p style={{ fontSize: 12, color: "#6b7c93" }}>
-          {directEnabled ? "Crea una sub-lista y usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
-        </p>
+        {!readOnly && (
+          <p style={{ fontSize: 12, color: "#6b7c93" }}>
+            {directEnabled ? "Crea una sub-lista y usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
+          </p>
+        )}
       </div>
       {subListModalUI}
     </div>
@@ -1256,7 +1262,7 @@ export function EgresosPanel({
                           </span>
                           {/* Solo pagos registrados desde la app (anticipo, comprobación o pago
                               directo). Los marcados por Finanzas desde la factura del proveedor no. */}
-                          {item.pago_tipo && (
+                          {item.pago_tipo && !readOnly && (
                             <button onClick={() => openEditPago(item)} style={editPagoBtnStyle}
                               title="Corregir el monto, la fecha, de dónde salió o los archivos de este pago">
                               ✎ Editar pago
@@ -1264,16 +1270,16 @@ export function EgresosPanel({
                           )}
                           </>
                         ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
-                          <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                          readOnly ? null : <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
                         ) : item.pago_modo === "comprobacion" && item.supplierType !== "none" ? (
                           <>
                             <span style={pendienteBadgeStyle}>⚠ Pendiente Cierre</span>
-                            <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>
+                            {!readOnly && <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>}
                           </>
                         ) : null}
                       </div>
 
-                      <div style={actionColStyle}>
+                      {!readOnly && <div style={actionColStyle}>
                         {item.supplierType === "proveedor" && (
                           <button
                             onClick={() => sendBilling(item, monto)}
@@ -1294,7 +1300,7 @@ export function EgresosPanel({
                         {directEnabled && item.pago_estado !== "pagado" && (
                           <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#f87171", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
                         )}
-                      </div>
+                      </div>}
                     </div>
                   </td>
                 </tr>
@@ -1332,7 +1338,7 @@ export function EgresosPanel({
             ? <SummaryCard label="Sub-listas"    value={String(subLists.length)} color="#94a3b8" />
             : <SummaryCard label="Cotizaciones"  value={String(quoteCount)}      color="#94a3b8" />}
         </div>
-        <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexShrink: 0 }}>
+        {!readOnly && <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexShrink: 0 }}>
           <button
             onClick={sendAllBilling}
             disabled={sendingAll}
@@ -1347,7 +1353,7 @@ export function EgresosPanel({
           >
             {sendingAll ? "⏳ Enviando..." : "✉ Facturar todos"}
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Filtros de estatus */}
@@ -1384,10 +1390,14 @@ export function EgresosPanel({
             <div style={quoteHeaderStyle}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <span style={quoteLabelStyle}>🗂 {active.name}</span>
-                <button onClick={() => openRenameSubList(active.id, active.name)} title="Renombrar sub-lista"
-                  style={{ background: "none", border: "none", color: "#7d8ca3", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>✎</button>
-                <button onClick={() => deleteSubList(active.id, active.name)} title="Eliminar sub-lista"
-                  style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>🗑</button>
+                {!readOnly && (
+                  <>
+                    <button onClick={() => openRenameSubList(active.id, active.name)} title="Renombrar sub-lista"
+                      style={{ background: "none", border: "none", color: "#7d8ca3", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>✎</button>
+                    <button onClick={() => deleteSubList(active.id, active.name)} title="Eliminar sub-lista"
+                      style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>🗑</button>
+                  </>
+                )}
               </span>
               <span style={quoteTotalStyle}>{fmt(sTotal)}</span>
             </div>
