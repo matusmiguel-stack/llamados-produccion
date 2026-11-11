@@ -165,6 +165,10 @@ export default function UsersPage() {
   }
 
   async function deleteUser(userId: string, userEmail: string) {
+    if (!isAdmin) {
+      alert("Solo un administrador puede borrar usuarios")
+      return
+    }
     if (userId === profile?.id) {
       alert("No puedes eliminar tu propia cuenta")
       return
@@ -395,7 +399,7 @@ export default function UsersPage() {
                         </div>
 
                         <div style={rowActionsStyle}>
-                          {/* Editor Premium gestiona a todos menos a los administradores */}
+                          {/* Editor Premium edita a todos menos a los administradores; borrar, solo admin */}
                           {canManageUsers && (isAdmin || user.role !== "admin") && (
                             <>
                               <button
@@ -404,7 +408,7 @@ export default function UsersPage() {
                               >
                                 Editar
                               </button>
-                              <button
+                              {isAdmin && <button
                                 onClick={() => deleteUser(user.id, user.email)}
                                 style={dangerButtonStyle}
                                 disabled={user.id === profile?.id}
@@ -415,7 +419,7 @@ export default function UsersPage() {
                                 }
                               >
                                 Borrar
-                              </button>
+                              </button>}
                             </>
                           )}
                         </div>

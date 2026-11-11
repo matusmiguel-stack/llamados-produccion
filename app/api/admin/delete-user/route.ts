@@ -1,115 +1,67 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { createAdminClient } from "../../../../lib/supabase-admin"
+import { verifyApiUser } from "../../../../lib/api-auth"
 
+// POST JSON { userId } → elimina la cuenta de un usuario. Solo admin.
+//
+// Se borra la cuenta de auth y, en la misma operación de la BD, su perfil
+// (profiles.id ON DELETE CASCADE); lo que creó (cotizaciones, entregas,
+// juntas…) se conserva sin autor (created_by ON DELETE SET NULL). Es todo o
+// nada: si algo lo impide, el usuario queda intacto.
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get("Authorization")
+    const user = await verifyApiUser(request)
+    if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
-    if (!authHeader) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !anonKey) {
-      return NextResponse.json(
-        { error: "Configuración de Supabase incompleta" },
-        { status: 500 }
-      )
-    }
-
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
-
-    const {
-      data: { user },
-      error: userError,
-    } = await userClient.auth.getUser()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
-
-    const { data: profiles, error: profilesError } = await userClient
-      .from("profiles")
-      .select("*")
-
-    if (profilesError) {
-      return NextResponse.json({ error: profilesError.message }, { status: 400 })
-    }
-
-    const myProfile = profiles?.find(
-      (profile) =>
-        profile.email?.trim().toLowerCase() ===
-        user.email?.trim().toLowerCase()
-    )
-
-    if (!myProfile || (myProfile.role !== "admin" && myProfile.role !== "editor_premium")) {
-      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 })
+    const admin = createAdminClient(user.id)
+    const { data: me } = await admin.from("profiles").select("id, role").eq("id", user.id).maybeSingle()
+    if (me?.role !== "admin") {
+      return NextResponse.json({ error: "Solo un administrador puede borrar usuarios" }, { status: 403 })
     }
 
     const { userId } = await request.json()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Falta el id del usuario" }, { status: 400 })
+    if (!userId) return NextResponse.json({ error: "Falta el id del usuario" }, { status: 400 })
+    if (userId === user.id) {
+      return NextResponse.json({ error: "No puedes eliminar tu propia cuenta" }, { status: 400 })
     }
 
-    if (userId === myProfile.id || userId === user.id) {
-      return NextResponse.json(
-        { error: "No puedes eliminar tu propia cuenta" },
-        { status: 400 }
-      )
+    const { data: target } = await admin.from("profiles").select("id, email, role").eq("id", userId).maybeSingle()
+    if (!target) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+
+    if (target.role === "admin") {
+      const { count } = await admin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin")
+      if ((count || 0) <= 1) {
+        return NextResponse.json({ error: "No puedes eliminar al último administrador" }, { status: 400 })
+      }
     }
 
-    const targetUser = profiles?.find((profile) => profile.id === userId)
-
-    if (!targetUser) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-    }
-
-    // Editor Premium no puede eliminar administradores.
-    if (myProfile.role === "editor_premium" && targetUser.role === "admin") {
-      return NextResponse.json({ error: "No puedes eliminar a un administrador" }, { status: 403 })
-    }
-
-    if (targetUser.role === "admin") {
-      const adminCount =
-        profiles?.filter((profile) => profile.role === "admin").length || 0
-
-      if (adminCount <= 1) {
+    const { error: authError } = await admin.auth.admin.deleteUser(userId)
+    if (authError) {
+      // La cuenta ya no existía: solo queda limpiar el perfil suelto
+      const yaNoExiste = authError.status === 404 || /not.?found/i.test(authError.message)
+      if (!yaNoExiste) {
+        console.error("[admin/delete-user]", target.email, authError.message)
         return NextResponse.json(
-          { error: "No puedes eliminar al último administrador" },
-          { status: 400 }
+          { error: `No se pudo eliminar a ${target.email}: ${authError.message}` },
+          { status: 400 },
         )
       }
     }
 
-    const adminClient = createAdminClient()
-
-    const { error: profileDeleteError } = await adminClient
-      .from("profiles")
-      .delete()
-      .eq("id", userId)
-
-    if (profileDeleteError) {
-      return NextResponse.json({ error: profileDeleteError.message }, { status: 400 })
-    }
-
-    const { error: authDeleteError } =
-      await adminClient.auth.admin.deleteUser(userId)
-
-    if (authDeleteError) {
-      return NextResponse.json({ error: authDeleteError.message }, { status: 400 })
+    // Normalmente ya se fue con la cuenta (cascada); por si acaso
+    const { error: profileError } = await admin.from("profiles").delete().eq("id", userId)
+    if (profileError) {
+      console.error("[admin/delete-user] perfil", target.email, profileError.message)
+      return NextResponse.json(
+        { error: `La cuenta de ${target.email} se eliminó, pero su perfil no: ${profileError.message}` },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Error al eliminar usuario"
-
+    const message = error instanceof Error ? error.message : "Error al eliminar usuario"
+    console.error("[admin/delete-user]", message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
