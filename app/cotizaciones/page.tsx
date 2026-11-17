@@ -6,6 +6,7 @@ import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { DraggableModalPanel } from "../../components/DraggableModalPanel"
 import { RESPONSABLES } from "../../lib/responsables"
+import { cotizacionYaAprobada, previewCodigoAprobacion, resolverCodigoAprobacion, type CodigoAprobacion } from "../../lib/codigo-aprobacion"
 import type { QuoteRubroPDF, QuotePDFData } from "../../lib/exportQuotePdf"
 
 type Client = { id: string; name: string }
@@ -221,6 +222,9 @@ export default function CotizacionesPage() {
   const [aprobarResponsable, setAprobarResponsable] = useState("")
   const [aproving, setAproving] = useState(false)
   const [yaAprobado, setYaAprobado] = useState(false)
+  // Código que tendrá la línea en Ingresos (RS3007, o RS3007-1… si el proyecto ya tenía una)
+  const [aprobarCodigo, setAprobarCodigo] = useState<CodigoAprobacion | null>(null)
+  const [aprobarNombre, setAprobarNombre] = useState("")
 
   const [clientId, setClientId] = useState("")
   const [projectId, setProjectId] = useState("")
@@ -425,16 +429,10 @@ export default function CotizacionesPage() {
         setProjectId(loadedProj.id)
       }
 
-      // Verificar si el proyecto ya está aprobado en ingresos
-      if (quote.project_id) {
-        const { data: existingIngreso } = await supabase
-          .from("ingresos")
-          .select("id")
-          .eq("project_id", quote.project_id)
-          .limit(1)
-        if (existingIngreso && existingIngreso.length > 0) {
-          setYaAprobado(true)
-        }
+      // ¿Esta cotización ya tiene su línea en Ingresos? (Otra cotización del
+      // mismo proyecto sí se puede aprobar: sale como RS####-1, -2…)
+      if (await cotizacionYaAprobada(qid, quote.status, quote.project_id)) {
+        setYaAprobado(true)
       }
 
       const { data: secs } = await supabase
@@ -912,7 +910,7 @@ export default function CotizacionesPage() {
       return
     }
     if (yaAprobado) {
-      alert("Este proyecto ya fue aprobado y está registrado en el control de ingresos.")
+      alert("Esta cotización ya fue aprobada y está registrada en el control de ingresos.")
       return
     }
     // Pre-seleccionar el responsable actual del proyecto si ya es uno de la lista.
@@ -920,6 +918,16 @@ export default function CotizacionesPage() {
     setAprobarResponsable(
       proj?.responsable && RESPONSABLES.some((r) => r.value === proj.responsable) ? proj.responsable : ""
     )
+    setAprobarNombre(quoteName.trim())
+    setAprobarCodigo(null)
+    if (projectId) {
+      try {
+        setAprobarCodigo(await previewCodigoAprobacion(projectId, proj?.code || null))
+      } catch (err) {
+        alert("No se pudo revisar los ingresos del proyecto: " + (err instanceof Error ? err.message : String(err)))
+        return
+      }
+    }
     setShowAprobarModal(true)
   }
 
@@ -935,20 +943,31 @@ export default function CotizacionesPage() {
     const iva         = Math.round(subtotal * 0.16 * 100) / 100
     const responsable = aprobarResponsable || selectedProject?.responsable || null
 
-    // Generar código RS#### si el proyecto todavía no tiene uno
+    // Código de esta aprobación: RS#### la primera vez (se genera si el
+    // proyecto no tiene), RS####-1, -2… si el proyecto ya tenía ingresos.
     let projectCode = selectedProject?.code || null
-    if (!projectCode && projectId) {
-      const { data: codeData } = await supabase.rpc("next_project_code")
-      if (codeData) {
-        projectCode = codeData as string
-        await supabase.from("projects").update({ code: projectCode }).eq("id", projectId)
-        // Actualizar estado local para que el label ya lo refleje
-        setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, code: projectCode! } : p))
+    let adicional = false
+    if (projectId) {
+      try {
+        const r = await resolverCodigoAprobacion(projectId, projectCode)
+        if (r.codigoProyecto && r.codigoProyecto !== projectCode) {
+          const nuevo = r.codigoProyecto
+          setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, code: nuevo } : p))
+        }
+        projectCode = r.codigo
+        adicional = r.adicional
+      } catch (err) {
+        setAproving(false)
+        alert("No se pudo generar el código: " + (err instanceof Error ? err.message : String(err)))
+        return
       }
     }
+    // En una aprobación adicional el nombre es el de la cotización (editable
+    // en el modal, p. ej. "Resizing"), no el del proyecto.
+    const nombreLinea = adicional ? (aprobarNombre.trim() || quoteName.trim()) : projectName
 
     const proyectoLabel = selectedProject
-      ? (projectCode ? `${projectCode} ${projectName}` : projectName)
+      ? (projectCode ? `${projectCode} ${nombreLinea}` : nombreLinea)
       : quoteName.trim()
 
     const MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
@@ -973,7 +992,9 @@ export default function CotizacionesPage() {
     await supabase.from("quotes").update({ status: "approved" }).eq("id", editQuoteId)
     // Guardar empresa y responsable en el proyecto: el reporte de egresos lee
     // `project.responsable`, así que sin esto el responsable no se reflejaba ahí.
-    if (projectId) {
+    // Solo en la primera aprobación: una adicional (RS####-1) no cambia los
+    // datos del proyecto, su empresa/responsable quedan en su propia línea.
+    if (projectId && !adicional) {
       await supabase.from("projects").update({ empresa: aprobarEmpresa, responsable }).eq("id", projectId)
       setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, responsable } : p))
     }
@@ -987,7 +1008,7 @@ export default function CotizacionesPage() {
         body: JSON.stringify({
           projectId,
           projectCode,
-          projectName,
+          projectName: nombreLinea,
           responsableNombre: responsable,
           empresa: aprobarEmpresa,
           costoSinIva: subtotal,
@@ -1467,7 +1488,7 @@ export default function CotizacionesPage() {
           <div style={aprobarModalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
             <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>
-              Aprobar proyecto
+              {aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}
             </h2>
             <p style={{ margin: "0 0 20px", color: "#94a3b8", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
               Esto creará una entrada en <strong style={{ color: "#e2e8f0" }}>Ingresos</strong> con los totales de esta cotización.
@@ -1481,13 +1502,36 @@ export default function CotizacionesPage() {
               return (
                 <div style={aprobarSummaryStyle}>
                   <Row label="Cliente"    value={clients.find(c => c.id === clientId)?.name || "—"} />
-                  <Row label="Proyecto"   value={quoteName || "—"} />
+                  <Row label="Código"     value={aprobarCodigo?.codigo || "Se genera al aprobar"} bold />
+                  <Row label="Cotización" value={quoteName || "—"} />
                   <Row label="Subtotal"   value={fmt(sub)} />
                   <Row label="IVA (16%)"  value={fmt(iva)} />
                   <Row label="Total"      value={fmt(sub + iva)} bold />
                 </div>
               )
             })()}
+
+            {aprobarCodigo?.adicional && (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Nombre en Ingresos</p>
+                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#6b7c93", lineHeight: 1.5 }}>
+                  El proyecto ya tiene una línea aprobada, esta se agrega aparte como <strong style={{ color: "#cbd5e1" }}>{aprobarCodigo.codigo}</strong>.
+                </p>
+                <input
+                  value={aprobarNombre}
+                  onChange={(e) => setAprobarNombre(e.target.value)}
+                  placeholder="Ej. Resizing"
+                  style={{
+                    width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 9, fontSize: 13,
+                    border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
+                    color: "#e2e8f0", outline: "none",
+                  }}
+                />
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                  Quedará como: <strong style={{ color: "#e2e8f0" }}>{aprobarCodigo.codigo} {aprobarNombre.trim() || quoteName.trim()}</strong>
+                </p>
+              </div>
+            )}
 
             {/* Responsable */}
             <div style={{ marginTop: 16 }}>

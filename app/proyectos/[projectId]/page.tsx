@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabase"
 import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { RESPONSABLES } from "../../../lib/responsables"
+import { cotizacionYaAprobada, previewCodigoAprobacion, resolverCodigoAprobacion, type CodigoAprobacion } from "../../../lib/codigo-aprobacion"
 import { MatrizPanel } from "./MatrizPanel"
 import { HojaLlamadoPanel } from "./HojaLlamadoPanel"
 import { InformacionGeneralPanel } from "./InformacionGeneralPanel"
@@ -1333,6 +1334,9 @@ function QuoteModal({
   )
   const [aproving, setAproving] = useState(false)
   const [yaAprobado, setYaAprobado] = useState(false)
+  // Código que tendrá la línea en Ingresos (RS3007, o RS3007-1… si el proyecto ya tenía una)
+  const [aprobarCodigo, setAprobarCodigo] = useState<CodigoAprobacion | null>(null)
+  const [aprobarNombre, setAprobarNombre] = useState("")
 
   const { quote, sections } = detail
   const subtotal = quoteSubtotal(sections)
@@ -1340,18 +1344,31 @@ function QuoteModal({
   const financiamientoAmt = subtotal * ((quote.financiamiento_percentage || 0) / 100)
   const total = subtotal + markupAmt + financiamientoAmt
 
-  // Verificar si este proyecto ya tiene un ingreso registrado
+  // ¿Esta cotización ya tiene su línea en Ingresos? (Otra cotización del
+  // mismo proyecto sí se puede aprobar: sale como RS####-1, -2…)
   useEffect(() => {
-    if (!quote.project_id) return
-    supabase
-      .from("ingresos")
-      .select("id")
-      .eq("project_id", quote.project_id)
-      .limit(1)
-      .then(({ data }) => {
-        if (data && data.length > 0) setYaAprobado(true)
-      })
-  }, [quote.project_id])
+    cotizacionYaAprobada(quote.id, quote.status, quote.project_id).then((ya) => {
+      if (ya) setYaAprobado(true)
+    })
+  }, [quote.id, quote.status, quote.project_id])
+
+  async function abrirAprobar() {
+    if (yaAprobado) {
+      alert("Esta cotización ya fue aprobada y está registrada en el control de ingresos.")
+      return
+    }
+    setAprobarNombre(quote.name)
+    setAprobarCodigo(null)
+    if (quote.project_id) {
+      try {
+        setAprobarCodigo(await previewCodigoAprobacion(quote.project_id, projectCode))
+      } catch (err) {
+        alert("No se pudo revisar los ingresos del proyecto: " + (err instanceof Error ? err.message : String(err)))
+        return
+      }
+    }
+    setShowAprobar(true)
+  }
 
   async function handleExportPdf() {
     setExporting(true)
@@ -1419,15 +1436,24 @@ function QuoteModal({
   async function confirmarAprobacion() {
     setAproving(true)
 
-    // Si el proyecto aún no tiene código RS, asignarlo ahora
+    // Código de esta aprobación: RS#### la primera vez (se genera si el
+    // proyecto no tiene), RS####-1, -2… si el proyecto ya tenía ingresos.
     let effectiveCode = projectCode
-    if (!effectiveCode && quote.project_id) {
-      const { data: nextData } = await supabase.rpc("next_project_code")
-      if (nextData) {
-        await supabase.from("projects").update({ code: nextData }).eq("id", quote.project_id)
-        effectiveCode = nextData
+    let adicional = false
+    if (quote.project_id) {
+      try {
+        const r = await resolverCodigoAprobacion(quote.project_id, projectCode)
+        effectiveCode = r.codigo
+        adicional = r.adicional
+      } catch (err) {
+        setAproving(false)
+        alert("No se pudo generar el código: " + (err instanceof Error ? err.message : String(err)))
+        return
       }
     }
+    // En una aprobación adicional el nombre es el de la cotización (editable
+    // en el modal, p. ej. "Resizing"), no el del proyecto.
+    const nombreLinea = adicional ? (aprobarNombre.trim() || quote.name) : projectName
 
     const responsable = aprobarResponsable || projectResponsable || null
     const iva = Math.round(total * 0.16 * 100) / 100
@@ -1437,7 +1463,7 @@ function QuoteModal({
       estatus:         "en_produccion",
       cliente_agencia: clientName,
       responsable,
-      proyecto:        effectiveCode ? `${effectiveCode} ${projectName}` : projectName,
+      proyecto:        effectiveCode ? `${effectiveCode} ${nombreLinea}` : nombreLinea,
       subtotal:        total,
       iva,
       mes_cierre:      MESES_ES[new Date().getMonth()],
@@ -1449,7 +1475,9 @@ function QuoteModal({
     await supabase.from("quotes").update({ status: "approved" }).eq("id", quote.id)
     // Guardar empresa y responsable en el proyecto: el reporte de egresos lee
     // project.responsable, así que sin esto el responsable no se reflejaba ahí.
-    if (quote.project_id) {
+    // Solo en la primera aprobación: una adicional (RS####-1) no cambia los
+    // datos del proyecto, su empresa/responsable quedan en su propia línea.
+    if (quote.project_id && !adicional) {
       await supabase.from("projects").update({ empresa: aprobarEmpresa, responsable }).eq("id", quote.project_id)
     }
 
@@ -1462,7 +1490,7 @@ function QuoteModal({
         body: JSON.stringify({
           projectId: quote.project_id,
           projectCode: effectiveCode,
-          projectName,
+          projectName: nombreLinea,
           responsableNombre: responsable,
           empresa: aprobarEmpresa,
           costoSinIva: total,
@@ -1523,13 +1551,7 @@ function QuoteModal({
               </span>
             )}
             <button
-              onClick={() => {
-                if (yaAprobado) {
-                  alert("Este proyecto ya fue aprobado y está registrado en el control de ingresos.")
-                  return
-                }
-                setShowAprobar(true)
-              }}
+              onClick={abrirAprobar}
               disabled={yaAprobado}
               style={{
                 ...aprobarQuoteBtnStyle,
@@ -1819,7 +1841,7 @@ function QuoteModal({
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>Aprobar proyecto</h2>
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>{aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}</h2>
             <p style={{ margin: "0 0 18px", color: "#94a3b8", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
               Esto creará una entrada en <strong style={{ color: "#e2e8f0" }}>Ingresos</strong> con los totales de esta cotización.
             </p>
@@ -1828,6 +1850,7 @@ function QuoteModal({
             <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", display: "grid", gap: 6 }}>
               {[
                 { label: "Cliente",   value: clientName },
+                { label: "Código",    value: aprobarCodigo?.codigo || "Se genera al aprobar", bold: true },
                 { label: "Cotización",value: quote.name },
                 { label: "Subtotal",  value: fmt(total) },
                 { label: "IVA (16%)", value: fmt(Math.round(total * 0.16 * 100) / 100) },
@@ -1839,6 +1862,28 @@ function QuoteModal({
                 </div>
               ))}
             </div>
+
+            {aprobarCodigo?.adicional && (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Nombre en Ingresos</p>
+                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#6b7c93", lineHeight: 1.5 }}>
+                  El proyecto ya tiene una línea aprobada, esta se agrega aparte como <strong style={{ color: "#cbd5e1" }}>{aprobarCodigo.codigo}</strong>.
+                </p>
+                <input
+                  value={aprobarNombre}
+                  onChange={(e) => setAprobarNombre(e.target.value)}
+                  placeholder="Ej. Resizing"
+                  style={{
+                    width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 9, fontSize: 13,
+                    border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
+                    color: "#e2e8f0", outline: "none",
+                  }}
+                />
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                  Quedará como: <strong style={{ color: "#e2e8f0" }}>{aprobarCodigo.codigo} {aprobarNombre.trim() || quote.name}</strong>
+                </p>
+              </div>
+            )}
 
             {/* Empresa */}
             <div style={{ marginTop: 16 }}>
