@@ -988,8 +988,15 @@ export default function CotizacionesPage() {
     setAproving(false)
     if (error) { alert(error.message); return }
 
-    // Mark the quote as approved too
-    await supabase.from("quotes").update({ status: "approved" }).eq("id", editQuoteId)
+    // Marcar la cotización como aprobada y guardar con qué código, empresa y
+    // responsable: su control de egresos se lleva aparte con esos datos.
+    await supabase.from("quotes").update({
+      status: "approved",
+      codigo: projectCode,
+      codigo_nombre: nombreLinea,
+      empresa: aprobarEmpresa,
+      responsable,
+    }).eq("id", editQuoteId)
     // Guardar empresa y responsable en el proyecto: el reporte de egresos lee
     // `project.responsable`, así que sin esto el responsable no se reflejaba ahí.
     // Solo en la primera aprobación: una adicional (RS####-1) no cambia los

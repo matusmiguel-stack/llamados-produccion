@@ -9,6 +9,7 @@ import { uploadComprobante, mensajeDeRed } from "../../../lib/upload-comprobante
 import { AppSidebar } from "../../../components/AppSidebar"
 import { PageLoader } from "../../../components/PageLoader"
 import { ContactChip } from "../../../components/ContactChip"
+import { esSubcodigo } from "../../../lib/codigo-egresos"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,7 +222,7 @@ export default function ProveedorDetailPage() {
         quote_sections!inner(
           name,
           quotes!inner(
-            id, name, project_id,
+            id, name, project_id, codigo, codigo_nombre,
             projects!inner(id, name, code, clients!inner(name))
           )
         )
@@ -241,6 +242,9 @@ export default function ProveedorDetailPage() {
       const sec   = item.quote_sections
       const quote = sec.quotes
       const proj  = quote.projects
+      // Cotización aprobada aparte (RS3007-1): sus egresos van con su código,
+      // separados de los del proyecto.
+      const adicional = esSubcodigo(quote.codigo)
 
       rows.push({
         id: item.id, description: item.description,
@@ -248,11 +252,12 @@ export default function ProveedorDetailPage() {
         actual_qty: item.actual_qty, actual_days: item.actual_days, actual_unit_price: item.actual_unit_price,
         actual_supplier_id: item.actual_supplier_id, actual_employee_id: item.actual_employee_id,
         monto,
-        project_id: proj.id, project_name: proj.name,
+        project_id: proj.id,
+        project_name: adicional ? `${proj.name} — ${quote.codigo} ${quote.codigo_nombre || quote.name}` : proj.name,
         client_name: proj.clients?.name || "",
         quote_id: quote.id, quote_name: quote.name,
         section_name: sec.name,
-        project_code: proj.code ?? null,
+        project_code: adicional ? quote.codigo : (proj.code ?? null),
         pago_estado: item.pago_estado ?? null,
         pago_fecha: item.pago_fecha ?? null,
       })
@@ -480,9 +485,11 @@ export default function ProveedorDetailPage() {
   const facturasFiltradas = facturas.filter(f => f.status === facFilter)
 
   const byProject: Record<string, { project_name: string; client_name: string; project_id: string; rows: EgresoRow[] }> = {}
+  // Agrupado por proyecto y código: RS3007 y RS3007-1 van en bloques aparte.
   for (const e of egresos) {
-    if (!byProject[e.project_id]) byProject[e.project_id] = { project_name: e.project_name, client_name: e.client_name, project_id: e.project_id, rows: [] }
-    byProject[e.project_id].rows.push(e)
+    const k = `${e.project_id}|${e.project_code || ""}`
+    if (!byProject[k]) byProject[k] = { project_name: e.project_name, client_name: e.client_name, project_id: e.project_id, rows: [] }
+    byProject[k].rows.push(e)
   }
 
   return (
@@ -574,17 +581,17 @@ export default function ProveedorDetailPage() {
                 <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7c93" }}>Este proveedor aún no tiene rubros capturados en ninguna liberación.</p>
               </div>
             ) : (
-              Object.entries(byProject).map(([pid, { project_name, client_name, rows }]) => {
+              Object.entries(byProject).map(([grupo, { project_name, client_name, project_id: pid, rows }]) => {
                 const projectTotal = rows.reduce((s, r) => s + r.monto, 0)
                 return (
-                  <div key={pid} style={{ marginBottom: 20 }}>
+                  <div key={grupo} style={{ marginBottom: 20 }}>
                     <div
                       style={{ ...projectHeaderStyle, cursor: "pointer" }}
-                      onClick={() => setColProj(prev => ({ ...prev, [pid]: !prev[pid] }))}
-                      title={colProj[pid] ? "Mostrar rubros" : "Ocultar rubros"}
+                      onClick={() => setColProj(prev => ({ ...prev, [grupo]: !prev[grupo] }))}
+                      title={colProj[grupo] ? "Mostrar rubros" : "Ocultar rubros"}
                     >
                       <div>
-                        <span style={{ color: "#7d8ca3", fontSize: 12, marginRight: 8 }}>{colProj[pid] ? "▸" : "▾"}</span>
+                        <span style={{ color: "#7d8ca3", fontSize: 12, marginRight: 8 }}>{colProj[grupo] ? "▸" : "▾"}</span>
                         <Link href={`/proyectos/${pid}`} style={projectNameLinkStyle} onClick={e => e.stopPropagation()}>{project_name}</Link>
                         <span style={clientNameStyle}> · {client_name}</span>
                         <span style={{ color: "#6b7c93", fontSize: 11, marginLeft: 8 }}>({rows.length} rubro{rows.length === 1 ? "" : "s"})</span>
@@ -592,7 +599,7 @@ export default function ProveedorDetailPage() {
                       <span style={projectTotalStyle}>{fmt(projectTotal)}</span>
                     </div>
 
-                    {!colProj[pid] && (
+                    {!colProj[grupo] && (
                     <div style={tableWrapStyle}>
                       <table style={tableStyle}>
                         <thead>
@@ -761,9 +768,11 @@ export default function ProveedorDetailPage() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {facturasFiltradas.map(f => {
-                    const proyecto = f.project_code
-                      ? `${f.project_code} ${f.project_name ?? ""}`.trim()
-                      : (f.project_name || f.codigo_proyecto || "—")
+                    const proyecto = esSubcodigo(f.codigo_proyecto)
+                      ? `${f.codigo_proyecto} ${f.project_name ?? ""}`.trim()
+                      : f.project_code
+                        ? `${f.project_code} ${f.project_name ?? ""}`.trim()
+                        : (f.project_name || f.codigo_proyecto || "—")
                     const vencida = f.status === "aceptada" && !!f.fecha_pago && f.fecha_pago < hoyISO
                     const pagar = montoPagar(f)
                     const sub = Number(f.subtotal ?? 0)

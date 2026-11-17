@@ -239,8 +239,9 @@ export async function POST(req: Request) {
     const montoStr = items.map((it: any) => it.monto).join(" + ")
 
     // Separar código del nombre del proyecto para mostrarlos en dos líneas
-    // proyectoLabel puede ser "RS3000 Kueski Junio" o sólo "Kueski Junio"
-    const codeMatch = proyectoLabel.match(/^(RS\d+)\s+(.+)$/)
+    // proyectoLabel puede ser "RS3000 Kueski Junio", "RS3007-1 Resizing"
+    // (aprobación adicional del proyecto) o sólo "Kueski Junio"
+    const codeMatch = proyectoLabel.match(/^(RS\d+(?:-\d+)?)\s+(.+)$/)
     const proyectoCodigo = codeMatch ? codeMatch[1] : "—"
     const proyectoNombre = codeMatch ? codeMatch[2] : proyectoLabel
 

@@ -2,6 +2,7 @@ import { supabase } from "./supabase"
 import { employeeDisplayName } from "./employee-dates"
 import { exportEgresosReport } from "./exportEgresosReport"
 import { exportEgresosReportXlsx } from "./exportEgresosReportXlsx"
+import { esSubcodigo } from "./codigo-egresos"
 
 type ProjectMeta = {
   projectName: string
@@ -9,6 +10,11 @@ type ProjectMeta = {
   empresa: "retro_studio" | "retro_films" | null
   responsable: string | null
   formato?: "pdf" | "xlsx"
+  // Si el proyecto tiene aprobaciones aparte (RS3007-1…), el reporte es de un
+  // solo código: quoteIds = esa cotización; soloCodigoBase = el RS3007 sin las
+  // adicionales. Sin ninguno, todo el proyecto (como siempre).
+  quoteIds?: string[]
+  soloCodigoBase?: boolean
 }
 
 // Reúne todos los egresos y genera el reporte PDF del proyecto
@@ -17,11 +23,21 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     supabase.from("proveedores").select("id,nombre,apellido,empresa").order("nombre"),
     supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,nickname").order("nombre"),
     supabase.from("ingresos").select("subtotal,cliente_agencia").eq("project_id", projectId).limit(1).maybeSingle(),
-    supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago,paid_at,concepto").eq("project_id", projectId),
+    supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago,paid_at,concepto,codigo_proyecto").eq("project_id", projectId),
   ])
 
-  const { data: quotes } = await supabase
-    .from("quotes").select("id,markup_percentage,financiamiento_percentage").eq("project_id", projectId).eq("released", true)
+  let quotesQuery = supabase
+    .from("quotes").select("id,markup_percentage,financiamiento_percentage,codigo").eq("project_id", projectId).eq("released", true)
+  if (meta.quoteIds) quotesQuery = quotesQuery.in("id", meta.quoteIds.length ? meta.quoteIds : ["00000000-0000-0000-0000-000000000000"])
+  const { data: quotesRaw } = await quotesQuery
+  const quotes = meta.soloCodigoBase
+    ? (quotesRaw || []).filter((q: { codigo: string | null }) => !esSubcodigo(q.codigo))
+    : quotesRaw
+  // Facturas del mismo código (con aprobaciones aparte, cada una lleva las suyas)
+  const facturasEnAlcance = (meta.quoteIds || meta.soloCodigoBase)
+    ? (facturas || []).filter((f: { codigo_proyecto: string | null }) =>
+        esSubcodigo(meta.projectCode) ? f.codigo_proyecto === meta.projectCode : !esSubcodigo(f.codigo_proyecto))
+    : (facturas || [])
 
   type Item = {
     id: string; seccion: string; concepto: string; proveedor: string; monto: number
@@ -111,7 +127,7 @@ export async function generateEgresosReport(projectId: string, meta: ProjectMeta
     responsable: nickOf(meta.responsable),
     cobrado: cobradoCalc > 0 ? Math.round(cobradoCalc * 100) / 100 : Number(ingreso?.subtotal || 0),
     items,
-    facturas: (facturas as any[]) || [],
+    facturas: (facturasEnAlcance as any[]) || [],
   }
 
   if (meta.formato === "xlsx") {

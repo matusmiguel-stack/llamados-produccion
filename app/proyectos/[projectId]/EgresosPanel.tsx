@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { uploadComprobante, mensajeDeRed } from "../../../lib/upload-comprobante"
 import { ContactChip } from "../../../components/ContactChip"
+import { esSubcodigo, gruposDeEgresos, type GrupoEgresos } from "../../../lib/codigo-egresos"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ function resolveLabel(proveedores: Proveedor[], employees: Employee[], contact: 
 
 export function EgresosPanel({
   projectId, isMobile, projectName, projectCode, empresa, projectResponsable,
-  gastosInternos = false, egresosDirectos = false, readOnly = false,
+  gastosInternos = false, egresosDirectos = false, readOnly = false, quoteIds, soloCodigoBase = false,
 }: {
   projectId: string
   isMobile: boolean
@@ -113,6 +114,12 @@ export function EgresosPanel({
   egresosDirectos?: boolean
   // Solo consulta (rol finanzas): sin pagar, editar, borrar, facturar ni sub-listas
   readOnly?: boolean
+  // Alcance por código de aprobación (ver EgresosPorCodigo). Sin ninguno de
+  // los dos se muestran todas las cotizaciones liberadas del proyecto.
+  //   quoteIds:       solo estas cotizaciones (un sub-código, RS3007-1)
+  //   soloCodigoBase: todas menos las de sub-códigos (el RS3007 del proyecto)
+  quoteIds?: string[]
+  soloCodigoBase?: boolean
 }) {
   // Modo de captura directa de egresos (sin cotización), con sub-listas.
   // Aplica a gastos internos (RS0000) y a proyectos marcados como iguala.
@@ -204,17 +211,28 @@ export function EgresosPanel({
       const [{ data: provs }, { data: emps }, { data: facts }] = await Promise.all([
         supabase.from("proveedores").select("id,nombre,apellido,empresa,actividad").order("nombre"),
         supabase.from("employees").select("id,nombre,apellido_paterno,apellido_materno,puesto,nickname").order("nombre"),
-        supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago").eq("project_id", projectId),
+        supabase.from("facturas").select("proveedor_id,quote_item_id,subtotal,status,origen,fecha_pago,codigo_proyecto").eq("project_id", projectId),
       ])
       setProveedores(provs || [])
       setEmployees(emps || [])
-      setFacturas(facts || [])
+      // Con varios códigos de aprobación en el proyecto, cada uno solo ve sus
+      // facturas (si no, una de RS3007-1 por $5,000 podría marcar como pagado
+      // un egreso de RS3007 por el mismo monto).
+      const factsEnAlcance = (quoteIds || soloCodigoBase)
+        ? (facts || []).filter((f: { codigo_proyecto: string | null }) =>
+            esSubcodigo(projectCode) ? f.codigo_proyecto === projectCode : !esSubcodigo(f.codigo_proyecto))
+        : (facts || [])
+      setFacturas(factsEnAlcance)
 
-      // Solo la cotización liberada
-      const { data: quotes } = await supabase
-        .from("quotes").select("id,name,egresos_directos")
+      // Solo la cotización liberada (y, si se pidió, solo las de este código)
+      let quotesQuery = supabase
+        .from("quotes").select("id,name,egresos_directos,codigo")
         .eq("project_id", projectId).eq("released", true)
-        .order("created_at", { ascending: true })
+      if (quoteIds) quotesQuery = quotesQuery.in("id", quoteIds.length ? quoteIds : ["00000000-0000-0000-0000-000000000000"])
+      const { data: quotesRaw } = await quotesQuery.order("created_at", { ascending: true })
+      const quotes = soloCodigoBase
+        ? (quotesRaw || []).filter((q: { codigo: string | null }) => !esSubcodigo(q.codigo))
+        : quotesRaw
       if (!quotes || quotes.length === 0) {
         // En modo directo el proyecto puede no tener cotización todavía: se deja
         // vacío para que el usuario cree su primera sub-lista.
@@ -1841,3 +1859,70 @@ function SupplierCombobox({
   )
 }
 
+// ─── Control de egresos por código de aprobación ─────────────────────────────
+// Si el proyecto tiene cotizaciones aprobadas aparte (RS3007-1, RS3007-2…),
+// cada código se lleva por separado: pestañas arriba y el panel de abajo solo
+// con los gastos, pagos e instrucciones de facturación de ese código, con su
+// empresa y responsable. Sin sub-códigos se ve exactamente como antes.
+
+type EgresosPanelProps = Parameters<typeof EgresosPanel>[0]
+
+export function EgresosPorCodigo(props: Omit<EgresosPanelProps, "quoteIds" | "soloCodigoBase">) {
+  const { projectId, projectCode, projectName, empresa, projectResponsable } = props
+  const [grupos, setGrupos] = useState<GrupoEgresos[] | null>(null)
+  const [activo, setActivo] = useState(0)
+
+  useEffect(() => {
+    let cancel = false
+    gruposDeEgresos(projectId, { code: projectCode, name: projectName, empresa, responsable: projectResponsable })
+      .then((g) => { if (!cancel) setGrupos(g) })
+      .catch(() => { if (!cancel) setGrupos([]) })
+    return () => { cancel = true }
+  }, [projectId, projectCode, projectName, empresa, projectResponsable])
+
+  if (grupos === null) {
+    return <p style={{ color: "#7d8ca3", fontSize: 13, padding: "24px 0", textAlign: "center" }}>Cargando…</p>
+  }
+
+  // Un solo código (lo normal): el panel de siempre, sin pestañas.
+  if (grupos.length <= 1) return <EgresosPanel {...props} />
+
+  const g = grupos[Math.min(activo, grupos.length - 1)]
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+        {grupos.map((gr, i) => {
+          const on = i === activo
+          return (
+            <button
+              key={gr.codigo || i}
+              onClick={() => setActivo(i)}
+              style={{
+                padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 600,
+                border: on ? "1px solid rgba(167,139,250,0.55)" : "1px solid rgba(148,163,184,0.18)",
+                background: on ? "rgba(167,139,250,0.16)" : "rgba(255,255,255,0.03)",
+                color: on ? "#ddd6fe" : "#94a3b8",
+              }}
+            >
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{gr.codigo || "Sin código"}</span>
+              <span style={{ marginLeft: 8, fontWeight: 500 }}>{gr.nombre}</span>
+            </button>
+          )
+        })}
+      </div>
+      <EgresosPanel
+        key={g.codigo || "base"}
+        {...props}
+        quoteIds={g.adicional ? g.quoteIds : undefined}
+        soloCodigoBase={!g.adicional}
+        projectCode={g.codigo}
+        projectName={g.nombre}
+        empresa={g.empresa}
+        projectResponsable={g.responsable}
+        // Las sub-listas de egresos directos viven en el código del proyecto.
+        gastosInternos={g.adicional ? false : props.gastosInternos}
+        egresosDirectos={g.adicional ? false : props.egresosDirectos}
+      />
+    </div>
+  )
+}

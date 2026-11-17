@@ -8,8 +8,10 @@ import { supabase } from "./supabase"
 //     resizings) → RS3007-1, RS3007-2… consecutivos. Así cada cotización tiene
 //     su propia línea en Ingresos sin moverla de carpeta.
 //
-// El sufijo solo vive en `ingresos.proyecto`; `projects.code` se queda como
-// RS3007 (egresos, facturas de proveedores y next_project_code siguen igual).
+// El código se guarda en la cotización (`quotes.codigo`, junto con su empresa
+// y responsable) y en `ingresos.proyecto`; `projects.code` se queda como
+// RS3007. Cada cotización aprobada lleva su control de egresos con su código
+// (ver lib/codigo-egresos.ts).
 
 export type CodigoAprobacion = {
   codigo: string | null // null = se genera al confirmar (proyecto sin código)
@@ -20,6 +22,13 @@ async function etiquetasDeIngresos(projectId: string): Promise<string[]> {
   const { data, error } = await supabase.from("ingresos").select("proyecto").eq("project_id", projectId)
   if (error) throw error
   return (data || []).map((r: { proyecto: string | null }) => r.proyecto || "")
+}
+
+// Códigos ya asignados a cotizaciones del proyecto (por si alguna línea de
+// Ingresos se renombró o borró, el consecutivo no se repite).
+async function codigosDeCotizaciones(projectId: string): Promise<string[]> {
+  const { data } = await supabase.from("quotes").select("codigo").eq("project_id", projectId).not("codigo", "is", null)
+  return (data || []).map((r: { codigo: string | null }) => r.codigo || "")
 }
 
 function siguienteSubcodigo(base: string, etiquetas: string[]): string {
@@ -37,7 +46,8 @@ function siguienteSubcodigo(base: string, etiquetas: string[]): string {
 export async function previewCodigoAprobacion(projectId: string, projectCode: string | null): Promise<CodigoAprobacion> {
   const etiquetas = await etiquetasDeIngresos(projectId)
   if (etiquetas.length === 0) return { codigo: projectCode, adicional: false }
-  return { codigo: projectCode ? siguienteSubcodigo(projectCode, etiquetas) : null, adicional: true }
+  const usados = [...etiquetas, ...(await codigosDeCotizaciones(projectId))]
+  return { codigo: projectCode ? siguienteSubcodigo(projectCode, usados) : null, adicional: true }
 }
 
 /** Al confirmar: genera el código del proyecto si hace falta y devuelve el definitivo. */
@@ -55,7 +65,8 @@ export async function resolverCodigoAprobacion(
   }
   const etiquetas = await etiquetasDeIngresos(projectId)
   if (etiquetas.length === 0 || !base) return { codigo: base, adicional: false, codigoProyecto: base }
-  return { codigo: siguienteSubcodigo(base, etiquetas), adicional: true, codigoProyecto: base }
+  const usados = [...etiquetas, ...(await codigosDeCotizaciones(projectId))]
+  return { codigo: siguienteSubcodigo(base, usados), adicional: true, codigoProyecto: base }
 }
 
 /** ¿Esta cotización ya tiene su línea en Ingresos? */

@@ -8,10 +8,11 @@ import { requireSessionProfile } from "../../../lib/session-profile"
 import { AppSidebar } from "../../../components/AppSidebar"
 import { RESPONSABLES } from "../../../lib/responsables"
 import { cotizacionYaAprobada, previewCodigoAprobacion, resolverCodigoAprobacion, type CodigoAprobacion } from "../../../lib/codigo-aprobacion"
+import { gruposDeEgresos, type GrupoEgresos } from "../../../lib/codigo-egresos"
 import { MatrizPanel } from "./MatrizPanel"
 import { HojaLlamadoPanel } from "./HojaLlamadoPanel"
 import { InformacionGeneralPanel } from "./InformacionGeneralPanel"
-import { EgresosPanel } from "./EgresosPanel"
+import { EgresosPorCodigo } from "./EgresosPanel"
 
 type Project = {
   id: string
@@ -186,6 +187,9 @@ export default function ProjectDetailPage() {
   const [showEgresos, setShowEgresos] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [generatingXlsx, setGeneratingXlsx] = useState(false)
+  // Con aprobaciones aparte (RS3007-1…) el reporte se saca por código
+  const [gruposReporte, setGruposReporte] = useState<GrupoEgresos[]>([])
+  const [grupoReporte, setGrupoReporte] = useState(0)
 
   const isAdmin     = profile?.role === "admin" || profile?.role === "editor" || profile?.role === "editor_premium"
   const isStrictAdmin = profile?.role === "admin"
@@ -199,13 +203,23 @@ export default function ProjectDetailPage() {
     else setGeneratingReport(true)
     try {
       const { generateEgresosReport } = await import("../../../lib/egresos-report-data")
-      await generateEgresosReport(projectId, {
-        projectName: project.name,
-        projectCode: project.code,
-        empresa: projectEmpresa,
-        responsable: project.responsable,
-        formato,
-      })
+      const g = gruposReporte.length > 1 ? gruposReporte[grupoReporte] : null
+      await generateEgresosReport(projectId, g
+        ? {
+            projectName: g.nombre,
+            projectCode: g.codigo,
+            empresa: g.empresa,
+            responsable: g.responsable,
+            formato,
+            ...(g.adicional ? { quoteIds: g.quoteIds } : { soloCodigoBase: true }),
+          }
+        : {
+            projectName: project.name,
+            projectCode: project.code,
+            empresa: projectEmpresa,
+            responsable: project.responsable,
+            formato,
+          })
     } catch (err: any) {
       alert("Error al generar reporte: " + err.message)
     } finally {
@@ -303,10 +317,16 @@ export default function ProjectDetailPage() {
     setClientName(client?.name || "Cliente")
     setSubfolderName(subfolder?.name || "Subcarpeta")
     // Prioridad: campo empresa del proyecto; fallback al ingreso aprobado
-    setProjectEmpresa(
+    const empresaProyecto =
       (projectData.empresa as "retro_studio" | "retro_films" | null) ??
       ((ingreso?.empresa as "retro_studio" | "retro_films" | null) ?? null)
-    )
+    setProjectEmpresa(empresaProyecto)
+
+    // Códigos de aprobación del proyecto (RS3007, RS3007-1…) para el reporte
+    gruposDeEgresos(projectId, {
+      code: projectData.code ?? null, name: projectData.name,
+      empresa: empresaProyecto, responsable: projectData.responsable ?? null,
+    }).then(setGruposReporte).catch(() => setGruposReporte([]))
   }
 
   async function loadQuotes() {
@@ -493,7 +513,23 @@ export default function ProjectDetailPage() {
             )}
 
             {isStrictAdmin && (
-              <div style={{ display: "flex", gap: 8, margin: "0 0 18px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, margin: "0 0 18px", flexWrap: "wrap", alignItems: "center" }}>
+                {gruposReporte.length > 1 && (
+                  <select
+                    value={grupoReporte}
+                    onChange={(e) => setGrupoReporte(Number(e.target.value))}
+                    title="Cada aprobación lleva su propio reporte de egresos"
+                    style={{
+                      padding: "10px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+                      border: "1px solid rgba(148,163,184,0.25)", background: "rgba(255,255,255,0.04)",
+                      color: "#e2e8f0", outline: "none",
+                    }}
+                  >
+                    {gruposReporte.map((g, i) => (
+                      <option key={g.codigo || i} value={i}>{g.codigo || "Sin código"} {g.nombre}</option>
+                    ))}
+                  </select>
+                )}
                 <button
                   onClick={() => handleGenerarReporte("pdf")}
                   disabled={generatingReport || generatingXlsx}
@@ -795,7 +831,7 @@ export default function ProjectDetailPage() {
                 maxHeight: "84vh",
               }}
             >
-              <EgresosPanel
+              <EgresosPorCodigo
                 projectId={projectId}
                 isMobile={isMobile}
                 projectName={project?.name ?? ""}
@@ -1472,7 +1508,15 @@ function QuoteModal({
       quote_id:        quote.id || null,
     })
     if (error) { alert(error.message); setAproving(false); return }
-    await supabase.from("quotes").update({ status: "approved" }).eq("id", quote.id)
+    // Marcar la cotización como aprobada y guardar con qué código, empresa y
+    // responsable: su control de egresos se lleva aparte con esos datos.
+    await supabase.from("quotes").update({
+      status: "approved",
+      codigo: effectiveCode,
+      codigo_nombre: nombreLinea,
+      empresa: aprobarEmpresa,
+      responsable,
+    }).eq("id", quote.id)
     // Guardar empresa y responsable en el proyecto: el reporte de egresos lee
     // project.responsable, así que sin esto el responsable no se reflejaba ahí.
     // Solo en la primera aprobación: una adicional (RS####-1) no cambia los

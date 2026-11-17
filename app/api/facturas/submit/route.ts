@@ -226,8 +226,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Faltan datos: email, código de proyecto, XML y PDF de la factura son obligatorios." }, { status: 400 })
     }
 
-    const codeMatch = codigoInput.match(/RS\d+/)
+    // RS3007, o RS3007-1 si es una cotización aprobada aparte dentro del
+    // proyecto (cada una lleva sus egresos y sus facturas por separado).
+    const codeMatch = codigoInput.match(/RS\d+(?:-\d+)?/)
     const codigo = codeMatch ? codeMatch[0] : codigoInput
+    const esSubcodigo = (c: string | null | undefined) => !!c && /^RS\d+-\d+$/i.test(c.trim())
+    const codigoAdicional = esSubcodigo(codigo)
 
     const admin = createAdminClient()
 
@@ -279,12 +283,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, status: "rechazada", motivo })
     }
 
-    // 3. Buscar proyecto por código
-    const { data: project } = await admin
-      .from("projects")
-      .select("id, name, code, empresa")
-      .eq("code", codigo)
-      .maybeSingle()
+    // 3. Buscar el proyecto por código. Un sub-código (RS3007-1) es de una
+    //    cotización aprobada aparte: se busca esa cotización y su proyecto.
+    type ProjectRow = { id: string; name: string; code: string | null; empresa: string | null }
+    let project: ProjectRow | null = null
+    let quoteAdicional: { id: string; name: string; codigo_nombre: string | null; empresa: string | null } | null = null
+    if (codigoAdicional) {
+      const { data: q } = await admin
+        .from("quotes").select("id, name, codigo_nombre, empresa, project_id")
+        .eq("codigo", codigo).maybeSingle()
+      if (q?.project_id) {
+        const { data: p } = await admin
+          .from("projects").select("id, name, code, empresa").eq("id", q.project_id).maybeSingle()
+        project = p
+        quoteAdicional = q
+      }
+    } else {
+      const { data: p } = await admin
+        .from("projects")
+        .select("id, name, code, empresa")
+        .eq("code", codigo)
+        .maybeSingle()
+      project = p
+    }
 
     if (!project) {
       return rechazar(
@@ -293,7 +314,9 @@ export async function POST(req: Request) {
       )
     }
 
-    const proyectoLabel = `${project.code} ${project.name}`
+    const proyectoLabel = quoteAdicional
+      ? `${codigo} ${quoteAdicional.codigo_nombre || quoteAdicional.name}`
+      : `${project.code} ${project.name}`
 
     // 4. Verificar que el XML contenga el código de proyecto
     if (!xmlText.toUpperCase().includes(codigo)) {
@@ -315,7 +338,8 @@ export async function POST(req: Request) {
 
     // 5b. Verificar RFC del receptor (la factura debe estar emitida a la empresa correcta)
     const receptorRfc = parseReceptorRfc(xmlText)
-    let empresaProyecto: string | null = project.empresa || null
+    // La aprobación adicional puede facturarse a otra empresa que el proyecto.
+    let empresaProyecto: string | null = quoteAdicional?.empresa || project.empresa || null
     if (!empresaProyecto) {
       // Fallback: inferir del ingreso aprobado
       const { data: ingreso } = await admin
@@ -354,11 +378,19 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. Reunir el monto de CADA concepto (egreso) del proveedor en este proyecto.
+    // 6. Reunir el monto de CADA concepto (egreso) del proveedor en este código.
     //    Cada factura debe cubrir un concepto individual — no la suma de todos.
-    const { data: quotes } = await admin
-      .from("quotes").select("id")
-      .eq("project_id", project.id).eq("released", true)
+    //    RS3007-1 solo ve los egresos de su cotización; RS3007 los del proyecto
+    //    menos los de las aprobaciones adicionales.
+    let quotes: { id: string }[] = []
+    if (quoteAdicional) {
+      quotes = [{ id: quoteAdicional.id }]
+    } else {
+      const { data: qs } = await admin
+        .from("quotes").select("id, codigo")
+        .eq("project_id", project.id).eq("released", true)
+      quotes = ((qs || []) as { id: string; codigo: string | null }[]).filter((q) => !esSubcodigo(q.codigo))
+    }
 
     const fmtMx = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
     const lineItems: { id: string; monto: number }[] = []
@@ -402,18 +434,21 @@ export async function POST(req: Request) {
     }
 
     // Evitar sobre-facturación: no aceptar más facturas de ese monto que conceptos existentes.
-    const { data: facturasPrevias } = await admin
+    const { data: facturasDelProyecto } = await admin
       .from("facturas")
-      .select("subtotal, quote_item_id")
+      .select("subtotal, quote_item_id, codigo_proyecto")
       .eq("proveedor_id", prov.id)
       .eq("project_id", project.id)
       .in("status", ["aceptada", "pagada"])
+    // Solo cuentan las del mismo código: RS3007-1 y RS3007 no se estorban.
+    const facturasPrevias = (facturasDelProyecto || []).filter((f: { codigo_proyecto: string | null }) =>
+      codigoAdicional ? f.codigo_proyecto === codigo : !esSubcodigo(f.codigo_proyecto))
     const yaFacturadasMismoMonto = (facturasPrevias || []).filter(
       (f: any) => f.subtotal != null && Math.abs(Number(f.subtotal) - subtotal) <= MONTO_TOLERANCIA
     ).length
     if (yaFacturadasMismoMonto >= conceptosCoinciden.length) {
       return rechazar(
-        `Ya recibimos ${yaFacturadasMismoMonto} factura(s) por ${fmtMx(subtotal)} en este proyecto, que es el número de conceptos autorizados con ese monto. Si crees que es un error, contacta al productor.`,
+        `Ya recibimos ${yaFacturadasMismoMonto} factura(s) por ${fmtMx(subtotal)} en ${codigo}, que es el número de conceptos autorizados con ese monto. Si crees que es un error, contacta al productor.`,
         project.id, proyectoLabel, subtotal
       )
     }
@@ -439,12 +474,12 @@ export async function POST(req: Request) {
     let pdfPath: string | null = null
 
     const xmlUpload = await admin.storage.from("facturas")
-      .upload(`${project.code}/${stamp}-${safeName(xmlFile.name)}`, Buffer.from(await xmlFile.arrayBuffer()), { contentType: "text/xml" })
+      .upload(`${codigo}/${stamp}-${safeName(xmlFile.name)}`, Buffer.from(await xmlFile.arrayBuffer()), { contentType: "text/xml" })
     if (!xmlUpload.error) xmlPath = xmlUpload.data.path
 
     if (pdfFile) {
       const pdfUpload = await admin.storage.from("facturas")
-        .upload(`${project.code}/${stamp}-${safeName(pdfFile.name)}`, Buffer.from(await pdfFile.arrayBuffer()), { contentType: "application/pdf" })
+        .upload(`${codigo}/${stamp}-${safeName(pdfFile.name)}`, Buffer.from(await pdfFile.arrayBuffer()), { contentType: "application/pdf" })
       if (!pdfUpload.error) pdfPath = pdfUpload.data.path
     }
 
