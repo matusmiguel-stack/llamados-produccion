@@ -4,6 +4,7 @@ import { PageLoader } from "../../components/PageLoader"
 import Link from "next/link"
 import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "../../lib/supabase"
+import { esSubcodigo } from "../../lib/codigo-egresos"
 import { requireSessionProfile } from "../../lib/session-profile"
 import { AppSidebar } from "../../components/AppSidebar"
 import { downloadIngresosTemplate, parseIngresosExcel } from "../../lib/ingresos-import"
@@ -401,7 +402,10 @@ export default function IngresosPage() {
   // Nombre del proyecto a mostrar: para ingresos vinculados se toma SIEMPRE del
   // proyecto (código + nombre), así coincide con la sección de Proyectos y no
   // depende de un texto que pueda quedar desactualizado.
+  // Excepción: las líneas de una aprobación adicional (RS3007-1 Resizing) llevan
+  // su propio código y nombre, que no son los del proyecto.
   function proyectoLabel(r: Ingreso): string {
+    if (esSubcodigo((r.proyecto || "").trim().split(/\s+/)[0])) return r.proyecto
     if (r.project_id) {
       const p = projects.find(x => x.id === r.project_id)
       if (p) return p.code ? `${p.code} ${p.name}` : p.name

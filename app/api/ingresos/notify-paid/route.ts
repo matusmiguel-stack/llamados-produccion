@@ -146,7 +146,10 @@ export async function POST(req: Request) {
       const { data: proj } = await admin
         .from("projects").select("name, code, client_id").eq("id", ing.project_id).single()
       if (proj) {
-        proyecto = proj.code ? `${proj.code} ${proj.name}` : proj.name
+        // Las líneas de una aprobación adicional (RS3007-1 Resizing) conservan
+        // su propio código y nombre.
+        const subcodigo = /^RS\d+-\d+\s/i.test((ing.proyecto || "").trim())
+        if (!subcodigo) proyecto = proj.code ? `${proj.code} ${proj.name}` : proj.name
         if (proj.client_id) {
           const { data: cli } = await admin
             .from("clients").select("name").eq("id", proj.client_id).single()
