@@ -1722,7 +1722,10 @@ function openEditVacation() {
 
     if (selectedJunta) {
       const payload = { ...basePayload, fecha: juntaDate }
-      const { error } = await supabase.from("juntas").update(payload).eq("id", selectedJunta.id)
+      // Al editar no se toca created_by: sigue siendo quien creó la junta.
+      const { created_by: _creador, ...cambios } = payload
+      void _creador
+      const { error } = await supabase.from("juntas").update(cambios).eq("id", selectedJunta.id)
       if (error) { setSavingEntry(false); alert(error.message); return }
       const juntaId = selectedJunta.id
       await supabase.from("junta_attendees").delete().eq("junta_id", juntaId)
@@ -1815,7 +1818,10 @@ function openEditVacation() {
     }
 
     if (selectedEnsayo) {
-      const { error } = await supabase.from("ensayos").update(payload).eq("id", selectedEnsayo.id)
+      // Al editar no se toca created_by: sigue siendo quien creó el ensayo.
+      const { created_by: _creador, ...cambios } = payload
+      void _creador
+      const { error } = await supabase.from("ensayos").update(cambios).eq("id", selectedEnsayo.id)
       if (error) { setSavingEntry(false); alert(error.message); return }
     } else {
       const { error } = await supabase.from("ensayos").insert(payload)
