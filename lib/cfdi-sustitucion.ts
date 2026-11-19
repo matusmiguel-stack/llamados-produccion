@@ -19,3 +19,17 @@ export function validarSustitucion(raw: unknown): { uuid: string | null; error: 
   }
   return { uuid, error: null }
 }
+
+/**
+ * Motivo de cancelación ante el SAT. 01 (con errores con relación) exige el
+ * UUID de la factura que sustituye a la cancelada; 02 y 03 no llevan UUID.
+ */
+export function validarMotivoCancelacion(motivo: unknown, sustituidaPor: unknown): { motivo: string; uuid: string | null; error: string | null } {
+  const m = String(motivo ?? "")
+  if (!["01", "02", "03"].includes(m)) return { motivo: m, uuid: null, error: "Motivo de cancelación no válido" }
+  if (m !== "01") return { motivo: m, uuid: null, error: null }
+  const { uuid, error } = validarSustitucion(sustituidaPor)
+  if (error) return { motivo: m, uuid: null, error: "El UUID de la factura que la sustituye no es válido" }
+  if (!uuid) return { motivo: m, uuid: null, error: "Con motivo 01 escribe el UUID de la factura que la sustituye" }
+  return { motivo: m, uuid, error: null }
+}

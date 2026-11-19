@@ -41,6 +41,7 @@ export const METODOS_PAGO: { clave: "PUE" | "PPD"; nombre: string }[] = [
 ]
 
 export const MOTIVOS_CANCELACION: { clave: string; nombre: string }[] = [
+  { clave: "01", nombre: "Comprobante emitido con errores con relación" },
   { clave: "02", nombre: "Comprobante emitido con errores sin relación" },
   { clave: "03", nombre: "No se llevó a cabo la operación" },
 ]

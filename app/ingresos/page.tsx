@@ -10,7 +10,8 @@ import { AppSidebar } from "../../components/AppSidebar"
 import { downloadIngresosTemplate, parseIngresosExcel } from "../../lib/ingresos-import"
 import { parseNumeroFactura } from "../../lib/cfdi"
 import { nombreLiquidacion } from "../../lib/liquidacion"
-import { FORMAS_PAGO, MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
+import { FORMAS_PAGO } from "../../lib/sat-catalogos"
+import { MotivoCancelacionFields } from "../../components/facturacion/MotivoCancelacionFields"
 import { TimbrarPanel, type TimbrarResultado } from "../../components/facturacion/TimbrarPanel"
 import { DatosFiscalesModal } from "../../components/facturacion/DatosFiscalesModal"
 import { FacturasIndependientesModal } from "../../components/facturacion/FacturasIndependientesModal"
@@ -205,13 +206,13 @@ export default function IngresosPage() {
   const [payPct, setPayPct]         = useState("")
   // Pago en efectivo sin factura: la parte pagada se registra con IVA 0.
   const [paySinIva, setPaySinIva]   = useState(false)
-  const [facturarModal, setFacturarModal] = useState<{ id: string; label: string; subtotal: number; row: Ingreso } | null>(null)
+  const [facturarModal, setFacturarModal] = useState<{ id: string; label: string; subtotal: number; row: Ingreso; refacturar?: { uuid: string; numero: string | null; enApp: boolean } } | null>(null)
   // "timbrar" = generar el CFDI desde la app; "subir" = XML/PDF hechos fuera
   const [facModo, setFacModo]       = useState<"timbrar" | "subir">("timbrar")
   const [facAmbiente, setFacAmbiente] = useState<Record<string, "pruebas" | "real" | null>>({})
   const [datosFiscalesOpen, setDatosFiscalesOpen] = useState(false)
   const [independientesOpen, setIndependientesOpen] = useState(false)
-  const [cancelModal, setCancelModal] = useState<{ row: Ingreso; label: string; motivo: string } | null>(null)
+  const [cancelModal, setCancelModal] = useState<{ row: Ingreso; label: string; motivo: string; sustituidaPor: string } | null>(null)
   const [cancelando, setCancelando] = useState(false)
   // Complementos de pago VIGENTES (facturas PPD): los automáticos van ligados a
   // su línea (ingreso_id); los hechos a mano, solo a la factura (factura_uuid).
@@ -603,6 +604,18 @@ export default function IngresosPage() {
     }
   }
 
+  // ── Refacturar: timbrar una factura nueva que sustituye a la actual (04) y
+  // cancelar la anterior con motivo 01 (la API lo hace si se timbró en la app)
+  function openRefacturar(r: Ingreso) {
+    if (!r.factura_uuid) return
+    openFacturarModal(r)
+    setFacturarModal({
+      id: r.id, label: proyectoLabel(r), subtotal: Number(r.subtotal ?? 0), row: r,
+      refacturar: { uuid: r.factura_uuid.toUpperCase(), numero: r.numero_factura, enApp: !!r.facturapi_id },
+    })
+    setFacModo("timbrar")
+  }
+
   // Receptor de la factura más reciente del mismo cliente (para prellenar)
   function receptorSugerido(r: Ingreso): string | null {
     const cliente = clienteLabel(r)
@@ -616,6 +629,7 @@ export default function IngresosPage() {
     if (d.correo) partes.push(`Se envió a ${d.correo}.`)
     if (d.correoFallo) partes.push("No se pudo enviar el correo; descárgala y mándala a mano.")
     if (d.remanente) partes.push(`Se creó "${d.remanente.proyecto}" por ${fmt(d.remanente.subtotal)}.`)
+    if (d.sustitucion) partes.push(d.sustitucion.mensaje)
     alert(partes.join("\n"))
     setFacturarModal(null)
     loadPage()
@@ -630,7 +644,7 @@ export default function IngresosPage() {
       const res = await fetch("/api/ingresos/cancelar-factura", {
         method: "POST",
         headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ ingresoId: cancelModal.row.id, motivo: cancelModal.motivo }),
+        body: JSON.stringify({ ingresoId: cancelModal.row.id, motivo: cancelModal.motivo, sustituidaPor: cancelModal.sustituidaPor }),
       })
       const d = await res.json()
       if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
@@ -1172,8 +1186,11 @@ export default function IngresosPage() {
                     {r.estatus !== "pagado" && (
                       <button onClick={() => openPayModal(r)} style={{ ...marcarPagoBtnStyle, ...mobileActionStyle }}>✓ Marcar Pago</button>
                     )}
+                    {r.estatus === "facturado" && r.factura_uuid && facAmbiente[r.empresa] && (
+                      <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#c4b5fd", borderColor: "rgba(167,139,250,0.35)", background: "rgba(124,58,237,0.10)", ...mobileActionStyle }}>🔁 Refacturar</button>
+                    )}
                     {r.facturapi_id && r.estatus !== "pagado" && (
-                      <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02" })} style={{ ...cancelarCfdiBtnStyle, ...mobileActionStyle }}>⊘ Cancelar factura</button>
+                      <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02", sustituidaPor: "" })} style={{ ...cancelarCfdiBtnStyle, ...mobileActionStyle }}>⊘ Cancelar factura</button>
                     )}
                     {faltaComplemento(r) && (
                       <button onClick={() => setComplementoModal({ row: r, label: proyectoLabel(r), forma: "03" })} style={{ ...complementoBtnStyle, ...mobileActionStyle }}>🧾 Complemento</button>
@@ -1288,8 +1305,13 @@ export default function IngresosPage() {
                             ✓ Marcar Pago
                           </button>
                         )}
+                        {r.estatus === "facturado" && r.factura_uuid && facAmbiente[r.empresa] && (
+                          <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#c4b5fd", borderColor: "rgba(167,139,250,0.35)", background: "rgba(124,58,237,0.10)" }} title="Refacturar: timbrar una factura nueva que sustituye a esta (relación 04) y cancelar esta con motivo 01">
+                            🔁
+                          </button>
+                        )}
                         {r.facturapi_id && r.estatus !== "pagado" && (
-                          <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02" })} style={cancelarCfdiBtnStyle} title="Cancelar la factura ante el SAT">
+                          <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02", sustituidaPor: "" })} style={cancelarCfdiBtnStyle} title="Cancelar la factura ante el SAT">
                             ⊘
                           </button>
                         )}
@@ -1390,12 +1412,16 @@ export default function IngresosPage() {
             <div style={modalBodyStyle}>
               <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>{cancelModal.label}</p>
               <FormField label="Motivo">
-                <select value={cancelModal.motivo} onChange={e => setCancelModal(m => m && { ...m, motivo: e.target.value })} style={inputStyle}>
-                  {MOTIVOS_CANCELACION.map(m => <option key={m.clave} value={m.clave}>{m.clave} · {m.nombre}</option>)}
-                </select>
+                <MotivoCancelacionFields
+                  motivo={cancelModal.motivo}
+                  sustituidaPor={cancelModal.sustituidaPor}
+                  onChange={v => setCancelModal(m => m && { ...m, ...v })}
+                  selectStyle={inputStyle}
+                />
               </FormField>
               <p style={{ margin: 0, fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
                 Se cancela ante el SAT y el ingreso regresa a “En Producción” para volver a facturarlo. Si fue una factura parcial, la línea de Liquidación se queda como está.
+                {" "}Para cambiar la factura por otra nueva usa mejor 🔁 Refacturar: timbra la nueva y cancela esta con motivo 01 en un solo paso.
               </p>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setCancelModal(null)} disabled={cancelando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
@@ -1415,7 +1441,7 @@ export default function IngresosPage() {
         <div style={overlayStyle}>
           <div style={{ ...modalStyle(isMobile), maxWidth: facModo === "timbrar" ? 540 : 420 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Facturar</h2>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>{facturarModal.refacturar ? `Refacturar ${facturarModal.refacturar.numero || ""}`.trim() : "Facturar"}</h2>
               <button onClick={() => setFacturarModal(null)} style={closeBtnStyle}>✕</button>
             </div>
             <div style={modalBodyStyle}>
@@ -1423,7 +1449,7 @@ export default function IngresosPage() {
                 {facturarModal.label}
               </p>
               {/* Timbrar en la app (Facturapi) o subir el XML/PDF hechos fuera */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              <div style={{ display: facturarModal.refacturar ? "none" : "flex", gap: 6, marginBottom: 14 }}>
                 {([["timbrar", "🧾 Timbrar en la app"], ["subir", "⬆ Subir XML y PDF"]] as const).map(([k, t]) => (
                   <button key={k} onClick={() => setFacModo(k)} style={{
                     ...secondaryBtnStyle, flex: 1, padding: "8px 10px", fontSize: 12,
@@ -1446,8 +1472,9 @@ export default function IngresosPage() {
                     const m = parseFloat(facMonto)
                     return facParcial && Number.isFinite(m) && m > 0 ? m : facturarModal.subtotal
                   })()}
-                  parcialSubtotal={facParcial && facMonto ? facMonto : null}
-                  parcialSlot={
+                  parcialSubtotal={!facturarModal.refacturar && facParcial && facMonto ? facMonto : null}
+                  refacturar={facturarModal.refacturar || null}
+                  parcialSlot={facturarModal.refacturar ? null : 
                   <>
                   {/* ── Facturación parcial ── */}
                   <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>

@@ -205,8 +205,10 @@ export async function descargarFactura(empresa: string, id: string, formato: "xm
   return Buffer.from(await res.arrayBuffer())
 }
 
-export async function cancelarFactura(empresa: string, id: string, motivo: string): Promise<{ status: string; cancellation_status?: string }> {
-  const res = await call(empresa, "DELETE", `/invoices/${encodeURIComponent(id)}?motive=${encodeURIComponent(motivo)}`)
+// Motivo 01 (con errores con relación) exige el UUID de la factura que la sustituye.
+export async function cancelarFactura(empresa: string, id: string, motivo: string, sustituidaPor?: string | null): Promise<{ status: string; cancellation_status?: string }> {
+  const sust = motivo === "01" && sustituidaPor ? `&substitution=${encodeURIComponent(sustituidaPor)}` : ""
+  const res = await call(empresa, "DELETE", `/invoices/${encodeURIComponent(id)}?motive=${encodeURIComponent(motivo)}${sust}`)
   const j = await res.json()
   return { status: j.status, cancellation_status: j.cancellation_status }
 }

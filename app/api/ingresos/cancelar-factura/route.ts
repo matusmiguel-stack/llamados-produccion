@@ -2,8 +2,9 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
 import { cancelarFactura } from "../../../../lib/facturapi"
+import { validarMotivoCancelacion } from "../../../../lib/cfdi-sustitucion"
 
-// POST JSON { ingresoId, motivo } → cancela ante el SAT la factura timbrada
+// POST JSON { ingresoId, motivo, sustituidaPor? (UUID, solo motivo 01) } → cancela ante el SAT la factura timbrada
 // desde la app y regresa el ingreso a "En producción" sin datos de factura.
 // Si el SAT pide la aceptación del cliente, la cancelación queda en proceso y
 // el ingreso no se toca hasta que se confirme (se puede volver a intentar).
@@ -13,8 +14,9 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     const admin = createAdminClient(user.id)
 
-    const { ingresoId, motivo } = await req.json()
-    if (!["02", "03"].includes(motivo)) return NextResponse.json({ error: "Motivo de cancelación no válido" }, { status: 400 })
+    const { ingresoId, motivo, sustituidaPor } = await req.json()
+    const mc = validarMotivoCancelacion(motivo, sustituidaPor)
+    if (mc.error) return NextResponse.json({ error: mc.error }, { status: 400 })
 
     const { data: ingreso } = await admin
       .from("ingresos").select("id, empresa, estatus, facturapi_id, numero_factura, factura_uuid").eq("id", ingresoId).single()
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const r = await cancelarFactura(ingreso.empresa, ingreso.facturapi_id, motivo)
+    const r = await cancelarFactura(ingreso.empresa, ingreso.facturapi_id, mc.motivo, mc.uuid)
     if (r.status !== "canceled") {
       return NextResponse.json({
         ok: true, pendiente: true,

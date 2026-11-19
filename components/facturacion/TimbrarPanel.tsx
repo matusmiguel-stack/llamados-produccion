@@ -18,6 +18,7 @@ export type TimbrarResultado = {
   correoFallo: boolean
   pruebas: boolean
   remanente: { proyecto: string; subtotal: number } | null
+  sustitucion?: { anterior: string; cancelada: boolean; pendiente: boolean; mensaje: string } | null
 }
 
 // Campos para timbrar el CFDI de un ingreso desde la app (Facturapi).
@@ -27,6 +28,7 @@ export function TimbrarPanel({
   parcialSubtotal,
   parcialSlot,
   ambiente,
+  refacturar,
   onDone,
   onCancel,
 }: {
@@ -35,6 +37,7 @@ export function TimbrarPanel({
   parcialSubtotal: string | null   // se manda solo si es parcial
   parcialSlot: React.ReactNode
   ambiente: "pruebas" | "real" | null
+  refacturar?: { uuid: string; numero: string | null; enApp: boolean } | null   // sustituir la factura actual del ingreso
   onDone: (r: TimbrarResultado) => void
   onCancel: () => void
 }) {
@@ -54,7 +57,7 @@ export function TimbrarPanel({
   const [timbrando, setTimbrando] = useState(false)
   const [detallista, setDetallista] = useState<DetallistaForm>(DETALLISTA_VACIO)
   const vista = useVistaPrevia()
-  const [sustituye, setSustituye] = useState("")
+  const [sustituye, setSustituye] = useState(refacturar?.uuid || "")
 
   useEffect(() => {
     (async () => {
@@ -128,7 +131,7 @@ export function TimbrarPanel({
   async function timbrar() {
     if (!validar(true) || !receptor) return
     const aviso = ambiente === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
-    if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}${validarSustitucion(sustituye).uuid ? `\nSustituye al CFDI ${validarSustitucion(sustituye).uuid}` : ""}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}\n\n¿Continuar?`)) return
+    if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}${refacturar ? `\n\nREFACTURAR: ${refacturar.enApp ? `la factura ${refacturar.numero || refacturar.uuid} se cancelará ante el SAT con motivo 01.` : `después cancela la factura ${refacturar.numero || refacturar.uuid} en Orderly con motivo 01.`}` : ""}${validarSustitucion(sustituye).uuid ? `\nSustituye al CFDI ${validarSustitucion(sustituye).uuid}` : ""}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}\n\n¿Continuar?`)) return
     setTimbrando(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -258,7 +261,7 @@ export function TimbrarPanel({
 
       <DetallistaFields value={detallista} onChange={setDetallista} />
 
-      <SustitucionField value={sustituye} onChange={setSustituye} />
+      <SustitucionField value={sustituye} onChange={setSustituye} bloqueado={refacturar ? (refacturar.numero || refacturar.uuid) : null} />
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
         <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />
@@ -281,7 +284,7 @@ export function TimbrarPanel({
           {vista.cargando ? "Generando…" : "👁 Vista previa"}
         </button>
         <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>
-          {timbrando ? "Timbrando…" : "🧾 Timbrar factura"}
+          {timbrando ? "Timbrando…" : refacturar ? "🔁 Refacturar" : "🧾 Timbrar factura"}
         </button>
       </div>
       {vista.overlay}

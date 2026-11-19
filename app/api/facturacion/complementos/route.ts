@@ -4,6 +4,7 @@ import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
 import { parseCfdiResumen } from "../../../../lib/cfdi"
 import { cancelarFactura, esModoPruebas } from "../../../../lib/facturapi"
+import { validarMotivoCancelacion } from "../../../../lib/cfdi-sustitucion"
 import {
   ComplementoError, cargarFacturaPPD, emitirComplementoPago, guardarArchivosComplemento, saldoFactura,
 } from "../../../../lib/complementos-pago"
@@ -15,7 +16,7 @@ import {
 //   { action: "detalle", facturaUuid } → total, lo ya pagado, saldo y parcialidad
 //   { action: "emitir", facturaUuid, fecha, monto, formaPago } → timbra el complemento
 //   { action: "archivo", id, tipo: "pdf" | "xml" } → link firmado
-//   { action: "cancelar", id, motivo: "02" | "03" } → cancela ante el SAT
+//   { action: "cancelar", id, motivo: "01" | "02" | "03", sustituidaPor? } → cancela ante el SAT
 export async function POST(req: Request) {
   try {
     const user = await verifyApiRole(req, ["admin", "finanzas"])
@@ -77,7 +78,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ url: data.signedUrl })
       }
 
-      if (!["02", "03"].includes(b.motivo)) return NextResponse.json({ error: "Motivo de cancelación no válido" }, { status: 400 })
+      const mc = validarMotivoCancelacion(b.motivo, b.sustituidaPor)
+      if (mc.error) return NextResponse.json({ error: mc.error }, { status: 400 })
       if (c.estatus === "cancelada") return NextResponse.json({ error: "Este complemento ya está cancelado" }, { status: 400 })
       // Cada complemento lleva el saldo que dejó el anterior: se cancelan del
       // más reciente hacia atrás para no romper la cadena de parcialidades.
@@ -87,7 +89,7 @@ export async function POST(req: Request) {
         const nums = posteriores.map(p => p.numero || "sin folio").join(", ")
         return NextResponse.json({ error: `Primero cancela los complementos posteriores de la misma factura (${nums})` }, { status: 400 })
       }
-      const r = await cancelarFactura(c.empresa, c.facturapi_id, b.motivo)
+      const r = await cancelarFactura(c.empresa, c.facturapi_id, mc.motivo, mc.uuid)
       if (r.status !== "canceled") {
         return NextResponse.json({
           ok: true, pendiente: true,

@@ -1,9 +1,9 @@
 "use client"
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
-import { MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
+import { MotivoCancelacionFields } from "./MotivoCancelacionFields"
 import { NuevoComplementoModal, llamarComplementos, mensajeComplemento, nombreFormaPago, type ComplementoResultado } from "./NuevoComplementoModal"
-import { EMPRESA_LABEL, fBody, fBtnPrimary, fBtnSmall, fClose, fHeader, fInput, fModal, fNote, fOverlay } from "./ui"
+import { EMPRESA_LABEL, fBody, fBtnPrimary, fBtnSmall, fClose, fHeader, fModal, fNote, fOverlay } from "./ui"
 
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 const fechaCorta = (iso: string) =>
@@ -47,7 +47,7 @@ export function ComplementosPagoModal({
   const [comps, setComps] = useState<Complemento[]>([])
   const [loading, setLoading] = useState(true)
   const [nuevo, setNuevo] = useState(false)
-  const [cancelando, setCancelando] = useState<{ c: Complemento; motivo: string } | null>(null)
+  const [cancelando, setCancelando] = useState<{ c: Complemento; motivo: string; sustituidaPor: string } | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
   function cargar() {
@@ -80,7 +80,7 @@ export function ComplementosPagoModal({
     if (!cancelando) return
     setOcupado(true)
     try {
-      const d = await llamarComplementos({ action: "cancelar", id: cancelando.c.id, motivo: cancelando.motivo })
+      const d = await llamarComplementos({ action: "cancelar", id: cancelando.c.id, motivo: cancelando.motivo, sustituidaPor: cancelando.sustituidaPor })
       alert(d.pendiente ? d.mensaje : `Complemento ${d.cancelado} cancelado. Su pago ya no cuenta para el saldo de la factura.`)
       setCancelando(null)
       cargar()
@@ -128,9 +128,7 @@ export function ComplementosPagoModal({
               <span style={{ fontSize: 13, color: "#fca5a5", fontWeight: 600 }}>
                 Cancelar ante el SAT el complemento {cancelando.c.numero} · {money(cancelando.c.monto)} de la factura {cancelando.c.factura_numero}
               </span>
-              <select value={cancelando.motivo} onChange={e => setCancelando({ ...cancelando, motivo: e.target.value })} style={fInput}>
-                {MOTIVOS_CANCELACION.map(m => <option key={m.clave} value={m.clave}>{m.clave} · {m.nombre}</option>)}
-              </select>
+              <MotivoCancelacionFields motivo={cancelando.motivo} sustituidaPor={cancelando.sustituidaPor} onChange={v => setCancelando({ ...cancelando, ...v })} />
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setCancelando(null)} disabled={ocupado} style={fBtnSmall}>No cancelar</button>
                 <button onClick={confirmarCancelacion} disabled={ocupado} style={{ ...fBtnSmall, color: "#f87171", borderColor: "rgba(248,113,113,0.4)" }}>
@@ -171,7 +169,7 @@ export function ComplementosPagoModal({
                       <button onClick={() => abrir(c.id, "pdf")} style={link}>PDF</button>
                       <button onClick={() => abrir(c.id, "xml")} style={link}>XML</button>
                       {!cancelado && (
-                        <button onClick={() => setCancelando({ c, motivo: "02" })} style={{ ...link, color: "#f87171", marginLeft: "auto" }}>⊘ Cancelar</button>
+                        <button onClick={() => setCancelando({ c, motivo: "02", sustituidaPor: "" })} style={{ ...link, color: "#f87171", marginLeft: "auto" }}>⊘ Cancelar</button>
                       )}
                     </div>
                   </div>

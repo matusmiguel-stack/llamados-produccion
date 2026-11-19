@@ -2,19 +2,20 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
 import { cancelarFactura } from "../../../../lib/facturapi"
+import { validarMotivoCancelacion } from "../../../../lib/cfdi-sustitucion"
 import { guardarArchivosIndependiente } from "../../../../lib/facturas-independientes"
 
 // POST JSON → acciones sobre una factura independiente:
 //   { action: "archivo", id, tipo: "pdf" | "xml" } → link firmado (si el
 //     archivo no se guardó al timbrar, se baja de Facturapi en ese momento)
-//   { action: "cancelar", id, motivo: "02" | "03" } → cancela ante el SAT
+//   { action: "cancelar", id, motivo: "01" | "02" | "03", sustituidaPor? } → cancela ante el SAT
 export async function POST(req: Request) {
   try {
     const user = await verifyApiRole(req, ["admin", "finanzas"])
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     const admin = createAdminClient(user.id)
 
-    const { action, id, tipo, motivo } = await req.json()
+    const { action, id, tipo, motivo, sustituidaPor } = await req.json()
     const { data: f } = await admin.from("facturas_independientes")
       .select("id, empresa, facturapi_id, numero, estatus, xml_path, pdf_path, uuid").eq("id", String(id || "")).single()
     if (!f) return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 })
@@ -31,7 +32,8 @@ export async function POST(req: Request) {
     }
 
     if (action === "cancelar") {
-      if (!["02", "03"].includes(motivo)) return NextResponse.json({ error: "Motivo de cancelación no válido" }, { status: 400 })
+      const mc = validarMotivoCancelacion(motivo, sustituidaPor)
+      if (mc.error) return NextResponse.json({ error: mc.error }, { status: 400 })
       if (f.estatus === "cancelada") return NextResponse.json({ error: "Esta factura ya está cancelada" }, { status: 400 })
       // El SAT no deja cancelar una factura PPD con pagos registrados
       if (f.uuid) {
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Esta factura tiene complementos de pago vigentes; cancélalos primero en 🧾 Complementos de pago" }, { status: 400 })
         }
       }
-      const r = await cancelarFactura(f.empresa, f.facturapi_id, motivo)
+      const r = await cancelarFactura(f.empresa, f.facturapi_id, mc.motivo, mc.uuid)
       if (r.status !== "canceled") {
         return NextResponse.json({
           ok: true, pendiente: true,

@@ -1,10 +1,10 @@
 "use client"
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
-import { MOTIVOS_CANCELACION } from "../../lib/sat-catalogos"
+import { MotivoCancelacionFields } from "./MotivoCancelacionFields"
 import { NuevaFacturaModal, type NuevaFacturaResultado } from "./NuevaFacturaModal"
 import { NuevoComplementoModal, llamarComplementos, mensajeComplemento, type ComplementoResultado } from "./NuevoComplementoModal"
-import { EMPRESA_LABEL, fBody, fBtnPrimary, fBtnSmall, fClose, fHeader, fInput, fModal, fNote, fOverlay } from "./ui"
+import { EMPRESA_LABEL, fBody, fBtnPrimary, fBtnSmall, fClose, fHeader, fModal, fNote, fOverlay } from "./ui"
 
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
 
@@ -56,7 +56,7 @@ export function FacturasIndependientesModal({
   const [nueva, setNueva] = useState(false)
   const [complementos, setComplementos] = useState<ComplementoDeFactura[]>([])
   const [complementoDe, setComplementoDe] = useState<string | null>(null)
-  const [cancelando, setCancelando] = useState<{ f: FacturaIndependiente; motivo: string } | null>(null)
+  const [cancelando, setCancelando] = useState<{ f: FacturaIndependiente; motivo: string; sustituidaPor: string } | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
   async function cargar() {
@@ -107,7 +107,7 @@ export function FacturasIndependientesModal({
     if (!cancelando) return
     setOcupado(true)
     try {
-      const d = await llamar({ action: "cancelar", id: cancelando.f.id, motivo: cancelando.motivo })
+      const d = await llamar({ action: "cancelar", id: cancelando.f.id, motivo: cancelando.motivo, sustituidaPor: cancelando.sustituidaPor })
       alert(d.pendiente ? d.mensaje : `Factura ${d.cancelada} cancelada.`)
       setCancelando(null)
       cargar()
@@ -160,9 +160,7 @@ export function FacturasIndependientesModal({
               <span style={{ fontSize: 13, color: "#fca5a5", fontWeight: 600 }}>
                 Cancelar ante el SAT la factura {cancelando.f.numero} · {money(cancelando.f.total)}
               </span>
-              <select value={cancelando.motivo} onChange={e => setCancelando({ ...cancelando, motivo: e.target.value })} style={fInput}>
-                {MOTIVOS_CANCELACION.map(m => <option key={m.clave} value={m.clave}>{m.clave} · {m.nombre}</option>)}
-              </select>
+              <MotivoCancelacionFields motivo={cancelando.motivo} sustituidaPor={cancelando.sustituidaPor} onChange={v => setCancelando({ ...cancelando, ...v })} />
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setCancelando(null)} disabled={ocupado} style={fBtnSmall}>No cancelar</button>
                 <button onClick={confirmarCancelacion} disabled={ocupado} style={{ ...fBtnSmall, color: "#f87171", borderColor: "rgba(248,113,113,0.4)" }}>
@@ -225,7 +223,7 @@ export function FacturasIndependientesModal({
                         <button
                           onClick={() => suyos.length
                             ? alert(`La factura ${f.numero} tiene complementos de pago vigentes (${suyos.map(c => c.numero).join(", ")}). Cancélalos primero en 🧾 Complementos de pago.`)
-                            : setCancelando({ f, motivo: "02" })}
+                            : setCancelando({ f, motivo: "02", sustituidaPor: "" })}
                           style={{ ...link, color: "#f87171", marginLeft: "auto" }}
                         >
                           ⊘ Cancelar
