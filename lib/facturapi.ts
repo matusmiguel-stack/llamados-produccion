@@ -3,6 +3,8 @@
 // secreta; la llave define también el ambiente (sk_test_… = pruebas,
 // sk_live_… = timbrado real).
 
+import { DETALLISTA_NS, detallistaPdfHtml, detallistaXml, type DetallistaInput } from "./detallista"
+
 const BASE = "https://www.facturapi.io/v2"
 
 const ENV_KEY: Record<string, string> = {
@@ -53,6 +55,7 @@ export type FacturaInput = {
   metodoPago: "PUE" | "PPD"
   serie?: string | null
   idempotencyKey?: string
+  detallista?: DetallistaInput | null   // Complemento Detallista (Liverpool, etc.)
 }
 
 export type FacturaEmitida = {
@@ -93,10 +96,27 @@ export async function crearFactura(empresa: string, f: FacturaInput): Promise<Fa
     payment_method: f.metodoPago,
     ...(f.serie ? { series: f.serie } : {}),
     ...(f.idempotencyKey ? { idempotency_key: f.idempotencyKey } : {}),
+    ...(f.detallista ? {
+      complements: [{ type: "custom", data: detallistaXml(f.detallista, totalEstimado(f)) }],
+      namespaces: [DETALLISTA_NS],
+      pdf_custom_section: detallistaPdfHtml(f.detallista),
+    } : {}),
   }
   const res = await call(empresa, "POST", "/invoices", body)
   const j = await res.json()
   return { id: j.id, uuid: String(j.uuid || "").toUpperCase(), series: j.series ?? null, folio_number: j.folio_number ?? null, total: Number(j.total) }
+}
+
+// Total que calculará Facturapi (impuestos redondeados por concepto), para
+// escribirlo con letra en el Complemento Detallista antes de timbrar.
+function totalEstimado(f: FacturaInput): number {
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  let total = 0
+  for (const c of f.conceptos) {
+    const base = r2(c.precio * (c.cantidad ?? 1))
+    total += base + r2(base * f.ivaTasa) - r2(base * (f.retencionIva || 0)) - r2(base * (f.retencionIsr || 0))
+  }
+  return r2(total)
 }
 
 // Fecha y hora del pago: mediodía en CDMX para que la fecha no se corra de

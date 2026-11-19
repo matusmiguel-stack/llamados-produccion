@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
+import { DETALLISTA_VACIO, DetallistaFields, detallistaDeReceptor, detallistaError, detallistaPayload, type DetallistaForm } from "./DetallistaFields"
 import { FField, FRow, fBtnGhost, fBtnPrimary, fBtnSmall, fInput, fNote, type Emisor, type Receptor } from "./ui"
 
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n)
@@ -48,6 +49,7 @@ export function TimbrarPanel({
   const [enviar, setEnviar] = useState(false)
   const [email, setEmail] = useState("")
   const [timbrando, setTimbrando] = useState(false)
+  const [detallista, setDetallista] = useState<DetallistaForm>(DETALLISTA_VACIO)
 
   useEffect(() => {
     (async () => {
@@ -82,6 +84,7 @@ export function TimbrarPanel({
     setMetodo(r.ultimo_metodo_pago === "PPD" ? "PPD" : "PUE")
     if (r.ultima_forma_pago && r.ultima_forma_pago !== "99") setForma(r.ultima_forma_pago)
     setEmail(r.email || "")
+    setDetallista(detallistaDeReceptor(r))
   }
 
   const receptor = receptores.find(r => r.id === receptorId) || null
@@ -93,8 +96,10 @@ export function TimbrarPanel({
     if (!descripcion.trim()) { alert("Escribe el concepto"); return }
     if (!/^\d{8}$/.test(clave)) { alert("La clave de producto/servicio SAT debe tener 8 dígitos"); return }
     if (enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return }
+    const errDet = detallistaError(detallista)
+    if (errDet) { alert(errDet); return }
     const aviso = ambiente === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
-    if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}\n\n¿Continuar?`)) return
+    if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}\n\n¿Continuar?`)) return
     setTimbrando(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -114,6 +119,7 @@ export function TimbrarPanel({
           parcialSubtotal,
           label: ingreso.label,
           email: enviar ? email.trim() : "",
+          detallista: detallistaPayload(detallista),
         }),
       })
       const d = await res.json()
@@ -219,6 +225,8 @@ export function TimbrarPanel({
       </FField>
 
       {parcialSlot}
+
+      <DetallistaFields value={detallista} onChange={setDetallista} />
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
         <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />

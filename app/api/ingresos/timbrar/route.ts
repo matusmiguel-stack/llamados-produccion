@@ -4,6 +4,7 @@ import { verifyApiRole } from "../../../../lib/api-auth"
 import { INGRESO_FACTURA_COLS, registrarFacturaIngreso, validarParcial } from "../../../../lib/ingresos-factura"
 import { crearFactura, descargarFactura, esModoPruebas, obtenerFactura, type FacturaEmitida } from "../../../../lib/facturapi"
 import { enviarFacturaCliente } from "../../../../lib/factura-email"
+import { detallistaParaGuardar, validarDetallista } from "../../../../lib/detallista"
 
 // POST JSON → timbra el CFDI del ingreso en Facturapi, guarda XML y PDF y lo
 // marca como facturado (mismo registro que cuando se sube desde Orderly).
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
 
     const { data: receptor } = await admin.from("receptores_fiscales").select("*").eq("id", receptorId).single()
     if (!receptor) return NextResponse.json({ error: "No se encontró el cliente a facturar" }, { status: 404 })
+    const { datos: detallista, error: detallistaErr } = validarDetallista(b.detallista)
+    if (detallistaErr) return NextResponse.json({ error: detallistaErr }, { status: 400 })
     const { data: emisor } = await admin.from("emisores_fiscales").select("serie").eq("empresa", ingreso.empresa).maybeSingle()
 
     const { parcial, error: parcialErr } = validarParcial(String(b.parcialSubtotal || ""), Number(ingreso.subtotal ?? 0))
@@ -92,6 +95,7 @@ export async function POST(req: Request) {
       ultima_forma_pago: metodoPago === "PPD" ? receptor.ultima_forma_pago : formaPago,
       ultimo_metodo_pago: metodoPago,
       uso_cfdi: uso,
+      detallista: detallistaParaGuardar(detallista, receptor.detallista ?? null),
       updated_at: new Date().toISOString(),
     }).eq("id", receptor.id)
 

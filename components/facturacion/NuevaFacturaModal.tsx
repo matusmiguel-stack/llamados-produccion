@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
+import { DETALLISTA_VACIO, DetallistaFields, detallistaDeReceptor, detallistaError, detallistaPayload, type DetallistaForm } from "./DetallistaFields"
 import {
   EMPRESA_LABEL, FField, FRow, fBody, fBtnGhost, fBtnPrimary, fBtnSmall, fClose, fHeader, fInput, fModal, fNote, fOverlay,
   type Emisor, type Receptor,
@@ -49,6 +50,7 @@ export function NuevaFacturaModal({
   const [forma, setForma] = useState("03")
   const [notas, setNotas] = useState("")
   const [enviar, setEnviar] = useState(false)
+  const [detallista, setDetallista] = useState<DetallistaForm>(DETALLISTA_VACIO)
   const [email, setEmail] = useState("")
   const [timbrando, setTimbrando] = useState(false)
 
@@ -91,6 +93,7 @@ export function NuevaFacturaModal({
     setMetodo(r.ultimo_metodo_pago === "PPD" ? "PPD" : "PUE")
     if (r.ultima_forma_pago && r.ultima_forma_pago !== "99") setForma(r.ultima_forma_pago)
     setEmail(r.email || "")
+    setDetallista(detallistaDeReceptor(r))
   }
 
   // Préstamos entre empresas: la otra empresa como receptor, con sus datos
@@ -143,8 +146,10 @@ export function NuevaFacturaModal({
       if (!((parseFloat(c.subtotal) || 0) > 0)) { alert(`Concepto ${i + 1}: escribe el subtotal`); return }
     }
     if (enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return }
+    const errDet = detallistaError(detallista)
+    if (errDet) { alert(errDet); return }
     const aviso = amb === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
-    const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · ${metodo}${metodo === "PPD" ? " (lleva complemento de pago al cobrarse)" : ""}`
+    const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · ${metodo}${metodo === "PPD" ? " (lleva complemento de pago al cobrarse)" : ""}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}`
     if (!confirm(`${aviso}:\n\n${resumen}\n\n¿Continuar?`)) return
     setTimbrando(true)
     try {
@@ -162,6 +167,7 @@ export function NuevaFacturaModal({
           formaPago: metodo === "PPD" ? "99" : forma,
           notas: notas.trim(),
           email: enviar ? email.trim() : "",
+          detallista: detallistaPayload(detallista),
         }),
       })
       const d = await res.json()
@@ -328,6 +334,8 @@ export function NuevaFacturaModal({
             <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="ej. Préstamo de Retro Studio a Retro Films" style={fInput} />
           </FField>
           <p style={fNote("#94a3b8")}>Esta factura no se suma al control de ingresos; queda en la lista de facturas independientes.</p>
+
+          <DetallistaFields value={detallista} onChange={setDetallista} />
 
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
             <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />

@@ -1,6 +1,7 @@
 // Estilos y piezas compartidas de los modales de facturación (mismo look que
 // los modales de Ingresos).
 import type React from "react"
+import type { DetallistaGuardado } from "../../lib/detallista"
 
 export const fInput: React.CSSProperties = {
   padding: "8px 11px",
@@ -85,6 +86,7 @@ export type Receptor = {
   client_id: string | null
   ultima_forma_pago: string | null
   ultimo_metodo_pago: string | null
+  detallista?: DetallistaGuardado | null
 }
 
 export type Emisor = {

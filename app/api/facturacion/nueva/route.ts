@@ -3,6 +3,7 @@ import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
 import { crearFactura, descargarFactura, esModoPruebas } from "../../../../lib/facturapi"
 import { enviarFacturaCliente } from "../../../../lib/factura-email"
+import { detallistaParaGuardar, validarDetallista } from "../../../../lib/detallista"
 import { guardarArchivosIndependiente } from "../../../../lib/facturas-independientes"
 
 const EMPRESAS = ["retro_studio", "retro_films"]
@@ -51,6 +52,8 @@ export async function POST(req: Request) {
 
     const { data: receptor } = await admin.from("receptores_fiscales").select("*").eq("id", receptorId).single()
     if (!receptor) return NextResponse.json({ error: "No se encontró el cliente a facturar" }, { status: 404 })
+    const { datos: detallista, error: detallistaErr } = validarDetallista(b.detallista)
+    if (detallistaErr) return NextResponse.json({ error: detallistaErr }, { status: 400 })
     const { data: emisor } = await admin.from("emisores_fiscales").select("serie").eq("empresa", empresa).maybeSingle()
 
     const factura = await crearFactura(empresa, {
@@ -61,6 +64,7 @@ export async function POST(req: Request) {
       formaPago,
       metodoPago,
       serie: emisor?.serie || null,
+      detallista,
     })
     const numero = `${factura.series || ""}${factura.folio_number ?? ""}` || factura.uuid.slice(0, 8)
     const subtotal = r2(conceptos.reduce((s: number, c: { precio: number }) => s + c.precio, 0))
@@ -100,6 +104,7 @@ export async function POST(req: Request) {
       ...(metodoPago === "PUE" ? { ultima_forma_pago: formaPago } : {}),
       ultimo_metodo_pago: metodoPago,
       uso_cfdi: uso,
+      detallista: detallistaParaGuardar(detallista, receptor.detallista ?? null),
       updated_at: new Date().toISOString(),
     }).eq("id", receptor.id)
 
