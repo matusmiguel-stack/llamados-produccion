@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
+import { useVistaPrevia } from "./VistaPrevia"
 import { DETALLISTA_VACIO, DetallistaFields, detallistaDeReceptor, detallistaError, detallistaPayload, type DetallistaForm } from "./DetallistaFields"
 import {
   EMPRESA_LABEL, FField, FRow, fBody, fBtnGhost, fBtnPrimary, fBtnSmall, fClose, fHeader, fInput, fModal, fNote, fOverlay,
@@ -51,6 +52,7 @@ export function NuevaFacturaModal({
   const [notas, setNotas] = useState("")
   const [enviar, setEnviar] = useState(false)
   const [detallista, setDetallista] = useState<DetallistaForm>(DETALLISTA_VACIO)
+  const vista = useVistaPrevia()
   const [email, setEmail] = useState("")
   const [timbrando, setTimbrando] = useState(false)
 
@@ -138,16 +140,36 @@ export function NuevaFacturaModal({
   const total = r2(subtotal + ivaMonto)
   const amb = ambiente[empresa] ?? null
 
-  async function timbrar() {
-    if (!receptor) { alert("Elige a quién se le factura"); return }
+  // Revisa lo capturado; avisa y devuelve false si falta algo.
+  function validar(paraTimbrar: boolean): boolean {
+    if (!receptor) { alert("Elige a quién se le factura"); return false }
     for (const [i, c] of conceptos.entries()) {
-      if (!c.descripcion.trim()) { alert(`Concepto ${i + 1}: escribe la descripción`); return }
-      if (!/^\d{8}$/.test(c.clave)) { alert(`Concepto ${i + 1}: la clave SAT debe tener 8 dígitos`); return }
-      if (!((parseFloat(c.subtotal) || 0) > 0)) { alert(`Concepto ${i + 1}: escribe el subtotal`); return }
+      if (!c.descripcion.trim()) { alert(`Concepto ${i + 1}: escribe la descripción`); return false }
+      if (!/^\d{8}$/.test(c.clave)) { alert(`Concepto ${i + 1}: la clave SAT debe tener 8 dígitos`); return false }
+      if (!((parseFloat(c.subtotal) || 0) > 0)) { alert(`Concepto ${i + 1}: escribe el subtotal`); return false }
     }
-    if (enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return }
+    if (paraTimbrar && enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return false }
     const errDet = detallistaError(detallista)
-    if (errDet) { alert(errDet); return }
+    if (errDet) { alert(errDet); return false }
+    return true
+  }
+
+  function verPrevia() {
+    if (!validar(false) || !receptor) return
+    vista.abrir({
+      empresa,
+      receptorId: receptor.id,
+      conceptos: conceptos.map(c => ({ descripcion: c.descripcion.trim(), claveProdServ: c.clave, claveUnidad: c.unidad, subtotal: parseFloat(c.subtotal) })),
+      ivaTasa: iva,
+      uso,
+      metodoPago: metodo,
+      formaPago: metodo === "PPD" ? "99" : forma,
+      detallista: detallistaPayload(detallista),
+    })
+  }
+
+  async function timbrar() {
+    if (!validar(true) || !receptor) return
     const aviso = amb === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
     const resumen = `${EMPRESA_LABEL[empresa]} → ${receptor.razon_social} (${receptor.rfc})\n${conceptos.length} concepto${conceptos.length === 1 ? "" : "s"} · Total ${money(total)} · ${metodo}${metodo === "PPD" ? " (lleva complemento de pago al cobrarse)" : ""}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}`
     if (!confirm(`${aviso}:\n\n${resumen}\n\n¿Continuar?`)) return
@@ -354,10 +376,14 @@ export function NuevaFacturaModal({
 
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             <button onClick={onClose} disabled={timbrando} style={fBtnGhost}>Cancelar</button>
+            <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#cbd5e1", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
+              {vista.cargando ? "Generando…" : "👁 Vista previa"}
+            </button>
             <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>
               {timbrando ? "Timbrando…" : "🧾 Timbrar factura"}
             </button>
           </div>
+          {vista.overlay}
         </div>
       </div>
     </div>

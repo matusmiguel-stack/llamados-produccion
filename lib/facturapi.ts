@@ -66,7 +66,7 @@ export type FacturaEmitida = {
   total: number
 }
 
-export async function crearFactura(empresa: string, f: FacturaInput): Promise<FacturaEmitida> {
+function cuerpoFactura(f: FacturaInput) {
   const taxes: any[] = [{ type: "IVA", rate: f.ivaTasa }]
   if (f.retencionIva) taxes.push({ type: "IVA", rate: f.retencionIva, withholding: true })
   if (f.retencionIsr) taxes.push({ type: "ISR", rate: f.retencionIsr, withholding: true })
@@ -102,9 +102,22 @@ export async function crearFactura(empresa: string, f: FacturaInput): Promise<Fa
       pdf_custom_section: detallistaPdfHtml(f.detallista),
     } : {}),
   }
-  const res = await call(empresa, "POST", "/invoices", body)
+  return body
+}
+
+export async function crearFactura(empresa: string, f: FacturaInput): Promise<FacturaEmitida> {
+  const res = await call(empresa, "POST", "/invoices", cuerpoFactura(f))
   const j = await res.json()
   return { id: j.id, uuid: String(j.uuid || "").toUpperCase(), series: j.series ?? null, folio_number: j.folio_number ?? null, total: Number(j.total) }
+}
+
+// Vista previa en PDF: Facturapi la genera SIN timbrar ni guardar nada (no
+// consume folio ni se reporta al SAT).
+export async function previewFactura(empresa: string, f: FacturaInput): Promise<Buffer> {
+  const { idempotency_key: _ik, ...body } = cuerpoFactura(f) as Record<string, unknown>
+  void _ik
+  const res = await call(empresa, "POST", "/invoices/preview/pdf", body)
+  return Buffer.from(await res.arrayBuffer())
 }
 
 // Total que calculará Facturapi (impuestos redondeados por concepto), para

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
+import { useVistaPrevia } from "./VistaPrevia"
 import { DETALLISTA_VACIO, DetallistaFields, detallistaDeReceptor, detallistaError, detallistaPayload, type DetallistaForm } from "./DetallistaFields"
 import { FField, FRow, fBtnGhost, fBtnPrimary, fBtnSmall, fInput, fNote, type Emisor, type Receptor } from "./ui"
 
@@ -50,6 +51,7 @@ export function TimbrarPanel({
   const [email, setEmail] = useState("")
   const [timbrando, setTimbrando] = useState(false)
   const [detallista, setDetallista] = useState<DetallistaForm>(DETALLISTA_VACIO)
+  const vista = useVistaPrevia()
 
   useEffect(() => {
     (async () => {
@@ -91,13 +93,34 @@ export function TimbrarPanel({
   const ivaMonto = Math.round(monto * iva * 100) / 100
   const total = Math.round((monto + ivaMonto) * 100) / 100
 
-  async function timbrar() {
-    if (!receptor) { alert("Elige a quién se le factura"); return }
-    if (!descripcion.trim()) { alert("Escribe el concepto"); return }
-    if (!/^\d{8}$/.test(clave)) { alert("La clave de producto/servicio SAT debe tener 8 dígitos"); return }
-    if (enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return }
+  // Revisa lo capturado; avisa y devuelve false si falta algo.
+  function validar(paraTimbrar: boolean): boolean {
+    if (!receptor) { alert("Elige a quién se le factura"); return false }
+    if (!descripcion.trim()) { alert("Escribe el concepto"); return false }
+    if (!/^\d{8}$/.test(clave)) { alert("La clave de producto/servicio SAT debe tener 8 dígitos"); return false }
+    if (!(monto > 0)) { alert("El monto a facturar debe ser mayor a cero"); return false }
+    if (paraTimbrar && enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return false }
     const errDet = detallistaError(detallista)
-    if (errDet) { alert(errDet); return }
+    if (errDet) { alert(errDet); return false }
+    return true
+  }
+
+  function verPrevia() {
+    if (!validar(false) || !receptor) return
+    vista.abrir({
+      empresa: ingreso.empresa,
+      receptorId: receptor.id,
+      conceptos: [{ descripcion: descripcion.trim(), claveProdServ: clave, claveUnidad: unidad, subtotal: monto }],
+      ivaTasa: iva,
+      uso,
+      metodoPago: metodo,
+      formaPago: forma,
+      detallista: detallistaPayload(detallista),
+    })
+  }
+
+  async function timbrar() {
+    if (!validar(true) || !receptor) return
     const aviso = ambiente === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
     if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}\n\n¿Continuar?`)) return
     setTimbrando(true)
@@ -245,10 +268,14 @@ export function TimbrarPanel({
 
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
         <button onClick={onCancel} disabled={timbrando} style={fBtnGhost}>Cancelar</button>
+        <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#cbd5e1", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
+          {vista.cargando ? "Generando…" : "👁 Vista previa"}
+        </button>
         <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>
           {timbrando ? "Timbrando…" : "🧾 Timbrar factura"}
         </button>
       </div>
+      {vista.overlay}
     </div>
   )
 }
