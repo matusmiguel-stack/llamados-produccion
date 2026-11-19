@@ -56,6 +56,7 @@ export type FacturaInput = {
   serie?: string | null
   idempotencyKey?: string
   detallista?: DetallistaInput | null   // Complemento Detallista (Liverpool, etc.)
+  sustituyeUuid?: string | null         // CFDI relacionado, tipo de relación 04 (sustitución)
 }
 
 export type FacturaEmitida = {
@@ -96,6 +97,7 @@ function cuerpoFactura(f: FacturaInput) {
     payment_method: f.metodoPago,
     ...(f.serie ? { series: f.serie } : {}),
     ...(f.idempotencyKey ? { idempotency_key: f.idempotencyKey } : {}),
+    ...(f.sustituyeUuid ? { related_documents: [{ relationship: "04", documents: [f.sustituyeUuid] }] } : {}),
     ...(f.detallista ? {
       complements: [{ type: "custom", data: detallistaXml(f.detallista, totalEstimado(f)) }],
       namespaces: [DETALLISTA_NS],

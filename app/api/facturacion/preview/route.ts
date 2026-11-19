@@ -3,6 +3,7 @@ import { createAdminClient } from "../../../../lib/supabase-admin"
 import { verifyApiRole } from "../../../../lib/api-auth"
 import { previewFactura } from "../../../../lib/facturapi"
 import { validarDetallista } from "../../../../lib/detallista"
+import { validarSustitucion } from "../../../../lib/cfdi-sustitucion"
 
 const EMPRESAS = ["retro_studio", "retro_films"]
 const r2 = (n: number) => Math.round(n * 100) / 100
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
     const { data: emisor } = await admin.from("emisores_fiscales").select("serie").eq("empresa", empresa).maybeSingle()
     const { datos: detallista, error: detallistaErr } = validarDetallista(b.detallista)
     if (detallistaErr) return NextResponse.json({ error: detallistaErr }, { status: 400 })
+    const { uuid: sustituyeUuid, error: sustErr } = validarSustitucion(b.sustituyeUuid)
+    if (sustErr) return NextResponse.json({ error: sustErr }, { status: 400 })
 
     const pdf = await previewFactura(empresa, {
       receptor: { rfc: receptor.rfc, razon_social: receptor.razon_social, regimen_fiscal: receptor.regimen_fiscal, cp: receptor.cp, email: receptor.email },
@@ -54,6 +57,7 @@ export async function POST(req: Request) {
       metodoPago,
       serie: emisor?.serie || null,
       detallista,
+      sustituyeUuid,
     })
     return new NextResponse(new Uint8Array(pdf), {
       headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="vista-previa.pdf"`, "Cache-Control": "no-store" },

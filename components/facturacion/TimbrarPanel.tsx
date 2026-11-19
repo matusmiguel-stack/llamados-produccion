@@ -4,6 +4,8 @@ import { supabase } from "../../lib/supabase"
 import { FORMAS_PAGO, METODOS_PAGO, USOS_CFDI } from "../../lib/sat-catalogos"
 import { ReceptorForm } from "./ReceptorForm"
 import { useVistaPrevia } from "./VistaPrevia"
+import { SustitucionField } from "./SustitucionField"
+import { validarSustitucion } from "../../lib/cfdi-sustitucion"
 import { DETALLISTA_VACIO, DetallistaFields, detallistaDeReceptor, detallistaError, detallistaPayload, type DetallistaForm } from "./DetallistaFields"
 import { FField, FRow, fBtnGhost, fBtnPrimary, fBtnSmall, fInput, fNote, type Emisor, type Receptor } from "./ui"
 
@@ -52,6 +54,7 @@ export function TimbrarPanel({
   const [timbrando, setTimbrando] = useState(false)
   const [detallista, setDetallista] = useState<DetallistaForm>(DETALLISTA_VACIO)
   const vista = useVistaPrevia()
+  const [sustituye, setSustituye] = useState("")
 
   useEffect(() => {
     (async () => {
@@ -102,6 +105,8 @@ export function TimbrarPanel({
     if (paraTimbrar && enviar && !email.trim()) { alert("Escribe el correo al que se manda la factura"); return false }
     const errDet = detallistaError(detallista)
     if (errDet) { alert(errDet); return false }
+    const errSust = validarSustitucion(sustituye).error
+    if (errSust) { alert(errSust); return false }
     return true
   }
 
@@ -116,13 +121,14 @@ export function TimbrarPanel({
       metodoPago: metodo,
       formaPago: forma,
       detallista: detallistaPayload(detallista),
+      sustituyeUuid: validarSustitucion(sustituye).uuid,
     })
   }
 
   async function timbrar() {
     if (!validar(true) || !receptor) return
     const aviso = ambiente === "real" ? "Se timbrará ante el SAT una factura REAL" : "Se timbrará una factura de PRUEBA (no es válida ante el SAT)"
-    if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}\n\n¿Continuar?`)) return
+    if (!confirm(`${aviso}:\n\n${receptor.razon_social} (${receptor.rfc})\nTotal ${money(total)} · ${metodo}${validarSustitucion(sustituye).uuid ? `\nSustituye al CFDI ${validarSustitucion(sustituye).uuid}` : ""}${detallista.activo ? `\nComplemento Detallista · pedido ${detallista.pedido.trim()}` : ""}\n\n¿Continuar?`)) return
     setTimbrando(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -143,6 +149,7 @@ export function TimbrarPanel({
           label: ingreso.label,
           email: enviar ? email.trim() : "",
           detallista: detallistaPayload(detallista),
+          sustituyeUuid: validarSustitucion(sustituye).uuid,
         }),
       })
       const d = await res.json()
@@ -250,6 +257,8 @@ export function TimbrarPanel({
       {parcialSlot}
 
       <DetallistaFields value={detallista} onChange={setDetallista} />
+
+      <SustitucionField value={sustituye} onChange={setSustituye} />
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
         <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />

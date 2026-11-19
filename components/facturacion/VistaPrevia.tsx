@@ -14,6 +14,7 @@ export type VistaPreviaPayload = {
   metodoPago: "PUE" | "PPD"
   formaPago: string
   detallista: unknown
+  sustituyeUuid: string | null
 }
 
 export function useVistaPrevia() {
