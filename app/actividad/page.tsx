@@ -44,6 +44,7 @@ const TABLE_META: Record<string, { label: string; emoji: string; href?: (id: str
   entregas:          { label: "Entrega",              emoji: "🎞️", href: () => "/postproduccion" },
   external_contacts: { label: "Contacto externo",     emoji: "📇" },
   hoja_llamado:      { label: "Hoja de llamado",      emoji: "📋" },
+  rodaje_planes:     { label: "Plan de rodaje",       emoji: "🎬" },
   client_subfolders: { label: "Subcarpeta",           emoji: "📂" },
 }
 

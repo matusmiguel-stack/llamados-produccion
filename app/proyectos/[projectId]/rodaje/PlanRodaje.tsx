@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { supabase } from "../../../../lib/supabase"
 import type { AppProfile } from "../../../../lib/session-profile"
-import { cargarPlan, crearPlan, type DatosPlan } from "../../../../lib/rodaje/datos"
+import { borrarPlanCompleto, cargarPlan, crearPlan, type DatosPlan } from "../../../../lib/rodaje/datos"
 import { aplicarCambios, siguientePos, type CambioOrden } from "../../../../lib/rodaje/orden"
 import { armarTandas, escenasSinTexto, leerTandas, type Progreso } from "../../../../lib/rodaje/lectura"
 import {
@@ -14,7 +14,9 @@ import {
   type Etiqueta, type FilaToma, type RodajeDia, type RodajeEscena, type RodajeGuion, type RodajeToma,
 } from "../../../../lib/rodaje/tipos"
 import { BarraProgreso } from "./comun"
-import { C, aviso, avisoAmbar, avisoError, boton, botonChico, botonPrimario, botonVioleta, panel, vacio } from "./estilos"
+import {
+  C, aviso, avisoAmbar, avisoError, boton, botonChico, botonPeligro, botonPrimario, botonVioleta, panel, vacio,
+} from "./estilos"
 import { VistaPlan } from "./VistaPlan"
 import { VistaGuiones } from "./VistaGuiones"
 import { ModoOrdenar } from "./ModoOrdenar"
@@ -23,6 +25,7 @@ import { GuionModal } from "./GuionModal"
 import { EditarEscena, EditarGuion } from "./Editores"
 import { EditarTomas } from "./Tomas"
 import { ExportarPDF } from "./ExportarPDF"
+import { BorrarTodo } from "./BorrarTodo"
 
 export type CamposEscena = Pick<
   RodajeEscena,
@@ -75,6 +78,7 @@ export function PlanRodaje(props: {
   const [editGuion, setEditGuion] = useState<RodajeGuion | null>(null)
   const [tomasDe, setTomasDe] = useState<string | null>(null)
   const [pdfAbierto, setPdfAbierto] = useState(false)
+  const [borrarAbierto, setBorrarAbierto] = useState(false)
 
   const datosRef = useRef<DatosPlan | null>(null)
   const lecturaRef = useRef({ activa: false, cancelada: false })
@@ -84,6 +88,21 @@ export function PlanRodaje(props: {
   // Los cambios se guardan de uno en uno y en el orden en que se hicieron: si
   // dos movimientos seguidos llegaran al servidor al revés, ganaría el viejo.
   const colaRef = useRef<Promise<unknown>>(Promise.resolve())
+
+  // Cuando el plan que estaba en pantalla deja de existir (se borró todo, aquí
+  // o desde otra sesión), se cierran sus ventanas y se detiene la lectura: si
+  // no, reaparecerían apuntando a escenas que ya no están.
+  const cerrarTodo = useCallback(() => {
+    lecturaRef.current.cancelada = true
+    setLectura(null)
+    setGuionAbierto(null)
+    setEditEscena(null)
+    setEditGuion(null)
+    setTomasDe(null)
+    setPdfAbierto(false)
+    setBorrarAbierto(false)
+    setVista("plan")
+  }, [])
 
   // ── Carga ───────────────────────────────────────────────────────────────────
   const recargar = useCallback(async () => {
@@ -103,6 +122,8 @@ export function PlanRodaje(props: {
           await new Promise((r) => setTimeout(r, 250))
           continue
         }
+        const anterior = datosRef.current?.plan.id || null
+        if (anterior && anterior !== (d?.plan.id || null)) cerrarTodo()
         datosRef.current = d
         setDatos(d)
         setEstado("listo")
@@ -113,7 +134,7 @@ export function PlanRodaje(props: {
       setErrorCarga((err as Error).message)
       setEstado((prev) => (prev === "listo" ? "listo" : "error"))
     }
-  }, [projectId])
+  }, [projectId, cerrarTodo])
 
   useEffect(() => {
     let vivo = true
@@ -506,6 +527,22 @@ export function PlanRodaje(props: {
     }
   }
 
+  // Borra el plan entero. Si el servidor falla, el error sube a la ventana de
+  // confirmación, que se queda abierta.
+  async function borrarTodo() {
+    const d = datosRef.current
+    if (!d) return
+    // Lo que se esté guardando termina primero, para que no truene contra un
+    // plan que ya no existe.
+    await colaRef.current
+    await borrarPlanCompleto(d.plan.id)
+    cerrarTodo()
+    datosRef.current = null
+    setDatos(null)
+    // Se confirma contra el servidor, por si alguien generó otro plan mientras tanto.
+    await recargar()
+  }
+
   // ── Pantallas ───────────────────────────────────────────────────────────────
   if (estado === "cargando") {
     return <div style={{ ...panel, color: C.apagado, fontSize: 14 }}>Cargando el plan de rodaje…</div>
@@ -558,6 +595,8 @@ export function PlanRodaje(props: {
   const vistaReal: Vista = !hayGuiones ? "subir" : !puedeEditar && (vista === "ordenar" || vista === "subir") ? "plan" : vista
   const pendientesTexto = puedeEditar ? escenasSinTexto(datos.escenas, datos.guiones).length : 0
   const porRevisar = datos.archivos.filter((a) => a.estado !== "aplicado").length
+  // Un plan recién generado y vacío no tiene nada que borrar.
+  const hayAlgo = hayGuiones || datos.archivos.length > 0 || datos.dias.length > 0
 
   const pestana = (v: Vista, texto: string) => (
     <button
@@ -665,6 +704,29 @@ export function PlanRodaje(props: {
         <ModoOrdenar datos={datos} esMovil={esMovil} acc={acc} onSalir={() => setVista("plan")} />
       )}
 
+      {puedeEditar && hayAlgo && vistaReal !== "ordenar" && (
+        <div
+          style={{
+            display: "flex", justifyContent: "flex-end", marginTop: 6, paddingTop: 12,
+            borderTop: `1px solid ${C.lineaSuave}`,
+          }}
+        >
+          <button
+            type="button"
+            style={{ ...botonPeligro, opacity: lectura?.activa ? 0.5 : 1 }}
+            onClick={() => setBorrarAbierto(true)}
+            disabled={!!lectura?.activa}
+            title={
+              lectura?.activa
+                ? "Espera a que la IA termine de leer"
+                : "Borra los guiones, escenas, tomas, días y archivos de este proyecto"
+            }
+          >
+            Borrar todo el plan
+          </button>
+        </div>
+      )}
+
       {guionAbierto && (
         <GuionModal
           datos={datos}
@@ -693,6 +755,15 @@ export function PlanRodaje(props: {
       )}
 
       {pdfAbierto && <ExportarPDF datos={datos} proyecto={props.proyecto} onCerrar={() => setPdfAbierto(false)} />}
+
+      {borrarAbierto && puedeEditar && (
+        <BorrarTodo
+          datos={datos}
+          proyecto={props.proyecto}
+          onBorrar={borrarTodo}
+          onCerrar={() => setBorrarAbierto(false)}
+        />
+      )}
 
       {escenaDeTomas && (
         <EditarTomas datos={datos} escena={escenaDeTomas} acc={acc} onCerrar={() => setTomasDe(null)} />
