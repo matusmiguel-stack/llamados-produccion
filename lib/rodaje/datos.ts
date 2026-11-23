@@ -162,6 +162,14 @@ export async function ligaArchivo(archivoId: string): Promise<string> {
   return r.url
 }
 
+/**
+ * Borra el plan completo: guiones, escenas, tomas, días, separadores y los
+ * archivos subidos. El proyecto queda sin plan. No se puede deshacer.
+ */
+export async function borrarPlanCompleto(planId: string): Promise<void> {
+  await api(`/api/rodaje/plan?plan=${encodeURIComponent(planId)}`, { method: "DELETE" })
+}
+
 /** La IA lee el archivo y devuelve piezas y escenas (tarda de segundos a un par de minutos). */
 export async function leerIndiceArchivo(archivoId: string): Promise<IndiceIA> {
   const r = await api<{ indice: IndiceIA }>("/api/rodaje/leer", {
