@@ -61,6 +61,9 @@ export type RodajeArchivo = {
   created_at: string
 }
 
+/** Una pieza del plan: un guion (o video, capítulo…) o una lista de fotos. */
+export type TipoPieza = "guion" | "fotos"
+
 export type RodajeGuion = {
   id: string
   plan_id: string
@@ -70,7 +73,34 @@ export type RodajeGuion = {
   titulo: string
   resumen: string
   notas: string[]
-  unidad: 1 | 2 | null
+  tipo: TipoPieza
+}
+
+export type TipoUnidad = "video" | "foto"
+
+/** Una unidad de rodaje (video, segunda unidad, foto…) con su propio plan de trabajo. */
+export type RodajeUnidad = {
+  id: string
+  plan_id: string
+  nombre: string
+  tipo: TipoUnidad
+  orden: number
+  created_at: string
+}
+
+export const MAX_UNIDADES = 8
+
+/** Cómo se dice que algo ya se hizo: video "filma", foto "hace". */
+export function palabras(tipo: TipoUnidad | undefined) {
+  return tipo === "foto"
+    ? { hecha: "Hecha", hechas: "hechas", unaHecha: "hecha", marcar: "Marcar hecha", pendientes: "Por hacer" }
+    : { hecha: "Filmada", hechas: "filmadas", unaHecha: "filmada", marcar: "Marcar filmada", pendientes: "Por filmar" }
+}
+
+/** "Video 3", "Capítulo 2"… o "Fotos" si la pieza es una lista de fotos. */
+export function nombrePieza(etq: { uno: string }, g: Pick<RodajeGuion, "numero" | "tipo"> | undefined): string {
+  if (!g) return etq.uno
+  return g.tipo === "fotos" ? "Fotos" : `${etq.uno} ${g.numero}`
 }
 
 export type RodajeDia = {
@@ -81,7 +111,8 @@ export type RodajeDia = {
   created_at: string
 }
 
-export type RodajeEscena = {
+/** Lo que dice la escena (igual para todas las unidades). */
+export type EscenaBase = {
   id: string
   plan_id: string
   guion_id: string
@@ -98,6 +129,10 @@ export type RodajeEscena = {
   tiene_texto: boolean
   /** No viene en la lista del plan; se pide al abrir el guion de la escena */
   texto?: LineaGuion[] | null
+}
+
+/** Dónde va la escena en el plan de UNA unidad, y si esa unidad ya la hizo. */
+export type LugarEscena = {
   dia_id: string | null
   pos: number
   filmada: boolean
@@ -105,10 +140,30 @@ export type RodajeEscena = {
   filmada_por: string | null
 }
 
+/** Una escena vista desde el plan de una unidad. */
+export type RodajeEscena = EscenaBase & LugarEscena
+
+/** Fila de rodaje_asignaciones: una escena dentro del plan de una unidad. */
+export type RodajeAsignacion = LugarEscena & {
+  id: string
+  plan_id: string
+  escena_id: string
+  unidad_id: string
+}
+
+/** Nota de llamado de un día para una unidad. */
+export type RodajeNotaDia = {
+  dia_id: string
+  unidad_id: string
+  plan_id: string
+  nota: string
+}
+
 export type RodajeSeparador = {
   id: string
   plan_id: string
   dia_id: string
+  unidad_id: string | null
   titulo: string
   pos: number
 }
@@ -118,6 +173,7 @@ export type RodajeToma = {
   id: string
   plan_id: string
   escena_id: string
+  unidad_id: string | null
   orden: number
   emplazamiento: string
   buena: string
@@ -166,7 +222,14 @@ export const TIPOS_ARCHIVO_GUION: Record<string, string> = {
 
 export const MAX_BYTES_GUION = 30 * 1024 * 1024
 
-/** Columnas de rodaje_escenas que carga el plan (todas menos el texto). */
+/**
+ * Columnas de rodaje_escenas que carga el plan: lo que dice la escena, sin el
+ * texto. El día, el orden y el "filmada" ya no se leen de aquí sino de
+ * rodaje_asignaciones (uno por unidad).
+ */
 export const COLUMNAS_ESCENA =
   "id, plan_id, guion_id, orden, numero, encabezado, ie, locacion, momento, descripcion, " +
-  "personajes, pagina, tiene_texto, dia_id, pos, filmada, filmada_at, filmada_por"
+  "personajes, pagina, tiene_texto"
+
+export const COLUMNAS_ASIGNACION =
+  "id, plan_id, escena_id, unidad_id, dia_id, pos, filmada, filmada_at, filmada_por"

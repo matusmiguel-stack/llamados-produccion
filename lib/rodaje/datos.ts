@@ -5,31 +5,34 @@
 import { supabase } from "../supabase"
 import { siguientePos } from "./orden"
 import {
+  COLUMNAS_ASIGNACION,
   COLUMNAS_ESCENA,
+  type EscenaBase,
   type Etiqueta,
   type IndiceIA,
   type LineaGuion,
   type RodajeArchivo,
+  type RodajeAsignacion,
   type RodajeDia,
-  type RodajeEscena,
   type RodajeGuion,
+  type RodajeNotaDia,
   type RodajePlan,
   type RodajeSeparador,
   type RodajeToma,
+  type RodajeUnidad,
 } from "./tipos"
+import type { DatosCrudos, DatosPlan } from "./unidades"
 
-export type DatosPlan = {
-  plan: RodajePlan
-  archivos: RodajeArchivo[]
-  guiones: RodajeGuion[]
-  dias: RodajeDia[]
-  escenas: RodajeEscena[]
-  seps: RodajeSeparador[]
-  tomas: RodajeToma[]
-}
+export type { DatosCrudos, DatosPlan } from "./unidades"
 
 /** Trae todas las filas de un plan, de mil en mil (el tope por consulta de Supabase). */
-async function todas<T>(tabla: string, columnas: string, planId: string, orden: string): Promise<T[]> {
+async function todas<T>(
+  tabla: string,
+  columnas: string,
+  planId: string,
+  orden: string,
+  desempate = "id"
+): Promise<T[]> {
   const out: T[] = []
   for (let desde = 0; ; desde += 1000) {
     const { data, error } = await supabase
@@ -37,7 +40,7 @@ async function todas<T>(tabla: string, columnas: string, planId: string, orden: 
       .select(columnas)
       .eq("plan_id", planId)
       .order(orden, { ascending: true })
-      .order("id", { ascending: true })
+      .order(desempate, { ascending: true })
       .range(desde, desde + 999)
     if (error) throw new Error(error.message)
     const filas = (data || []) as unknown as T[]
@@ -48,7 +51,7 @@ async function todas<T>(tabla: string, columnas: string, planId: string, orden: 
 }
 
 /** El plan del proyecto con todo lo suyo, o null si todavía no se genera. */
-export async function cargarPlan(projectId: string): Promise<DatosPlan | null> {
+export async function cargarPlan(projectId: string): Promise<DatosCrudos | null> {
   const { data: plan, error } = await supabase
     .from("rodaje_planes")
     .select("id, project_id, etiqueta, created_at")
@@ -57,20 +60,34 @@ export async function cargarPlan(projectId: string): Promise<DatosPlan | null> {
   if (error) throw new Error(error.message)
   if (!plan) return null
 
-  const [archivos, guiones, dias, escenas, seps, tomas] = await Promise.all([
+  const unidadesDe = () =>
+    todas<RodajeUnidad>("rodaje_unidades", "id, plan_id, nombre, tipo, orden, created_at", plan.id, "orden")
+
+  // Un plan sin unidades es uno recién generado o uno de antes de que
+  // existieran: la base le crea "Unidad 1" y le pasa el plan como estaba.
+  let unidades = await unidadesDe()
+  if (!unidades.length) {
+    const { error: errPreparar } = await supabase.rpc("rodaje_preparar_unidades", { p_plan: plan.id })
+    if (errPreparar) throw new Error(errPreparar.message)
+    unidades = await unidadesDe()
+  }
+
+  const [archivos, guiones, dias, escenas, seps, tomas, asignaciones, notas] = await Promise.all([
     todas<RodajeArchivo>("rodaje_archivos", "*", plan.id, "created_at"),
-    todas<RodajeGuion>("rodaje_guiones", "id, plan_id, archivo_id, orden, numero, titulo, resumen, notas, unidad", plan.id, "orden"),
+    todas<RodajeGuion>("rodaje_guiones", "id, plan_id, archivo_id, orden, numero, titulo, resumen, notas, tipo", plan.id, "orden"),
     todas<RodajeDia>("rodaje_dias", "id, plan_id, fecha, nota, created_at", plan.id, "created_at"),
-    todas<RodajeEscena>("rodaje_escenas", COLUMNAS_ESCENA, plan.id, "orden"),
-    todas<RodajeSeparador>("rodaje_separadores", "id, plan_id, dia_id, titulo, pos", plan.id, "pos"),
+    todas<EscenaBase>("rodaje_escenas", COLUMNAS_ESCENA, plan.id, "orden"),
+    todas<RodajeSeparador>("rodaje_separadores", "id, plan_id, dia_id, unidad_id, titulo, pos", plan.id, "pos"),
     todas<RodajeToma>(
       "rodaje_tomas",
-      "id, plan_id, escena_id, orden, emplazamiento, buena, proteccion, notas, updated_by, updated_at",
+      "id, plan_id, escena_id, unidad_id, orden, emplazamiento, buena, proteccion, notas, updated_by, updated_at",
       plan.id,
       "orden"
     ),
+    todas<RodajeAsignacion>("rodaje_asignaciones", COLUMNAS_ASIGNACION, plan.id, "pos"),
+    todas<RodajeNotaDia>("rodaje_dia_notas", "dia_id, unidad_id, plan_id, nota", plan.id, "dia_id", "unidad_id"),
   ])
-  return { plan: plan as RodajePlan, archivos, guiones, dias, escenas, seps, tomas }
+  return { plan: plan as RodajePlan, archivos, guiones, dias, escenas, seps, tomas, unidades, asignaciones, notas }
 }
 
 export async function crearPlan(projectId: string, userId: string | null): Promise<void> {
@@ -208,7 +225,8 @@ function uuid(): string {
 
 /**
  * Convierte la lectura revisada en guiones y escenas del plan. Las escenas
- * entran en "Sin día asignado", al final, en el orden del guion.
+ * entran al plan de la unidad desde la que se está viendo, en "Sin día
+ * asignado", al final y en el orden del guion.
  */
 export async function aplicarIndice(opciones: {
   datos: DatosPlan
@@ -246,10 +264,15 @@ export async function aplicarIndice(opciones: {
       descripcion: e.descripcion,
       personajes: e.personajes,
       pagina: e.pagina > 0 ? e.pagina : null,
-      dia_id: null,
-      pos: pos++,
     }))
   )
+  const lugares = escenas.map((e) => ({
+    plan_id: planId,
+    escena_id: e.id,
+    unidad_id: datos.unidad.id,
+    dia_id: null,
+    pos: pos++,
+  }))
 
   if (!datos.guiones.length && datos.plan.etiqueta !== etiqueta) {
     const { error } = await supabase.from("rodaje_planes").update({ etiqueta }).eq("id", planId)
@@ -259,13 +282,19 @@ export async function aplicarIndice(opciones: {
   const { error: errG } = await supabase.from("rodaje_guiones").insert(guiones)
   if (errG) throw new Error(errG.message)
 
+  // Si algo falla a medias, el plan queda como estaba: al borrar los guiones
+  // se van sus escenas y su lugar en la unidad.
+  const deshacer = async (mensaje: string): Promise<never> => {
+    await supabase.from("rodaje_guiones").delete().in("id", guiones.map((g) => g.id))
+    throw new Error(mensaje)
+  }
   for (let i = 0; i < escenas.length; i += 200) {
     const { error } = await supabase.from("rodaje_escenas").insert(escenas.slice(i, i + 200))
-    if (error) {
-      // Deja el plan como estaba: al borrar los guiones se van sus escenas.
-      await supabase.from("rodaje_guiones").delete().in("id", guiones.map((g) => g.id))
-      throw new Error(error.message)
-    }
+    if (error) await deshacer(error.message)
+  }
+  for (let i = 0; i < lugares.length; i += 500) {
+    const { error } = await supabase.from("rodaje_asignaciones").insert(lugares.slice(i, i + 500))
+    if (error) await deshacer(error.message)
   }
 
   const { error: errA } = await supabase

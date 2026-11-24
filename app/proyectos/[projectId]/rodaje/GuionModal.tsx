@@ -6,7 +6,7 @@
 import { useEffect, useState, type CSSProperties } from "react"
 import { leerTextoEscenas, textoDeEscena, type DatosPlan } from "../../../../lib/rodaje/datos"
 import { slugEscena } from "../../../../lib/rodaje/orden"
-import { ETIQUETAS, type LineaGuion } from "../../../../lib/rodaje/tipos"
+import { ETIQUETAS, nombrePieza, palabras, type LineaGuion } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
 import { Modal, ResumenTomas, numeroEscena, tomasDeEscena } from "./comun"
 import { C, MONO, avisoAmbar, avisoError, boton, botonVerde, botonVioleta, chipAmbar, vacio } from "./estilos"
@@ -46,6 +46,7 @@ export function GuionModal(props: {
   const { datos, escenaId, lista, puedeEditar, acc, onCambiar } = props
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
   const varias = datos.guiones.length > 1
+  const p = palabras(datos.unidad.tipo)
 
   const escena = datos.escenas.find((e) => e.id === escenaId)
   const guion = escena ? datos.guiones.find((g) => g.id === escena.guion_id) : undefined
@@ -117,7 +118,7 @@ export function GuionModal(props: {
 
   const num = numeroEscena(escena, guion, varias)
   const tomas = tomasDeEscena(datos.tomas, escena.id)
-  const sobre = varias && guion ? `${etq.uno} ${guion.numero} · ${guion.titulo}` : guion?.titulo || "Guion"
+  const sobre = varias && guion ? `${nombrePieza(etq, guion)} · ${guion.titulo}` : guion?.titulo || "Guion"
 
   return (
     <Modal
@@ -148,7 +149,7 @@ export function GuionModal(props: {
           )}
           {puedeEditar && (
             <button type="button" style={escena.filmada ? botonVerde : botonVioleta} onClick={() => acc.marcarFilmada(escena.id, !escena.filmada)}>
-              {escena.filmada ? "✓ Filmada" : "Marcar filmada"}
+              {escena.filmada ? `✓ ${p.hecha}` : p.marcar}
             </button>
           )}
         </>

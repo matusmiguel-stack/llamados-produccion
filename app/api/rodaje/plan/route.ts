@@ -6,10 +6,10 @@ import { ROLES_EDITAN_RODAJE } from "../../../../lib/rodaje/tipos"
 const BUCKET = "guiones"
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// DELETE ?plan=<plan> → borra TODO el plan de rodaje: los guiones con sus
-// escenas y tomas, los días con sus separadores, y los archivos subidos (sus
-// filas y los archivos de Storage). El proyecto queda como si nunca hubiera
-// tenido plan. No se puede deshacer; en el Historial queda quién lo borró y
+// DELETE ?plan=<plan> → borra TODO el plan de rodaje, de todas las unidades:
+// los guiones con sus escenas y tomas, los días con sus separadores, las
+// unidades con su plan de trabajo, y los archivos subidos (sus filas y los
+// archivos de Storage). El proyecto queda como si nunca hubiera tenido plan. No se puede deshacer; en el Historial queda quién lo borró y
 // cuánto había.
 export async function DELETE(req: Request) {
   const user = await verifyApiUser(req)
@@ -39,17 +39,22 @@ export async function DELETE(req: Request) {
 
   // Foto de lo que había, para el Historial. Si algo de esto falla no importa:
   // el borrado sigue.
-  const contar = async (tabla: string, soloFilmadas = false) => {
-    let q = admin.from(tabla).select("id", { count: "exact", head: true }).eq("plan_id", planId)
-    if (soloFilmadas) q = q.eq("filmada", true)
-    const { count } = await q
+  const contar = async (tabla: string) => {
+    const { count } = await admin.from(tabla).select("id", { count: "exact", head: true }).eq("plan_id", planId)
     return count ?? 0
   }
-  const [proyecto, guiones, escenas, filmadas, tomas, dias] = await Promise.all([
+  // "Hecha" = que alguna unidad ya la marcó (cada unidad lleva su avance).
+  const contarHechas = async () => {
+    const { data } = await admin
+      .from("rodaje_asignaciones").select("escena_id").eq("plan_id", planId).eq("filmada", true)
+    return new Set((data || []).map((a) => a.escena_id as string)).size
+  }
+  const [proyecto, unidades, guiones, escenas, hechas, tomas, dias] = await Promise.all([
     admin.from("projects").select("name, code").eq("id", plan.project_id).maybeSingle().then((r) => r.data),
+    admin.from("rodaje_unidades").select("nombre").eq("plan_id", planId).order("orden").then((r) => r.data),
     contar("rodaje_guiones"),
     contar("rodaje_escenas"),
-    contar("rodaje_escenas", true),
+    contarHechas(),
     contar("rodaje_tomas"),
     contar("rodaje_dias"),
   ])
@@ -89,9 +94,10 @@ export async function DELETE(req: Request) {
     old_data: {
       proyecto: nombreProyecto,
       project_id: plan.project_id,
+      unidades: (unidades || []).map((u) => u.nombre),
       guiones,
       escenas,
-      escenas_filmadas: filmadas,
+      escenas_hechas: hechas,
       tomas,
       dias,
       archivos: (archivos || []).map((a) => a.nombre),

@@ -6,10 +6,11 @@
 import { useState } from "react"
 import type { DatosPlan } from "../../../../lib/rodaje/datos"
 import { diasVista, SIN_DIA } from "../../../../lib/rodaje/orden"
-import { ETIQUETAS, type RodajeEscena, type RodajeGuion } from "../../../../lib/rodaje/tipos"
+import { ETIQUETAS, nombrePieza, palabras, type RodajeEscena, type RodajeGuion } from "../../../../lib/rodaje/tipos"
+import { escenasHechas } from "../../../../lib/rodaje/unidades"
 import type { Acciones } from "./PlanRodaje"
 import { Modal } from "./comun"
-import { boton, botonPeligro, botonPrimario, campo, etiquetaCampo } from "./estilos"
+import { C, boton, botonPeligro, botonPrimario, campo, etiquetaCampo } from "./estilos"
 
 const MOMENTOS = ["DÍA", "NOCHE", "AMANECER", "ATARDECER"]
 
@@ -25,9 +26,13 @@ export function EditarEscena(props: {
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
   const guion = datos.guiones.find((g) => g.id === guionId)
   const dias = diasVista(datos.dias)
+  // Una foto de una lista de fotos: mismo formulario, con menos campos.
+  const esFoto = guion?.tipo === "fotos"
+  const cosa = esFoto ? "foto" : "escena"
+  const variasUnidades = datos.unidades.length > 1
 
   const siguiente = () => {
-    const nums = datos.escenas
+    const nums = datos.todas
       .filter((e) => e.guion_id === guionId)
       .map((e) => parseInt(e.numero, 10))
       .filter((n) => Number.isFinite(n))
@@ -41,44 +46,77 @@ export function EditarEscena(props: {
   const [descripcion, setDescripcion] = useState(escena?.descripcion ?? "")
   const [personajes, setPersonajes] = useState((escena?.personajes ?? []).join(", "))
   const [dia, setDia] = useState(escena?.dia_id || SIN_DIA)
+  // En qué unidades está (solo se pregunta cuando hay más de una).
+  const enUnidades = () =>
+    new Set(escena ? datos.asignaciones.filter((a) => a.escena_id === escena.id).map((a) => a.unidad_id) : [datos.unidad.id])
+  const [unidades, setUnidades] = useState<Set<string>>(enUnidades)
 
   function guardar() {
     const num = numero.trim()
     if (!num) {
-      alert("Falta el número de la escena.")
+      alert(`Falta el número de la ${cosa}.`)
+      return
+    }
+    if (esFoto && !locacion.trim()) {
+      alert("Falta decir qué foto es.")
       return
     }
     const campos = {
       numero: num,
-      ie,
-      locacion: locacion.trim().toUpperCase(),
-      momento: momento.trim().toUpperCase(),
+      ie: esFoto ? "" : ie,
+      // El título de una foto se queda como se escribió; la locación va en mayúsculas.
+      locacion: esFoto ? locacion.trim() : locacion.trim().toUpperCase(),
+      momento: esFoto ? "" : momento.trim().toUpperCase(),
       descripcion: descripcion.trim(),
       personajes: [...new Set(personajes.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean))],
       dia_id: dia === SIN_DIA ? null : dia,
     }
-    if (escena) acc.actualizarEscena(escena.id, campos)
-    else acc.crearEscena(guionId, campos)
+    if (!escena) {
+      acc.crearEscena(guionId, campos)
+      props.onCerrar()
+      return
+    }
+
+    // Cambios de unidad: salir de una borra lo que esa unidad ya le marcó.
+    const antes = enUnidades()
+    const salen = datos.unidades.filter((u) => antes.has(u.id) && !unidades.has(u.id))
+    const entran = datos.unidades.filter((u) => !antes.has(u.id) && unidades.has(u.id))
+    const pierden = salen.filter(
+      (u) =>
+        datos.asignaciones.some((a) => a.escena_id === escena.id && a.unidad_id === u.id && a.filmada) ||
+        datos.tomasTodas.some((t) => t.escena_id === escena.id && t.unidad_id === u.id)
+    )
+    if (pierden.length) {
+      const nombres = pierden.map((u) => u.nombre).join(" y ")
+      if (!confirm(`¿Quitar la ${cosa} ${escena.numero} de ${nombres}? Se pierde lo que ya le marcó y sus tomas ahí.`)) return
+    }
+    acc.actualizarEscena(escena.id, campos)
+    for (const u of entran) acc.agregarAUnidad(u.id, [escena.id])
+    for (const u of salen) acc.quitarDeUnidad(u.id, [escena.id])
     props.onCerrar()
   }
 
   function borrar() {
     if (!escena) return
-    if (!confirm(`¿Borrar la escena ${escena.numero}? También se borra su texto.`)) return
+    const aviso = esFoto
+      ? `¿Borrar la foto ${escena.numero}?`
+      : `¿Borrar la escena ${escena.numero}? También se borra su texto.`
+    const deTodas = variasUnidades ? " Se borra de todas las unidades." : ""
+    if (!confirm(aviso + deTodas)) return
     acc.borrarEscena(escena.id)
     props.onCerrar()
   }
 
   return (
     <Modal
-      sobre={guion ? `${etq.uno} ${guion.numero} · ${guion.titulo}` : undefined}
-      titulo={escena ? `Editar escena ${escena.numero}` : "Nueva escena"}
+      sobre={guion ? `${nombrePieza(etq, guion)} · ${guion.titulo}` : undefined}
+      titulo={escena ? `Editar ${cosa} ${escena.numero}` : `Nueva ${cosa}`}
       onCerrar={props.onCerrar}
       pie={
         <>
           {escena && (
             <button type="button" style={{ ...botonPeligro, marginRight: "auto" }} onClick={borrar}>
-              Borrar escena
+              Borrar {cosa}
             </button>
           )}
           <button type="button" style={boton} onClick={props.onCerrar}>Cancelar</button>
@@ -87,48 +125,103 @@ export function EditarEscena(props: {
       }
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "90px minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
-          <label>
-            <span style={etiquetaCampo}>Número</span>
-            <input style={campo} value={numero} onChange={(ev) => setNumero(ev.target.value)} maxLength={12} />
-          </label>
-          <label>
-            <span style={etiquetaCampo}>Int / Ext</span>
-            <select style={{ ...campo, colorScheme: "dark" }} value={ie} onChange={(ev) => setIe(ev.target.value)}>
-              <option value="">—</option>
-              <option value="INT">INT</option>
-              <option value="EXT">EXT</option>
-              <option value="INT/EXT">INT/EXT</option>
-            </select>
-          </label>
-          <label>
-            <span style={etiquetaCampo}>Momento</span>
-            <input style={campo} value={momento} onChange={(ev) => setMomento(ev.target.value)} list="rodaje-momentos" maxLength={30} />
-            <datalist id="rodaje-momentos">
-              {MOMENTOS.map((m) => <option key={m} value={m} />)}
-            </datalist>
-          </label>
-        </div>
+        {esFoto ? (
+          <div style={{ display: "grid", gridTemplateColumns: "90px minmax(0, 1fr)", gap: 10 }}>
+            <label>
+              <span style={etiquetaCampo}>Número</span>
+              <input style={campo} value={numero} onChange={(ev) => setNumero(ev.target.value)} maxLength={12} />
+            </label>
+            <label>
+              <span style={etiquetaCampo}>Foto</span>
+              <input style={campo} value={locacion} onChange={(ev) => setLocacion(ev.target.value)} maxLength={160} placeholder="Qué foto es" />
+            </label>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "90px minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
+              <label>
+                <span style={etiquetaCampo}>Número</span>
+                <input style={campo} value={numero} onChange={(ev) => setNumero(ev.target.value)} maxLength={12} />
+              </label>
+              <label>
+                <span style={etiquetaCampo}>Int / Ext</span>
+                <select style={{ ...campo, colorScheme: "dark" }} value={ie} onChange={(ev) => setIe(ev.target.value)}>
+                  <option value="">—</option>
+                  <option value="INT">INT</option>
+                  <option value="EXT">EXT</option>
+                  <option value="INT/EXT">INT/EXT</option>
+                </select>
+              </label>
+              <label>
+                <span style={etiquetaCampo}>Momento</span>
+                <input style={campo} value={momento} onChange={(ev) => setMomento(ev.target.value)} list="rodaje-momentos" maxLength={30} />
+                <datalist id="rodaje-momentos">
+                  {MOMENTOS.map((m) => <option key={m} value={m} />)}
+                </datalist>
+              </label>
+            </div>
+            <label>
+              <span style={etiquetaCampo}>Locación</span>
+              <input style={campo} value={locacion} onChange={(ev) => setLocacion(ev.target.value)} maxLength={160} />
+            </label>
+          </>
+        )}
         <label>
-          <span style={etiquetaCampo}>Locación</span>
-          <input style={campo} value={locacion} onChange={(ev) => setLocacion(ev.target.value)} maxLength={160} />
+          <span style={etiquetaCampo}>{esFoto ? "Notas" : "Qué pasa"}</span>
+          <textarea style={{ ...campo, minHeight: 64, resize: "vertical" }} value={descripcion} onChange={(ev) => setDescripcion(ev.target.value)} maxLength={esFoto ? 2000 : 240} />
         </label>
         <label>
-          <span style={etiquetaCampo}>Qué pasa</span>
-          <textarea style={{ ...campo, minHeight: 64, resize: "vertical" }} value={descripcion} onChange={(ev) => setDescripcion(ev.target.value)} maxLength={240} />
-        </label>
-        <label>
-          <span style={etiquetaCampo}>Personajes (separados por coma)</span>
+          <span style={etiquetaCampo}>{esFoto ? "Quién sale (separados por coma)" : "Personajes (separados por coma)"}</span>
           <input style={campo} value={personajes} onChange={(ev) => setPersonajes(ev.target.value)} />
         </label>
         <label>
-          <span style={etiquetaCampo}>Día de rodaje</span>
+          <span style={etiquetaCampo}>
+            {variasUnidades ? `Día de rodaje · ${datos.unidad.nombre}` : "Día de rodaje"}
+          </span>
           <select style={{ ...campo, colorScheme: "dark" }} value={dia} onChange={(ev) => setDia(ev.target.value)}>
             {dias.map((d) => (
               <option key={d.clave} value={d.clave}>{d.titulo}</option>
             ))}
           </select>
         </label>
+        {variasUnidades && escena && (
+          <fieldset style={{ margin: 0, padding: 0, border: "none", minWidth: 0 }}>
+            <legend style={{ ...etiquetaCampo, padding: 0 }}>Unidades que la trabajan</legend>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {datos.unidades.map((u) => {
+                const marcada = unidades.has(u.id)
+                return (
+                  <label
+                    key={u.id}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 9, cursor: "pointer",
+                      border: `1px solid ${marcada ? C.violetaBorde : C.linea}`,
+                      background: marcada ? C.violetaFondo : "rgba(255,255,255,0.04)",
+                      color: marcada ? C.violetaClaro : C.texto2, fontSize: 13, fontWeight: 600,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={marcada}
+                      onChange={() =>
+                        setUnidades((prev) => {
+                          const s = new Set(prev)
+                          if (s.has(u.id)) s.delete(u.id)
+                          else s.add(u.id)
+                          return s
+                        })
+                      }
+                    />
+                    {u.nombre}
+                  </label>
+                )
+              })}
+            </div>
+            <p style={{ margin: "6px 0 0", color: C.apagado, fontSize: 12 }}>
+              Cada unidad la ordena, la marca como hecha y califica sus tomas por separado.
+            </p>
+          </fieldset>
+        )}
       </div>
     </Modal>
   )
@@ -142,12 +235,13 @@ export function EditarGuion(props: {
 }) {
   const { datos, guion, acc } = props
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
-  const escenas = datos.escenas.filter((e) => e.guion_id === guion.id)
+  const escenas = datos.todas.filter((e) => e.guion_id === guion.id)
+  const esFotos = guion.tipo === "fotos"
+  const pieza = esFotos ? "Lista de fotos" : etq.uno
 
   const [numero, setNumero] = useState(guion.numero)
   const [titulo, setTitulo] = useState(guion.titulo)
   const [resumen, setResumen] = useState(guion.resumen)
-  const [unidad, setUnidad] = useState(guion.unidad ? String(guion.unidad) : "")
 
   function guardar() {
     const num = numero.trim()
@@ -159,30 +253,34 @@ export function EditarGuion(props: {
       numero: num,
       titulo: titulo.trim(),
       resumen: resumen.trim(),
-      unidad: unidad ? (Number(unidad) as 1 | 2) : null,
     })
     props.onCerrar()
   }
 
   function borrar() {
-    const filmadas = escenas.filter((e) => e.filmada).length
+    // Hecha = que alguna unidad ya la marcó.
+    const hechasPor = escenasHechas(datos.asignaciones)
+    const hechas = escenas.filter((e) => hechasPor.has(e.id)).length
+    const cosas = esFotos ? "fotos" : "escenas"
+    const ya = datos.unidades.length > 1 ? "ya hechas" : `ya ${palabras(datos.unidad.tipo).hechas}`
     const detalle = escenas.length
-      ? ` Se borran también sus ${escenas.length} escenas` + (filmadas ? ` (${filmadas} ya filmadas).` : ".")
+      ? ` Se borran también sus ${escenas.length} ${cosas}` + (hechas ? ` (${hechas} ${ya}).` : ".")
       : ""
-    if (!confirm(`¿Borrar ${etq.uno.toLowerCase()} ${guion.numero} "${guion.titulo}"?${detalle} No se puede deshacer.`)) return
+    const que = esFotos ? "la lista de fotos" : `${etq.uno.toLowerCase()} ${guion.numero}`
+    if (!confirm(`¿Borrar ${que} "${guion.titulo}"?${detalle} No se puede deshacer.`)) return
     acc.borrarGuion(guion.id)
     props.onCerrar()
   }
 
   return (
     <Modal
-      sobre={etq.uno}
-      titulo={`Editar ${etq.uno.toLowerCase()} ${guion.numero}`}
+      sobre={pieza}
+      titulo={esFotos ? "Editar lista de fotos" : `Editar ${etq.uno.toLowerCase()} ${guion.numero}`}
       onCerrar={props.onCerrar}
       pie={
         <>
           <button type="button" style={{ ...botonPeligro, marginRight: "auto" }} onClick={borrar}>
-            Borrar {etq.uno.toLowerCase()}
+            {esFotos ? "Borrar lista" : `Borrar ${etq.uno.toLowerCase()}`}
           </button>
           <button type="button" style={boton} onClick={props.onCerrar}>Cancelar</button>
           <button type="button" style={botonPrimario} onClick={guardar}>Guardar</button>
@@ -196,18 +294,10 @@ export function EditarGuion(props: {
             <input style={campo} value={numero} onChange={(ev) => setNumero(ev.target.value)} maxLength={12} />
           </label>
           <label>
-            <span style={etiquetaCampo}>Unidad de rodaje</span>
-            <select style={{ ...campo, colorScheme: "dark" }} value={unidad} onChange={(ev) => setUnidad(ev.target.value)}>
-              <option value="">Sin asignar</option>
-              <option value="1">Unidad 1</option>
-              <option value="2">Unidad 2</option>
-            </select>
+            <span style={etiquetaCampo}>Título</span>
+            <input style={campo} value={titulo} onChange={(ev) => setTitulo(ev.target.value)} maxLength={160} />
           </label>
         </div>
-        <label>
-          <span style={etiquetaCampo}>Título</span>
-          <input style={campo} value={titulo} onChange={(ev) => setTitulo(ev.target.value)} maxLength={160} />
-        </label>
         <label>
           <span style={etiquetaCampo}>De qué trata</span>
           <textarea style={{ ...campo, minHeight: 80, resize: "vertical" }} value={resumen} onChange={(ev) => setResumen(ev.target.value)} maxLength={600} />

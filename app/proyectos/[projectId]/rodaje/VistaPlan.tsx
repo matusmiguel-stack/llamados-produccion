@@ -6,10 +6,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { DatosPlan } from "../../../../lib/rodaje/datos"
 import { bloquesDia, diasVista, norm, secuenciaDia, slugEscena } from "../../../../lib/rodaje/orden"
-import { ETIQUETAS, type RodajeEscena, type RodajeToma } from "../../../../lib/rodaje/tipos"
+import { ETIQUETAS, nombrePieza, palabras, type RodajeEscena, type RodajeToma } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
 import { BarraProgreso, TarjetaEscena } from "./comun"
-import { C, MONO, boton, botonChico, botonVioleta, campo, chip, chipAmbar, chipVerde, panel, vacio } from "./estilos"
+import { C, MONO, boton, botonChico, botonVioleta, campo, chip, chipVerde, panel, vacio } from "./estilos"
 
 /** Tomas por escena, cada lista en su orden. */
 export function agruparTomas(tomas: RodajeToma[]): Map<string, RodajeToma[]> {
@@ -64,13 +64,16 @@ export function VistaPlan(props: {
   onEditarEscena: (e: RodajeEscena) => void
   onTomas: (e: RodajeEscena) => void
   onOrdenar: () => void
+  /** Ir a la vista por pieza, donde se agregan escenas a la unidad */
+  onAgregarEscenas: () => void
+  onListaFotos: () => void
 }) {
   const { datos, puedeEditar, esMovil, acc } = props
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
+  const p = palabras(datos.unidad.tipo)
 
   const [buscar, setBuscar] = useState("")
   const [soloPendientes, setSoloPendientes] = useState(false)
-  const [unidad, setUnidad] = useState<"" | "1" | "2">("")
   const [colapsadas, alternarColapso, fijarColapsadas] = useConjuntoGuardado(`rodaje-col-${datos.plan.id}`)
 
   // La barra de avance se queda fija arriba al bajar por el plan. (No se usa
@@ -108,17 +111,15 @@ export function VistaPlan(props: {
   const porGuion = useMemo(() => new Map(datos.guiones.map((g) => [g.id, g])), [datos.guiones])
   const tomasPorEscena = useMemo(() => agruparTomas(datos.tomas), [datos.tomas])
   const varias = datos.guiones.length > 1
-  const hayUnidades = datos.guiones.some((g) => g.unidad)
   const dias = useMemo(() => diasVista(datos.dias), [datos.dias])
 
   const q = norm(buscar.trim())
-  const filtrando = !!q || soloPendientes || !!unidad
+  const filtrando = !!q || soloPendientes
 
   const secciones = useMemo(() => {
     const pasa = (e: RodajeEscena) => {
       if (soloPendientes && e.filmada) return false
       const g = porGuion.get(e.guion_id)
-      if (unidad && String(g?.unidad || "") !== unidad) return false
       if (q) {
         const donde = norm(
           [e.numero, g?.numero, g?.titulo, slugEscena(e), e.descripcion, e.personajes.join(" ")].join(" ")
@@ -138,7 +139,7 @@ export function VistaPlan(props: {
         bloques: bloquesDia(visibles),
       }
     })
-  }, [dias, datos.escenas, datos.seps, datos.guiones, porGuion, q, soloPendientes, unidad, filtrando])
+  }, [dias, datos.escenas, datos.seps, datos.guiones, porGuion, q, soloPendientes, filtrando])
 
   // Orden en que se recorren las escenas con ← → dentro del guion.
   const lista = useMemo(
@@ -155,6 +156,41 @@ export function VistaPlan(props: {
 
   const irA = (clave: string) => {
     document.getElementById(`dia-${clave}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
+  // "escenas filmadas", o "fotos hechas" si la unidad solo trae listas de fotos.
+  const soloFotos = total > 0 && datos.escenas.every((e) => porGuion.get(e.guion_id)?.tipo === "fotos")
+  const cosas = soloFotos ? (total === 1 ? "foto" : "fotos") : total === 1 ? "escena" : "escenas"
+
+  // La unidad todavía no tiene nada que hacer: se le agregan escenas del guion
+  // o una lista de fotos.
+  if (total === 0) {
+    return (
+      <div style={{ ...panel, padding: 14 }}>
+        <div style={{ ...vacio, padding: "30px 20px" }}>
+          <p style={{ margin: 0, color: C.texto, fontSize: 15, fontWeight: 600 }}>
+            {datos.unidad.nombre} todavía no tiene escenas
+          </p>
+          {puedeEditar ? (
+            <>
+              <p style={{ margin: "8px auto 16px", maxWidth: 460 }}>
+                Agrégale escenas del guion (una escena puede estar en varias unidades) o crea una lista de fotos.
+              </p>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <button type="button" style={botonVioleta} onClick={props.onAgregarEscenas}>
+                  Agregar escenas del guion
+                </button>
+                <button type="button" style={boton} onClick={props.onListaFotos}>
+                  + Lista de fotos
+                </button>
+              </div>
+            </>
+          ) : (
+            <p style={{ margin: "8px 0 0" }}>Cuando producción le asigne escenas, aquí vas a ver su plan.</p>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -177,7 +213,7 @@ export function VistaPlan(props: {
             <span style={{ fontFamily: MONO, color: C.verdeClaro }}>{filmadas}</span>
             <span style={{ color: C.apagado }}> de </span>
             <span style={{ fontFamily: MONO }}>{total}</span>
-            <span style={{ color: C.apagado }}> {total === 1 ? "escena filmada" : "escenas filmadas"}</span>
+            <span style={{ color: C.apagado }}> {cosas} {total === 1 ? p.unaHecha : p.hechas}</span>
           </span>
           <span style={{ fontFamily: MONO, color: C.apagado, fontSize: 12 }}>
             {total ? Math.round((filmadas / total) * 100) : 0}%
@@ -221,15 +257,6 @@ export function VistaPlan(props: {
         <button type="button" onClick={() => setSoloPendientes(!soloPendientes)} aria-pressed={soloPendientes} style={soloPendientes ? botonVioleta : boton}>
           Solo pendientes
         </button>
-        {hayUnidades && (
-          <div style={{ display: "inline-flex", gap: 4 }} role="group" aria-label="Unidad">
-            {(["", "1", "2"] as const).map((u) => (
-              <button key={u || "todas"} type="button" onClick={() => setUnidad(u)} aria-pressed={unidad === u} style={unidad === u ? botonVioleta : boton}>
-                {u ? `U${u}` : "Todas"}
-              </button>
-            ))}
-          </div>
-        )}
         {varias && (
           <button
             type="button"
@@ -297,6 +324,7 @@ export function VistaPlan(props: {
                     varias={varias}
                     puedeEditar={puedeEditar}
                     tomas={tomasPorEscena.get(e.id)}
+                    tipoUnidad={datos.unidad.tipo}
                     onFilmada={(v) => acc.marcarFilmada(e.id, v)}
                     onGuion={() => props.onGuion(e.id, lista)}
                     onEditar={() => props.onEditarEscena(e)}
@@ -317,12 +345,11 @@ export function VistaPlan(props: {
                     >
                       <span style={{ color: C.apagado, fontSize: 11, width: 10 }}>{cerrada ? "▸" : "▾"}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violetaClaro, whiteSpace: "nowrap" }}>
-                        {etq.uno} {g?.numero}
+                        {nombrePieza(etq, g)}
                       </span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: C.texto, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {g?.titulo}
                       </span>
-                      {g?.unidad && <span style={chipAmbar}>U{g.unidad}</span>}
                       <span style={hechas === b.c.escenas.length ? chipVerde : chip}>
                         <span style={{ fontFamily: MONO }}>{hechas}/{b.c.escenas.length}</span>
                       </span>

@@ -7,7 +7,7 @@ import { useState } from "react"
 import type { DatosPlan } from "../../../../lib/rodaje/datos"
 import { slugEscena } from "../../../../lib/rodaje/orden"
 import {
-  ETIQUETAS, MAX_TOMAS_POR_ESCENA,
+  ETIQUETAS, MAX_TOMAS_POR_ESCENA, nombrePieza,
   type FilaToma, type RodajeEscena,
 } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
@@ -46,10 +46,15 @@ export function EditarTomas(props: {
 
   return (
     <Modal
-      sobre={varias && guion ? `${etq.uno} ${guion.numero} · ${guion.titulo}` : "Tomas"}
+      sobre={
+        [
+          varias && guion ? `${nombrePieza(etq, guion)} · ${guion.titulo}` : "Tomas",
+          datos.unidades.length > 1 ? datos.unidad.nombre : "",
+        ].filter(Boolean).join(" · ")
+      }
       titulo={
         <>
-          Tomas de la escena <span style={{ fontFamily: MONO, color: C.violetaClaro }}>{num}</span>
+          Tomas de la {guion?.tipo === "fotos" ? "foto" : "escena"} <span style={{ fontFamily: MONO, color: C.violetaClaro }}>{num}</span>
           <span style={{ display: "block", marginTop: 3, color: C.apagado, fontSize: 12.5, fontWeight: 400 }}>
             {slugEscena(escena)}
           </span>

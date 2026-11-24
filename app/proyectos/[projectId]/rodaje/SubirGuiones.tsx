@@ -435,10 +435,17 @@ export function SubirGuiones(props: {
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap", marginTop: 12 }}>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
+                  {datos.unidades.length > 1 && (
+                    <span style={{ marginRight: "auto", color: C.apagado, fontSize: 12 }}>
+                      Las escenas entran al plan de {datos.unidad.nombre}. Después las puedes pasar a otras unidades.
+                    </span>
+                  )}
                   <button type="button" style={botonPeligro} onClick={() => quitar(a)} disabled={aplicando === a.id}>Descartar</button>
                   <button type="button" style={botonPrimario} onClick={() => aplicar(a)} disabled={aplicando === a.id}>
-                    {aplicando === a.id ? "Agregando…" : "Agregar al plan"}
+                    {aplicando === a.id
+                      ? "Agregando…"
+                      : datos.unidades.length > 1 ? `Agregar al plan de ${datos.unidad.nombre}` : "Agregar al plan"}
                   </button>
                 </div>
               </>

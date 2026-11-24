@@ -7,6 +7,7 @@
 import { useState } from "react"
 import type { DatosPlan } from "../../../../lib/rodaje/datos"
 import { ETIQUETAS } from "../../../../lib/rodaje/tipos"
+import { escenasHechas } from "../../../../lib/rodaje/unidades"
 import { Modal } from "./comun"
 import { C, MONO, avisoError, boton, botonPeligro, campo, etiquetaCampo } from "./estilos"
 
@@ -27,21 +28,29 @@ export function BorrarTodo(props: {
   const [borrando, setBorrando] = useState(false)
   const [error, setError] = useState("")
 
-  const filmadas = datos.escenas.filter((e) => e.filmada).length
+  // Se borra el plan de TODAS las unidades, no solo el de la que se está viendo.
+  const variasUnidades = datos.unidades.length > 1
+  const hechas = escenasHechas(datos.asignaciones).size
   const conTomas = new Set(
-    datos.tomas.filter((t) => t.emplazamiento || t.buena || t.proteccion || t.notas).map((t) => t.escena_id)
+    datos.tomasTodas.filter((t) => t.emplazamiento || t.buena || t.proteccion || t.notas).map((t) => t.escena_id)
   ).size
-  const nGuiones = datos.guiones.length
-  const nEscenas = datos.escenas.length
+  const nGuiones = datos.guiones.filter((g) => g.tipo !== "fotos").length
+  const nListas = datos.guiones.length - nGuiones
+  const nEscenas = datos.todas.length
   const nDias = datos.dias.length
   const nArchivos = datos.archivos.length
+  const yaHechas = variasUnidades
+    ? hechas === 1 ? "1 ya hecha" : `${hechas} ya hechas`
+    : hechas === 1 ? "1 ya filmada" : `${hechas} ya filmadas`
 
   const renglones: Renglon[] = [
+    { n: variasUnidades ? datos.unidades.length : 0, texto: "unidades, cada una con su plan" },
     { n: nGuiones, texto: (nGuiones === 1 ? etq.uno : etq.varios).toLowerCase() },
+    { n: nListas, texto: nListas === 1 ? "lista de fotos" : "listas de fotos" },
     {
       n: nEscenas,
       texto: nEscenas === 1 ? "escena" : "escenas",
-      detalle: filmadas ? (filmadas === 1 ? "1 ya filmada" : `${filmadas} ya filmadas`) : "",
+      detalle: hechas ? yaHechas : "",
     },
     { n: conTomas, texto: conTomas === 1 ? "escena con tomas calificadas" : "escenas con tomas calificadas" },
     { n: nDias, texto: nDias === 1 ? "día de rodaje" : "días de rodaje" },
