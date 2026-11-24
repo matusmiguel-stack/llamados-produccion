@@ -1,26 +1,34 @@
 "use client"
 
-// Menú de PDF: el plan de trabajo (completo, por día o por unidad) y el reporte
-// de tomas buenas (en orden de guion o de rodaje).
+// Menú de PDF: el plan de trabajo (completo o por día) y el reporte de tomas
+// buenas (en orden de guion o de rodaje). Cada PDF es de una unidad; si el plan
+// tiene varias, aquí se elige de cuál.
 
-import { useState, type ReactNode } from "react"
-import type { DatosPlan } from "../../../../lib/rodaje/datos"
+import { useMemo, useState, type ReactNode } from "react"
+import type { DatosCrudos } from "../../../../lib/rodaje/datos"
 import { diasVista } from "../../../../lib/rodaje/orden"
 import { descargarPlanPDF, descargarTomasPDF } from "../../../../lib/rodaje/pdf"
 import { ETIQUETAS } from "../../../../lib/rodaje/tipos"
+import { proyectar } from "../../../../lib/rodaje/unidades"
 import { Modal } from "./comun"
-import { C, MONO, avisoError, boton, etiquetaCampo } from "./estilos"
+import { C, MONO, avisoError, boton, botonVioleta, etiquetaCampo } from "./estilos"
 
-export function ExportarPDF(props: { datos: DatosPlan; proyecto: string; onCerrar: () => void }) {
-  const { datos, proyecto } = props
+export function ExportarPDF(props: {
+  crudos: DatosCrudos
+  /** La unidad que se está viendo: es la que sale elegida */
+  unidadId: string
+  proyecto: string
+  onCerrar: () => void
+}) {
+  const { crudos, proyecto } = props
+  const [unidadId, setUnidadId] = useState(props.unidadId)
+  const datos = useMemo(() => proyectar(crudos, unidadId), [crudos, unidadId])
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [error, setError] = useState("")
 
   const dias = diasVista(datos.dias)
   const enDia = (id: string | null) => datos.escenas.filter((e) => (e.dia_id || null) === id).length
-  const unidadDe = new Map(datos.guiones.map((g) => [g.id, g.unidad]))
-  const enUnidad = (u: 1 | 2) => datos.escenas.filter((e) => unidadDe.get(e.guion_id) === u).length
   const conTomas = new Set(
     datos.tomas.filter((t) => t.emplazamiento || t.buena || t.proteccion || t.notas).map((t) => t.escena_id)
   ).size
@@ -55,14 +63,35 @@ export function ExportarPDF(props: { datos: DatosPlan; proyecto: string; onCerra
   )
 
   const esc = (n: number) => `${n} esc.`
+  const variasUnidades = datos.unidades.length > 1
 
   return (
     <Modal titulo="Descargar PDF" sobre="Plan de rodaje" ancho={520} onCerrar={props.onCerrar}>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 18 }}>
         {error && <div style={avisoError}>{error}</div>}
 
+        {variasUnidades && (
+          <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6 }}>
+            <span style={etiquetaCampo}>Unidad</span>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }} role="group" aria-label="Unidad del PDF">
+              {datos.unidades.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  aria-pressed={u.id === datos.unidad.id}
+                  disabled={!!ocupado}
+                  onClick={() => setUnidadId(u.id)}
+                  style={u.id === datos.unidad.id ? botonVioleta : boton}
+                >
+                  {u.nombre}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6 }}>
-          <span style={etiquetaCampo}>Plan de trabajo</span>
+          <span style={etiquetaCampo}>Plan de trabajo{variasUnidades ? ` · ${datos.unidad.nombre}` : ""}</span>
           {opcion("plan:todo", "Plan completo", esc(datos.escenas.length), () =>
             descargarPlanPDF(datos, proyecto, { tipo: "todo" })
           )}
@@ -77,17 +106,10 @@ export function ExportarPDF(props: { datos: DatosPlan; proyecto: string; onCerra
             opcion("plan:sin-dia", "Sin día asignado", esc(enDia(null)), () =>
               descargarPlanPDF(datos, proyecto, { tipo: "dia", diaId: null })
             )}
-          {([1, 2] as const)
-            .filter((u) => enUnidad(u) > 0)
-            .map((u) =>
-              opcion(`plan:u${u}`, `Unidad ${u} · plan completo`, esc(enUnidad(u)), () =>
-                descargarPlanPDF(datos, proyecto, { tipo: "unidad", unidad: u })
-              )
-            )}
         </section>
 
         <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6 }}>
-          <span style={etiquetaCampo}>Reporte de tomas buenas</span>
+          <span style={etiquetaCampo}>Reporte de tomas buenas{variasUnidades ? ` · ${datos.unidad.nombre}` : ""}</span>
           {opcion("tomas:guion", "Orden del guion", `por ${etq.uno.toLowerCase()}`, () =>
             descargarTomasPDF(datos, proyecto, "guion")
           )}

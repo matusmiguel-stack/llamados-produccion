@@ -6,13 +6,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { supabase } from "../../../../lib/supabase"
 import type { AppProfile } from "../../../../lib/session-profile"
-import { borrarPlanCompleto, cargarPlan, crearPlan, type DatosPlan } from "../../../../lib/rodaje/datos"
-import { aplicarCambios, siguientePos, type CambioOrden } from "../../../../lib/rodaje/orden"
+import { borrarPlanCompleto, cargarPlan, crearPlan, type DatosCrudos } from "../../../../lib/rodaje/datos"
+import type { CambioOrden } from "../../../../lib/rodaje/orden"
 import { armarTandas, escenasSinTexto, leerTandas, type Progreso } from "../../../../lib/rodaje/lectura"
 import {
-  ETIQUETAS, MAX_TOMAS_POR_ESCENA, puedeEditarRodaje,
-  type Etiqueta, type FilaToma, type RodajeDia, type RodajeEscena, type RodajeGuion, type RodajeToma,
+  ETIQUETAS, MAX_TOMAS_POR_ESCENA, MAX_UNIDADES, puedeEditarRodaje,
+  type EscenaBase, type Etiqueta, type FilaToma, type RodajeDia, type RodajeEscena,
+  type RodajeGuion, type RodajeToma, type RodajeUnidad, type TipoUnidad,
 } from "../../../../lib/rodaje/tipos"
+import {
+  aplicarOrden, nombreUnidadNueva, numeroListaFotos, proyectar, siguientePosEn, unidadActual,
+} from "../../../../lib/rodaje/unidades"
 import { BarraProgreso } from "./comun"
 import {
   C, aviso, avisoAmbar, avisoError, boton, botonChico, botonPeligro, botonPrimario, botonVioleta, panel, vacio,
@@ -26,7 +30,10 @@ import { EditarEscena, EditarGuion } from "./Editores"
 import { EditarTomas } from "./Tomas"
 import { ExportarPDF } from "./ExportarPDF"
 import { BorrarTodo } from "./BorrarTodo"
+import { AdministrarUnidades, SelectorUnidad } from "./Unidades"
+import { NuevaListaFotos } from "./ListaFotos"
 
+/** Lo que se captura de una escena; dia_id es su día en la unidad que se está viendo. */
 export type CamposEscena = Pick<
   RodajeEscena,
   "numero" | "ie" | "locacion" | "momento" | "descripcion" | "personajes" | "dia_id"
@@ -42,7 +49,7 @@ export type Acciones = {
   crearSeparador: (diaId: string, titulo: string, id?: string) => void
   renombrarSeparador: (id: string, titulo: string) => void
   borrarSeparador: (id: string) => void
-  actualizarGuion: (id: string, cambios: Partial<Pick<RodajeGuion, "numero" | "titulo" | "resumen" | "unidad">>) => void
+  actualizarGuion: (id: string, cambios: Partial<Pick<RodajeGuion, "numero" | "titulo" | "resumen">>) => void
   borrarGuion: (id: string) => void
   crearEscena: (guionId: string, campos: CamposEscena) => void
   actualizarEscena: (id: string, campos: Partial<CamposEscena>) => void
@@ -51,6 +58,17 @@ export type Acciones = {
   /** Reemplaza las tomas de la escena por las del formulario (los renglones vacíos se descartan) */
   guardarTomas: (escenaId: string, filas: FilaToma[]) => void
   leerTextoPendiente: () => void
+  /** Crea una unidad con el primer nombre libre y devuelve su id (null si ya no caben más) */
+  crearUnidad: (tipo: TipoUnidad) => string | null
+  actualizarUnidad: (id: string, cambios: Partial<Pick<RodajeUnidad, "nombre" | "tipo">>) => void
+  /** Borra la unidad con su plan; las escenas siguen en las demás unidades */
+  borrarUnidad: (id: string) => void
+  /** Mete escenas al plan de una unidad, en "Sin día asignado" y en el orden en que vienen */
+  agregarAUnidad: (unidadId: string, escenaIds: string[]) => void
+  /** Saca escenas del plan de una unidad (se pierde su avance y sus tomas en esa unidad) */
+  quitarDeUnidad: (unidadId: string, escenaIds: string[]) => void
+  /** Crea una lista de fotos (una pieza con una "escena" por foto) en el plan de una unidad */
+  crearListaFotos: (titulo: string, fotos: string[], unidadId: string) => void
 }
 
 type Vista = "plan" | "guiones" | "ordenar" | "subir"
@@ -67,7 +85,32 @@ export function PlanRodaje(props: {
   const { projectId, perfil, esMovil } = props
   const puedeEditar = puedeEditarRodaje(perfil.role)
 
-  const [datos, setDatos] = useState<DatosPlan | null>(null)
+  // Lo que hay en la base. Las vistas reciben `datos`: el plan visto desde la
+  // unidad elegida (ver proyectar).
+  const [crudos, setDatos] = useState<DatosCrudos | null>(null)
+  // Cada quien recuerda su unidad en este navegador: foto abre en Foto.
+  const claveUnidad = `rodaje-unidad-${projectId}`
+  const [unidadSel, setUnidadSel] = useState<string | null>(() => {
+    try {
+      return window.localStorage.getItem(claveUnidad)
+    } catch {
+      return null
+    }
+  })
+  const unidadRef = useRef<string | null>(unidadSel)
+  const elegirUnidad = useCallback(
+    (id: string) => {
+      unidadRef.current = id
+      setUnidadSel(id)
+      try {
+        window.localStorage.setItem(claveUnidad, id)
+      } catch {
+        // Sin almacenamiento (modo privado): funciona igual, solo no se recuerda.
+      }
+    },
+    [claveUnidad]
+  )
+  const datos = useMemo(() => (crudos ? proyectar(crudos, unidadSel) : null), [crudos, unidadSel])
   const [estado, setEstado] = useState<"cargando" | "listo" | "error">("cargando")
   const [errorCarga, setErrorCarga] = useState("")
   const [vista, setVista] = useState<Vista>("plan")
@@ -79,8 +122,10 @@ export function PlanRodaje(props: {
   const [tomasDe, setTomasDe] = useState<string | null>(null)
   const [pdfAbierto, setPdfAbierto] = useState(false)
   const [borrarAbierto, setBorrarAbierto] = useState(false)
+  const [unidadesAbierto, setUnidadesAbierto] = useState(false)
+  const [fotosAbierto, setFotosAbierto] = useState(false)
 
-  const datosRef = useRef<DatosPlan | null>(null)
+  const datosRef = useRef<DatosCrudos | null>(null)
   const lecturaRef = useRef({ activa: false, cancelada: false })
   // Cambios propios: cuántos se han hecho y cuántos siguen guardándose. Sirve
   // para no pintar una recarga que se pidió antes de que el cambio llegara.
@@ -101,6 +146,8 @@ export function PlanRodaje(props: {
     setTomasDe(null)
     setPdfAbierto(false)
     setBorrarAbierto(false)
+    setUnidadesAbierto(false)
+    setFotosAbierto(false)
     setVista("plan")
   }, [])
 
@@ -160,7 +207,7 @@ export function PlanRodaje(props: {
   // ── Tiempo real ─────────────────────────────────────────────────────────────
   // Cualquier cambio de otra persona (o de la lectura de la IA) vuelve a cargar
   // el plan. Se junta en una sola recarga si llegan varios seguidos.
-  const planId = datos?.plan.id || null
+  const planId = crudos?.plan.id || null
   useEffect(() => {
     let cancelado = false
     let canal: ReturnType<typeof supabase.channel> | null = null
@@ -194,6 +241,7 @@ export function PlanRodaje(props: {
       const tablas = [
         "rodaje_planes", "rodaje_archivos", "rodaje_guiones",
         "rodaje_dias", "rodaje_escenas", "rodaje_separadores", "rodaje_tomas",
+        "rodaje_unidades", "rodaje_asignaciones", "rodaje_dia_notas",
       ]
       let c = supabase.channel(`rodaje-${projectId}`)
       for (const table of tablas) {
@@ -232,7 +280,7 @@ export function PlanRodaje(props: {
   // Primero se pinta el cambio y luego se guarda; si el servidor lo rechaza, se
   // avisa y se vuelve a cargar lo que realmente quedó.
   const mutar = useCallback(
-    async (local: (d: DatosPlan) => DatosPlan, remoto: () => Resultado, queFallo: string) => {
+    async (local: (d: DatosCrudos) => DatosCrudos, remoto: () => Resultado, queFallo: string) => {
       // datosRef es la copia al momento: dos acciones seguidas ven el cambio
       // de la anterior sin esperar a que React vuelva a pintar.
       const base = datosRef.current
@@ -288,30 +336,45 @@ export function PlanRodaje(props: {
   const acc: Acciones = useMemo(() => {
     const ahora = () => new Date().toISOString()
     const id = () => crypto.randomUUID()
+    // La unidad que se está viendo: es en la que caen los cambios del plan.
+    const u = () => unidadActual(datosRef.current?.unidades || [], unidadRef.current)?.id || ""
+    const SIN_AVANCE = { filmada: false, filmada_at: null, filmada_por: null }
 
     return {
       recargar,
       leerTextoPendiente,
 
       marcarFilmada(escenaId, valor) {
+        const unidad = u()
         const cambio = {
           filmada: valor,
           filmada_at: valor ? ahora() : null,
           filmada_por: valor ? perfil.id : null,
         }
         mutar(
-          (d) => ({ ...d, escenas: d.escenas.map((e) => (e.id === escenaId ? { ...e, ...cambio } : e)) }),
-          () => supabase.from("rodaje_escenas").update({ ...cambio, updated_at: ahora() }).eq("id", escenaId),
+          (d) => ({
+            ...d,
+            asignaciones: d.asignaciones.map((a) =>
+              a.escena_id === escenaId && a.unidad_id === unidad ? { ...a, ...cambio } : a
+            ),
+          }),
+          () =>
+            supabase
+              .from("rodaje_asignaciones")
+              .update({ ...cambio, updated_at: ahora() })
+              .eq("escena_id", escenaId)
+              .eq("unidad_id", unidad),
           "guardar la escena"
         )
       },
 
       guardarOrden(cambios) {
         const d = datosRef.current
+        const unidad = u()
         if (!d || !cambios.length) return
         mutar(
-          (x) => ({ ...x, ...aplicarCambios(x.escenas, x.seps, cambios) }),
-          () => supabase.rpc("rodaje_guardar_orden", { p_plan: d.plan.id, p_items: cambios }),
+          (x) => ({ ...x, ...aplicarOrden(x, unidad, cambios) }),
+          () => supabase.rpc("rodaje_guardar_orden_unidad", { p_plan: d.plan.id, p_unidad: unidad, p_items: cambios }),
           "guardar el orden"
         )
       },
@@ -328,32 +391,63 @@ export function PlanRodaje(props: {
       },
 
       actualizarDia(diaId, cambios) {
-        mutar(
-          (x) => ({ ...x, dias: x.dias.map((dd) => (dd.id === diaId ? { ...dd, ...cambios } : dd)) }),
-          () => supabase.from("rodaje_dias").update(cambios).eq("id", diaId),
-          "guardar el día"
-        )
+        const d = datosRef.current
+        const unidad = u()
+        if (!d) return
+        // La fecha es del día (igual para todas las unidades); la nota de
+        // llamado es de la unidad que la escribe.
+        if ("fecha" in cambios) {
+          const fecha = cambios.fecha ?? null
+          mutar(
+            (x) => ({ ...x, dias: x.dias.map((dd) => (dd.id === diaId ? { ...dd, fecha } : dd)) }),
+            () => supabase.from("rodaje_dias").update({ fecha }).eq("id", diaId),
+            "guardar el día"
+          )
+        }
+        if ("nota" in cambios) {
+          const fila = { dia_id: diaId, unidad_id: unidad, plan_id: d.plan.id, nota: cambios.nota || "" }
+          mutar(
+            (x) => ({
+              ...x,
+              notas: [...x.notas.filter((n) => !(n.dia_id === diaId && n.unidad_id === unidad)), fila],
+            }),
+            () => supabase.from("rodaje_dia_notas").upsert(fila, { onConflict: "dia_id,unidad_id" }),
+            "guardar la nota del día"
+          )
+        }
       },
 
       borrarDia(diaId) {
         const d = datosRef.current
         if (!d) return
-        // Sus escenas regresan a "Sin día asignado", al final.
-        let pos = siguientePos(null, d.escenas, d.seps)
-        const cambios: CambioOrden[] = d.escenas
-          .filter((e) => e.dia_id === diaId)
-          .sort((a, b) => a.pos - b.pos)
-          .map((e) => ({ t: "e" as const, id: e.id, dia: null, pos: pos++ }))
+        // El día se borra para todas las unidades: en cada una, sus escenas de
+        // ese día regresan a "Sin día asignado", al final.
+        const porUnidad = d.unidades
+          .map((un) => {
+            let pos = siguientePosEn(d, un.id, null)
+            const cambios: CambioOrden[] = d.asignaciones
+              .filter((a) => a.unidad_id === un.id && a.dia_id === diaId)
+              .sort((a, b) => a.pos - b.pos)
+              .map((a) => ({ t: "e" as const, id: a.escena_id, dia: null, pos: pos++ }))
+            return { unidad: un.id, cambios }
+          })
+          .filter((x) => x.cambios.length)
         mutar(
-          (x) => ({
-            ...x,
-            dias: x.dias.filter((dd) => dd.id !== diaId),
-            seps: x.seps.filter((s) => s.dia_id !== diaId),
-            escenas: aplicarCambios(x.escenas, x.seps, cambios).escenas,
-          }),
+          (x) => {
+            let y = x
+            for (const p of porUnidad) y = { ...y, ...aplicarOrden(y, p.unidad, p.cambios) }
+            return {
+              ...y,
+              dias: y.dias.filter((dd) => dd.id !== diaId),
+              seps: y.seps.filter((s) => s.dia_id !== diaId),
+              notas: y.notas.filter((n) => n.dia_id !== diaId),
+            }
+          },
           async () => {
-            if (cambios.length) {
-              const r = await supabase.rpc("rodaje_guardar_orden", { p_plan: d.plan.id, p_items: cambios })
+            for (const p of porUnidad) {
+              const r = await supabase.rpc("rodaje_guardar_orden_unidad", {
+                p_plan: d.plan.id, p_unidad: p.unidad, p_items: p.cambios,
+              })
               if (r.error) return r
             }
             return supabase.from("rodaje_dias").delete().eq("id", diaId)
@@ -364,8 +458,12 @@ export function PlanRodaje(props: {
 
       crearSeparador(diaId, titulo, sepId) {
         const d = datosRef.current
+        const unidad = u()
         if (!d) return
-        const sep = { id: sepId || id(), plan_id: d.plan.id, dia_id: diaId, titulo, pos: siguientePos(diaId, d.escenas, d.seps) }
+        const sep = {
+          id: sepId || id(), plan_id: d.plan.id, dia_id: diaId, unidad_id: unidad, titulo,
+          pos: siguientePosEn(d, unidad, diaId),
+        }
         mutar(
           (x) => ({ ...x, seps: [...x.seps, sep] }),
           () => supabase.from("rodaje_separadores").insert(sep),
@@ -399,12 +497,16 @@ export function PlanRodaje(props: {
 
       borrarGuion(guionId) {
         mutar(
-          (x) => ({
-            ...x,
-            guiones: x.guiones.filter((g) => g.id !== guionId),
-            escenas: x.escenas.filter((e) => e.guion_id !== guionId),
-            tomas: x.tomas.filter((t) => x.escenas.some((e) => e.id === t.escena_id && e.guion_id !== guionId)),
-          }),
+          (x) => {
+            const fuera = new Set(x.escenas.filter((e) => e.guion_id === guionId).map((e) => e.id))
+            return {
+              ...x,
+              guiones: x.guiones.filter((g) => g.id !== guionId),
+              escenas: x.escenas.filter((e) => !fuera.has(e.id)),
+              asignaciones: x.asignaciones.filter((a) => !fuera.has(a.escena_id)),
+              tomas: x.tomas.filter((t) => !fuera.has(t.escena_id)),
+            }
+          },
           () => supabase.from("rodaje_guiones").delete().eq("id", guionId),
           "borrar"
         )
@@ -412,40 +514,63 @@ export function PlanRodaje(props: {
 
       crearEscena(guionId, campos) {
         const d = datosRef.current
+        const unidad = u()
         if (!d) return
+        const { dia_id: dia, ...contenido } = campos
         const orden = d.escenas.filter((e) => e.guion_id === guionId).reduce((m, e) => Math.max(m, e.orden), -1) + 1
-        const fila = {
-          id: id(),
-          plan_id: d.plan.id,
-          guion_id: guionId,
-          orden,
-          ...campos,
-          encabezado: "",
-          pos: siguientePos(campos.dia_id, d.escenas, d.seps),
-        }
-        const escena: RodajeEscena = {
-          ...fila, pagina: null, tiene_texto: false, filmada: false, filmada_at: null, filmada_por: null,
+        const fila = { id: id(), plan_id: d.plan.id, guion_id: guionId, orden, ...contenido, encabezado: "" }
+        const escena: EscenaBase = { ...fila, pagina: null, tiene_texto: false }
+        // Entra al plan de la unidad que se está viendo, al final de su día.
+        const lugar = {
+          id: id(), plan_id: d.plan.id, escena_id: fila.id, unidad_id: unidad,
+          dia_id: dia || null, pos: siguientePosEn(d, unidad, dia || null),
         }
         mutar(
-          (x) => ({ ...x, escenas: [...x.escenas, escena] }),
-          () => supabase.from("rodaje_escenas").insert(fila),
+          (x) => ({
+            ...x,
+            escenas: [...x.escenas, escena],
+            asignaciones: [...x.asignaciones, { ...lugar, ...SIN_AVANCE }],
+          }),
+          async () => {
+            const r = await supabase.from("rodaje_escenas").insert(fila)
+            if (r.error) return r
+            return supabase.from("rodaje_asignaciones").insert(lugar)
+          },
           "crear la escena"
         )
       },
 
       actualizarEscena(escenaId, campos) {
         const d = datosRef.current
+        const unidad = u()
         if (!d) return
-        const actual = d.escenas.find((e) => e.id === escenaId)
-        if (!actual) return
-        // Si cambia de día, entra al final del día nuevo.
-        const cambiaDia = "dia_id" in campos && (campos.dia_id || null) !== (actual.dia_id || null)
-        const cambio = cambiaDia
-          ? { ...campos, pos: siguientePos(campos.dia_id || null, d.escenas, d.seps) }
-          : campos
+        const { dia_id: dia, ...contenido } = campos
+        // Lo que dice la escena es igual para todas las unidades; el día es el
+        // de la unidad que se está viendo (si cambia, entra al final del nuevo).
+        const actual = d.asignaciones.find((a) => a.escena_id === escenaId && a.unidad_id === unidad)
+        const cambiaDia = "dia_id" in campos && !!actual && (dia || null) !== (actual.dia_id || null)
+        const lugar = cambiaDia ? { dia_id: dia || null, pos: siguientePosEn(d, unidad, dia || null) } : null
+        const hayContenido = Object.keys(contenido).length > 0
+        if (!hayContenido && !lugar) return
         mutar(
-          (x) => ({ ...x, escenas: x.escenas.map((e) => (e.id === escenaId ? { ...e, ...cambio } : e)) }),
-          () => supabase.from("rodaje_escenas").update({ ...cambio, updated_at: ahora() }).eq("id", escenaId),
+          (x) => ({
+            ...x,
+            escenas: hayContenido ? x.escenas.map((e) => (e.id === escenaId ? { ...e, ...contenido } : e)) : x.escenas,
+            asignaciones: lugar
+              ? x.asignaciones.map((a) => (a.escena_id === escenaId && a.unidad_id === unidad ? { ...a, ...lugar } : a))
+              : x.asignaciones,
+          }),
+          async () => {
+            if (hayContenido) {
+              const r = await supabase.from("rodaje_escenas").update({ ...contenido, updated_at: ahora() }).eq("id", escenaId)
+              if (r.error || !lugar) return r
+            }
+            return supabase
+              .from("rodaje_asignaciones")
+              .update({ ...lugar, updated_at: ahora() })
+              .eq("escena_id", escenaId)
+              .eq("unidad_id", unidad)
+          },
           "guardar la escena"
         )
       },
@@ -455,6 +580,7 @@ export function PlanRodaje(props: {
           (x) => ({
             ...x,
             escenas: x.escenas.filter((e) => e.id !== escenaId),
+            asignaciones: x.asignaciones.filter((a) => a.escena_id !== escenaId),
             tomas: x.tomas.filter((t) => t.escena_id !== escenaId),
           }),
           () => supabase.from("rodaje_escenas").delete().eq("id", escenaId),
@@ -464,6 +590,7 @@ export function PlanRodaje(props: {
 
       guardarTomas(escenaId, filas) {
         const d = datosRef.current
+        const unidad = u()
         if (!d) return
         const limpio = (v: string, max: number) => (v || "").trim().slice(0, max)
         const nuevas: RodajeToma[] = filas
@@ -481,13 +608,17 @@ export function PlanRodaje(props: {
             id: f.id || id(),
             plan_id: d.plan.id,
             escena_id: escenaId,
+            unidad_id: unidad,
             orden: i,
             updated_by: perfil.id,
             updated_at: ahora(),
           }))
         const quedan = nuevas.map((t) => t.id)
+        // Las tomas son de la unidad: las que otra unidad le calificó a la
+        // misma escena no se tocan.
+        const deOtra = (t: RodajeToma) => t.escena_id !== escenaId || (!!t.unidad_id && t.unidad_id !== unidad)
         mutar(
-          (x) => ({ ...x, tomas: [...x.tomas.filter((t) => t.escena_id !== escenaId), ...nuevas] }),
+          (x) => ({ ...x, tomas: [...x.tomas.filter(deOtra), ...nuevas] }),
           async () => {
             // Primero se guardan los renglones y después se quitan los que ya
             // no están: si algo falla a medias, no se pierde lo capturado.
@@ -495,7 +626,7 @@ export function PlanRodaje(props: {
               const r = await supabase.from("rodaje_tomas").upsert(nuevas)
               if (r.error) return r
             }
-            const borrar = supabase.from("rodaje_tomas").delete().eq("escena_id", escenaId)
+            const borrar = supabase.from("rodaje_tomas").delete().eq("escena_id", escenaId).eq("unidad_id", unidad)
             return quedan.length ? borrar.not("id", "in", `(${quedan.join(",")})`) : borrar
           },
           "guardar las tomas"
@@ -509,6 +640,170 @@ export function PlanRodaje(props: {
           (x) => ({ ...x, plan: { ...x.plan, etiqueta } }),
           () => supabase.from("rodaje_planes").update({ etiqueta }).eq("id", d.plan.id),
           "guardar el cambio"
+        )
+      },
+
+      // ── Unidades ──────────────────────────────────────────────────────────────
+      crearUnidad(tipo) {
+        const d = datosRef.current
+        if (!d || d.unidades.length >= MAX_UNIDADES) return null
+        const fila = {
+          id: id(),
+          plan_id: d.plan.id,
+          nombre: nombreUnidadNueva(d.unidades, tipo),
+          tipo,
+          orden: d.unidades.reduce((m, x) => Math.max(m, x.orden), -1) + 1,
+        }
+        mutar(
+          (x) => ({ ...x, unidades: [...x.unidades, { ...fila, created_at: ahora() }] }),
+          () => supabase.from("rodaje_unidades").insert(fila),
+          "crear la unidad"
+        )
+        return fila.id
+      },
+
+      actualizarUnidad(unidadId, cambios) {
+        mutar(
+          (x) => ({ ...x, unidades: x.unidades.map((un) => (un.id === unidadId ? { ...un, ...cambios } : un)) }),
+          () => supabase.from("rodaje_unidades").update(cambios).eq("id", unidadId),
+          "guardar la unidad"
+        )
+      },
+
+      borrarUnidad(unidadId) {
+        const d = datosRef.current
+        if (!d || d.unidades.length <= 1) return
+        mutar(
+          (x) => ({
+            ...x,
+            unidades: x.unidades.filter((un) => un.id !== unidadId),
+            asignaciones: x.asignaciones.filter((a) => a.unidad_id !== unidadId),
+            seps: x.seps.filter((s) => s.unidad_id !== unidadId),
+            tomas: x.tomas.filter((t) => t.unidad_id !== unidadId),
+            notas: x.notas.filter((n) => n.unidad_id !== unidadId),
+          }),
+          () => supabase.from("rodaje_unidades").delete().eq("id", unidadId),
+          "borrar la unidad"
+        )
+      },
+
+      agregarAUnidad(unidadId, escenaIds) {
+        const d = datosRef.current
+        if (!d || !unidadId) return
+        const ya = new Set(d.asignaciones.filter((a) => a.unidad_id === unidadId).map((a) => a.escena_id))
+        let pos = siguientePosEn(d, unidadId, null)
+        const filas = [...new Set(escenaIds)]
+          .filter((e) => !ya.has(e))
+          .map((escena_id) => ({ id: id(), plan_id: d.plan.id, escena_id, unidad_id: unidadId, dia_id: null, pos: pos++ }))
+        if (!filas.length) return
+        mutar(
+          (x) => ({ ...x, asignaciones: [...x.asignaciones, ...filas.map((f) => ({ ...f, ...SIN_AVANCE }))] }),
+          async () => {
+            // Si otra persona ya la agregó, no es error: se queda la que está.
+            for (let i = 0; i < filas.length; i += 500) {
+              const r = await supabase
+                .from("rodaje_asignaciones")
+                .upsert(filas.slice(i, i + 500), { onConflict: "escena_id,unidad_id", ignoreDuplicates: true })
+              if (r.error) return r
+            }
+            return { error: null }
+          },
+          "agregar a la unidad"
+        )
+      },
+
+      quitarDeUnidad(unidadId, escenaIds) {
+        const ids = [...new Set(escenaIds)]
+        if (!unidadId || !ids.length) return
+        const fuera = new Set(ids)
+        mutar(
+          (x) => ({
+            ...x,
+            asignaciones: x.asignaciones.filter((a) => !(a.unidad_id === unidadId && fuera.has(a.escena_id))),
+            tomas: x.tomas.filter((t) => !(t.unidad_id === unidadId && fuera.has(t.escena_id))),
+          }),
+          async () => {
+            // En la base, al irse la escena de la unidad se van sus tomas ahí.
+            for (let i = 0; i < ids.length; i += 100) {
+              const r = await supabase
+                .from("rodaje_asignaciones")
+                .delete()
+                .eq("unidad_id", unidadId)
+                .in("escena_id", ids.slice(i, i + 100))
+              if (r.error) return r
+            }
+            return { error: null }
+          },
+          "quitar de la unidad"
+        )
+      },
+
+      crearListaFotos(titulo, fotos, unidadId) {
+        const d = datosRef.current
+        if (!d || !unidadId || !fotos.length) return
+        const guion: RodajeGuion = {
+          id: id(),
+          plan_id: d.plan.id,
+          archivo_id: null,
+          orden: d.guiones.reduce((m, g) => Math.max(m, g.orden), -1) + 1,
+          numero: numeroListaFotos(d.guiones),
+          titulo: titulo.trim().slice(0, 160) || "Lista de fotos",
+          resumen: "",
+          notas: [],
+          tipo: "fotos",
+        }
+        // Cada renglón es una foto. Lo corto va de título; si no cabe, completo abajo.
+        const escenas: EscenaBase[] = fotos.map((texto, i) => ({
+          id: id(),
+          plan_id: d.plan.id,
+          guion_id: guion.id,
+          orden: i,
+          numero: String(i + 1),
+          encabezado: "",
+          ie: "",
+          locacion: texto.length > 160 ? texto.slice(0, 157).trimEnd() + "…" : texto,
+          momento: "",
+          descripcion: texto.length > 160 ? texto.slice(0, 2000) : "",
+          personajes: [],
+          pagina: null,
+          tiene_texto: false,
+        }))
+        let pos = siguientePosEn(d, unidadId, null)
+        const lugares = escenas.map((e) => ({
+          id: id(), plan_id: d.plan.id, escena_id: e.id, unidad_id: unidadId, dia_id: null, pos: pos++,
+        }))
+        mutar(
+          (x) => ({
+            ...x,
+            guiones: [...x.guiones, guion],
+            escenas: [...x.escenas, ...escenas],
+            asignaciones: [...x.asignaciones, ...lugares.map((l) => ({ ...l, ...SIN_AVANCE }))],
+          }),
+          async () => {
+            const { id: guionId, plan_id, orden, numero, titulo: t, tipo } = guion
+            const r = await supabase.from("rodaje_guiones").insert({ id: guionId, plan_id, orden, numero, titulo: t, tipo })
+            if (r.error) return r
+            // Si algo falla a medias se borra la pieza, y con ella lo que haya entrado.
+            const deshacer = async <T extends { error: { message: string } | null }>(fallo: T): Promise<T> => {
+              await supabase.from("rodaje_guiones").delete().eq("id", guionId)
+              return fallo
+            }
+            for (let i = 0; i < escenas.length; i += 200) {
+              // tiene_texto lo calcula la base: no se manda.
+              const filas = escenas.slice(i, i + 200).map((e) => ({
+                id: e.id, plan_id: e.plan_id, guion_id: e.guion_id, orden: e.orden, numero: e.numero,
+                locacion: e.locacion, descripcion: e.descripcion,
+              }))
+              const re = await supabase.from("rodaje_escenas").insert(filas)
+              if (re.error) return deshacer(re)
+            }
+            for (let i = 0; i < lugares.length; i += 500) {
+              const rl = await supabase.from("rodaje_asignaciones").insert(lugares.slice(i, i + 500))
+              if (rl.error) return deshacer(rl)
+            }
+            return { error: null }
+          },
+          "crear la lista de fotos"
         )
       },
     }
@@ -550,12 +845,16 @@ export function PlanRodaje(props: {
 
   if (estado === "error") {
     const faltaTabla = /rodaje_|relation|schema cache|does not exist/i.test(errorCarga)
+    // La app nueva con la base sin el script de unidades.
+    const faltaUnidades = faltaTabla && /rodaje_unidades|rodaje_asignaciones|rodaje_dia_notas|rodaje_preparar_unidades|unidad_id|\btipo\b/i.test(errorCarga)
     return (
       <div style={panel}>
         <div style={avisoError}>
-          {faltaTabla
-            ? "El plan de rodaje todavía no está instalado en la base de datos. Falta ejecutar el script supabase/migrations/20261109_plan_rodaje.sql en Supabase."
-            : `No se pudo cargar el plan de rodaje: ${errorCarga}`}
+          {faltaUnidades
+            ? "Falta un paso para las unidades de rodaje: ejecutar en Supabase el script supabase/migrations/20261123_rodaje_unidades.sql. Mientras tanto no se pierde nada del plan."
+            : faltaTabla
+              ? "El plan de rodaje todavía no está instalado en la base de datos. Falta ejecutar el script supabase/migrations/20261109_plan_rodaje.sql en Supabase."
+              : `No se pudo cargar el plan de rodaje: ${errorCarga}`}
         </div>
         <button type="button" style={{ ...boton, marginTop: 12 }} onClick={() => { setEstado("cargando"); recargar() }}>
           Reintentar
@@ -593,10 +892,11 @@ export function PlanRodaje(props: {
   const escenaDeTomas = tomasDe && puedeEditar ? datos.escenas.find((e) => e.id === tomasDe) : undefined
   const hayGuiones = datos.guiones.length > 0
   const vistaReal: Vista = !hayGuiones ? "subir" : !puedeEditar && (vista === "ordenar" || vista === "subir") ? "plan" : vista
-  const pendientesTexto = puedeEditar ? escenasSinTexto(datos.escenas, datos.guiones).length : 0
+  const pendientesTexto = puedeEditar ? escenasSinTexto(datos.todas, datos.guiones).length : 0
   const porRevisar = datos.archivos.filter((a) => a.estado !== "aplicado").length
   // Un plan recién generado y vacío no tiene nada que borrar.
-  const hayAlgo = hayGuiones || datos.archivos.length > 0 || datos.dias.length > 0
+  const hayAlgo = hayGuiones || datos.archivos.length > 0 || datos.dias.length > 0 || datos.unidades.length > 1
+  const variasUnidades = datos.unidades.length > 1
 
   const pestana = (v: Vista, texto: string) => (
     <button
@@ -626,6 +926,15 @@ export function PlanRodaje(props: {
             </>
           )}
         </div>
+      )}
+
+      {variasUnidades && (
+        <SelectorUnidad
+          datos={datos}
+          puedeEditar={puedeEditar}
+          onElegir={elegirUnidad}
+          onAdministrar={() => setUnidadesAbierto(true)}
+        />
       )}
 
       {errorCarga && estado === "listo" && (
@@ -684,6 +993,8 @@ export function PlanRodaje(props: {
           onEditarEscena={(e) => setEditEscena({ escena: e, guionId: e.guion_id })}
           onTomas={(e) => setTomasDe(e.id)}
           onOrdenar={() => setVista("ordenar")}
+          onAgregarEscenas={() => setVista("guiones")}
+          onListaFotos={() => setFotosAbierto(true)}
         />
       )}
 
@@ -697,11 +1008,19 @@ export function PlanRodaje(props: {
           onTomas={(e) => setTomasDe(e.id)}
           onNuevaEscena={(guionId) => setEditEscena({ escena: null, guionId })}
           onEditarGuion={(g) => setEditGuion(g)}
+          onUnidades={() => setUnidadesAbierto(true)}
+          onListaFotos={() => setFotosAbierto(true)}
         />
       )}
 
       {vistaReal === "ordenar" && (
-        <ModoOrdenar datos={datos} esMovil={esMovil} acc={acc} onSalir={() => setVista("plan")} />
+        <ModoOrdenar
+          datos={datos}
+          esMovil={esMovil}
+          acc={acc}
+          onUnidades={() => setUnidadesAbierto(true)}
+          onSalir={() => setVista("plan")}
+        />
       )}
 
       {puedeEditar && hayAlgo && vistaReal !== "ordenar" && (
@@ -754,7 +1073,32 @@ export function PlanRodaje(props: {
         <EditarGuion datos={datos} guion={editGuion} acc={acc} onCerrar={() => setEditGuion(null)} />
       )}
 
-      {pdfAbierto && <ExportarPDF datos={datos} proyecto={props.proyecto} onCerrar={() => setPdfAbierto(false)} />}
+      {pdfAbierto && crudos && (
+        <ExportarPDF
+          crudos={crudos}
+          unidadId={datos.unidad.id}
+          proyecto={props.proyecto}
+          onCerrar={() => setPdfAbierto(false)}
+        />
+      )}
+
+      {unidadesAbierto && puedeEditar && (
+        <AdministrarUnidades
+          datos={datos}
+          acc={acc}
+          onElegir={elegirUnidad}
+          onCerrar={() => setUnidadesAbierto(false)}
+        />
+      )}
+
+      {fotosAbierto && puedeEditar && (
+        <NuevaListaFotos
+          datos={datos}
+          acc={acc}
+          onElegir={elegirUnidad}
+          onCerrar={() => setFotosAbierto(false)}
+        />
+      )}
 
       {borrarAbierto && puedeEditar && (
         <BorrarTodo

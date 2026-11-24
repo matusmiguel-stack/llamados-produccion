@@ -2,7 +2,7 @@
 // qué escenas forman un bloque y qué renglones cambian al mover algo.
 // No toca Supabase ni React, para poder probarla sola.
 
-import type { RodajeDia, RodajeEscena, RodajeGuion, RodajeSeparador } from "./tipos"
+import type { EscenaBase, RodajeDia, RodajeEscena, RodajeGuion, RodajeSeparador } from "./tipos"
 
 export const SIN_DIA = "sin-dia"
 
@@ -67,7 +67,8 @@ export function claveDia(diaId: string | null | undefined): string {
 /** Orden del guion: primero por pieza, luego por escena dentro de la pieza. */
 export function comparadorGuion(guiones: RodajeGuion[]) {
   const ord = new Map(guiones.map((g) => [g.id, g.orden]))
-  return (a: RodajeEscena, b: RodajeEscena) =>
+  type Ordenable = Pick<EscenaBase, "id" | "guion_id" | "orden">
+  return (a: Ordenable, b: Ordenable) =>
     (ord.get(a.guion_id) ?? 0) - (ord.get(b.guion_id) ?? 0) ||
     a.orden - b.orden ||
     (a.id < b.id ? -1 : 1)
@@ -302,7 +303,7 @@ export function norm(s: string): string {
 }
 
 /** "INT. CASA / SALA · DÍA" a partir de los campos de la escena. */
-export function slugEscena(e: Pick<RodajeEscena, "ie" | "locacion" | "momento" | "encabezado">): string {
+export function slugEscena(e: Pick<EscenaBase, "ie" | "locacion" | "momento" | "encabezado">): string {
   const loc = [e.ie ? e.ie + "." : "", e.locacion].filter(Boolean).join(" ")
   const base = loc || e.encabezado || "Sin locación"
   return e.momento ? `${base} · ${e.momento}` : base

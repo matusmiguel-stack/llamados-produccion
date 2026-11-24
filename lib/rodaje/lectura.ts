@@ -3,7 +3,7 @@
 // /api/rodaje/leer para que ninguna llamada se acerque al tope de tiempo.
 
 import { ErrorApi, leerTextoEscenas } from "./datos"
-import type { RodajeEscena, RodajeGuion } from "./tipos"
+import type { EscenaBase, RodajeGuion } from "./tipos"
 
 export type Tanda = { archivoId: string; ids: string[]; reintento?: boolean }
 
@@ -11,7 +11,7 @@ const MAX_ESCENAS = 8
 const MAX_PAGINAS = 6
 
 /** Escenas a las que les falta el texto y cuyo archivo original sigue disponible. */
-export function escenasSinTexto(escenas: RodajeEscena[], guiones: RodajeGuion[]): RodajeEscena[] {
+export function escenasSinTexto<E extends EscenaBase>(escenas: E[], guiones: RodajeGuion[]): E[] {
   const conArchivo = new Set(guiones.filter((g) => g.archivo_id).map((g) => g.id))
   return escenas.filter((e) => !e.tiene_texto && conArchivo.has(e.guion_id))
 }
@@ -20,7 +20,7 @@ export function escenasSinTexto(escenas: RodajeEscena[], guiones: RodajeGuion[])
  * Parte las escenas pendientes en tandas por archivo, en el orden del guion.
  * Cada tanda lleva hasta 8 escenas o unas 6 páginas, lo que llegue primero.
  */
-export function armarTandas(escenas: RodajeEscena[], guiones: RodajeGuion[]): Tanda[] {
+export function armarTandas(escenas: EscenaBase[], guiones: RodajeGuion[]): Tanda[] {
   const tandas: Tanda[] = []
   const porGuion = [...guiones]
     .filter((g) => g.archivo_id)

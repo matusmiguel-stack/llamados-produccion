@@ -1,5 +1,6 @@
-// PDF del plan de rodaje: el plan de trabajo (por día, completo o por unidad)
-// y el reporte de tomas buenas (en orden de guion o de rodaje).
+// PDF del plan de rodaje: el plan de trabajo (por día o completo) y el reporte
+// de tomas buenas (en orden de guion o de rodaje). Los dos salen del plan de
+// UNA unidad: reciben el plan ya visto desde esa unidad.
 //
 // Mismo lenguaje visual que la hoja de llamado (lib/exportHojaPdf.ts): imagen
 // de encabezado de Retro con el título al centro, tira morada, cajas de datos,
@@ -9,7 +10,7 @@
 import type { jsPDF as JsPDF } from "jspdf"
 import type { DatosPlan } from "./datos"
 import { bloquesDia, comparadorGuion, diasVista, secuenciaDia, slugEscena, type DiaVista } from "./orden"
-import { ETIQUETAS, type RodajeEscena, type RodajeGuion, type RodajeToma } from "./tipos"
+import { ETIQUETAS, nombrePieza, palabras, type RodajeEscena, type RodajeGuion, type RodajeToma } from "./tipos"
 
 // ── Hoja y colores (los mismos de la hoja de llamado) ─────────────────────────
 const PAGE_W = 215.9
@@ -39,7 +40,6 @@ const C_LIMA = "#c8f068" // el verde del "es" de #TODOesPOSIBLE
 export type AlcancePlan =
   | { tipo: "todo" }
   | { tipo: "dia"; diaId: string | null }
-  | { tipo: "unidad"; unidad: 1 | 2 }
 
 export type OrdenTomas = "guion" | "rodaje"
 
@@ -260,7 +260,13 @@ type Contexto = {
   porGuion: Map<string, RodajeGuion>
   numero: (e: RodajeEscena) => string
   pieza: (g: RodajeGuion | undefined) => string
+  /** Nombre de la unidad, o "" si el plan solo tiene una (no hace falta decirlo) */
+  unidad: string
+  /** "filmada" para video, "hecha" para foto */
+  p: ReturnType<typeof palabras>
 }
+
+const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 
 function contexto(datos: DatosPlan): Contexto {
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
@@ -273,7 +279,9 @@ function contexto(datos: DatosPlan): Contexto {
       const g = porGuion.get(e.guion_id)
       return varias && g ? `${g.numero}.${e.numero}` : e.numero
     },
-    pieza: (g) => (g ? `${etq.uno} ${g.numero}${g.titulo ? " · " + g.titulo : ""}` : etq.uno),
+    pieza: (g) => (g ? `${nombrePieza(etq, g)}${g.titulo ? " · " + g.titulo : ""}` : etq.uno),
+    unidad: datos.unidades.length > 1 ? datos.unidad.nombre : "",
+    p: palabras(datos.unidad.tipo),
   }
 }
 
@@ -281,12 +289,12 @@ function contexto(datos: DatosPlan): Contexto {
 
 export function nombrePlanPDF(datos: DatosPlan, proyecto: string, alcance: AlcancePlan): string {
   let parte = "Plan completo"
-  if (alcance.tipo === "unidad") parte = `Unidad ${alcance.unidad} - Plan completo`
   if (alcance.tipo === "dia") {
     const d = diasVista(datos.dias).find((x) => x.id === alcance.diaId)
     parte = d && d.id ? `Día ${d.n}` : "Sin día asignado"
   }
-  return `Plan de trabajo - ${paraArchivo(proyecto)} - ${parte} - ${hoy()}.pdf`
+  const unidad = datos.unidades.length > 1 ? `${paraArchivo(datos.unidad.nombre)} - ` : ""
+  return `Plan de trabajo - ${paraArchivo(proyecto)} - ${unidad}${parte} - ${hoy()}.pdf`
 }
 
 export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance: AlcancePlan): Promise<JsPDF> {
@@ -295,9 +303,7 @@ export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance
   const p = pincel(doc)
   const ctx = contexto(datos)
 
-  const unidad = alcance.tipo === "unidad" ? alcance.unidad : null
-  const incluye = (e: RodajeEscena) => !unidad || ctx.porGuion.get(e.guion_id)?.unidad === unidad
-  const escenas = datos.escenas.filter(incluye)
+  const escenas = datos.escenas
   const todos = diasVista(datos.dias)
   const dias: DiaVista[] =
     alcance.tipo === "dia"
@@ -308,17 +314,17 @@ export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance
   const diasDeRodaje = dias.filter((d) => d.id).length
 
   const queEs =
-    (unidad ? `Unidad ${unidad} · ` : "") + (alcance.tipo === "dia" ? dias[0]?.titulo || "Día" : "plan completo")
+    (ctx.unidad ? `${ctx.unidad} · ` : "") + (alcance.tipo === "dia" ? dias[0]?.titulo || "Día" : "plan completo")
 
   // Encabezado, tira y cajas de datos
   let y = await encabezado(doc, p, "PLAN DE TRABAJO", queEs)
   y = tira(doc, p, y, fechaCorta(), proyecto)
   y = cajas(doc, p, y, [
     ["Escenas", String(enAlcance.length)],
-    ["Filmadas", String(filmadas)],
-    ["Por filmar", String(enAlcance.length - filmadas)],
+    [mayuscula(ctx.p.hechas), String(filmadas)],
+    [ctx.p.pendientes, String(enAlcance.length - filmadas)],
     ["Días de rodaje", String(diasDeRodaje)],
-    ["Unidad", unidad ? `Unidad ${unidad}` : "Todas"],
+    ["Unidad", datos.unidad.nombre],
   ])
   y += 3
 
@@ -331,12 +337,12 @@ export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance
     { titulo: "ESC.", w: 17 },
     { titulo: "LOCACIÓN / ACCIÓN", w: W - 17 - 48 - 17 },
     { titulo: "PERSONAJES", w: 48 },
-    { titulo: "FILMADA", w: 17, centro: true },
+    { titulo: ctx.p.hecha.toUpperCase(), w: 17, centro: true },
   ]
 
   dias.forEach((d) => {
     const delDia = escenas.filter((e) => (e.dia_id || null) === d.id)
-    const conteo = `${plural(delDia.length, "escena", "escenas")} · ${plural(delDia.filter((e) => e.filmada).length, "filmada", "filmadas")}`
+    const conteo = `${plural(delDia.length, "escena", "escenas")} · ${plural(delDia.filter((e) => e.filmada).length, ctx.p.unaHecha, ctx.p.hechas)}`
     const abrirSeccion = (continua: boolean) => {
       y = barraSeccion(doc, p, y, d.titulo + (continua ? "  (continúa)" : ""), conteo)
       if (d.nota && !continua) y = cajaTexto(doc, p, y, "Nota del día", d.nota)
@@ -346,9 +352,7 @@ export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance
     if (y + 5.5 + 6 + 20 > FONDO) { doc.addPage(); y = MARGIN }
     abrirSeccion(false)
 
-    let bloques = bloquesDia(secuenciaDia(d.id, escenas, datos.seps, datos.guiones))
-    // Al filtrar por unidad, un separador sin escenas debajo ya no dice nada.
-    if (unidad) bloques = bloques.filter((b, i) => b.t !== "sep" || bloques[i + 1]?.t === "corrida")
+    const bloques = bloquesDia(secuenciaDia(d.id, escenas, datos.seps, datos.guiones))
 
     let fila = 0
     for (const b of bloques) {
@@ -363,7 +367,6 @@ export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance
         if (!ctx.varias) return
         y = renglonAncho(doc, p, y, {
           texto: ctx.pieza(g) + (continua ? "  (continúa)" : ""),
-          derecha: g?.unidad ? `UNIDAD ${g.unidad}` : "",
           fondo: C_LILA,
           color: C_MORADO_TEXTO,
         })
@@ -432,14 +435,15 @@ export async function generarPlanPDF(datos: DatosPlan, proyecto: string, alcance
     y += 4
   })
 
-  pie(doc, p, `Plan de trabajo · ${proyecto}`)
+  pie(doc, p, `Plan de trabajo · ${[proyecto, ctx.unidad].filter(Boolean).join(" · ")}`)
   return doc
 }
 
 // ── Reporte de tomas buenas ───────────────────────────────────────────────────
 
-export function nombreTomasPDF(proyecto: string, orden: OrdenTomas): string {
-  return `Reporte de tomas - ${paraArchivo(proyecto)} - ${orden === "rodaje" ? "Orden de rodaje" : "Orden del guion"} - ${hoy()}.pdf`
+export function nombreTomasPDF(datos: DatosPlan, proyecto: string, orden: OrdenTomas): string {
+  const unidad = datos.unidades.length > 1 ? `${paraArchivo(datos.unidad.nombre)} - ` : ""
+  return `Reporte de tomas - ${paraArchivo(proyecto)} - ${unidad}${orden === "rodaje" ? "Orden de rodaje" : "Orden del guion"} - ${hoy()}.pdf`
 }
 
 export async function generarTomasPDF(datos: DatosPlan, proyecto: string, orden: OrdenTomas): Promise<JsPDF> {
@@ -475,17 +479,18 @@ export async function generarTomasPDF(datos: DatosPlan, proyecto: string, orden:
   const tituloOrden = orden === "rodaje" ? "orden de rodaje" : "orden del guion"
 
   // Encabezado, tira y cajas de datos
-  let y = await encabezado(doc, p, "TOMAS BUENAS", `Reporte · ${tituloOrden}`)
+  const hechas = mayuscula(ctx.p.hechas)
+  let y = await encabezado(doc, p, "TOMAS BUENAS", [ctx.unidad, `Reporte · ${tituloOrden}`].filter(Boolean).join(" · "))
   y = tira(doc, p, y, fechaCorta(), proyecto)
   y = cajas(doc, p, y, [
     ["Escenas", String(lista.length)],
-    ["Filmadas", String(nFilmadas)],
+    [hechas, String(nFilmadas)],
     ["Con tomas", String(conTomas)],
-    ["Filmadas sin calificar", String(sinCalificar.length)],
+    [`${hechas} sin calificar`, String(sinCalificar.length)],
     ["Orden", orden === "rodaje" ? "De rodaje" : "Del guion"],
   ])
   if (sinCalificar.length) {
-    y = cajaTexto(doc, p, y, `Filmadas sin calificar (${sinCalificar.length})`, sinCalificar.map((e) => ctx.numero(e)).join(", "), C_AMBAR)
+    y = cajaTexto(doc, p, y, `${hechas} sin calificar (${sinCalificar.length})`, sinCalificar.map((e) => ctx.numero(e)).join(", "), C_AMBAR)
   }
   y += 3
 
@@ -508,14 +513,14 @@ export async function generarTomasPDF(datos: DatosPlan, proyecto: string, orden:
       const d = lugar.get(e.id)?.dia
       const delDia = datos.escenas.filter((x) => (x.dia_id || null) === (d?.id ?? null))
       izq = d?.titulo || "Sin día asignado"
-      der = `${plural(delDia.length, "escena", "escenas")} · ${plural(delDia.filter((x) => x.filmada).length, "filmada", "filmadas")}`
+      der = `${plural(delDia.length, "escena", "escenas")} · ${plural(delDia.filter((x) => x.filmada).length, ctx.p.unaHecha, ctx.p.hechas)}`
     } else {
       const g = ctx.porGuion.get(e.guion_id)
       izq = ctx.pieza(g)
       const ns = [...new Set(
         datos.escenas.filter((x) => x.guion_id === e.guion_id).map((x) => lugar.get(x.id)?.dia.n).filter((n): n is number => !!n)
       )].sort((a, b) => a - b)
-      der = [g?.unidad ? `Unidad ${g.unidad}` : "", ns.length ? `Día ${ns.join(", ")}` : "Sin día asignado"].filter(Boolean).join(" · ")
+      der = ns.length ? `Día ${ns.join(", ")}` : "Sin día asignado"
     }
     y = barraSeccion(doc, p, y, izq + (continua ? "  (continúa)" : ""), der)
     y = cabezaTabla(doc, p, y, COLS)
@@ -534,7 +539,6 @@ export async function generarTomasPDF(datos: DatosPlan, proyecto: string, orden:
     p.fuente("normal", 7.5); const desc = p.partir(e.descripcion, COLS[1].w - 3)
     const meta: string[] = []
     if (orden === "rodaje" && ctx.varias) meta.push(ctx.pieza(g))
-    if (orden === "rodaje" && g?.unidad) meta.push(`Unidad ${g.unidad}`)
     p.fuente("normal", 7); const metaL = p.partir(meta.join(" · "), COLS[1].w - 3)
     const altoEscena = 2.4 + titulo.length * 3.5 + desc.length * 3 + metaL.length * 2.9 + 1.2
     const pos = donde ? (!donde.dia.id ? "s/día" : orden === "rodaje" ? `#${donde.i}` : `D${donde.dia.n} #${donde.i}`) : ""
@@ -552,7 +556,9 @@ export async function generarTomasPDF(datos: DatosPlan, proyecto: string, orden:
         })
       : [{
           emp: [], notas: [], buena: "", prot: "", h: 6.5,
-          aviso: e.filmada ? { texto: "Sin calificar", color: C_AMBAR } : { texto: "Pendiente de filmar", color: C_GRIS_CLARO },
+          aviso: e.filmada
+            ? { texto: "Sin calificar", color: C_AMBAR }
+            : { texto: datos.unidad.tipo === "foto" ? "Pendiente" : "Pendiente de filmar", color: C_GRIS_CLARO },
         }]
     const sumaTomas = renglones.reduce((a, r) => a + r.h, 0)
     if (sumaTomas < altoEscena) renglones[renglones.length - 1].h += altoEscena - sumaTomas
@@ -647,7 +653,7 @@ export async function generarTomasPDF(datos: DatosPlan, proyecto: string, orden:
     doc.text("Este plan todavía no tiene escenas.", X, y + 6)
   }
 
-  pie(doc, p, `Reporte de tomas buenas (${tituloOrden}) · ${proyecto}`)
+  pie(doc, p, `Reporte de tomas buenas (${tituloOrden}) · ${[proyecto, ctx.unidad].filter(Boolean).join(" · ")}`)
   return doc
 }
 
@@ -660,5 +666,5 @@ export async function descargarPlanPDF(datos: DatosPlan, proyecto: string, alcan
 /** Genera el reporte de tomas buenas y lo descarga. */
 export async function descargarTomasPDF(datos: DatosPlan, proyecto: string, orden: OrdenTomas): Promise<void> {
   const doc = await generarTomasPDF(datos, proyecto, orden)
-  doc.save(nombreTomasPDF(proyecto, orden))
+  doc.save(nombreTomasPDF(datos, proyecto, orden))
 }

@@ -1,8 +1,8 @@
 "use client"
 
 // Modo ordenar: se crean los días, se reparten las escenas (arrastrando o con
-// ▲▼), se agregan separadores con título y se asigna la unidad de cada pieza.
-// Cada cambio se guarda solo.
+// ▲▼) y se agregan separadores con título. Se ordena el plan de la unidad que
+// se está viendo; los días son de todas. Cada cambio se guarda solo.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
 import type { DatosPlan } from "../../../../lib/rodaje/datos"
@@ -10,11 +10,11 @@ import {
   cambiosDeFilas, construirFilas, diaDeFila, diasVista, moverADia, moverFila, moverUnPaso, slugEscena,
   SIN_DIA, type Fila,
 } from "../../../../lib/rodaje/orden"
-import { ETIQUETAS } from "../../../../lib/rodaje/tipos"
+import { ETIQUETAS, nombrePieza, palabras } from "../../../../lib/rodaje/tipos"
 import type { Acciones } from "./PlanRodaje"
 import { numeroEscena } from "./comun"
 import { useConjuntoGuardado } from "./VistaPlan"
-import { C, MONO, aviso, botonChico, botonIcono, botonPeligro, botonVerde, botonVioleta, campoChico, chip, chipAmbar, panel } from "./estilos"
+import { C, MONO, aviso, botonChico, botonIcono, botonPeligro, botonVerde, botonVioleta, campoChico, chip, panel } from "./estilos"
 
 const asa: CSSProperties = {
   flexShrink: 0,
@@ -43,10 +43,19 @@ const renglon: CSSProperties = {
   background: "rgba(255,255,255,0.025)",
 }
 
-export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Acciones; onSalir: () => void }) {
+export function ModoOrdenar(props: {
+  datos: DatosPlan
+  esMovil: boolean
+  acc: Acciones
+  onUnidades: () => void
+  onSalir: () => void
+}) {
   const { datos, esMovil, acc } = props
   const etq = ETIQUETAS[datos.plan.etiqueta] || ETIQUETAS.guion
   const varias = datos.guiones.length > 1
+  const unidad = datos.unidad
+  const variasUnidades = datos.unidades.length > 1
+  const p = palabras(unidad.tipo)
 
   const [separados, alternarSeparado] = useConjuntoGuardado(`rodaje-sep-${datos.plan.id}`)
   const [enfocar, setEnfocar] = useState<string | null>(null)
@@ -177,13 +186,57 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
 
   const escenasEn = (clave: string) =>
     datos.escenas.filter((e) => (e.dia_id || SIN_DIA) === clave).length
+  // Escenas que OTRAS unidades tienen ese día: borrar el día también las mueve.
+  const deOtrasEn = (diaId: string) =>
+    datos.asignaciones.filter((a) => a.dia_id === diaId && a.unidad_id !== unidad.id).length
+
+  const tomasDe = useMemo(() => new Set(datos.tomas.map((t) => t.escena_id)), [datos.tomas])
+  /** Saca escenas del plan de esta unidad (solo se ofrece cuando hay varias). */
+  const quitar = (ids: string[], que: string) => {
+    const hechas = ids.filter((id) => porEscena.get(id)?.filmada).length
+    const conTomas = ids.filter((id) => tomasDe.has(id)).length
+    if (hechas || conTomas) {
+      const pierde = [
+        hechas ? `${hechas} ${hechas === 1 ? `marcada como ${p.unaHecha}` : `marcadas como ${p.hechas}`}` : "",
+        conTomas ? `tomas calificadas en ${conTomas}` : "",
+      ].filter(Boolean).join(" y ")
+      if (!confirm(`¿Quitar ${que} de ${unidad.nombre}? Tiene ${pierde}; eso se pierde. La escena sigue en el proyecto.`)) return
+    }
+    acc.quitarDeUnidad(unidad.id, ids)
+  }
+  const botonQuitar = (ids: string[], que: string) =>
+    variasUnidades ? (
+      <button
+        type="button"
+        style={botonIcono}
+        aria-label={`Quitar ${que} de ${unidad.nombre}`}
+        title={`Quitar del plan de ${unidad.nombre} (la escena sigue en el proyecto)`}
+        onClick={() => quitar(ids, que)}
+      >
+        ✕
+      </button>
+    ) : null
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 10 }}>
       <div style={{ ...aviso, display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-        <span>Arrastra con ≡ o usa ▲▼ para mover. Cada cambio se guarda solo.</span>
-        <button type="button" style={botonVerde} onClick={props.onSalir}>Listo</button>
+        <span>
+          {variasUnidades && <strong>Plan de {unidad.nombre}. </strong>}
+          Arrastra con ≡ o usa ▲▼ para mover. Cada cambio se guarda solo.
+        </span>
+        <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" style={botonChico} onClick={props.onUnidades}>
+            {variasUnidades ? "Unidades" : "+ Unidad"}
+          </button>
+          <button type="button" style={botonVerde} onClick={props.onSalir}>Listo</button>
+        </span>
       </div>
+
+      {variasUnidades && datos.escenas.length === 0 && (
+        <div style={{ ...aviso, border: `1px dashed ${C.linea}`, background: "transparent", color: C.tenue }}>
+          {unidad.nombre} todavía no tiene escenas. Agrégalas desde la pestaña {etq.varios} o crea una lista de fotos.
+        </div>
+      )}
 
       <div ref={contenedor} style={{ ...panel, padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6, userSelect: arrastre ? "none" : undefined }}>
         {filas.map((f, i) => {
@@ -232,7 +285,7 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
                         key={`n:${d.nota}`}
                         type="text"
                         defaultValue={d.nota}
-                        placeholder="Nota del día (locación, llamado…)"
+                        placeholder={variasUnidades ? `Nota de ${unidad.nombre} (locación, llamado…)` : "Nota del día (locación, llamado…)"}
                         aria-label={`Nota del día ${d.n}`}
                         onBlur={(ev) => {
                           const v = ev.target.value.trim()
@@ -260,10 +313,15 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
                         aria-label={`Borrar el día ${d.n}`}
                         title="Borrar el día (sus escenas regresan a Sin día)"
                         onClick={() => {
-                          const aviso = n
-                            ? `¿Borrar el Día ${d.n}? Sus ${n} escenas regresan a "Sin día asignado".`
-                            : `¿Borrar el Día ${d.n}?`
-                          if (confirm(aviso)) acc.borrarDia(d.id as string)
+                          const otras = deOtrasEn(d.id as string)
+                          const partes = [
+                            `¿Borrar el Día ${d.n}?`,
+                            n ? `${n === 1 ? "Su escena regresa" : `Sus ${n} escenas regresan`} a "Sin día asignado".` : "",
+                            otras
+                              ? `El día se borra para todas las unidades: ${otras === 1 ? "otra unidad tiene 1 escena" : `otras unidades tienen ${otras} escenas`} ese día, que también ${otras === 1 ? "regresa" : "regresan"} a "Sin día asignado".`
+                              : "",
+                          ]
+                          if (confirm(partes.filter(Boolean).join(" "))) acc.borrarDia(d.id as string)
                         }}
                       >
                         Borrar
@@ -314,7 +372,8 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
 
           if (f.k === "blk") {
             const g = porGuion.get(f.guionId)
-            const nombre = `${etq.uno} ${g?.numero || ""}`
+            const nombre = nombrePieza(etq, g)
+            const esFotos = g?.tipo === "fotos"
             const hechas = f.ids.filter((id) => porEscena.get(id)?.filmada).length
             const unica = f.ids.length === 1 ? porEscena.get(f.ids[0]) : undefined
             // "Separar" solo sirve si la pieza tiene más escenas que mover por su lado.
@@ -335,21 +394,11 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
                     </div>
                     <div style={{ color: C.apagado, fontSize: 11.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {f.ids.length === 1 && unica
-                        ? `Escena ${unica.numero} · ${slugEscena(unica)}${hechas ? " · filmada" : ""}`
-                        : `${f.ids.length} escenas juntas${hechas ? ` · ${hechas} filmadas` : ""}`}
+                        ? `${esFotos ? "Foto" : "Escena"} ${unica.numero} · ${slugEscena(unica)}${hechas ? ` · ${p.unaHecha}` : ""}`
+                        : `${f.ids.length} ${esFotos ? "fotos" : "escenas"} juntas${hechas ? ` · ${hechas} ${hechas === 1 ? p.unaHecha : p.hechas}` : ""}`}
                     </div>
                   </div>
                   <div style={controles}>
-                  <select
-                    aria-label={`Unidad de ${nombre}`}
-                    value={g?.unidad ? String(g.unidad) : ""}
-                    onChange={(ev) => g && acc.actualizarGuion(g.id, { unidad: ev.target.value ? (Number(ev.target.value) as 1 | 2) : null })}
-                    style={{ ...campoChico, width: esMovil ? 84 : 96, flexShrink: 0, colorScheme: "dark" }}
-                  >
-                    <option value="">Unidad</option>
-                    <option value="1">U1</option>
-                    <option value="2">U2</option>
-                  </select>
                   {separable && (
                     <button type="button" style={botonChico} onClick={() => alternarSeparado(f.guionId)} title="Mostrar cada escena por separado para moverlas una por una">
                       Separar
@@ -357,6 +406,7 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
                   )}
                   {flechas(f.clave, nombre)}
                   {mandarA(f.clave, nombre, true)}
+                  {botonQuitar(f.ids, f.ids.length === 1 ? nombre : `estas ${f.ids.length} escenas de ${nombre}`)}
                   </div>
                 </div>
               </div>
@@ -366,7 +416,7 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
           const e = porEscena.get(f.id)
           if (!e) return null
           const g = porGuion.get(e.guion_id)
-          const nombre = `escena ${numeroEscena(e, g, varias)}`
+          const nombre = `${g?.tipo === "fotos" ? "foto" : "escena"} ${numeroEscena(e, g, varias)}`
           const agrupable = varias && separados.has(e.guion_id)
           return (
             <div key={f.clave}>
@@ -380,7 +430,6 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
                   <span style={{ color: C.texto2, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {slugEscena(e)}
                   </span>
-                  {g?.unidad && <span style={chipAmbar}>U{g.unidad}</span>}
                 </div>
                 <div style={controles}>
                   {agrupable && (
@@ -390,6 +439,7 @@ export function ModoOrdenar(props: { datos: DatosPlan; esMovil: boolean; acc: Ac
                   )}
                   {flechas(f.clave, nombre)}
                   {mandarA(f.clave, nombre, true)}
+                  {botonQuitar([e.id], `la ${nombre}`)}
                 </div>
               </div>
             </div>

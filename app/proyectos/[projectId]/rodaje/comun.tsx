@@ -4,14 +4,16 @@
 
 import { useEffect, type CSSProperties, type ReactNode } from "react"
 import { slugEscena } from "../../../../lib/rodaje/orden"
-import type { RodajeEscena, RodajeGuion, RodajeToma } from "../../../../lib/rodaje/tipos"
+import {
+  palabras, type EscenaBase, type RodajeEscena, type RodajeGuion, type RodajeToma, type TipoUnidad,
+} from "../../../../lib/rodaje/tipos"
 import {
   C, MONO, botonChico, chip, chipVerde, chipVioleta, eyebrow,
   modalCabeza, modalCaja, modalCuerpo, modalFondo,
 } from "./estilos"
 
 /** "3.2" cuando el plan tiene varias piezas; "2" cuando es un solo guion. */
-export function numeroEscena(e: RodajeEscena, g: RodajeGuion | undefined, varias: boolean): string {
+export function numeroEscena(e: Pick<EscenaBase, "numero">, g: RodajeGuion | undefined, varias: boolean): string {
   return varias && g ? `${g.numero}.${e.numero}` : e.numero
 }
 
@@ -174,6 +176,10 @@ export function TarjetaEscena(props: {
   dia?: string
   /** Tomas calificadas de esta escena, ya en orden */
   tomas?: RodajeToma[]
+  /** Tipo de la unidad desde la que se ve: video "filma", foto "hace" */
+  tipoUnidad?: TipoUnidad
+  /** Otras unidades que también trabajan esta escena (solo en la vista por guion) */
+  otras?: { nombre: string; hecha: boolean }[]
   onFilmada: (valor: boolean) => void
   onGuion: () => void
   onEditar?: () => void
@@ -185,6 +191,10 @@ export function TarjetaEscena(props: {
   const compacta = e.filmada && !tomas.length && !(puedeEditar && props.onTomas)
   const filmada = e.filmada
   const num = numeroEscena(e, guion, varias)
+  const p = palabras(props.tipoUnidad)
+  // Una foto de una lista de fotos no tiene guion que leer.
+  const esFoto = guion?.tipo === "fotos"
+  const cosa = esFoto ? "foto" : "escena"
 
   const circulo = (
     <span
@@ -217,14 +227,14 @@ export function TarjetaEscena(props: {
           type="button"
           onClick={() => props.onFilmada(!filmada)}
           aria-pressed={filmada}
-          aria-label={filmada ? `Escena ${num} filmada: desmarcar` : `Marcar escena ${num} como filmada`}
-          title={filmada ? "Filmada: toca para desmarcar" : "Marcar como filmada"}
+          aria-label={filmada ? `${esFoto ? "Foto" : "Escena"} ${num} ${p.unaHecha}: desmarcar` : `Marcar ${cosa} ${num} como ${p.unaHecha}`}
+          title={filmada ? `${p.hecha}: toca para desmarcar` : `Marcar como ${p.unaHecha}`}
           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "inline-flex" }}
         >
           {circulo}
         </button>
       ) : (
-        <span title={filmada ? "Filmada" : "Pendiente"} style={{ display: "inline-flex" }}>{circulo}</span>
+        <span title={filmada ? p.hecha : "Pendiente"} style={{ display: "inline-flex" }}>{circulo}</span>
       )}
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -240,8 +250,13 @@ export function TarjetaEscena(props: {
           >
             {slugEscena(e)}
           </span>
-          {filmada && <span style={chipVerde}>Filmada</span>}
+          {filmada && <span style={chipVerde}>{p.hecha}</span>}
           {props.dia && <span style={e.dia_id ? chipVioleta : chip}>{props.dia}</span>}
+          {props.otras?.map((o) => (
+            <span key={o.nombre} style={o.hecha ? chipVerde : chip} title={`También en ${o.nombre}${o.hecha ? " (ya hecha)" : ""}`}>
+              +{o.nombre}{o.hecha ? " ✓" : ""}
+            </span>
+          ))}
         </div>
         {!filmada && e.descripcion && (
           <p style={{ margin: "3px 0 0", color: C.tenue, fontSize: 13, lineHeight: 1.4 }}>{e.descripcion}</p>
@@ -259,7 +274,7 @@ export function TarjetaEscena(props: {
                 type="button"
                 onClick={props.onTomas}
                 style={{ ...botonChico, padding: "4px 9px", fontSize: 11.5, letterSpacing: 0.4 }}
-                aria-label={tomas.length ? `Editar tomas de la escena ${num}` : `Agregar tomas a la escena ${num}`}
+                aria-label={tomas.length ? `Editar tomas de la ${cosa} ${num}` : `Agregar tomas a la ${cosa} ${num}`}
               >
                 {tomas.length ? "EDITAR TOMAS" : "+ TOMAS"}
               </button>
@@ -269,11 +284,13 @@ export function TarjetaEscena(props: {
       </div>
 
       <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-        <button type="button" onClick={props.onGuion} style={botonChico} title="Ver el texto de la escena">
-          GUION
-        </button>
+        {!esFoto && (
+          <button type="button" onClick={props.onGuion} style={botonChico} title="Ver el texto de la escena">
+            GUION
+          </button>
+        )}
         {puedeEditar && props.onEditar && (
-          <button type="button" onClick={props.onEditar} style={botonChico} aria-label={`Editar escena ${num}`} title="Editar escena">
+          <button type="button" onClick={props.onEditar} style={botonChico} aria-label={`Editar ${cosa} ${num}`} title={`Editar ${cosa}`}>
             ✎
           </button>
         )}
