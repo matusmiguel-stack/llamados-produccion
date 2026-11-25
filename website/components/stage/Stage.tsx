@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { StageController, type StageDom } from "./controller"
 import { parseRoute } from "./routes"
 import { setStageNavigator } from "./bus"
-import type { Project } from "@/lib/vimeo"
+import type { Category, Project } from "@/lib/vimeo"
 import styles from "./stage.module.css"
 
 /* Escenario persistente de "/", "/proyectos", "/proyectos/[slug]" y "/nosotros":
@@ -16,9 +16,22 @@ let introPlayed = false
 
 type Props = {
   projects: Project[]
+  categories: Category[]
   reel: { id: string; h: string; poster: string }
   reelVideo?: string
   children: React.ReactNode
+}
+
+/* Proyectos de la categoría activa, en el orden del showcase (con su índice
+   global, que es el que entiende el escenario). */
+function listFor(projects: Project[], categories: Category[], cat: number) {
+  const byId = new Map(projects.map((p, i) => [p.id, i]))
+  const ids = categories[cat]?.ids
+  if (!ids) return projects.map((p, i) => ({ p, i }))
+  return ids.flatMap((id) => {
+    const i = byId.get(id)
+    return i === undefined ? [] : [{ p: projects[i], i }]
+  })
 }
 
 function deferred() {
@@ -27,10 +40,12 @@ function deferred() {
   return { promise, resolve }
 }
 
-export default function Stage({ projects, reel, reelVideo, children }: Props) {
+export default function Stage({ projects, categories, reel, reelVideo, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [withPreloader] = useState(() => !introPlayed)
+  // Categoría activa: solo para pintar la lista accesible en su orden
+  const [cat, setCat] = useState(0)
   const ready = useRef<ReturnType<typeof deferred> | null>(null)
   if (!ready.current) ready.current = deferred()
 
@@ -40,6 +55,7 @@ export default function Stage({ projects, reel, reelVideo, children }: Props) {
   const video = useRef<HTMLVideoElement>(null)
   const reelFrame = useRef<HTMLIFrameElement>(null)
   const list = useRef<HTMLUListElement>(null)
+  const bar = useRef<HTMLDivElement>(null)
   const hint = useRef<HTMLButtonElement>(null)
   const veil = useRef<HTMLDivElement>(null)
   const backdrop = useRef<HTMLDivElement>(null)
@@ -87,14 +103,16 @@ export default function Stage({ projects, reel, reelVideo, children }: Props) {
       veil: veil.current!, backdrop: backdrop.current!, canvas: canvas.current!,
       caption: caption.current!, capTitle: capTitle.current!, capSub: capSub.current!,
       player: player.current!, caseUi: caseUi.current!, back: back.current!, backLabel: backLabel.current!,
-      counter: counter.current!, list: list.current!, preloader: preloader.current, preloaderLogo: preloaderLogo.current,
+      counter: counter.current!, list: list.current!, bar: bar.current, preloader: preloader.current, preloaderLogo: preloaderLogo.current,
     }
     const c = new StageController(dom, {
       projects,
+      categories,
       reel,
       routerPush: (href) => router.push(href, { scroll: false }),
       initial: parseRoute(window.location.pathname),
       playIntro: !introPlayed && !!preloader.current,
+      onCategory: setCat,
       onIntroDone: () => { introPlayed = true },
       reelReady: ready.current!.promise,
     })
@@ -160,8 +178,25 @@ export default function Stage({ projects, reel, reelVideo, children }: Props) {
         <span ref={capSub} className={styles.capSub} data-goo />
       </p>
 
+      {categories.length > 1 && (
+        <div ref={bar} className={styles.bar} role="group" aria-label="Categorías">
+          {categories.map((c, i) => (
+            <button
+              key={c.id}
+              type="button"
+              className={styles.barItem}
+              data-goo
+              aria-pressed={i === 0}
+              onClick={() => ctrl.current?.setCategory(i)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <ul ref={list} className={styles.list} aria-label="Proyectos">
-        {projects.map((p, i) => (
+        {listFor(projects, categories, cat).map(({ p, i }) => (
           <li key={p.id}>
             <button type="button" onClick={() => ctrl.current?.openFromList(i)} onFocus={() => ctrl.current?.focusProject(i)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

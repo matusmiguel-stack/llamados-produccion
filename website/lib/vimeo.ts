@@ -55,51 +55,91 @@ export async function hasFileAccess(): Promise<boolean> {
   return !!(await progressiveInfo(REEL.id)).list.length
 }
 
-export async function getProjects(): Promise<Project[]> {
-  const token = process.env.VIMEO_TOKEN
-  const showcase = process.env.VIMEO_SHOWCASE_ID
-  if (!token || !showcase) {
-    if (process.env.NODE_ENV === "production") throw new Error("Faltan VIMEO_TOKEN o VIMEO_SHOWCASE_ID")
-    return []
-  }
+/* Una categoría = un showcase de Vimeo; el botón lleva el título del showcase. */
+export type Category = { id: string; label: string; ids: string[] }
+export type Catalog = { projects: Project[]; categories: Category[] }
 
+/* VIMEO_SHOWCASE_ID acepta varios IDs separados por comas; el primero es la
+   categoría que se ve al entrar. */
+function showcaseIds() {
+  return (process.env.VIMEO_SHOWCASE_ID ?? "").split(/[\s,]+/).filter(Boolean)
+}
+
+// Si Vimeo falla, mejor tronar: en ISR se queda la última versión buena
+async function vimeoJson(path: string, token: string) {
+  const res = await fetch(`${API}${path}`, { headers: headers(token), next: { revalidate: 3600 } })
+  if (!res.ok) throw new Error(`Vimeo respondió ${res.status} en ${path.split("?")[0]}`)
+  return res.json()
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function showcaseVideos(album: string, token: string): Promise<any[]> {
   // Vimeo entrega máximo 100 por página: se piden todas las páginas
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const videos: any[] = []
   for (let page = 1; page <= 20; page++) {
-    const res = await fetch(`${API}/me/albums/${showcase}/videos?per_page=100&page=${page}&fields=${FIELDS}`, {
-      headers: headers(token),
-      next: { revalidate: 3600 },
-    })
-    // Si Vimeo falla, mejor tronar: en ISR se queda la última versión buena
-    if (!res.ok) throw new Error(`Vimeo respondió ${res.status}`)
-    const data = await res.json()
+    const data = await vimeoJson(`/me/albums/${album}/videos?per_page=100&page=${page}&fields=${FIELDS}`, token)
     videos.push(...(data.data ?? []))
     if (!data.paging?.next || (data.data ?? []).length < 100) break
   }
-  const files = await hasFileAccess()
+  return videos
+}
 
+export async function getCatalog(): Promise<Catalog> {
+  const token = process.env.VIMEO_TOKEN
+  const albums = showcaseIds()
+  if (!token || !albums.length) {
+    if (process.env.NODE_ENV === "production") throw new Error("Faltan VIMEO_TOKEN o VIMEO_SHOWCASE_ID")
+    return { projects: [], categories: [] }
+  }
+
+  const [files, ...showcases] = await Promise.all([
+    hasFileAccess(),
+    ...albums.map(async (album) => {
+      const [meta, videos] = await Promise.all([
+        vimeoJson(`/me/albums/${album}?fields=name`, token),
+        showcaseVideos(album, token),
+      ])
+      return { album, name: String(meta?.name ?? "").trim(), videos }
+    }),
+  ])
+
+  // Un mismo video puede estar en varios showcases: se guarda una sola vez
+  const byId = new Map<string, Project>()
   const seen = new Set<string>()
-  return videos.map((v) => {
-    const id = String(v.uri).split("/").pop() as string
-    const title = String(v.name)
-    let slug = slugify(title) || id
-    if (seen.has(slug)) slug = `${slug}-${id}`
-    seen.add(slug)
-    const base = v.pictures?.base_link as string | undefined
-    return {
-      id,
-      slug,
-      title,
-      ...splitTitle(title),
-      embedUrl: v.player_embed_url || `https://player.vimeo.com/video/${id}`,
-      width: v.width || 1920,
-      height: v.height || 1080,
-      poster: pictureAt(base, 1280, 720),
-      posterLarge: pictureAt(base, 1920, 1080),
-      ...(files ? { peek: `/api/vimeo/${id}/540p`, peekPhone: `/api/vimeo/${id}/360p` } : {}),
+  const categories: Category[] = []
+  for (const sc of showcases) {
+    const ids: string[] = []
+    for (const v of sc.videos) {
+      const id = String(v.uri).split("/").pop() as string
+      if (!byId.has(id)) {
+        const title = String(v.name)
+        let slug = slugify(title) || id
+        if (seen.has(slug)) slug = `${slug}-${id}`
+        seen.add(slug)
+        const base = v.pictures?.base_link as string | undefined
+        byId.set(id, {
+          id,
+          slug,
+          title,
+          ...splitTitle(title),
+          embedUrl: v.player_embed_url || `https://player.vimeo.com/video/${id}`,
+          width: v.width || 1920,
+          height: v.height || 1080,
+          poster: pictureAt(base, 1280, 720),
+          posterLarge: pictureAt(base, 1920, 1080),
+          ...(files ? { peek: `/api/vimeo/${id}/540p`, peekPhone: `/api/vimeo/${id}/360p` } : {}),
+        })
+      }
+      if (!ids.includes(id)) ids.push(id)
     }
-  })
+    if (ids.length) categories.push({ id: sc.album, label: sc.name || "Proyectos", ids })
+  }
+  return { projects: [...byId.values()], categories }
+}
+
+export async function getProjects(): Promise<Project[]> {
+  return (await getCatalog()).projects
 }
 
 type Progressive = { rendition: string; height: number; link: string }

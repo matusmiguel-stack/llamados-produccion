@@ -1,11 +1,11 @@
 import gsap from "gsap"
 import { Strip, webglOk, type Rect } from "./strip"
-import { gooTimeline, setGoo, prefersReducedMotion } from "@/lib/goo"
+import { gooProgress, gooTimeline, setGoo, prefersReducedMotion } from "@/lib/goo"
 import { swapText } from "@/lib/swap"
 import { lerp } from "@/lib/ease"
 import { parseRoute, isThinRoute, SITE, type StageRoute } from "./routes"
 import { revealHeader } from "./bus"
-import type { Project } from "@/lib/vimeo"
+import type { Category, Project } from "@/lib/vimeo"
 
 export type StageDom = {
   root: HTMLElement
@@ -24,6 +24,7 @@ export type StageDom = {
   backLabel: HTMLElement
   counter: HTMLElement
   list: HTMLElement
+  bar: HTMLElement | null
   preloader: HTMLElement | null
   preloaderLogo: HTMLElement | null
 }
@@ -32,11 +33,13 @@ type Mode = "hero" | "proyectos" | "case" | "nosotros"
 
 type Options = {
   projects: Project[]
+  categories: Category[]
   reel: { id: string; h: string }
   routerPush: (href: string) => void
   initial: StageRoute
   playIntro: boolean
   onIntroDone: () => void
+  onCategory?: (i: number) => void
   reelReady: Promise<void>
 }
 
@@ -50,6 +53,10 @@ export class StageController {
   private dom: StageDom
   private o: Options
   private projects: Project[]
+  // Cada categoría como lista de índices de projects, en el orden del showcase
+  private orders: number[][]
+  private cat = 0
+  private barShown = false
   private strip: Strip | null = null
   private webgl: boolean
   private reduced: boolean
@@ -91,6 +98,11 @@ export class StageController {
     this.dom = dom
     this.o = o
     this.projects = o.projects
+    const indexById = new Map(o.projects.map((p, i) => [p.id, i]))
+    this.orders = o.categories
+      .map((c) => c.ids.map((id) => indexById.get(id)).filter((i): i is number => i !== undefined))
+      .filter((ord) => ord.length)
+    if (!this.orders.length) this.orders = [o.projects.map((_, i) => i)]
     this.reduced = prefersReducedMotion()
     this.webgl = webglOk()
     dom.root.dataset.webgl = this.webgl && o.projects.length ? "on" : "off"
@@ -112,15 +124,16 @@ export class StageController {
       })
       this.strip.warm()
     }
+    this.applyCategory(0)
 
-    if (process.env.NODE_ENV !== "production") (window as unknown as { __stage: unknown }).__stage = this
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __stage: this, __gsap: gsap })
 
     gsap.ticker.lagSmoothing(500, 16.7)
     gsap.ticker.add(this.tick)
     this.listen()
     this.measure()
 
-    if (this.projects.length) this.setCaption(0, false)
+    if (this.order.length) this.setCaption(this.order[0], false)
 
     document.documentElement.classList.add("stage-on")
 
@@ -374,6 +387,7 @@ export class StageController {
     tl.to(this.v, { veil: 1, duration: 1.0, ease: "power1.inOut" }, late + 0.167)
     this.stripIn(tl, late + 0.167)
     tl.call(() => this.showCaption(), [], late + 0.79)
+    this.showBar(tl, late + 0.79)
     tl.call(() => this.enableStrip(), [], late + 1.21)
   }
 
@@ -382,6 +396,7 @@ export class StageController {
     if (from === "case") this.closeCase(tl, false)
     else this.settleLeftovers(tl)
     this.hideCaption(tl, 0)
+    this.hideBar(tl, 0)
     this.stripOut(tl, 0)
     tl.to(this.v, { recede: 0, duration: 1.067, ease: "power2.inOut" }, from === "case" ? 0.21 : 0.4)
     tl.to(this.v, { veil: 0, duration: 0.8, ease: "power1.inOut" }, from === "case" ? 0.375 : 0.533)
@@ -394,9 +409,99 @@ export class StageController {
     else this.settleLeftovers(tl)
     tl.add(gooTimeline([this.dom.hint], "out", { duration: 0.33 }), 0)
     this.hideCaption(tl, 0)
+    this.hideBar(tl, 0)
     this.stripOut(tl, 0)
     tl.to(this.v, { recede: 1, duration: 1.333, ease: "power2.inOut" }, 0)
     tl.to(this.v, { veil: 1, duration: 1.0, ease: "power1.inOut" }, 0.167)
+  }
+
+  /* ---------- categorías (un showcase de Vimeo cada una) ---------- */
+
+  private get order() {
+    return this.orders[this.cat] ?? []
+  }
+
+  private get barButtons() {
+    return Array.from(this.dom.bar?.querySelectorAll<HTMLButtonElement>("button") ?? [])
+  }
+
+  private counterText(index: number, cat = this.cat) {
+    const order = this.orders[cat] ?? []
+    const pos = order.indexOf(index)
+    return `${pad2((pos < 0 ? 0 : pos) + 1)} / ${pad2(order.length)}`
+  }
+
+  private categoryFor(index: number) {
+    if (this.order.includes(index)) return this.cat
+    const c = this.orders.findIndex((ord) => ord.includes(index))
+    return c >= 0 ? c : this.cat
+  }
+
+  /* Los botones siempre reflejan this.cat (la categoría que de verdad se ve). */
+  private syncPressed() {
+    this.barButtons.forEach((b, k) => b.setAttribute("aria-pressed", String(k === this.cat)))
+  }
+
+  /* Cambio inmediato (sin animación): carrusel, lista accesible y botones. */
+  private applyCategory(i: number) {
+    this.cat = Math.max(0, Math.min(i, this.orders.length - 1))
+    this.strip?.setOrder(this.order)
+    this.o.onCategory?.(this.cat)
+    this.syncPressed()
+  }
+
+  /* Si se abre un proyecto que no está en la categoría actual (link directo),
+     se cambia a la primera que lo tenga. */
+  private ensureCategoryFor(index: number) {
+    const c = this.categoryFor(index)
+    if (c !== this.cat) this.applyCategory(c)
+  }
+
+  setCategory(i: number) {
+    if (i === this.cat || this.mode !== "proyectos" || this.locked() || !this.orders[i]) return
+    const s = this.strip
+    if (!s) {
+      this.applyCategory(i)
+      this.dom.list.scrollLeft = 0
+      return
+    }
+    // Si la entrada del carrusel sigue corriendo (llegada, botones), se termina
+    // de golpe: matarla dejaría la fila a medio llegar y los botones a medias.
+    this.tl?.progress(1)
+    // Las tarjetas se van hacia el fondo, se cambia la fila y regresan
+    const tl = this.timeline(1.1)
+    s.inputEnabled = false
+    s.peekEnabled = false
+    this.hideCaption(tl, 0, 0.35)
+    tl.to(s, { stripShown: 0, duration: this.reduced ? 0.3 : 0.45, ease: "power2.in" }, 0)
+    tl.call(() => this.applyCategory(i), [], 0.46)
+    tl.to(s, { stripShown: 1, duration: this.reduced ? 0.3 : 0.9, ease: "power3.out" }, 0.5)
+    tl.call(() => this.showCaption(), [], 0.75)
+    tl.call(() => this.enableStrip(), [], 1.1)
+  }
+
+  private showBar(tl: gsap.core.Timeline, at: number) {
+    const bar = this.dom.bar
+    if (!bar || this.orders.length < 2) return
+    this.barShown = true
+    this.syncPressed()
+    bar.inert = false
+    tl.call(() => { bar.style.visibility = "visible" }, [], at)
+    tl.add(gooTimeline(this.barButtons, "in", { duration: 0.83, stagger: 0.05 }), at)
+  }
+
+  /* Se fija en si de verdad se ve (no en barShown): si una salida anterior se
+     interrumpió, los botones pueden haber quedado a medias. */
+  private hideBar(tl: gsap.core.Timeline, at: number) {
+    const bar = this.dom.bar
+    if (!bar) return
+    const visible = bar.style.visibility === "visible" || this.barButtons.some((b) => gooProgress(b) > 0)
+    this.barShown = false
+    if (!visible) return
+    bar.inert = true
+    if (bar.contains(document.activeElement)) (document.activeElement as HTMLElement).blur()
+    tl.add(gooTimeline(this.barButtons, "out", { duration: 0.35, stagger: 0.025 }), at)
+    tl.call(() => { if (!this.barShown) bar.style.visibility = "hidden" }, [], at + 0.45)
   }
 
   /* ---------- caption ---------- */
@@ -560,8 +665,6 @@ export class StageController {
     const p = this.projects[index]
     this.caseIndex = index
     this.morphDone = false
-    this.strip?.prefetch(index)
-    this.dom.counter.textContent = `${pad2(index + 1)} / ${pad2(this.projects.length)}`
     this.dom.backLabel.textContent = "Proyectos"
     this.dom.root.dataset.player = "case"
     this.placePlayer()
@@ -570,6 +673,13 @@ export class StageController {
 
     const s = this.strip
     const lifted = morph && !this.reduced && !!s && s.stripShown > 0.99 && s.lift(index)
+    // Un proyecto de otra categoría (link directo, historial): la categoría se
+    // cambia ya que el carrusel no se ve, para no barajar tarjetas a la vista.
+    const cat = lifted ? this.cat : this.categoryFor(index)
+    const stripVisible = !!s && s.arrive > 0.01 && s.stripShown > 0.01
+    if (cat !== this.cat && !stripVisible) this.applyCategory(cat)
+    this.strip?.prefetch(index)
+    this.dom.counter.textContent = this.counterText(index, cat)
     const tl = this.timeline(1.25)
     // El reproductor de Vimeo carga pesado en el hilo principal: si se crea al
     // mismo tiempo que la tarjeta se transforma, la animación se traba.
@@ -582,6 +692,7 @@ export class StageController {
     }
     if (lifted && s) {
       this.hideCaption(tl, 0, 0.375)
+      this.hideBar(tl, 0)
       s.morph = 0
       tl.to(s, { stripShown: 0, duration: 0.54, ease: "power2.in" }, 0)
       tl.to(s, { morph: 1, duration: 1.083, ease: "none" }, 0)
@@ -590,6 +701,7 @@ export class StageController {
       tl.call(() => this.armReveal(), [], 1.083)
     } else {
       this.hideCaption(tl, 0, 0.3)
+      this.hideBar(tl, 0)
       tl.add(gooTimeline([this.dom.hint], "out", { duration: 0.33 }), 0)
       if (s) {
         s.drop()
@@ -601,6 +713,10 @@ export class StageController {
       tl.fromTo(this.dom.caseUi, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, ease: "power1.out" }, 0.3)
       tl.call(() => {
         if (s) { s.arrive = 1; s.stripShown = 0; s.setAwake(false) }
+        if (cat !== this.cat) {
+          this.applyCategory(cat)
+          this.strip?.prefetch(index)
+        }
         this.armReveal()
       }, [], 0.6)
     }
@@ -610,8 +726,9 @@ export class StageController {
   private swapCase(index: number) {
     const p = this.projects[index]
     this.caseIndex = index
+    this.ensureCategoryFor(index)
     this.strip?.prefetch(index)
-    swapText(this.dom.counter, `${pad2(index + 1)} / ${pad2(this.projects.length)}`)
+    swapText(this.dom.counter, this.counterText(index))
     this.placePlayer()
     this.mountPlayer(`${p.embedUrl}${p.embedUrl.includes("?") ? "&" : "?"}${PLAYER_PARAMS}`)
     this.morphDone = false
@@ -635,7 +752,10 @@ export class StageController {
     tl.to(this.v, { backdrop: 0, duration: 0.6, ease: "power1.inOut" }, 0.2)
 
     const s = this.strip
-    if (!s) return
+    if (!s) {
+      if (toStrip) this.showBar(tl, 0.5)
+      return
+    }
     if (toStrip && index >= 0) {
       s.setAwake(true)
       s.arrive = 1
@@ -651,6 +771,7 @@ export class StageController {
       tl.to(s, { morph: 0, duration: back, ease: "none", onComplete: () => s.drop() }, 0.1)
       tl.to(s, { stripShown: 1, duration: 1.0, ease: "power3.out" }, 0.375)
       tl.call(() => this.showCaption(), [], 0.71)
+      this.showBar(tl, 0.71)
       tl.call(() => this.enableStrip(), [], 1.1)
     } else {
       s.drop()

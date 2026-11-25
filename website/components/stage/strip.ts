@@ -186,6 +186,8 @@ function cardMaterial(u: CardUniforms) {
 export class Strip {
   readonly canvas: HTMLCanvasElement
   private works: StripWork[]
+  // Índices de works que muestra el carrusel ahora (la categoría activa)
+  private order: number[] = []
   private cb: StripCallbacks
   private renderer: THREE.WebGLRenderer
   private rt: THREE.WebGLRenderTarget
@@ -299,6 +301,7 @@ export class Strip {
     document.body.append(this.peekBox)
 
     this.textures = works.map(() => null)
+    this.order = works.map((_, i) => i)
 
     this.coarse = window.matchMedia("(pointer: coarse)").matches
     this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -353,15 +356,38 @@ export class Strip {
      dormido: al cerrar ese video la tarjeta tiene que tener su imagen. */
   prefetch(i: number) {
     this.frameAt = performance.now()
-    this.preloadAround(i)
+    const pos = this.order.indexOf(i)
+    if (pos >= 0) this.preloadAround(pos)
+    else this.ensurePoster(i)
   }
 
+  /* center es una posición dentro del orden de la categoría actual */
   private preloadAround(center: number) {
-    const N = this.works.length
+    const N = this.order.length
     if (!N) return
-    const span = Math.min(PRELOAD, Math.floor((N - 1) / 2))
-    for (let k = -span; k <= span; k++) this.ensurePoster(mod(center + k, N))
+    const span = Math.min(PRELOAD, Math.ceil((N - 1) / 2))
+    for (let k = -span; k <= span; k++) this.ensurePoster(this.order[mod(center + k, N)])
   }
+
+  /* Cambia los proyectos que muestra el carrusel (una categoría): `order`
+     son índices de works, en el orden del showcase. Arranca en el primero. */
+  setOrder(order: number[]) {
+    this.order = order.filter((i) => i >= 0 && i < this.works.length)
+    this.offset = this.goal = this.anchor = 0
+    this.velocity = 0
+    this.wheeling = false
+    this.dragState = null
+    this.active = -1
+    this.frameAt = performance.now()
+    this.preloadAround(0)
+    this.emitChange()
+    this.lastSig = []
+  }
+
+  get count() { return this.order.length }
+
+  /* Posición (0…N-1) de un proyecto en la categoría actual, o -1. */
+  positionOf(i: number) { return this.order.indexOf(i) }
 
   private evictPosters() {
     const loaded: number[] = []
@@ -519,9 +545,10 @@ export class Strip {
   }
 
   goTo(index: number, instant = false) {
-    const N = this.works.length
-    if (!N) return
-    let n = index - mod(Math.round(this.goal), N)
+    const N = this.order.length
+    const pos = this.order.indexOf(index)
+    if (!N || pos < 0) return
+    let n = pos - mod(Math.round(this.goal), N)
     if (n > N / 2) n -= N
     if (n < -N / 2) n += N
     if (instant) {
@@ -780,10 +807,10 @@ export class Strip {
   }
 
   private updatePeeks(dt: number) {
-    const N = this.works.length
+    const N = this.order.length
     const settled = !this.dragState && !this.wheeling && Math.abs(this.velocity) < 0.2
       && Math.abs(this.offset - Math.round(this.offset)) < 0.04
-    const target = this.peekEnabled && settled && this.stripShown >= 1 && N ? mod(Math.round(this.offset), N) : -1
+    const target = this.peekEnabled && settled && this.stripShown >= 1 && N ? this.order[mod(Math.round(this.offset), N)] : -1
     if (target >= 0) this.peekFor(target)
     const k = 1 - Math.exp(-5 * dt)
     for (const [i, p] of this.peeks) {
@@ -811,9 +838,9 @@ export class Strip {
   /* ---------- bucle ---------- */
 
   private emitChange() {
-    const N = this.works.length
+    const N = this.order.length
     if (!N) return
-    const a = mod(Math.round(this.offset), N)
+    const a = this.order[mod(Math.round(this.offset), N)]
     if (a !== this.active) {
       this.active = a
       this.cb.onChange?.(a)
@@ -877,7 +904,7 @@ export class Strip {
 
   private updateSlots() {
     const { u, L, H } = this
-    const N = this.works.length
+    const N = this.order.length
     const pullPush = (this.pull / (1 - this.pull)) * H
     const hide = 1 - this.stripShown
     const hidePush = hide * hide * 0.6 * H
@@ -892,7 +919,7 @@ export class Strip {
       const rel = n - this.offset
       s.rel = rel
       if (!N) { s.visible = false; s.mesh.visible = false; continue }
-      s.work = mod(n, N)
+      s.work = this.order[mod(n, N)]
       const x = rel * L.pitch * u
       s.mesh.position.set(x, y, z)
       const depth = this.depthOf(x, y, z)
