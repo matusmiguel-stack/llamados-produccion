@@ -1,6 +1,6 @@
 import FilmsContent from "./FilmsContent"
 
-export const metadata = { title: "Films — Retro Casa Productora" }
+export const metadata = { title: "Films" }
 
 export default function FilmsPage() {
   return <FilmsContent />

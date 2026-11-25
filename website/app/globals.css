@@ -8,11 +8,38 @@
   --b: rgba(232, 228, 220, 0.07);
   --b2: rgba(232, 228, 220, 0.13);
   --fd: Georgia, 'Times New Roman', serif;
-  --fb: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --fb: var(--font-sans), -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --fm: ui-monospace, 'SF Mono', Menlo, 'Courier New', monospace;
 }
 
-html { scroll-behavior: smooth; }
+/* 1rem = 10px en un diseño de 1920 de ancho; en celular, 10px a 390×844 */
+html { font-size: .520833vw; }
+@media (orientation: portrait), (max-width: 767px) {
+  html { font-size: min(2.5641vw, 1.18483svh); }
+}
+
+/* Lo que entra con el efecto goo arranca invisible (el <noscript> del layout
+   lo muestra si no hay JS) */
+[data-goo] { display: inline-block; }
+[data-goo]:not(.is-in) { opacity: 0; }
+
+/* Mientras el escenario está montado la página no tiene scroll: sin esto, el
+   gesto de deslizar hacia abajo dispara el "jalar para recargar" del celular */
+html.stage-on,
+html.stage-on body { overscroll-behavior: none; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* Evita que Chrome/Safari en Mac le roben el swipe horizontal del trackpad
    para su gesto nativo de "atrás/adelante" del navegador */
@@ -22,10 +49,14 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--fb);
+  font-size: 16px;
+  font-weight: 450;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+::selection { background: rgb(255 255 255 / 0.9); color: #060608; }
 
 @media (hover: hover) and (pointer: fine) {
   *, *::before, *::after { cursor: none !important; }

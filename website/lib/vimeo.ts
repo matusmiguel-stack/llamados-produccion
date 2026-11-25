@@ -1,62 +1,124 @@
-export type VimeoVideo = {
+/* Datos de Vimeo para el sitio. Solo corre en el servidor (usa VIMEO_TOKEN). */
+
+export type Project = {
   id: string
+  slug: string
   title: string
-  year: string
-  duration: string
-  thumbnail: string
-  gradient: string
+  client: string
+  name: string
+  embedUrl: string
+  width: number
+  height: number
+  poster: string
+  posterLarge: string
+  peek?: string
+  peekPhone?: string
 }
 
-const GRADIENTS = ["g0", "g1", "g2", "g3", "g4"]
-
-function fmtDuration(secs: number): string {
-  const h = Math.floor(secs / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-  return `${m}:${String(s).padStart(2, "0")}`
+export const REEL = {
+  id: "1228977530",
+  h: "0b90ec8591",
+  poster: "https://i.vimeocdn.com/video/2203522220-0ff0084d8b5cec49fa19d538604936419b7e6e432bc607d57e798e19281e56ae-d_1920x1080?region=us",
 }
 
-export async function getShowcaseVideos(): Promise<VimeoVideo[]> {
+const API = "https://api.vimeo.com"
+const FIELDS = "uri,name,width,height,player_embed_url,pictures.base_link"
+
+export const slugify = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+
+/* Las miniaturas de i.vimeocdn.com aceptan un tamaño pegado al path
+   (…-d_1280x720?region=us) y mandan CORS abierto, así que sirven como texturas. */
+function pictureAt(base: string | undefined, w: number, h: number) {
+  if (!base) return ""
+  const [path, query] = base.split("?")
+  return `${path}_${w}x${h}${query ? `?${query}` : ""}`
+}
+
+/* "Atún Dolores - Cuaresma 2026" → cliente arriba, proyecto abajo */
+function splitTitle(title: string) {
+  const i = title.indexOf(" - ")
+  if (i < 0) return { client: title.trim(), name: "" }
+  return { client: title.slice(0, i).trim(), name: title.slice(i + 3).trim() }
+}
+
+function headers(token: string) {
+  return { Authorization: `bearer ${token}`, Accept: "application/vnd.vimeo.*+json;version=3.4" }
+}
+
+/* Con un token que tenga el permiso "video_files", Vimeo entrega MP4 directos;
+   entonces el reel se reproduce en <video> y las tarjetas muestran un preview. */
+export async function hasFileAccess(): Promise<boolean> {
   const token = process.env.VIMEO_TOKEN
-  const showcaseId = process.env.VIMEO_SHOWCASE_ID
-
-  if (!token || !showcaseId) return FALLBACK_VIDEOS
-
+  if (!token) return false
   try {
-    const res = await fetch(
-      `https://api.vimeo.com/me/albums/${showcaseId}/videos?per_page=50&fields=uri,name,release_time,duration,pictures`,
-      {
-        headers: { Authorization: `bearer ${token}` },
-        next: { revalidate: 3600 },
-      }
-    )
-    if (!res.ok) return FALLBACK_VIDEOS
-
+    const res = await fetch(`${API}/videos/${REEL.id}?fields=play.progressive.rendition`, {
+      headers: headers(token),
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return false
     const data = await res.json()
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return data.data.map((v: any, i: number) => ({
-      id: v.uri.split("/").pop() as string,
-      title: v.name as string,
-      year: new Date(v.release_time).getFullYear().toString(),
-      duration: fmtDuration(v.duration as number),
-      thumbnail:
-        // prefer 1280w, fallback to whatever's biggest
-        (v.pictures?.sizes as { width: number; link: string }[])
-          ?.sort((a, b) => b.width - a.width)
-          .find((s) => s.width <= 1280)?.link ?? "",
-      gradient: GRADIENTS[i % GRADIENTS.length],
-    }))
+    return Array.isArray(data?.play?.progressive) && data.play.progressive.length > 0
   } catch {
-    return FALLBACK_VIDEOS
+    return false
   }
 }
 
-const FALLBACK_VIDEOS: VimeoVideo[] = [
-  { id: "", title: "Retrato editorial",           year: "2025", duration: "4:12",    thumbnail: "", gradient: "g0" },
-  { id: "", title: "Campaña verano Kia",          year: "2025", duration: "1:30",    thumbnail: "", gradient: "g1" },
-  { id: "", title: "Sin título (2024)",            year: "2024", duration: "18:44",   thumbnail: "", gradient: "g2" },
-  { id: "", title: "Live · Auditorio Nacional",    year: "2024", duration: "2:05:30", thumbnail: "", gradient: "g3" },
-  { id: "", title: "Reel 2024",                   year: "2024", duration: "2:30",    thumbnail: "", gradient: "g4" },
-]
+export async function getProjects(): Promise<Project[]> {
+  const token = process.env.VIMEO_TOKEN
+  const showcase = process.env.VIMEO_SHOWCASE_ID
+  if (!token || !showcase) {
+    if (process.env.NODE_ENV === "production") throw new Error("Faltan VIMEO_TOKEN o VIMEO_SHOWCASE_ID")
+    return []
+  }
+
+  const res = await fetch(`${API}/me/albums/${showcase}/videos?per_page=50&fields=${FIELDS}`, {
+    headers: headers(token),
+    next: { revalidate: 3600 },
+  })
+  // Si Vimeo falla, mejor tronar: en ISR se queda la última versión buena
+  if (!res.ok) throw new Error(`Vimeo respondió ${res.status}`)
+  const data = await res.json()
+  const files = await hasFileAccess()
+
+  const seen = new Set<string>()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data.data as any[]).map((v) => {
+    const id = String(v.uri).split("/").pop() as string
+    const title = String(v.name)
+    let slug = slugify(title) || id
+    if (seen.has(slug)) slug = `${slug}-${id}`
+    seen.add(slug)
+    const base = v.pictures?.base_link as string | undefined
+    return {
+      id,
+      slug,
+      title,
+      ...splitTitle(title),
+      embedUrl: v.player_embed_url || `https://player.vimeo.com/video/${id}`,
+      width: v.width || 1920,
+      height: v.height || 1080,
+      poster: pictureAt(base, 1280, 720),
+      posterLarge: pictureAt(base, 1920, 1080),
+      ...(files ? { peek: `/api/vimeo/${id}/540p`, peekPhone: `/api/vimeo/${id}/360p` } : {}),
+    }
+  })
+}
+
+/* Liga directa a un MP4 (solo con token con permiso de archivos). */
+export async function progressiveLink(id: string, quality: string): Promise<string | null> {
+  const token = process.env.VIMEO_TOKEN
+  if (!token) return null
+  const res = await fetch(`${API}/videos/${id}?fields=play.progressive`, {
+    headers: headers(token),
+    next: { revalidate: 1800 },
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  const list = (data?.play?.progressive ?? []) as { rendition: string; height: number; link: string }[]
+  if (!list.length) return null
+  const want = parseInt(quality, 10) || 540
+  const sorted = [...list].sort((a, b) => b.height - a.height)
+  return (sorted.find((f) => f.height <= want) ?? sorted[sorted.length - 1]).link
+}

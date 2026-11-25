@@ -1,17 +1,23 @@
-import { getShowcaseVideos } from "@/lib/vimeo"
-import ScrollProjects from "@/components/ScrollProjects"
-import PageTransition from "@/components/PageTransition"
+import Link from "next/link"
+import { getProjects } from "@/lib/vimeo"
 
 export const metadata = {
-  title: "Proyectos — Retro Casa Productora",
+  title: "Proyectos",
   description: "Catálogo de proyectos de producción audiovisual",
 }
 
 export default async function ProyectosPage() {
-  const videos = await getShowcaseVideos()
+  const projects = await getProjects()
   return (
-    <PageTransition>
-      <ScrollProjects videos={videos} />
-    </PageTransition>
+    <nav className="sr-only" aria-label="Proyectos">
+      <h1>Proyectos</h1>
+      <ul>
+        {projects.map((p) => (
+          <li key={p.id}>
+            <Link href={`/proyectos/${p.slug}`} scroll={false}>{p.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }

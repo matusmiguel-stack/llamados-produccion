@@ -1,0 +1,106 @@
+.header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 51;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: max(2.4rem, 16px) max(2.4rem, 16px) 0;
+  pointer-events: none;
+  translate: calc(var(--px, 0) * -0.6rem) calc(var(--py, 0) * -0.4rem);
+  font-size: max(1.8rem, 13px);
+  line-height: max(2.3rem, 17px);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+}
+
+.header a { pointer-events: auto; }
+
+/* Hasta que aparecen con la animación no se pueden picar */
+.header a:has([data-goo]:not(:global(.is-in))),
+.header a[data-goo]:not(:global(.is-in)) { pointer-events: none; }
+
+.logo {
+  display: flex;
+  color: #fff;
+}
+
+.logoGoo {
+  display: inline-block;
+}
+
+.logoGoo img {
+  display: block;
+  height: max(2.6rem, 19px);
+  width: auto;
+}
+
+.nav {
+  display: flex;
+  gap: 1.4rem;
+}
+
+.link {
+  position: relative;
+  white-space: nowrap;
+  padding-right: 0.06em;
+  color: rgb(255 255 255 / 0.6);
+  transition: color 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* El estado actual va en aria-current y no en className: React reescribe
+   className al navegar y borraría la clase is-in que deja la animación. */
+.link[aria-current="page"] { color: #fff; }
+
+.link:focus-visible {
+  color: #fff;
+  outline: 1px solid rgb(255 255 255 / 0.6);
+  outline-offset: 0.6rem;
+}
+
+@media (hover: hover) {
+  .link:hover { color: #fff; }
+}
+
+.scan {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0.06em;
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.scan i {
+  width: max(0.2rem, 1.5px);
+  height: max(0.2rem, 1.5px);
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity 0.25s linear var(--d, 0s),
+    transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) var(--d, 0s);
+}
+
+@media (hover: hover) {
+  .link:hover .scan i { opacity: 1; transform: scale(1); }
+}
+.link:focus-visible .scan i { opacity: 1; transform: scale(1); }
+
+@media (orientation: portrait), (max-width: 767px) {
+  .header {
+    padding: max(1.8rem, env(safe-area-inset-top)) 2rem 0;
+    font-size: max(1.5rem, 12px);
+    line-height: max(2rem, 16px);
+  }
+  .nav { gap: 0.9rem; }
+  .logoGoo img { height: max(2.2rem, 16px); }
+}
+
+@media (pointer: coarse) {
+  .link { color: rgb(255 255 255 / 0.7); }
+  .link[aria-current="page"] { color: #fff; }
+}

@@ -1,63 +1,17 @@
-"use client"
+import Stage from "@/components/stage/Stage"
+import { getProjects, hasFileAccess, REEL } from "@/lib/vimeo"
 
-import { useEffect, useRef, useState } from "react"
-import { usePathname } from "next/navigation"
-import VideoModal from "@/components/VideoModal"
-import styles from "./reel-bg.module.css"
-
-const REEL_VIMEO_ID = "1228977530"
-
-/* Video de fondo compartido por Home y Nosotros: al navegar entre ambas
-   páginas este layout no se desmonta, así que el reel sigue reproduciéndose
-   sin cortes — sólo el contenido (children) cambia con la transición. */
-export default function ReelLayout({ children }: { children: React.ReactNode }) {
-  const [showModal, setShowModal] = useState(false)
-  // Cambia al cerrar el modal para remontar el iframe de fondo y que vuelva a arrancar
-  const [bgKey, setBgKey] = useState(0)
-
-  const pathname = usePathname()
-  const prevPathRef = useRef(pathname)
-  useEffect(() => {
-    // En Proyectos este iframe queda tapado por el carrusel (que tiene sus
-    // propios videos) y el navegador lo pausa por estar oculto; al volver
-    // se remonta para que retome la reproducción en vez de quedar estático.
-    if (prevPathRef.current === "/proyectos" && pathname !== "/proyectos") {
-      setBgKey(k => k + 1)
-    }
-    prevPathRef.current = pathname
-  }, [pathname])
-
-  function closeModal() {
-    setShowModal(false)
-    setBgKey(k => k + 1)
-  }
-
+/* El escenario (reel + carrusel + reproductor) vive en este layout para que
+   no se desmonte al moverse entre el inicio, Proyectos, un proyecto y Nosotros. */
+export default async function StageLayout({ children }: { children: React.ReactNode }) {
+  const [projects, files] = await Promise.all([getProjects(), hasFileAccess()])
   return (
-    <div className={styles.root}>
-      <div
-        className={styles.videoBg}
-        onClick={() => setShowModal(true)}
-        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowModal(true) } }}
-        role="button"
-        tabIndex={0}
-        aria-label="Reproducir reel con sonido"
-        data-cursor="play"
-      >
-        <div className={styles.fallback} aria-hidden />
-        <iframe
-          key={bgKey}
-          className={styles.video}
-          src={`https://player.vimeo.com/video/${REEL_VIMEO_ID}?background=1&autoplay=1&muted=1&loop=1&controls=0&byline=0&title=0&portrait=0&dnt=1`}
-          allow="autoplay"
-          tabIndex={-1}
-          aria-hidden
-        />
-        <div className={styles.overlay} aria-hidden />
-      </div>
-
-      <div className={styles.content}>{children}</div>
-
-      {showModal && <VideoModal videoId={REEL_VIMEO_ID} onClose={closeModal} />}
-    </div>
+    <Stage
+      projects={projects}
+      reel={REEL}
+      reelVideo={files ? `/api/vimeo/${REEL.id}/1080p` : undefined}
+    >
+      {children}
+    </Stage>
   )
 }

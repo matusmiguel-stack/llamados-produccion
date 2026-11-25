@@ -19,10 +19,21 @@ export default function CustomCursor() {
     function move(e: MouseEvent) {
       mx = e.clientX
       my = e.clientY
+      ringRef.current!.style.opacity = "1"
+      // El carrusel es un solo <canvas> que cambia su data-cursor según lo que
+      // haya bajo el mouse, así que hay que revisarlo también al moverse.
+      if ((e.target as Element | null)?.tagName === "CANVAS") over(e)
     }
 
     function over(e: MouseEvent) {
       const t = e.target as Element | null
+      // Dentro de un reproductor (iframe) la página deja de recibir el mouse:
+      // se esconde el puntito para no dejarlo congelado junto al cursor normal.
+      if (t?.tagName === "IFRAME") {
+        ringRef.current!.style.opacity = "0"
+        ringRef.current!.classList.remove(styles.ringHover, styles.ringPlay)
+        return
+      }
       const isLink  = !!t?.closest("a, button")
       const videoEl = t?.closest("[data-cursor='play']") as HTMLElement | null
 
