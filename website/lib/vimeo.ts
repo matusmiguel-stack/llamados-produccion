@@ -50,11 +50,9 @@ function headers(token: string) {
 /* Con un token que tenga el permiso "video_files", Vimeo entrega MP4 directos;
    entonces el reel se reproduce en <video> y las tarjetas muestran un preview. */
 export async function hasFileAccess(): Promise<boolean> {
-  try {
-    return !!(await progressiveInfo(REEL.id)).list.length
-  } catch {
-    return false
-  }
+  // Un error pasajero de Vimeo (429, 5xx, red) truena a propósito: en ISR se
+  // conserva la última página buena en vez de guardar una sin previews.
+  return !!(await progressiveInfo(REEL.id)).list.length
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -65,18 +63,24 @@ export async function getProjects(): Promise<Project[]> {
     return []
   }
 
-  const res = await fetch(`${API}/me/albums/${showcase}/videos?per_page=50&fields=${FIELDS}`, {
-    headers: headers(token),
-    next: { revalidate: 3600 },
-  })
-  // Si Vimeo falla, mejor tronar: en ISR se queda la última versión buena
-  if (!res.ok) throw new Error(`Vimeo respondió ${res.status}`)
-  const data = await res.json()
+  // Vimeo entrega máximo 100 por página: se piden todas las páginas
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const videos: any[] = []
+  for (let page = 1; page <= 20; page++) {
+    const res = await fetch(`${API}/me/albums/${showcase}/videos?per_page=100&page=${page}&fields=${FIELDS}`, {
+      headers: headers(token),
+      next: { revalidate: 3600 },
+    })
+    // Si Vimeo falla, mejor tronar: en ISR se queda la última versión buena
+    if (!res.ok) throw new Error(`Vimeo respondió ${res.status}`)
+    const data = await res.json()
+    videos.push(...(data.data ?? []))
+    if (!data.paging?.next || (data.data ?? []).length < 100) break
+  }
   const files = await hasFileAccess()
 
   const seen = new Set<string>()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data.data as any[]).map((v) => {
+  return videos.map((v) => {
     const id = String(v.uri).split("/").pop() as string
     const title = String(v.name)
     let slug = slugify(title) || id
@@ -102,13 +106,16 @@ type Progressive = { rendition: string; height: number; link: string }
 
 /* MP4 disponibles de un video (vacío si el token no tiene permiso de archivos
    o si el video no es de la cuenta del token). */
-export async function progressiveInfo(id: string) {
+export async function progressiveInfo(id: string, { fresh = false } = {}) {
   const token = process.env.VIMEO_TOKEN
   if (!token) return { list: [] as Progressive[], status: "sin-token", owner: "" }
+  // Las ligas firmadas caducan: la ruta de MP4 siempre pide una nueva (fresh)
+  // y deja que solo la CDN la guarde un rato.
   const res = await fetch(`${API}/videos/${id}?fields=play,user.uri`, {
     headers: headers(token),
-    next: { revalidate: 1800 },
+    ...(fresh ? { cache: "no-store" as const } : { next: { revalidate: 1800 } }),
   })
+  if (res.status === 429 || res.status >= 500) throw new Error(`Vimeo respondió ${res.status}`)
   if (!res.ok) return { list: [] as Progressive[], status: `vimeo-${res.status}`, owner: "" }
   const data = await res.json()
   const list = (Array.isArray(data?.play?.progressive) ? data.play.progressive : []) as Progressive[]

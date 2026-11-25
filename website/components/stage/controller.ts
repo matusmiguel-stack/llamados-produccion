@@ -560,6 +560,7 @@ export class StageController {
     const p = this.projects[index]
     this.caseIndex = index
     this.morphDone = false
+    this.strip?.prefetch(index)
     this.dom.counter.textContent = `${pad2(index + 1)} / ${pad2(this.projects.length)}`
     this.dom.backLabel.textContent = "Proyectos"
     this.dom.root.dataset.player = "case"
@@ -609,6 +610,7 @@ export class StageController {
   private swapCase(index: number) {
     const p = this.projects[index]
     this.caseIndex = index
+    this.strip?.prefetch(index)
     swapText(this.dom.counter, `${pad2(index + 1)} / ${pad2(this.projects.length)}`)
     this.placePlayer()
     this.mountPlayer(`${p.embedUrl}${p.embedUrl.includes("?") ? "&" : "?"}${PLAYER_PARAMS}`)

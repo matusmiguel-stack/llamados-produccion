@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const allowed = new Set([REEL.id, ...(await getProjects()).map((p) => p.id)])
   if (!allowed.has(id)) return notFound("fuera-del-showcase")
 
-  const info = await progressiveInfo(id)
+  const info = await progressiveInfo(id, { fresh: true })
   const link = pickProgressive(info.list, q)
   // El motivo va en un header para poder diagnosticar sin ver los logs
   if (!link) return notFound(`sin-archivos;play=${info.status};owner=${info.owner}`)

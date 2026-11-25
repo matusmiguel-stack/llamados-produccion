@@ -27,6 +27,9 @@ const NARROW: Layout = { cardW: 30, cardH: 18.6, pitch: 32.4, centerY: 1, frameW
 const NARROW_QUERY = "(orientation: portrait), (max-width: 767px)"
 
 const SLOTS = 9
+// Dos ventanas de ±PRELOAD (destino y posición actual) deben caber en MAX_POSTERS
+const PRELOAD = 5
+const MAX_POSTERS = 24
 const SPRING = { glide: 4.7, drag: 19.5, wheel: 6 }
 const PULL = { max: 0.335, speed: 3.35, follow: 0.19, release: 0.04 }
 const WHEEL = { settle: 150, threshold: 60 }
@@ -205,6 +208,10 @@ export class Strip {
 
   private textures: (THREE.Texture | null)[] = []
   private largeTex = new Map<number, THREE.Texture>()
+  private requested = new Set<number>()
+  private posterUsed = new Map<number, number>()
+  private posterFailed = new Map<number, number>()
+  private frameAt = 0
   private peeks = new Map<number, Peek>()
   private peekBox: HTMLDivElement
   private loader = new THREE.TextureLoader()
@@ -292,7 +299,6 @@ export class Strip {
     document.body.append(this.peekBox)
 
     this.textures = works.map(() => null)
-    works.forEach((w, i) => this.loadPoster(i, w.poster))
 
     this.coarse = window.matchMedia("(pointer: coarse)").matches
     this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -300,6 +306,8 @@ export class Strip {
     // iOS suele tirar el contexto WebGL al salir de la app; al volver hay que repintar
     canvas.addEventListener("webglcontextrestored", this.onRestored)
     this.resize()
+    this.frameAt = performance.now()
+    this.preloadAround(0)
   }
 
   private onRestored = () => {
@@ -319,14 +327,57 @@ export class Strip {
     tex.needsUpdate = true
   }
 
-  private loadPoster(i: number, url: string) {
-    if (!url) return
+  /* Los pósters se cargan solo cerca del centro y se liberan los lejanos:
+     con decenas de proyectos, tenerlos todos en la GPU puede tumbar el
+     contexto WebGL en celulares. */
+  private ensurePoster(i: number) {
+    this.posterUsed.set(i, this.frameAt)
+    if (this.requested.has(i)) return
+    const w = this.works[i]
+    if (!w?.poster || this.frameAt - (this.posterFailed.get(i) ?? -Infinity) < 15000) return
+    this.requested.add(i)
+    const url = this.narrow ? w.poster.replace("_1280x720", "_960x540") : w.poster
     this.loader.load(url, (tex) => {
-      if (this.disposed) { tex.dispose(); return }
+      if (this.disposed || !this.requested.has(i)) { tex.dispose(); return }
       this.prepTexture(tex)
       this.textures[i] = tex
       this.lastSig = []
+      this.evictPosters()
+    }, undefined, () => {
+      this.requested.delete(i)
+      this.posterFailed.set(i, performance.now())
     })
+  }
+
+  /* Pide el póster de un proyecto (y sus vecinos) aunque el carrusel esté
+     dormido: al cerrar ese video la tarjeta tiene que tener su imagen. */
+  prefetch(i: number) {
+    this.frameAt = performance.now()
+    this.preloadAround(i)
+  }
+
+  private preloadAround(center: number) {
+    const N = this.works.length
+    if (!N) return
+    const span = Math.min(PRELOAD, Math.floor((N - 1) / 2))
+    for (let k = -span; k <= span; k++) this.ensurePoster(mod(center + k, N))
+  }
+
+  private evictPosters() {
+    const loaded: number[] = []
+    this.textures.forEach((t, i) => { if (t) loaded.push(i) })
+    if (loaded.length <= MAX_POSTERS) return
+    const keep = new Set(this.slots.filter((s) => s.visible).map((s) => s.work))
+    if (this.lifted) keep.add(this.lifted.index)
+    loaded
+      .filter((i) => !keep.has(i))
+      .sort((a, b) => (this.posterUsed.get(a) ?? 0) - (this.posterUsed.get(b) ?? 0))
+      .slice(0, loaded.length - MAX_POSTERS)
+      .forEach((i) => {
+        this.textures[i]?.dispose()
+        this.textures[i] = null
+        this.requested.delete(i)
+      })
   }
 
   private loadLarge(i: number) {
@@ -336,6 +387,11 @@ export class Strip {
       if (this.disposed) { tex.dispose(); return }
       this.prepTexture(tex)
       this.largeTex.set(i, tex)
+      // Solo se conservan el póster grande actual y el anterior
+      for (const [j, t] of this.largeTex) {
+        if (this.largeTex.size <= 2) break
+        if (j !== i && j !== this.lifted?.index) { t.dispose(); this.largeTex.delete(j) }
+      }
       this.lastSig = []
     })
   }
@@ -828,6 +884,8 @@ export class Strip {
     const y = L.centerY * u
     const z = -pullPush - hidePush
     const base = Math.floor(this.offset)
+    this.preloadAround(Math.round(this.goal))
+    if (Math.round(this.goal) !== Math.round(this.offset)) this.preloadAround(Math.round(this.offset))
     for (let t = 0; t < SLOTS; t++) {
       const s = this.slots[t]
       const n = base + t - 4
@@ -930,6 +988,7 @@ export class Strip {
   update(dt: number) {
     if (this.disposed) return
     const now = performance.now()
+    this.frameAt = now
     this.physics(dt, now)
     this.updatePeeks(dt)
     if (!this.awake) return
