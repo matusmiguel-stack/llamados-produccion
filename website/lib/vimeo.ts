@@ -59,10 +59,18 @@ export async function hasFileAccess(): Promise<boolean> {
 export type Category = { id: string; label: string; ids: string[] }
 export type Catalog = { projects: Project[]; categories: Category[] }
 
-/* VIMEO_SHOWCASE_ID acepta varios IDs separados por comas; el primero es la
-   categoría que se ve al entrar. */
+/* VIMEO_SHOWCASE_ID acepta varios showcases separados por comas; el primero es
+   la categoría que se ve al entrar. Cada uno puede llevar el nombre del botón:
+   "11351579,12472234=Food & Drinks,12375422=Kids". Sin nombre se usa el
+   título del showcase en Vimeo. */
 function showcaseIds() {
-  return (process.env.VIMEO_SHOWCASE_ID ?? "").split(/[\s,]+/).filter(Boolean)
+  return (process.env.VIMEO_SHOWCASE_ID ?? "")
+    .split(/[,\n]/)
+    .map((entry) => {
+      const [id, ...label] = entry.split("=")
+      return { id: id.trim(), label: label.join("=").trim() }
+    })
+    .filter((s, i, all) => /^\d+$/.test(s.id) && all.findIndex((o) => o.id === s.id) === i)
 }
 
 // Si Vimeo falla, mejor tronar: en ISR se queda la última versión buena
@@ -95,12 +103,12 @@ export async function getCatalog(): Promise<Catalog> {
 
   const [files, ...showcases] = await Promise.all([
     hasFileAccess(),
-    ...albums.map(async (album) => {
+    ...albums.map(async ({ id: album, label }) => {
       const [meta, videos] = await Promise.all([
-        vimeoJson(`/me/albums/${album}?fields=name`, token),
+        label ? null : vimeoJson(`/me/albums/${album}?fields=name`, token),
         showcaseVideos(album, token),
       ])
-      return { album, name: String(meta?.name ?? "").trim(), videos }
+      return { album, name: label || String(meta?.name ?? "").trim(), videos }
     }),
   ])
 
