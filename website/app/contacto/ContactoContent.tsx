@@ -73,7 +73,7 @@ export default function ContactoContent() {
   const router = useRouter()
   const mainRef = useRef<HTMLElement>(null)
 
-  // Contacto es el último de la secuencia — arriba regresa a Live, pero solo
+  // Contacto es el último de la secuencia — arriba regresa a Proyectos, pero solo
   // cuando ya se está arriba del todo (el scroll interno con snap entre
   // "Contacto comercial" y los dos formularios no debe disparar la salida)
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function ContactoContent() {
       if (Date.now() - mountedAt < EXIT_COOLDOWN_MS) return
       if (el!.scrollTop > 4) return
       navigating = true
-      router.push("/live", { transitionTypes: ["nav-back"] })
+      router.push("/proyectos", { transitionTypes: ["nav-back"] })
     }
 
     function onWheel(e: WheelEvent) {

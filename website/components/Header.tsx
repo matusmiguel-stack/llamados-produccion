@@ -9,11 +9,10 @@ import { isStageRoute } from "./stage/routes"
 import { headerRevealed, onHeaderReveal, revealHeader, stageNavigate } from "./stage/bus"
 import styles from "./Header.module.css"
 
+// Films y Live siguen en construcción: sus páginas existen pero no van en el menú
 const LINKS = [
   { href: "/nosotros", label: "Nosotros" },
   { href: "/proyectos", label: "Proyectos" },
-  { href: "/films", label: "Films" },
-  { href: "/live", label: "Live" },
   { href: "/contacto", label: "Contacto" },
 ]
 
