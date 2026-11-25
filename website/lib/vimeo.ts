@@ -50,16 +50,8 @@ function headers(token: string) {
 /* Con un token que tenga el permiso "video_files", Vimeo entrega MP4 directos;
    entonces el reel se reproduce en <video> y las tarjetas muestran un preview. */
 export async function hasFileAccess(): Promise<boolean> {
-  const token = process.env.VIMEO_TOKEN
-  if (!token) return false
   try {
-    const res = await fetch(`${API}/videos/${REEL.id}?fields=play.progressive.rendition`, {
-      headers: headers(token),
-      next: { revalidate: 3600 },
-    })
-    if (!res.ok) return false
-    const data = await res.json()
-    return Array.isArray(data?.play?.progressive) && data.play.progressive.length > 0
+    return !!(await progressiveInfo(REEL.id)).list.length
   } catch {
     return false
   }
@@ -106,17 +98,25 @@ export async function getProjects(): Promise<Project[]> {
   })
 }
 
-/* Liga directa a un MP4 (solo con token con permiso de archivos). */
-export async function progressiveLink(id: string, quality: string): Promise<string | null> {
+type Progressive = { rendition: string; height: number; link: string }
+
+/* MP4 disponibles de un video (vacío si el token no tiene permiso de archivos
+   o si el video no es de la cuenta del token). */
+export async function progressiveInfo(id: string) {
   const token = process.env.VIMEO_TOKEN
-  if (!token) return null
-  const res = await fetch(`${API}/videos/${id}?fields=play.progressive`, {
+  if (!token) return { list: [] as Progressive[], status: "sin-token", owner: "" }
+  const res = await fetch(`${API}/videos/${id}?fields=play,user.uri`, {
     headers: headers(token),
     next: { revalidate: 1800 },
   })
-  if (!res.ok) return null
+  if (!res.ok) return { list: [] as Progressive[], status: `vimeo-${res.status}`, owner: "" }
   const data = await res.json()
-  const list = (data?.play?.progressive ?? []) as { rendition: string; height: number; link: string }[]
+  const list = (Array.isArray(data?.play?.progressive) ? data.play.progressive : []) as Progressive[]
+  return { list, status: String(data?.play?.status ?? ""), owner: String(data?.user?.uri ?? "") }
+}
+
+/* Liga directa a un MP4 (solo con token con permiso de archivos). */
+export function pickProgressive(list: Progressive[], quality: string): string | null {
   if (!list.length) return null
   const want = parseInt(quality, 10) || 540
   const sorted = [...list].sort((a, b) => b.height - a.height)
