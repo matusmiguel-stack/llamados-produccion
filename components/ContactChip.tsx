@@ -10,7 +10,7 @@ export function ContactChip({
   style,
 }: {
   label: string
-  icon: string
+  icon?: string
   color: string        // hex, p. ej. "#131313"
   style?: React.CSSProperties
 }) {
@@ -28,7 +28,7 @@ export function ContactChip({
         ...style,
       }}
     >
-      <span style={{ fontSize: 11, lineHeight: secundario ? "16px" : undefined, flexShrink: 0 }}>{icon}</span>
+      {icon && <span style={{ fontSize: 11, lineHeight: secundario ? "16px" : undefined, flexShrink: 0 }}>{icon}</span>}
       <span style={{ display: "grid", minWidth: 0, lineHeight: 1.3 }}>
         <span style={{ ...linea, fontSize: 12, fontWeight: 700 }}>{principal}</span>
         {secundario && <span style={{ ...linea, fontSize: 11, fontWeight: 500, opacity: 0.75 }}>{secundario}</span>}

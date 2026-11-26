@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
     await sendPushToUser(user.id, {
-      title: "🔔 Push funcionando",
+      title: "Push funcionando",
       body: "Las notificaciones en background están activas",
       url: "/",
     })

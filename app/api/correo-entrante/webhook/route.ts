@@ -130,9 +130,9 @@ export async function POST(req: Request) {
       // si falla, seguimos sin cuerpo — no es crítico
     }
 
-    const notasPartes = [`📧 Creada automáticamente desde un correo de ${from}.`]
-    if (sinIcs) notasPartes.push("⚠️ El correo no traía una invitación de calendario adjunta: revisa fecha y hora.")
-    else if (eraTodoElDia) notasPartes.push("⚠️ La invitación era de todo el día: la hora (09:00) es solo un placeholder, revísala.")
+    const notasPartes = [`Creada automáticamente desde un correo de ${from}.`]
+    if (sinIcs) notasPartes.push("El correo no traía una invitación de calendario adjunta: revisa fecha y hora.")
+    else if (eraTodoElDia) notasPartes.push("La invitación era de todo el día: la hora (09:00) es solo un placeholder, revísala.")
     if (descripcionIcs) notasPartes.push(descripcionIcs)
     else if (cuerpoTexto) notasPartes.push(cuerpoTexto)
 

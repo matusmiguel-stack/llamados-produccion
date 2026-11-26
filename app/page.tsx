@@ -12,6 +12,15 @@ import { requireSessionProfile } from "../lib/session-profile"
 import { AppSidebar } from "../components/AppSidebar"
 import { PageLoader } from "../components/PageLoader"
 import { ProximosLlamados } from "../components/ProximosLlamados"
+import {
+  SideDrawer,
+  CloseIcon,
+  drawerBarStyle,
+  drawerBodyStyle,
+  drawerIconButtonStyle,
+  drawerQuietButtonStyle,
+  drawerInkButtonStyle,
+} from "../components/SideDrawer"
 import { PushNotificationManager } from "../components/PushNotificationManager"
 import { DatePickerField } from "../components/DatePickerField"
 import { CalendarSearch, type CalendarSearchItem } from "../components/CalendarSearch"
@@ -212,6 +221,17 @@ export default function Home() {
   // Vista de meses apilados: se dibuja como varios dayGridMonth uno debajo de
   // otro para que las filas crezcan y se vean TODOS los eventos.
   const [stackedMonths, setStackedMonths] = useState(false)
+  // Columna "Próximos llamados": plegada por defecto para que el calendario use
+  // todo el ancho; se recuerda en este navegador. La página solo se pinta en el
+  // cliente (antes hay PageLoader), así que leer localStorage aquí es seguro.
+  const [showProximos, setShowProximos] = useState(() => {
+    try { return typeof window !== "undefined" && localStorage.getItem("calendario.proximos") === "1" } catch { return false }
+  })
+  const [detailCrewTab, setDetailCrewTab] = useState<"personal" | "tecnicos">("personal")
+  function toggleProximos(open: boolean) {
+    setShowProximos(open)
+    try { localStorage.setItem("calendario.proximos", open ? "1" : "0") } catch {}
+  }
   const [calViewType, setCalViewType] = useState("dayGridMonth")
   const [calMonthStart, setCalMonthStart] = useState<Date | null>(null)
   // Día seleccionado en la vista móvil estilo iPhone: al picar un día se
@@ -2377,6 +2397,24 @@ function openEditVacation() {
                   Importar invitación
                 </button>
               )}
+              {!isMobile && (
+                <button
+                  type="button"
+                  onClick={() => toggleProximos(!showProximos)}
+                  aria-pressed={showProximos}
+                  title={showProximos ? "Ocultar próximos llamados" : "Ver próximos llamados"}
+                  style={{
+                    ...importIcsBtnStyle,
+                    ...(showProximos ? { background: "#131313", borderColor: "#131313", color: "#FFFFFF" } : {}),
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M14.5 4.5v15" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  Próximos llamados
+                </button>
+              )}
               {/* Indicador de sincronización en vivo */}
               <div
                 title={liveConnected ? "Sincronización en vivo activa" : "Conectando..."}
@@ -2708,11 +2746,12 @@ function openEditVacation() {
             )}
           </section>
 
-          {!isMobile && (
+          {!isMobile && showProximos && (
             <ProximosLlamados
               shoots={allShoots}
               shootEmployees={shootEmployees}
               onOpen={(id) => handleEventClick({ event: { id } })}
+              onClose={() => toggleProximos(false)}
             />
           )}
           </div>
@@ -2870,7 +2909,7 @@ function openEditVacation() {
                           ...(entryMode === "personal" ? entryModeSwitchActiveStyle : {}),
                         }}
                       >
-                        🔒 Personal
+                        Personal
                       </button>
                     )}
                   </div>
@@ -2880,7 +2919,7 @@ function openEditVacation() {
                   <div style={formModalColumnStyle}>
                     <p style={formModalSectionLabelStyle}>{selectedPersonal ? "Editar evento personal" : "Nuevo evento personal"}</p>
                     <p style={{ margin: 0, color: "#6B6B6B", fontSize: 12 }}>
-                      🔒 Solo tú ves este evento. No se avisa ni se muestra a nadie más.
+                      Solo tú ves este evento. No se avisa ni se muestra a nadie más.
                     </p>
 
                     <div>
@@ -3841,21 +3880,11 @@ function openEditVacation() {
         )}
 
         {vacationDetailsOpen && selectedVacation && (
-          <div style={overlayStyle} className="modal-overlay">
-            <div
-              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
-              style={{
-                ...formModalStyle,
-                width: isMobile ? "100%" : 680,
-                height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? "100%" : "88vh",
-                borderRadius: isMobile ? 0 : 16,
-              }}
-            >
+          <SideDrawer onClose={() => setVacationDetailsOpen(false)} label="Vacaciones" width={520}>
               <div style={formModalHeaderStyle}>
                 <div>
                   <h2 style={formModalTitleStyle}>
-                    🏖️ {formatVacationTitle(selectedVacation, vacationEmployees)}
+                    {formatVacationTitle(selectedVacation, vacationEmployees)}
                   </h2>
                   <p style={formModalMetaStyle}>
                     {formatVacationRange(selectedVacation.start_date, selectedVacation.end_date)}
@@ -3924,15 +3953,13 @@ function openEditVacation() {
                   </button>
                 )}
               </div>
-            </div>
-          </div>
+            </SideDrawer>
         )}
 
         {/* ── Cumpleaños / Aniversario modal ── */}
         {dateEventDetailsOpen && selectedDateEvent && (() => {
           const { type, employee, year } = selectedDateEvent
           const isBirthday = type === "birthday"
-          const emoji = isBirthday ? "🎂" : "🎉"
           const color = isBirthday ? "#B8800E" : "#0E857D"
           const nombre = employeeDisplayName(employee)
 
@@ -3948,11 +3975,10 @@ function openEditVacation() {
           }
 
           return (
-            <div style={overlayStyle} className="modal-overlay">
-              <div style={{ ...formModalStyle, maxWidth: 360, borderRadius: 16 }} onClick={(e) => e.stopPropagation()}>
+            <SideDrawer onClose={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }} label="Cumpleaños o aniversario" width={520}>
                 <div style={formModalHeaderStyle}>
                   <div>
-                    <h2 style={formModalTitleStyle}>{emoji} {isBirthday ? "Cumpleaños" : "Aniversario"}</h2>
+                    <h2 style={formModalTitleStyle}>{isBirthday ? "Cumpleaños" : "Aniversario"}</h2>
                     <p style={formModalMetaStyle}>{year}</p>
                   </div>
                   <button onClick={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }} style={formModalCloseStyle} aria-label="Cerrar">×</button>
@@ -3960,7 +3986,6 @@ function openEditVacation() {
                 <div style={formModalBodyStyle}>
                   <div style={formModalColumnStyle}>
                     <div style={{ padding: "16px", borderRadius: 12, background: `rgba(${isBirthday ? "245,158,11" : "20,184,166"},0.08)`, border: `1px solid rgba(${isBirthday ? "245,158,11" : "20,184,166"},0.2)`, textAlign: "center" }}>
-                      <p style={{ margin: 0, fontSize: 32 }}>{emoji}</p>
                       <p style={{ margin: "8px 0 4px", color: "#141414", fontSize: 18, fontWeight: 700 }}>{nombre}</p>
                       {employee.puesto && <p style={{ margin: 0, color: "#6B6B6B", fontSize: 13 }}>{employee.puesto}</p>}
                       <p style={{ margin: "12px 0 0", color, fontSize: 15, fontWeight: 600 }}>{subtitle}</p>
@@ -3970,27 +3995,15 @@ function openEditVacation() {
                 <div style={formModalFooterStyle}>
                   <button onClick={() => { setDateEventDetailsOpen(false); setSelectedDateEvent(null) }} style={formModalSecondaryButtonStyle}>Cerrar</button>
                 </div>
-              </div>
-            </div>
+              </SideDrawer>
           )
         })()}
 
         {juntaDetailsOpen && selectedJunta && (
-          <div style={overlayStyle} className="modal-overlay">
-            <div
-              className={isMobile ? "modal-panel modal-panel-mobile" : "modal-panel"}
-              style={{
-                ...formModalStyle,
-                width: isMobile ? "100%" : 520,
-                height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? "100%" : "88vh",
-                borderRadius: isMobile ? 0 : 16,
-              }}
-            >
+          <SideDrawer onClose={() => { setJuntaDetailsOpen(false); setSelectedJunta(null) }} label="Junta" width={520}>
               <div style={formModalHeaderStyle}>
                 <div>
                   <h2 style={formModalTitleStyle}>
-                    {selectedJunta.tipo === "Brief" ? "📋" : selectedJunta.tipo === "PPM" ? "🎬" : selectedJunta.tipo === "Junta Interna" ? "🏠" : selectedJunta.tipo === "Invitación por correo" ? "📧" : "🤝"}{" "}
                     {selectedJunta.titulo || selectedJunta.tipo}
                   </h2>
                   <p style={formModalMetaStyle}>
@@ -4047,7 +4060,7 @@ function openEditVacation() {
                           wordBreak: "break-all",
                         }}
                       >
-                        🔗 Unirse a la reunión
+                        Unirse a la reunión
                       </a>
                     </div>
                   )}
@@ -4079,7 +4092,7 @@ function openEditVacation() {
                           wordBreak: "break-all",
                         }}
                       >
-                        📍 Ver en Google Maps
+                        Ver en Google Maps
                       </a>
                     </div>
                   )}
@@ -4197,19 +4210,14 @@ function openEditVacation() {
                   </button>
                 )}
               </div>
-            </div>
-          </div>
+            </SideDrawer>
         )}
 
         {personalDetailsOpen && selectedPersonal && canPersonal && (
-          <div style={overlayStyle} className="modal-overlay">
-            <div
-              style={{ ...formModalStyle, maxWidth: 400, borderRadius: 16 }}
-              onClick={(e) => e.stopPropagation()}
-            >
+          <SideDrawer onClose={() => { setPersonalDetailsOpen(false); setSelectedPersonal(null) }} label="Evento personal" width={520}>
               <div style={formModalHeaderStyle}>
                 <div>
-                  <h2 style={formModalTitleStyle}>🔒 {selectedPersonal.titulo || "Personal"}</h2>
+                  <h2 style={formModalTitleStyle}>{selectedPersonal.titulo || "Personal"}</h2>
                   <p style={formModalMetaStyle}>
                     {formatVacationDate(selectedPersonal.fecha)}
                     {selectedPersonal.all_day || !selectedPersonal.hora_inicio
@@ -4221,7 +4229,7 @@ function openEditVacation() {
               </div>
               <div style={formModalBodyStyle}>
                 <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.17)" }}>
-                  <p style={{ margin: 0, color: "#3F3F3F", fontSize: 13 }}>🔒 Evento personal: solo tú lo ves.</p>
+                  <p style={{ margin: 0, color: "#3F3F3F", fontSize: 13 }}>Evento personal: solo tú lo ves.</p>
                 </div>
                 {selectedPersonal.notas && (
                   <FormModalPreviewField label="Notas" value={selectedPersonal.notas} multiline />
@@ -4232,19 +4240,14 @@ function openEditVacation() {
                 <button onClick={openEditPersonal} style={formModalPrimaryButtonStyle}>Editar</button>
                 <button onClick={() => deletePersonal(selectedPersonal.id)} style={formModalDangerButtonStyle}>Borrar</button>
               </div>
-            </div>
-          </div>
+            </SideDrawer>
         )}
 
         {ensayoDetailsOpen && selectedEnsayo && (
-          <div style={overlayStyle} className="modal-overlay">
-            <div
-              style={{ ...formModalStyle, maxWidth: 400, borderRadius: 16 }}
-              onClick={(e) => e.stopPropagation()}
-            >
+          <SideDrawer onClose={() => { setEnsayoDetailsOpen(false); setSelectedEnsayo(null) }} label="Ensayo" width={520}>
               <div style={formModalHeaderStyle}>
                 <div>
-                  <h2 style={formModalTitleStyle}>🎭 {selectedEnsayo.titulo || "Ensayo"}</h2>
+                  <h2 style={formModalTitleStyle}>{selectedEnsayo.titulo || "Ensayo"}</h2>
                   <p style={formModalMetaStyle}>
                     {formatVacationDate(selectedEnsayo.fecha)}
                     {selectedEnsayo.all_day || !selectedEnsayo.hora_inicio
@@ -4256,7 +4259,6 @@ function openEditVacation() {
               </div>
               <div style={formModalBodyStyle}>
                 <div style={{ padding: "16px", borderRadius: 12, background: "rgba(219,39,119,0.08)", border: "1px solid rgba(219,39,119,0.2)", textAlign: "center" }}>
-                  <p style={{ margin: 0, fontSize: 32 }}>🎭</p>
                   <p style={{ margin: "8px 0 4px", color: "#141414", fontSize: 17, fontWeight: 700 }}>
                     {selectedEnsayo.titulo || "Ensayo de la obra"}
                   </p>
@@ -4276,271 +4278,297 @@ function openEditVacation() {
                   <button onClick={() => deleteEnsayo(selectedEnsayo.id)} style={formModalDangerButtonStyle}>Borrar</button>
                 )}
               </div>
-            </div>
-          </div>
+            </SideDrawer>
         )}
 
-        {detailsOpen && selectedShoot && (
-          <div style={overlayStyle} className="modal-overlay">
-            <DraggableModalPanel
-              enabled={!isMobile}
-              resetKey={selectedShoot.id}
-              className={
-                isMobile
-                  ? "modal-panel modal-panel-mobile"
-                  : "modal-panel modal-panel-draggable"
-              }
-              style={{
-                ...formModalStyle,
-                width: isMobile ? "100%" : 680,
-                height: isMobile ? "100%" : "auto",
-                maxHeight: isMobile ? "100%" : "88vh",
-                borderRadius: isMobile ? 0 : 16,
-              }}
-            >
-              <div
-                data-drag-handle
-                style={{
-                  ...formModalHeaderStyle,
-                  ...(!isMobile ? draggableModalHeaderStyle : {}),
-                }}
-              >
-                <div>
-                  <p style={{ ...formModalMetaStyle, margin: "0 0 2px" }}>
-                    {selectedShoot.client || "Sin cliente"}
-                  </p>
-                  <h2 style={formModalTitleStyle}>{selectedShoot.title}</h2>
-                  <p style={formModalMetaStyle}>
-                    {[
-                      allSubfolders.find(
-                        (subfolder) =>
-                          subfolder.id ===
-                          allProjects.find((project) => project.id === selectedShoot.project_id)?.subfolder_id
-                      )?.name,
-                      selectedShoot.project,
-                    ].filter(Boolean).join(" / ") || "Sin proyecto"}
-                  </p>
-                </div>
+        {detailsOpen && selectedShoot && (() => {
+          // ── Detalle del llamado: panel lateral, como la hoja de llamado ──
+          const inicio = selectedShoot.all_day ? "" : String(selectedShoot.start_time || "").slice(11, 16)
+          const fin = selectedShoot.all_day ? "" : String(selectedShoot.end_time || "").slice(11, 16)
+          const celdas = [
+            ...(selectedShoot.horario_avanzada ? [{ label: "Avanzada Retro", value: String(selectedShoot.horario_avanzada) }] : []),
+            ...(fin ? [{ label: "Fin estimado", value: fin }] : []),
+          ]
+          const personal = getShootEmployees(selectedShoot.id)
+          const tecnicos = getShootTechnicalResources(selectedShoot.id)
+          const subcarpeta = allSubfolders.find(
+            (subfolder) => subfolder.id === allProjects.find((project) => project.id === selectedShoot.project_id)?.subfolder_id
+          )?.name
+          const ruta = [subcarpeta, selectedShoot.project].filter(Boolean).join(" / ")
+          const lugar = selectedShoot.location?.trim()
+          const direccion = selectedShoot.address?.trim()
+          const destinoMaps = direccion || lugar
+          const estatus = ({
+            confirmed: { color: "#2E7448", fondo: "#E3F1E8" },
+            tentative: { color: "#8A5B00", fondo: "#FBEFD6" },
+            cancelled: { color: "#B42318", fondo: "#FBE7E5" },
+            wrap: { color: "#595959", fondo: "#EDEDED" },
+          } as Record<string, { color: string; fondo: string }>)[selectedShoot.status || "tentative"] || { color: "#8A5B00", fondo: "#FBEFD6" }
+          const notas = [
+            { titulo: "Para todo el equipo", texto: selectedShoot.public_notes, privado: false },
+            { titulo: "Producción", texto: selectedShoot.production_notes, privado: false },
+            ...(canEdit ? [{ titulo: "Solo admins", texto: selectedShoot.private_notes, privado: true }] : []),
+          ].filter((n) => n.texto && String(n.texto).trim())
+          const avatarFondos = ["#E3E8F0", "#F3E3C7", "#D8ECE1", "#F6DCE6"]
 
-                <button
-                  onClick={() => setDetailsOpen(false)}
-                  style={formModalCloseStyle}
-                  aria-label="Cerrar"
-                >
-                  ×
+          return (
+            <SideDrawer onClose={() => setDetailsOpen(false)} label={`Llamado: ${selectedShoot.title || ""}`}>
+              <div style={isMobile ? { ...drawerBarStyle, padding: "12px", gap: 6 } : drawerBarStyle}>
+                <button type="button" onClick={() => setDetailsOpen(false)} style={drawerIconButtonStyle} aria-label="Cerrar">
+                  <CloseIcon />
                 </button>
-              </div>
-
-              <div style={formModalBodyStyle}>
-                {/* Horarios del llamado: la hora general manda, en grande */}
-                {(() => {
-                  const inicio = selectedShoot.all_day ? "" : String(selectedShoot.start_time || "").slice(11, 16)
-                  const fin = selectedShoot.all_day ? "" : String(selectedShoot.end_time || "").slice(11, 16)
-                  const celdas = [
-                    ...(selectedShoot.horario_avanzada ? [{ label: "Avanzada Retro", value: String(selectedShoot.horario_avanzada) }] : []),
-                    ...(fin ? [{ label: "Fin estimado", value: fin }] : []),
-                  ]
-                  return (
-                    // Envoltura sin overflow: el cuerpo del modal es un grid con
-                    // scroll y una celda con overflow hidden se encogería.
-                    <div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: isMobile ? "1fr" : ["1.3fr", ...celdas.map(() => "1fr")].join(" "),
-                        border: "1px solid #E2E2E2",
-                        borderRadius: 10,
-                        overflow: "hidden",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <div style={{ background: "#131313", padding: "14px 16px 15px" }}>
-                        <div style={{ fontSize: 12.5, color: "#8F8F8F" }}>Llamado general</div>
-                        <div
-                          style={{
-                            marginTop: 6,
-                            fontSize: inicio ? (isMobile ? 44 : 52) : 28,
-                            lineHeight: 0.95,
-                            fontStretch: "64%",
-                            fontWeight: 760,
-                            color: "#FFFFFF",
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
-                          {inicio || "Todo el día"}
-                        </div>
-                      </div>
-                      {celdas.map((c) => (
-                        <div
-                          key={c.label}
-                          style={{
-                            padding: "14px 16px 15px",
-                            borderLeft: isMobile ? "none" : "1px solid #E2E2E2",
-                            borderTop: isMobile ? "1px solid #E2E2E2" : "none",
-                          }}
-                        >
-                          <div style={{ fontSize: 12.5, color: "#595959" }}>{c.label}</div>
-                          <div
-                            style={{
-                              marginTop: 10,
-                              fontSize: 30,
-                              lineHeight: 1,
-                              fontStretch: "68%",
-                              fontWeight: 650,
-                              color: "#141414",
-                              fontVariantNumeric: "tabular-nums",
-                            }}
-                          >
-                            {c.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    </div>
-                  )
-                })()}
-
-                <div
-                  style={{
-                    ...formModalColumnsStyle,
-                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                  }}
-                >
-                  <div style={formModalColumnStyle}>
-                    <p style={formModalSectionLabelStyle}>Detalles</p>
-
-                    <div style={formModalRowStyle}>
-                      <FormModalPreviewField
-                        label="Cliente"
-                        value={selectedShoot.client}
-                      />
-                      <FormModalPreviewField
-                        label="Proyecto"
-                        value={selectedShoot.project}
-                      />
-                    </div>
-
-                    <FormModalPreviewField
-                      label="Locación"
-                      value={selectedShoot.location}
-                    />
-
-                    <FormModalPreviewField
-                      label="Dirección"
-                      value={selectedShoot.address}
-                    />
-                  </div>
-
-                  <div style={formModalColumnStyle}>
-                    <p style={formModalSectionLabelStyle}>Producción</p>
-
-                    <div style={formModalRowStyle}>
-                      <div style={formModalFieldStyle}>
-                        <span style={formModalLabelStyle}>Estado</span>
-                        <span style={formModalStatusBadgeStyle(selectedShoot.status)}>
-                          {statusLabel(selectedShoot.status)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <FormModalPreviewField
-                      label="Fechas"
-                      value={formatShootSchedule(selectedShoot)}
-                    />
-
-                    <div style={formModalFieldStyle}>
-                      <span style={formModalLabelStyle}>
-                        Personal Retro ({getShootEmployees(selectedShoot.id).length})
-                      </span>
-                      {getShootEmployees(selectedShoot.id).length > 0 ? (
-                        <div style={formModalPillGridStyle}>
-                          {getShootEmployees(selectedShoot.id).map((employee) => (
-                            <span key={employee.id} style={formModalPillStyle}>
-                              {employeeDisplayName(employee)}
-                              <span style={formModalPillMetaStyle}>{employee.puesto}</span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={formModalValueStyle}>—</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={formModalNotesBlockStyle}>
-                  <p style={formModalSectionLabelStyle}>Notas</p>
-                  <div
-                    style={{
-                      ...formModalNotesGridStyle,
-                      gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-                    }}
-                  >
-                    <FormModalPreviewField
-                      label="Públicas"
-                      value={selectedShoot.public_notes}
-                      multiline
-                    />
-
-                    {canEdit && (
-                      <FormModalPreviewField
-                        label="Privadas"
-                        value={selectedShoot.private_notes}
-                        multiline
-                      />
-                    )}
-
-                    <FormModalPreviewField
-                      label="Producción"
-                      value={selectedShoot.production_notes}
-                      multiline
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={formModalFooterStyle}>
-                <button
-                  onClick={() => setDetailsOpen(false)}
-                  style={formModalSecondaryButtonStyle}
-                >
-                  Cerrar
+                <div style={{ flex: 1 }} />
+                <button type="button" onClick={shareSelectedShoot} style={drawerQuietButtonStyle}>
+                  WhatsApp
                 </button>
-
-                <button
-                  onClick={shareSelectedShoot}
-                  style={formModalWhatsAppButtonStyle}
-                >
-                  {isMobile ? "WhatsApp" : "Compartir por WhatsApp"}
-                </button>
-
                 {canEdit && (
                   <button
+                    type="button"
                     onClick={() => {
                       setDupeDate(selectedShoot.start_time.slice(0, 10))
+                      // El selector de fecha va encima: se cierra el panel primero
+                      setDetailsOpen(false)
                       setShowDupePicker(true)
                     }}
-                    style={formModalDuplicateButtonStyle}
+                    style={drawerQuietButtonStyle}
                   >
                     Duplicar
                   </button>
                 )}
-
                 {canEdit && (
-                  <button onClick={openEditShoot} style={formModalPrimaryButtonStyle}>
-                    Editar
+                  <button type="button" onClick={openEditShoot} style={drawerInkButtonStyle}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M4 20l4-1 11-11-3-3L5 16z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                    </svg>
+                    {isMobile ? "Editar" : "Editar llamado"}
                   </button>
                 )}
-
                 {canEdit && (
-                  <button onClick={deleteShoot} style={formModalDangerButtonStyle}>
-                    Borrar
+                  <button
+                    type="button"
+                    onClick={deleteShoot}
+                    style={{ ...drawerIconButtonStyle, color: "#C2362B" }}
+                    aria-label="Borrar llamado"
+                    title="Borrar llamado"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 )}
               </div>
-            </DraggableModalPanel>
-          </div>
-        )}
+
+              <div style={{ ...drawerBodyStyle, padding: isMobile ? "20px 18px 28px" : drawerBodyStyle.padding }}>
+                <div style={drMetaStyle}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontWeight: 600, color: "#131313" }}>
+                    <span aria-hidden style={{ width: 9, height: 13, borderRadius: 2, background: "#131313" }} />
+                    Llamado
+                  </span>
+                  <span style={{ ...drPillStyle, color: estatus.color, background: estatus.fondo }}>
+                    <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} />
+                    {statusLabel(selectedShoot.status)}
+                  </span>
+                  {ruta && <span style={drRutaStyle} title={ruta}>{ruta}</span>}
+                </div>
+
+                <p style={drClienteStyle}>{selectedShoot.client || "Sin cliente"}</p>
+                <h2 style={{ ...drTituloStyle, fontSize: isMobile ? 23 : 27 }}>{selectedShoot.title}</h2>
+                <p style={drFechaStyle}>{formatShootSchedule(selectedShoot)}</p>
+
+                {/* Horarios: la hora general manda, en grande */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : ["1.3fr", ...celdas.map(() => "1fr")].join(" "),
+                    marginTop: 22,
+                    border: "1px solid #E2E2E2",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ background: "#131313", padding: "14px 16px 15px" }}>
+                    <div style={{ fontSize: 12.5, color: "#A3A3A3" }}>Llamado general</div>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: inicio ? (isMobile ? 44 : 52) : 28,
+                        lineHeight: 0.95,
+                        fontStretch: "64%",
+                        fontWeight: 760,
+                        color: "#FFFFFF",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {inicio || "Todo el día"}
+                    </div>
+                  </div>
+                  {celdas.map((c) => (
+                    <div
+                      key={c.label}
+                      style={{
+                        padding: "14px 16px 15px",
+                        borderLeft: isMobile ? "none" : "1px solid #E2E2E2",
+                        borderTop: isMobile ? "1px solid #E2E2E2" : "none",
+                      }}
+                    >
+                      <div style={{ fontSize: 12.5, color: "#595959" }}>{c.label}</div>
+                      <div
+                        style={{
+                          marginTop: 10,
+                          fontSize: 30,
+                          lineHeight: 1,
+                          fontStretch: "68%",
+                          fontWeight: 650,
+                          color: "#141414",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {c.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Locación */}
+                <section style={drSeccionStyle}>
+                  <h3 style={drSeccionTituloStyle}>Locación</h3>
+                  {lugar || direccion ? (
+                    <>
+                      {lugar && <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{lugar}</p>}
+                      {direccion && direccion !== lugar && (
+                        <p style={{ margin: "1px 0 0", color: "#595959", fontSize: 14 }}>{direccion}</p>
+                      )}
+                      <div style={drLigasStyle}>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destinoMaps || "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={drLigaStyle}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" stroke="currentColor" strokeWidth="1.6" />
+                            <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.6" />
+                          </svg>
+                          Abrir en Maps
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(destinoMaps || "").then(
+                              () => alert("Dirección copiada"),
+                              () => alert("No se pudo copiar la dirección"),
+                            )
+                          }}
+                          style={{ ...drLigaStyle, background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", fontSize: 13, fontWeight: 600 }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                            <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" stroke="currentColor" strokeWidth="1.6" />
+                          </svg>
+                          Copiar dirección
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <p style={drVacioStyle}>Sin locación todavía.</p>
+                  )}
+                </section>
+
+                {/* Equipo */}
+                <section style={drSeccionStyle}>
+                  <h3 style={drSeccionTituloStyle}>
+                    Equipo <span style={{ color: "#8A8A8A", fontWeight: 500 }}>{personal.length + tecnicos.length}</span>
+                  </h3>
+                  <div style={drTabsStyle} role="tablist">
+                    {([
+                      { key: "personal", label: "Personal Retro", n: personal.length },
+                      { key: "tecnicos", label: "Técnicos", n: tecnicos.length },
+                    ] as const).map((t) => (
+                      <button
+                        key={t.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={detailCrewTab === t.key}
+                        onClick={() => setDetailCrewTab(t.key)}
+                        style={{
+                          ...drTabStyle,
+                          color: detailCrewTab === t.key ? "#141414" : "#595959",
+                          fontWeight: detailCrewTab === t.key ? 600 : 400,
+                          borderBottomColor: detailCrewTab === t.key ? "#141414" : "transparent",
+                        }}
+                      >
+                        {t.label}
+                        <span style={{ marginLeft: 4, color: "#8A8A8A", fontWeight: 500 }}>{t.n}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {detailCrewTab === "personal" ? (
+                    personal.length > 0 ? (
+                      <ul style={drListaStyle}>
+                        {personal.map((employee: any, i: number) => {
+                          const nombre = employeeDisplayName(employee)
+                          const iniciales = `${(employee.nombre || "").charAt(0)}${(employee.apellido_paterno || "").charAt(0)}`.toUpperCase()
+                          return (
+                            <li key={employee.id} style={drFilaStyle}>
+                              <span style={{ ...drAvatarStyle, background: avatarFondos[i % avatarFondos.length] }}>{iniciales || nombre.charAt(0)}</span>
+                              <span style={{ minWidth: 0 }}>
+                                <span style={{ display: "block", fontWeight: 550, lineHeight: 1.2 }}>{nombre}</span>
+                                {employee.puesto && <span style={{ display: "block", color: "#595959", fontSize: 12.5 }}>{employee.puesto}</span>}
+                              </span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    ) : (
+                      <p style={drVacioStyle}>Nadie asignado todavía.</p>
+                    )
+                  ) : tecnicos.length > 0 ? (
+                    <ul style={drListaStyle}>
+                      {tecnicos.map((r: any) => (
+                        <li key={r.id} style={drFilaStyle}>
+                          <span style={{ ...drAvatarStyle, background: "#EDEDED", color: "#595959" }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z M4 7.5 12 12l8-4.5M12 12v9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                          <span style={{ fontWeight: 550 }}>{r.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={drVacioStyle}>Sin técnicos asignados.</p>
+                  )}
+                </section>
+
+                {/* Notas */}
+                <section style={drSeccionStyle}>
+                  <h3 style={drSeccionTituloStyle}>Notas</h3>
+                  {notas.length > 0 ? (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {notas.map((n) => (
+                        <div key={n.titulo} style={drNotaStyle}>
+                          <p style={drNotaTituloStyle}>
+                            {n.privado && (
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <rect x="5" y="10.5" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                                <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" strokeWidth="1.6" />
+                              </svg>
+                            )}
+                            {n.titulo}
+                          </p>
+                          <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{n.texto}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={drVacioStyle}>Sin notas.</p>
+                  )}
+                </section>
+              </div>
+            </SideDrawer>
+          )
+        })()}
       {/* Mini-modal: selecciona fecha para duplicar */}
       {showDupePicker && selectedShoot && (
         <div
@@ -4918,11 +4946,11 @@ function openEditVacation() {
           }}
         >
           <p style={eventTooltipTitleStyle}>{hoverTip.title}</p>
-          {hoverTip.time && <p style={eventTooltipTimeStyle}>🕑 {hoverTip.time}</p>}
+          {hoverTip.time && <p style={eventTooltipTimeStyle}>{hoverTip.time}</p>}
           {hoverTip.participants.length > 0 && (
             <div style={eventTooltipPeopleStyle}>
               <span style={eventTooltipPeopleLabelStyle}>
-                👥 {hoverTip.participants.length}
+                {hoverTip.participants.length}
               </span>
               <span style={eventTooltipPeopleNamesStyle}>
                 {hoverTip.participants.join(", ")}
@@ -5142,9 +5170,9 @@ function buildShootWhatsAppMessage(
     : startDate.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false })
 
   const lines: string[] = [
-    "🎬 LLAMADO",
+    "LLAMADO",
     `*${shoot.title || "Sin título"}*`,
-    `📅 ${dateLabel} ·`,
+    `${dateLabel} ·`,
   ]
 
   if (shoot.horario_avanzada?.trim()) {
@@ -5156,21 +5184,21 @@ function buildShootWhatsAppMessage(
   }
 
   const clientProject = [shoot.client, shoot.project].filter(Boolean).join(" · ")
-  if (clientProject) lines.push(`🏢 ${clientProject}`)
+  if (clientProject) lines.push(`${clientProject}`)
 
   if (shoot.location?.trim()) {
-    lines.push(`📍 ${shoot.location.trim()}`)
+    lines.push(`${shoot.location.trim()}`)
   }
 
   if (shoot.address?.trim() && shoot.address.trim() !== shoot.location?.trim()) {
-    lines.push(`📌 ${shoot.address.trim()}`)
+    lines.push(`${shoot.address.trim()}`)
   }
 
   lines.push(`Estado: ${statusLabel(shoot.status)}`)
 
   if (employees.length > 0) {
     lines.push("")
-    lines.push("👥 CREW")
+    lines.push("CREW")
     for (const employee of employees) {
       lines.push(`• ${employeeDisplayName(employee)} — ${employee.puesto}`)
     }
@@ -5178,7 +5206,7 @@ function buildShootWhatsAppMessage(
 
   if (shoot.public_notes?.trim()) {
     lines.push("")
-    lines.push("📝 NOTAS")
+    lines.push("NOTAS")
     lines.push(shoot.public_notes.trim())
   }
 
@@ -5305,12 +5333,6 @@ function Detail({ label, value }: { label: string; value: string }) {
   )
 }
 
-function statusEmoji(status: string) {
-  if (status === "confirmed") return "✅"
-  if (status === "cancelled") return "❌"
-  if (status === "wrap") return "🏁"
-  return "🟡"
-}
 function getStatusColor(status: string) {
   if (status === "confirmed") return "#16a34a"
 
@@ -5319,6 +5341,140 @@ function getStatusColor(status: string) {
   if (status === "wrap") return "#8A8A8A"
 
   return "#A86B00"
+}
+
+// ── Detalle del llamado (panel lateral) ─────────────────────────────────────
+const drMetaStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  fontSize: 12.5,
+  color: "#595959",
+  minWidth: 0,
+}
+const drPillStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  height: 20,
+  padding: "0 8px",
+  borderRadius: 10,
+  fontSize: 11.5,
+  fontWeight: 600,
+  flexShrink: 0,
+}
+const drRutaStyle: React.CSSProperties = {
+  marginLeft: "auto",
+  color: "#8A8A8A",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0,
+}
+const drClienteStyle: React.CSSProperties = {
+  margin: "18px 0 0",
+  fontSize: 13.5,
+  fontWeight: 500,
+  color: "#595959",
+}
+const drTituloStyle: React.CSSProperties = {
+  margin: "3px 0 0",
+  fontWeight: 720,
+  fontStretch: "118%",
+  letterSpacing: "-0.02em",
+  lineHeight: 1.12,
+  color: "#141414",
+}
+const drFechaStyle: React.CSSProperties = {
+  margin: "6px 0 0",
+  fontSize: 14,
+  color: "#595959",
+}
+const drSeccionStyle: React.CSSProperties = {
+  marginTop: 24,
+}
+const drSeccionTituloStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  fontSize: 14,
+  fontWeight: 650,
+  color: "#141414",
+}
+const drLigasStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 16,
+  marginTop: 8,
+  fontSize: 13,
+}
+const drLigaStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  color: "#141414",
+  fontWeight: 600,
+  textDecoration: "underline",
+  textDecorationColor: "#C4C4C4",
+  textUnderlineOffset: 3,
+}
+const drTabsStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 18,
+  borderBottom: "1px solid #E2E2E2",
+  marginBottom: 4,
+}
+const drTabStyle: React.CSSProperties = {
+  padding: "0 0 9px",
+  marginBottom: -1,
+  background: "none",
+  border: "none",
+  borderBottom: "2px solid transparent",
+  fontSize: 13.5,
+  cursor: "pointer",
+}
+const drListaStyle: React.CSSProperties = {
+  listStyle: "none",
+  margin: 0,
+  padding: 0,
+}
+const drFilaStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "30px minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 12,
+  padding: "8px 0",
+  borderBottom: "1px solid #EDEDED",
+  fontSize: 14,
+}
+const drAvatarStyle: React.CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: "50%",
+  display: "grid",
+  placeItems: "center",
+  fontSize: 11.5,
+  fontWeight: 650,
+  color: "#131313",
+}
+const drNotaStyle: React.CSSProperties = {
+  background: "#F3F3F3",
+  borderRadius: 8,
+  padding: "12px 14px",
+  fontSize: 14,
+  color: "#141414",
+}
+const drNotaTituloStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  margin: "0 0 3px",
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "#595959",
+}
+const drVacioStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 13.5,
+  color: "#8A8A8A",
 }
 
 const appShellStyle: React.CSSProperties = {

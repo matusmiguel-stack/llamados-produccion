@@ -76,7 +76,6 @@ export default function FacturasPage() {
         ) : !open ? (
           /* ── Cerrado ── */
           <div style={{ textAlign: "center", padding: "32px 0" }}>
-            <p style={{ fontSize: 44, margin: 0 }}>🗓️</p>
             <p style={{ color: "#262626", fontSize: 17, fontWeight: 600, margin: "16px 0 8px" }}>
               La recepción de facturas está cerrada
             </p>
@@ -89,7 +88,6 @@ export default function FacturasPage() {
         ) : result?.status === "aceptada" ? (
           /* ── Aceptada ── */
           <div style={{ textAlign: "center", padding: "24px 0" }}>
-            <p style={{ fontSize: 44, margin: 0 }}>✅</p>
             <p style={{ color: "#1F8A55", fontSize: 18, fontWeight: 700, margin: "16px 0 8px" }}>
               Factura recibida correctamente
             </p>
@@ -110,7 +108,6 @@ export default function FacturasPage() {
           /* ── Rechazada ── */
           <div style={{ padding: "8px 0" }}>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: 44, margin: 0 }}>❌</p>
               <p style={{ color: "#C2362B", fontSize: 18, fontWeight: 700, margin: "16px 0 16px" }}>
                 Factura rechazada
               </p>

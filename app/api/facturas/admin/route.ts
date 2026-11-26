@@ -142,7 +142,7 @@ export async function POST(req: Request) {
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
         <tr><td style="background:#0f172a;padding:28px 32px;">
           <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Retro Casa Productora</p>
-          <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#f1f5f9;">Pago Realizado 💸</p>
+          <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#f1f5f9;">Pago Realizado</p>
         </td></tr>
         <tr><td style="padding:28px 32px;">
           <p style="margin:0;font-size:15px;color:#334155;">Hola <strong>${provNombre}</strong>,</p>

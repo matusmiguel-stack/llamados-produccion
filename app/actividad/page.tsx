@@ -23,29 +23,29 @@ type LogDetail = LogRow & { old_data: any; new_data: any }
 
 // Metadatos por tabla: etiqueta legible, emoji y a dónde enlaza el registro
 const TABLE_META: Record<string, { label: string; emoji: string; href?: (id: string) => string }> = {
-  shoots:            { label: "Llamado",              emoji: "🎬", href: () => "/" },
-  juntas:            { label: "Junta",                emoji: "🤝", href: () => "/" },
-  ensayos:           { label: "Ensayo",               emoji: "🎭", href: () => "/" },
-  vacations:         { label: "Vacaciones",           emoji: "🏖️", href: () => "/empleados" },
-  projects:          { label: "Proyecto",             emoji: "📁", href: id => `/proyectos/${id}` },
-  clients:           { label: "Cliente",              emoji: "🏢" },
-  quotes:            { label: "Cotización",           emoji: "📝", href: () => "/cotizaciones" },
-  quote_sections:    { label: "Sección de cotización", emoji: "📝" },
-  quote_items:       { label: "Partida de cotización", emoji: "📝" },
-  ingresos:          { label: "Ingreso",              emoji: "💵", href: () => "/ingresos" },
-  facturas:          { label: "Factura",              emoji: "🧾", href: () => "/finanzas" },
-  proveedores:       { label: "Proveedor",            emoji: "🚚", href: id => `/proveedores/${id}` },
-  employees:         { label: "Empleado",             emoji: "👤", href: () => "/empleados" },
-  resources:         { label: "Inventario",           emoji: "📦", href: () => "/resources" },
-  referencias:       { label: "Referencia",           emoji: "🔗", href: () => "/referencias" },
-  user_tasks:        { label: "Tarea",                emoji: "✅", href: () => "/tasks" },
-  flujo_movimientos: { label: "Flujo de caja",        emoji: "💰", href: () => "/flujo" },
-  flujo_fijos:       { label: "Flujo fijo",           emoji: "💰", href: () => "/flujo" },
-  entregas:          { label: "Entrega",              emoji: "🎞️", href: () => "/postproduccion" },
-  external_contacts: { label: "Contacto externo",     emoji: "📇" },
-  hoja_llamado:      { label: "Hoja de llamado",      emoji: "📋" },
-  rodaje_planes:     { label: "Plan de rodaje",       emoji: "🎬" },
-  client_subfolders: { label: "Subcarpeta",           emoji: "📂" },
+  shoots:            { label: "Llamado",              emoji: "", href: () => "/" },
+  juntas:            { label: "Junta",                emoji: "", href: () => "/" },
+  ensayos:           { label: "Ensayo",               emoji: "", href: () => "/" },
+  vacations:         { label: "Vacaciones",           emoji: "", href: () => "/empleados" },
+  projects:          { label: "Proyecto",             emoji: "", href: id => `/proyectos/${id}` },
+  clients:           { label: "Cliente",              emoji: "" },
+  quotes:            { label: "Cotización",           emoji: "", href: () => "/cotizaciones" },
+  quote_sections:    { label: "Sección de cotización", emoji: "" },
+  quote_items:       { label: "Partida de cotización", emoji: "" },
+  ingresos:          { label: "Ingreso",              emoji: "", href: () => "/ingresos" },
+  facturas:          { label: "Factura",              emoji: "", href: () => "/finanzas" },
+  proveedores:       { label: "Proveedor",            emoji: "", href: id => `/proveedores/${id}` },
+  employees:         { label: "Empleado",             emoji: "", href: () => "/empleados" },
+  resources:         { label: "Inventario",           emoji: "", href: () => "/resources" },
+  referencias:       { label: "Referencia",           emoji: "", href: () => "/referencias" },
+  user_tasks:        { label: "Tarea",                emoji: "", href: () => "/tasks" },
+  flujo_movimientos: { label: "Flujo de caja",        emoji: "", href: () => "/flujo" },
+  flujo_fijos:       { label: "Flujo fijo",           emoji: "", href: () => "/flujo" },
+  entregas:          { label: "Entrega",              emoji: "", href: () => "/postproduccion" },
+  external_contacts: { label: "Contacto externo",     emoji: "" },
+  hoja_llamado:      { label: "Hoja de llamado",      emoji: "" },
+  rodaje_planes:     { label: "Plan de rodaje",       emoji: "" },
+  client_subfolders: { label: "Subcarpeta",           emoji: "" },
 }
 
 const tableMeta = (t: string) => TABLE_META[t] || { label: t, emoji: "•" }
@@ -223,7 +223,7 @@ export default function ActividadPage() {
 
       <main style={{ flex: 1, padding: isMobile ? "76px 14px 32px" : "32px 36px", maxWidth: 1100, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>🕓 Historial de movimientos</h1>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>Historial de movimientos</h1>
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#737373" }}>
             Registro de todo lo que se crea, edita y elimina en la app. Solo visible para administradores.
           </p>
@@ -298,7 +298,6 @@ export default function ActividadPage() {
                     const href = r.action !== "DELETE" && meta.href && r.record_id ? meta.href(r.record_id) : null
                     return (
                       <div key={r.id} style={rowStyle}>
-                        <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }} aria-hidden>{meta.emoji}</span>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 14, color: "#262626" }}>
@@ -381,7 +380,6 @@ function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolea
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 20 }} aria-hidden>{meta.emoji}</span>
         <span style={{ fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>{meta.label}</span>
         <span style={actionBadgeStyle(act)}>{act.badge}</span>
       </div>

@@ -223,7 +223,7 @@ export default function SolicitudesVacacionesPage() {
                       </p>
                     </div>
                     <span style={{ ...statusBadgeStyle, background: info.bg, color: info.color }}>
-                      {info.emoji} {info.label}
+                      {info.label}
                     </span>
                   </div>
 

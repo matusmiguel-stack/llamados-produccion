@@ -870,7 +870,7 @@ export default function IngresosPage() {
     // Factura PPD: complemento de pago por lo cobrado
     if (esPPD(r) && payComplemento && !paySinIva) {
       const c = await emitirComplemento(r.id, payForma)
-      alert(c.ok ? c.msg : `El pago se guardó, pero no se pudo emitir el complemento de pago: ${c.msg}\n\nPuedes reintentarlo con el botón 🧾 Complemento de la línea.`)
+      alert(c.ok ? c.msg : `El pago se guardó, pero no se pudo emitir el complemento de pago: ${c.msg}\n\nPuedes reintentarlo con el botón Complemento de la línea.`)
     }
 
     setPayModal(null)
@@ -997,10 +997,10 @@ export default function IngresosPage() {
             {isAdmin && (
               <>
                 <button onClick={() => downloadIngresosTemplate()} style={secondaryBtnStyle} title="Descargar plantilla de Excel">
-                  ⬇ Plantilla
+                  Plantilla
                 </button>
                 <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={secondaryBtnStyle} title="Importar ingresos desde Excel">
-                  {importing ? "Importando…" : "⬆ Importar Excel"}
+                  {importing ? "Importando…" : "Importar Excel"}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -1012,13 +1012,13 @@ export default function IngresosPage() {
               </>
             )}
             <button onClick={() => setDatosFiscalesOpen(true)} style={secondaryBtnStyle} title="Datos fiscales de clientes y de Retro Studio / Films">
-              🧾 Datos fiscales
+              Datos fiscales
             </button>
             <button onClick={() => setIndependientesOpen(true)} style={secondaryBtnStyle} title="Facturas que no van al control de ingresos (préstamos entre empresas, etc.)">
-              🧾 Facturas independientes
+              Facturas independientes
             </button>
             <button onClick={() => setComplementosOpen(true)} style={secondaryBtnStyle} title="Complementos de pago de facturas PPD: los automáticos y los que se hacen a mano">
-              🧾 Complementos de pago
+              Complementos de pago
             </button>
             {/* Admin y finanzas pueden capturar ingresos manuales (sin proyecto) */}
             <button onClick={openCreate} style={newBtnStyle}>+ Nuevo ingreso</button>
@@ -1031,7 +1031,7 @@ export default function IngresosPage() {
           <SummaryCard label="Cobrado"         value={globalCobrado}   color="#1F8A55" valueWithIva={globalCobradoConIva} />
           <SummaryCard label="Por cobrar"      value={globalPendiente} color="#C2410C" valueWithIva={globalPendienteConIva} />
           {globalOverdue > 0 && (
-            <SummaryCard label="⚠ Pagos vencidos" value={globalOverdue} color="#C2362B" />
+            <SummaryCard label="Pagos vencidos" value={globalOverdue} color="#C2362B" />
           )}
         </div>
 
@@ -1149,7 +1149,7 @@ export default function IngresosPage() {
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block", marginRight: 5, flexShrink: 0 }} />
                       {cfg.label}
                     </span>
-                    {isOverdue && <span style={overdueBadgeStyle}>⚠ Vencido</span>}
+                    {isOverdue && <span style={overdueBadgeStyle}>Vencido</span>}
                   </div>
 
                   <div style={{ minWidth: 0 }}>
@@ -1187,13 +1187,13 @@ export default function IngresosPage() {
                       <button onClick={() => openPayModal(r)} style={{ ...marcarPagoBtnStyle, ...mobileActionStyle }}>✓ Marcar Pago</button>
                     )}
                     {r.estatus === "facturado" && r.factura_uuid && facAmbiente[r.empresa] && (
-                      <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#3F3F3F", borderColor: "rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)", ...mobileActionStyle }}>🔁 Refacturar</button>
+                      <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#3F3F3F", borderColor: "rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)", ...mobileActionStyle }}>Refacturar</button>
                     )}
                     {r.facturapi_id && r.estatus !== "pagado" && (
                       <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02", sustituidaPor: "" })} style={{ ...cancelarCfdiBtnStyle, ...mobileActionStyle }}>⊘ Cancelar factura</button>
                     )}
                     {faltaComplemento(r) && (
-                      <button onClick={() => setComplementoModal({ row: r, label: proyectoLabel(r), forma: "03" })} style={{ ...complementoBtnStyle, ...mobileActionStyle }}>🧾 Complemento</button>
+                      <button onClick={() => setComplementoModal({ row: r, label: proyectoLabel(r), forma: "03" })} style={{ ...complementoBtnStyle, ...mobileActionStyle }}>Complemento</button>
                     )}
                     <button onClick={() => openEdit(r)} style={{ ...actionBtnStyle, ...mobileActionStyle, marginLeft: "auto", minWidth: 36 }} aria-label="Editar">✎</button>
                     {(isAdmin || !r.project_id) && (
@@ -1259,7 +1259,7 @@ export default function IngresosPage() {
                             {cfg.label}
                           </span>
                           {isOverdue && (
-                            <span style={overdueBadgeStyle}>⚠ Vencido</span>
+                            <span style={overdueBadgeStyle}>Vencido</span>
                           )}
                         </div>
                       </td>
@@ -1307,7 +1307,7 @@ export default function IngresosPage() {
                         )}
                         {r.estatus === "facturado" && r.factura_uuid && facAmbiente[r.empresa] && (
                           <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#3F3F3F", borderColor: "rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)" }} title="Refacturar: timbrar una factura nueva que sustituye a esta (relación 04) y cancelar esta con motivo 01">
-                            🔁
+
                           </button>
                         )}
                         {r.facturapi_id && r.estatus !== "pagado" && (
@@ -1317,7 +1317,7 @@ export default function IngresosPage() {
                         )}
                         {faltaComplemento(r) && (
                           <button onClick={() => setComplementoModal({ row: r, label: proyectoLabel(r), forma: "03" })} style={complementoBtnStyle} title="Factura PPD cobrada sin complemento de pago">
-                            🧾 Complemento
+                            Complemento
                           </button>
                         )}
                         <button onClick={() => openEdit(r)} style={actionBtnStyle}>✎</button>
@@ -1393,7 +1393,7 @@ export default function IngresosPage() {
                   Cancelar
                 </button>
                 <button onClick={confirmarComplemento} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.12)", color: "#1D6FB8", fontSize: 13, fontWeight: 700, cursor: emitiendo ? "not-allowed" : "pointer", opacity: emitiendo ? 0.6 : 1 }}>
-                  {emitiendo ? "Emitiendo…" : "🧾 Emitir complemento"}
+                  {emitiendo ? "Emitiendo…" : "Emitir complemento"}
                 </button>
               </div>
             </div>
@@ -1421,7 +1421,7 @@ export default function IngresosPage() {
               </FormField>
               <p style={{ margin: 0, fontSize: 11, color: "#8A8A8A", lineHeight: 1.5 }}>
                 Se cancela ante el SAT y el ingreso regresa a “En Producción” para volver a facturarlo. Si fue una factura parcial, la línea de Liquidación se queda como está.
-                {" "}Para cambiar la factura por otra nueva usa mejor 🔁 Refacturar: timbra la nueva y cancela esta con motivo 01 en un solo paso.
+                {" "}Para cambiar la factura por otra nueva usa mejor Refacturar: timbra la nueva y cancela esta con motivo 01 en un solo paso.
               </p>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setCancelModal(null)} disabled={cancelando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}>
@@ -1450,7 +1450,7 @@ export default function IngresosPage() {
               </p>
               {/* Timbrar en la app (Facturapi) o subir el XML/PDF hechos fuera */}
               <div style={{ display: facturarModal.refacturar ? "none" : "flex", gap: 6, marginBottom: 14 }}>
-                {([["timbrar", "🧾 Timbrar en la app"], ["subir", "⬆ Subir XML y PDF"]] as const).map(([k, t]) => (
+                {([["timbrar", "Timbrar en la app"], ["subir", "Subir XML y PDF"]] as const).map(([k, t]) => (
                   <button key={k} onClick={() => setFacModo(k)} style={{
                     ...secondaryBtnStyle, flex: 1, padding: "8px 10px", fontSize: 12,
                     ...(facModo === k ? { background: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.2)", color: "#3F3F3F" } : {}),
@@ -1788,7 +1788,7 @@ export default function IngresosPage() {
                   />
                   {editingLinked && (
                     <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>
-                      🔗 Vinculado a la carpeta del cliente — se renombra desde Proyectos.
+                      Vinculado a la carpeta del cliente — se renombra desde Proyectos.
                     </p>
                   )}
                 </FormField>

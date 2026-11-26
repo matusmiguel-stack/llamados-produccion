@@ -64,10 +64,12 @@ export function ProximosLlamados({
   shoots,
   shootEmployees,
   onOpen,
+  onClose,
 }: {
   shoots: Shoot[]
   shootEmployees: ShootEmployee[]
   onOpen: (shootId: string) => void
+  onClose?: () => void
 }) {
   const hoy = hoyLocal()
   const limite = sumarDias(hoy, DIAS_VENTANA)
@@ -91,7 +93,16 @@ export function ProximosLlamados({
 
   return (
     <aside style={columnaStyle} className="proximos-llamados" aria-label="Próximos llamados">
-      <h2 style={tituloStyle}>Próximos llamados</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <h2 style={tituloStyle}>Próximos llamados</h2>
+        {onClose && (
+          <button type="button" onClick={onClose} aria-label="Ocultar próximos llamados" title="Ocultar" style={cerrarStyle}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       {porDia.length === 0 && (
         <p style={vacioStyle}>No hay llamados en las próximas tres semanas.</p>
@@ -189,8 +200,22 @@ const columnaStyle: CSSProperties = {
   top: 24,
 }
 
+const cerrarStyle: CSSProperties = {
+  marginLeft: "auto",
+  width: 30,
+  height: 30,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: 7,
+  border: "1px solid #E2E2E2",
+  background: "#FFFFFF",
+  color: "#595959",
+  cursor: "pointer",
+}
+
 const tituloStyle: CSSProperties = {
-  margin: "4px 0 0",
+  margin: 0,
   fontSize: 15,
   fontWeight: 650,
   color: "#141414",

@@ -408,7 +408,7 @@ export default function FinanzasPage() {
 
       <main style={{ flex: 1, padding: isMobile ? "76px 14px 32px" : "32px 36px", maxWidth: 1200, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>💰 Finanzas — Facturas</h1>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>Finanzas — Facturas</h1>
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#737373" }}>
             Facturas recibidas de proveedores y programación de pagos
           </p>
@@ -440,7 +440,7 @@ export default function FinanzasPage() {
         {(totalPorPagarHistorico.sinIva > 0 || totalPagadoHistorico.sinIva > 0) && (
           <div style={{ marginBottom: 24 }}>
             <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#C2410C",}}>
-              🕰️ Deuda histórica (pasada, previa a la app)
+              Deuda histórica (pasada, previa a la app)
             </p>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 12 }}>
               <div style={cardStyle("#C2410C")}>
@@ -463,7 +463,7 @@ export default function FinanzasPage() {
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           {(["lista", "viernes"] as const).map(v => (
             <button key={v} onClick={() => setView(v)} style={filterBtnStyle(view === v)}>
-              {v === "lista" ? "📋 Lista" : "📅 Calendario de viernes"}
+              {v === "lista" ? "Lista" : "Calendario de viernes"}
             </button>
           ))}
         </div>
@@ -478,7 +478,6 @@ export default function FinanzasPage() {
               <div ref={calWrapRef} style={{ position: "relative" }}>
                 <button onClick={() => setCalOpen(o => !o)} style={dateJumpBtnStyle} title="Saltar a un viernes específico">
                   <span style={{ fontSize: 15, fontWeight: 700, color: "#1A1A1A" }}>{fechaViernes(selectedViernes)}</span>
-                  <span style={{ fontSize: 12, color: "#737373" }}>📅</span>
                 </button>
                 {calOpen && (
                   <MiniCalendar value={selectedViernes} onPick={goViernes} highlight={fridaysWithPagos} />
@@ -497,7 +496,7 @@ export default function FinanzasPage() {
                     <button key={v.fecha} onClick={() => setSelViernes(v.fecha)} style={chipStyle(active, v.vencido)}>
                       <span style={{ fontWeight: 700 }}>{fechaCorta(v.fecha)}</span>
                       <span style={{ opacity: 0.85, marginLeft: 6 }}>{fmtMx(v.total)}</span>
-                      {v.vencido && <span style={{ marginLeft: 6, fontSize: 9 }}>⚠</span>}
+                      {v.vencido && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600 }}>vencido</span>}
                     </button>
                   )
                 })}
@@ -556,8 +555,8 @@ export default function FinanzasPage() {
                           {fmtMx(montoPagar(f))}
                         </span>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                          {f.xml_path && <button onClick={() => download(f.xml_path!)} style={miniBtnStyle}>⬇ XML</button>}
-                          {f.pdf_path && <button onClick={() => download(f.pdf_path!)} style={miniBtnStyle}>⬇ PDF</button>}
+                          {f.xml_path && <button onClick={() => download(f.xml_path!)} style={miniBtnStyle}>XML</button>}
+                          {f.pdf_path && <button onClick={() => download(f.pdf_path!)} style={miniBtnStyle}>PDF</button>}
                           <button onClick={() => markPaid(f)} disabled={working === f.id} style={payBtnStyle(working === f.id)}>
                             {working === f.id ? "..." : "✓ Marcar Pago"}
                           </button>
@@ -578,7 +577,7 @@ export default function FinanzasPage() {
         {pagosEsteViernes.length > 0 && (
           <div style={{ marginBottom: 28, padding: "18px 20px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 14 }}>
             <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#A86B00",}}>
-              ⚡ Liberar este viernes
+              Liberar este viernes
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pagosEsteViernes.map(f => (
@@ -684,13 +683,13 @@ export default function FinanzasPage() {
                     )}
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                       {f.xml_path && (
-                        <button onClick={() => download(f.xml_path!)} style={miniBtnStyle}>⬇ XML</button>
+                        <button onClick={() => download(f.xml_path!)} style={miniBtnStyle}>XML</button>
                       )}
                       {f.pdf_path && (
-                        <button onClick={() => download(f.pdf_path!)} style={miniBtnStyle}>⬇ PDF</button>
+                        <button onClick={() => download(f.pdf_path!)} style={miniBtnStyle}>PDF</button>
                       )}
                       {f.comprobante_path && (
-                        <button onClick={() => download(f.comprobante_path!)} style={miniBtnStyle} title="Comprobante de pago del banco">📎 Comprobante</button>
+                        <button onClick={() => download(f.comprobante_path!)} style={miniBtnStyle} title="Comprobante de pago del banco">Comprobante</button>
                       )}
                       {f.status === "aceptada" && (
                         <button onClick={() => markPaid(f)} disabled={working === f.id} style={payBtnStyle(working === f.id)}>

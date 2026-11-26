@@ -85,7 +85,6 @@ export function PushNotificationManager({ userId }: Props) {
 
   return (
     <div style={bannerStyle}>
-      <span style={{ fontSize: 14 }}>🔔</span>
       <span style={{ fontSize: 13, color: "#3F3F3F" }}>
         Activa notificaciones para pagos vencidos y juntas próximas
       </span>

@@ -1816,7 +1816,7 @@ function SupplierCombobox({
 
           {filteredEmps.length > 0 && (
             <>
-              <div style={comboboxGroupHeaderStyle}>👤 Empleados RETRO</div>
+              <div style={comboboxGroupHeaderStyle}>Empleados RETRO</div>
               {filteredEmps.map(e => {
                 const lbl = empNick(e)
                 return (
@@ -1834,7 +1834,7 @@ function SupplierCombobox({
 
           {filteredProvs.length > 0 && (
             <>
-              <div style={comboboxGroupHeaderStyle}>🏢 Proveedores externos</div>
+              <div style={comboboxGroupHeaderStyle}>Proveedores externos</div>
               {filteredProvs.map(p => {
                 const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
                 const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad

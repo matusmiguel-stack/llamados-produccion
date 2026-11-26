@@ -13,7 +13,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100
 // POST JSON → factura "desde cero" con varios conceptos. NO toca el control de
 // ingresos (suelen ser préstamos entre Retro Studio y Retro Films): se guarda
 // en facturas_independientes. PUE o PPD; las PPD llevan complemento de pago
-// cuando se cobran (🧾 Complemento en la lista de facturas independientes).
+// cuando se cobran (Complemento en la lista de facturas independientes).
 export async function POST(req: Request) {
   try {
     const user = await verifyApiRole(req, ["admin", "finanzas"])

@@ -120,7 +120,6 @@ export default function LoginPage() {
         {/* ── Sent confirmation ── */}
         {view === "sent" && (
           <>
-            <div style={sentIconStyle}>✉️</div>
             <h2 style={sentTitleStyle}>Revisa tu correo</h2>
             <p style={subtitleStyle}>
               Si <strong style={{ color: "#262626" }}>{resetEmail}</strong> está registrado, recibirás un enlace para crear una nueva contraseña. Puede tardar unos minutos.

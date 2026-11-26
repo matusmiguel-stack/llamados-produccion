@@ -696,7 +696,7 @@ export default function CotizacionesPage() {
             oldTotal += (Number(it.qty) || 0) * (Number(it.days) || 0) * (Number(it.unit_price) || 0)
           }
 
-          // 🛡️ Salvaguarda anti-borrado: nunca sustituir una cotización que YA tenía
+          // Salvaguarda anti-borrado: nunca sustituir una cotización que YA tenía
           // importes por un estado completamente vacío. Esto bloquea de raíz el bug
           // que dejaba cotizaciones en cero (closure obsoleto del autosave, sobrescritura
           // por edición en vivo, o una carga parcial). Es la última línea de defensa.
@@ -1493,7 +1493,6 @@ export default function CotizacionesPage() {
       {showAprobarModal && (
         <div style={aprobarOverlayStyle}>
           <div style={aprobarModalStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
             <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#141414", textAlign: "center" }}>
               {aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}
             </h2>

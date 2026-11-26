@@ -56,7 +56,6 @@ export default function ResetPasswordPage() {
         {/* ── Invalid / expired ── */}
         {view === "invalid" && (
           <>
-            <div style={iconStyle}>⚠️</div>
             <h2 style={titleStyle}>Enlace inválido</h2>
             <p style={subtitleStyle}>
               Este enlace ya expiró o no es válido. Solicita uno nuevo desde la pantalla de inicio.
@@ -112,7 +111,6 @@ export default function ResetPasswordPage() {
         {/* ── Success ── */}
         {view === "success" && (
           <>
-            <div style={iconStyle}>✅</div>
             <h2 style={titleStyle}>¡Contraseña actualizada!</h2>
             <p style={subtitleStyle}>Tu contraseña se cambió correctamente. Ya puedes entrar con ella.</p>
             <button onClick={() => { window.location.href = "/login" }} style={primaryBtnStyle}>

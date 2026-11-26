@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
       try {
         await sendPushToUser(profileId, {
-          title: `📋 Nueva junta programada`,
+          title: `Nueva junta programada`,
           body: `${label} · ${fechaLabel}${horaInicio ? ` a las ${horaInicio}` : ""}`,
           url: "/",
         })

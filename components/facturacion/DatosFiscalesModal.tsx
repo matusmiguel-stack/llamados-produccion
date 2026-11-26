@@ -65,7 +65,7 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
     <div style={fOverlay}>
       <div style={fModal(620)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Datos fiscales</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Datos fiscales</h2>
           <button onClick={onClose} style={fClose}>✕</button>
         </div>
         <div style={{ display: "flex", gap: 6, padding: "12px 24px 0" }}>
@@ -95,7 +95,7 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
                     <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar por nombre o RFC…" style={{ ...fInput, flex: "1 1 200px", width: "auto" }} />
                     <button onClick={() => setEditando("nuevo")} style={fBtnSmall}>＋ Nuevo cliente</button>
                     <button onClick={importar} disabled={importando} style={fBtnSmall} title="Lee los XML de las facturas que ya subiste en Ingresos">
-                      {importando ? "Leyendo facturas…" : "⬇ Llenar desde facturas anteriores"}
+                      {importando ? "Leyendo facturas…" : "Llenar desde facturas anteriores"}
                     </button>
                   </div>
                   {importRes && <p style={fNote(importRes.startsWith("Error") ? "#C2362B" : "#1F8A55")}>{importRes}</p>}

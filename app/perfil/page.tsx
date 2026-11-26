@@ -272,7 +272,7 @@ export default function ProfilePage() {
             <section style={panelStyle}>
               <div style={{ ...panelHeaderStyle, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div>
-                  <p style={panelTitleStyle}>Mis vacaciones 🏖️</p>
+                  <p style={panelTitleStyle}>Mis vacaciones</p>
                   <p style={panelHintStyle}>
                     {vacConfigurado
                       ? `Período en curso · ${resumenVac!.anios} año${resumenVac!.anios !== 1 ? "s" : ""} de antigüedad`
@@ -328,7 +328,7 @@ export default function ProfilePage() {
                         return (
                           <div key={s.id} style={solicitudRowStyle}>
                             <span style={{ ...statusBadgeStyle, background: info.bg, color: info.color }}>
-                              {info.emoji} {info.label}
+                              {info.label}
                             </span>
                             <div style={{ flex: 1, minWidth: 160 }}>
                               <p style={solicitudFechasStyle}>

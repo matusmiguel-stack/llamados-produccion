@@ -223,7 +223,7 @@ export default function TasksPage() {
             Mis Tareas
           </h1>
           <p style={{ fontSize: 13, color: "#737373", marginBottom: 28 }}>
-            Tus tareas privadas y las que te comparten 👥
+            Tus tareas privadas y las que te comparten
           </p>
 
           {/* Nueva tarea */}
@@ -249,7 +249,7 @@ export default function TasksPage() {
                 />
               </div>
               <button onClick={() => setShowNewShares(!showNewShares)} style={{ ...ghostButtonStyle, textAlign: "left" }}>
-                👥 {newShares.length > 0
+                {newShares.length > 0
                   ? `Compartida con ${newShares.map(nameOf).join(", ")}`
                   : "Compartir con… (opcional)"}
               </button>
@@ -271,7 +271,7 @@ export default function TasksPage() {
           {overdue.length > 0 && (
             <section style={{ ...panelStyle, borderColor: "rgba(239,68,68,0.35)", marginTop: 20 }}>
               <p style={{ ...panelTitleStyle, color: "#C2362B" }}>
-                ⚠ Vencidas ({overdue.length})
+                Vencidas ({overdue.length})
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {overdue.map(task => (
@@ -306,7 +306,7 @@ export default function TasksPage() {
               Pendientes ({upcoming.length})
             </p>
             {upcoming.length === 0 ? (
-              <p style={emptyStyle}>Sin tareas pendientes 🎉</p>
+              <p style={emptyStyle}>Sin tareas pendientes</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {upcoming.map(task => (
@@ -503,7 +503,7 @@ function TaskRow({
             </div>
             <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
           </div>
-          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>👥 Compartir con:</p>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>Compartir con:</p>
           <SharePicker
             users={users}
             selfId={selfId}
@@ -529,13 +529,13 @@ function TaskRow({
           {task.title}
         </p>
         <p style={{ fontSize: 12, color: overdue ? "#C2362B" : "#8A8A8A", margin: "2px 0 0" }}>
-          {overdue ? "⚠ " : ""}{formatDueLabel(task)}
+          {formatDueLabel(task)}
           {!esMia && (
-            <span style={{ color: "#1D6FB8" }}> · 👥 de {ownerName}</span>
+            <span style={{ color: "#1D6FB8" }}> · de {ownerName}</span>
           )}
           {esMia && sharedNames.length > 0 && (
             <span style={{ color: "#131313" }} title={sharedNames.join(", ")}>
-              {" "}· 👥 con {sharedNames.length === 1 ? sharedNames[0] : `${sharedNames.length} personas`}
+              {" "}· con {sharedNames.length === 1 ? sharedNames[0] : `${sharedNames.length} personas`}
             </span>
           )}
           {task.completed && task.completed_by && (
@@ -544,7 +544,7 @@ function TaskRow({
         </p>
       </div>
       {!task.completed && esMia && (
-        <button onClick={onEdit} style={iconButtonStyle} title="Editar">✏</button>
+        <button onClick={onEdit} style={iconButtonStyle} title="Editar" aria-label="Editar">✎</button>
       )}
       {esMia && (
         <button onClick={onDelete} style={{ ...iconButtonStyle, color: "#C2362B" }} title="Borrar">×</button>

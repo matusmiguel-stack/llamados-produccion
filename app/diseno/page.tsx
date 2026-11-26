@@ -323,7 +323,7 @@ export default function DisenoPage() {
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 800, color: "#141414" }}>
-              🎨 Diseño
+              Diseño
             </h1>
             <p style={{ margin: "4px 0 0", color: "#737373", fontSize: 13 }}>
               Calendario de entregas de diseño
@@ -466,14 +466,14 @@ export default function DisenoPage() {
                     border: !modoLibre ? "1px solid #131313" : "1px solid rgba(0,0,0,0.14)",
                     background: !modoLibre ? "rgba(0,0,0,0.05)" : "transparent",
                     color: !modoLibre ? "#3F3F3F" : "#8A8A8A" }}>
-                  📂 Desde catálogo
+                  Desde catálogo
                 </button>
                 <button type="button" onClick={() => setModoLibre(true)}
                   style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
                     border: modoLibre ? "1px solid #131313" : "1px solid rgba(0,0,0,0.14)",
                     background: modoLibre ? "rgba(0,0,0,0.05)" : "transparent",
                     color: modoLibre ? "#3F3F3F" : "#8A8A8A" }}>
-                  ✏️ Escribir manualmente
+                  Escribir manualmente
                 </button>
               </div>
 

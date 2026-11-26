@@ -39,15 +39,15 @@ function detectarFuente(url: string): string {
 }
 
 const FUENTES: Record<string, { label: string; emoji: string; color: string }> = {
-  instagram: { label: "Instagram", emoji: "📸", color: "#C93F5D" },
-  youtube:   { label: "YouTube",   emoji: "▶️", color: "#C2362B" },
-  tiktok:    { label: "TikTok",    emoji: "🎵", color: "#0E857D" },
-  vimeo:     { label: "Vimeo",     emoji: "🎬", color: "#1D6FB8" },
-  pinterest: { label: "Pinterest", emoji: "📌", color: "#C93F5D" },
-  behance:   { label: "Behance",   emoji: "🎨", color: "#3F3F3F" },
-  drive:     { label: "Drive",     emoji: "📁", color: "#A86B00" },
-  x:         { label: "X",         emoji: "🐦", color: "#6B6B6B" },
-  web:       { label: "Web",       emoji: "🔗", color: "#131313" },
+  instagram: { label: "Instagram", emoji: "", color: "#C93F5D" },
+  youtube:   { label: "YouTube",   emoji: "▶", color: "#C2362B" },
+  tiktok:    { label: "TikTok",    emoji: "", color: "#0E857D" },
+  vimeo:     { label: "Vimeo",     emoji: "", color: "#1D6FB8" },
+  pinterest: { label: "Pinterest", emoji: "", color: "#C93F5D" },
+  behance:   { label: "Behance",   emoji: "", color: "#3F3F3F" },
+  drive:     { label: "Drive",     emoji: "", color: "#A86B00" },
+  x:         { label: "X",         emoji: "", color: "#6B6B6B" },
+  web:       { label: "Web",       emoji: "", color: "#131313" },
 }
 const fuenteInfo = (f: string) => FUENTES[f] || FUENTES.web
 
@@ -249,7 +249,7 @@ export default function ReferenciaProyectoPage() {
                       target="_blank" rel="noopener noreferrer"
                       style={driveBtnStyle}
                     >
-                      📄 Ver en Drive
+                      Ver en Drive
                     </a>
                   )}
                   <button
@@ -258,7 +258,7 @@ export default function ReferenciaProyectoPage() {
                     title={driveUrl ? "Volver a sincronizar la hoja del Drive" : "Crear la pestaña en la hoja compartida del Drive"}
                     style={{ ...driveBtnStyle, opacity: syncing ? 0.6 : 1, cursor: "pointer" }}
                   >
-                    {syncing ? "Sincronizando…" : driveUrl ? "↻ Sincronizar" : "🔗 Vincular a Drive"}
+                    {syncing ? "Sincronizando…" : driveUrl ? "↻ Sincronizar" : "Vincular a Drive"}
                   </button>
                 </div>
               </div>
@@ -300,7 +300,6 @@ export default function ReferenciaProyectoPage() {
                     <p style={{ margin: 0, fontSize: 11, color: "#737373" }}>
                       Se guardará como{" "}
                       <span style={{ color: fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).color }}>
-                        {fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).emoji}{" "}
                         {fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).label}
                       </span>
                     </p>
@@ -319,7 +318,7 @@ export default function ReferenciaProyectoPage() {
                     const n = referencias.filter(r => r.fuente === f).length
                     return (
                       <button key={f} onClick={() => setFiltro(f)} style={chipStyle(filtro === f, info.color)}>
-                        {info.emoji} {info.label} ({n})
+                        {info.label} ({n})
                       </button>
                     )
                   })}
@@ -329,7 +328,7 @@ export default function ReferenciaProyectoPage() {
               {/* Lista de referencias */}
               {visibles.length === 0 ? (
                 <p style={{ color: "#858585", fontSize: 14, marginTop: 32, textAlign: "center" }}>
-                  Aún no hay referencias aquí. Pega el primer link arriba. 🎬
+                  Aún no hay referencias aquí. Pega el primer link arriba.
                 </p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
@@ -349,7 +348,7 @@ export default function ReferenciaProyectoPage() {
                           background: `${info.color}1a`,
                           border: `1px solid ${info.color}44`,
                         }}>
-                          {info.emoji} {info.label}
+                          {info.label}
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <a href={r.url} target="_blank" rel="noopener noreferrer"
@@ -363,10 +362,10 @@ export default function ReferenciaProyectoPage() {
                             <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B6B6B", lineHeight: 1.5, wordBreak: "break-word" }}>{r.nota}</p>
                           )}
                           <p style={{ margin: "8px 0 0", fontSize: 11, color: "#737373" }}>
-                            👤 {r.autor} · {fechaCorta(r.created_at)}
+                            {r.autor} · {fechaCorta(r.created_at)}
                             {sem && !soyCalificador && (
                               <span style={{ marginLeft: 8, color: sem.color, fontWeight: 600 }}>
-                                {sem.emoji} {sem.label}
+                                {sem.label}
                               </span>
                             )}
                           </p>
@@ -390,14 +389,14 @@ export default function ReferenciaProyectoPage() {
                                     opacity: activo ? 1 : 0.45,
                                   }}
                                 >
-                                  {c.emoji}
+                                  <span aria-hidden style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: c.color }} />
                                 </button>
                               )
                             })}
                           </div>
                         )}
                         {puedeBorrar(r) && (
-                          <button onClick={() => deleteReferencia(r)} title="Borrar referencia" style={deleteBtnStyle}>🗑</button>
+                          <button onClick={() => deleteReferencia(r)} title="Borrar referencia" style={deleteBtnStyle} aria-label="Borrar referencia"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
                         )}
                       </div>
                     )

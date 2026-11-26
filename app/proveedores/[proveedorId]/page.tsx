@@ -526,10 +526,10 @@ export default function ProveedorDetailPage() {
             </button>
             {showContacto && (
               <div style={{ ...infoGridStyle, marginTop: 10 }}>
-                <InfoCard icon="📧" label="Email"     value={proveedor!.email    || "—"} />
-                <InfoCard icon="📱" label="Teléfono"  value={proveedor!.telefono || "—"} />
-                <InfoCard icon="💼" label="Actividad" value={proveedor!.actividad} />
-                <InfoCard icon="📅" label="Alta"
+                <InfoCard icon="" label="Email"     value={proveedor!.email    || "—"} />
+                <InfoCard icon="" label="Teléfono"  value={proveedor!.telefono || "—"} />
+                <InfoCard icon="" label="Actividad" value={proveedor!.actividad} />
+                <InfoCard icon="" label="Alta"
                   value={new Date(proveedor!.created_at).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })} />
               </div>
             )}
@@ -559,10 +559,10 @@ export default function ProveedorDetailPage() {
           {canSeeFacturas && (
             <div style={tabBarStyle}>
               <button onClick={() => setActiveTab("facturas")} style={tabBtnStyle(activeTab === "facturas")}>
-                🧾 Facturas ({facturas.length})
+                Facturas ({facturas.length})
               </button>
               <button onClick={() => setActiveTab("egresos")} style={tabBtnStyle(activeTab === "egresos")}>
-                📋 Egresos ({egresos.length})
+                Egresos ({egresos.length})
               </button>
             </div>
           )}
@@ -686,7 +686,7 @@ export default function ProveedorDetailPage() {
                                 <td style={{ ...tdStyle, color: "#737373", fontSize: 12 }}>{row.section_name}</td>
                                 <td style={{ ...tdStyle, color: "#262626", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
                                 <td style={tdStyle}>
-                                  <ContactChip label={contactLabel} icon={isThisProv ? "🏢" : "👤"} color={isThisProv ? "#A86B00" : "#1F8A55"} style={{ maxWidth: 220 }} />
+                                  <ContactChip label={contactLabel} icon={isThisProv ? "" : ""} color={isThisProv ? "#A86B00" : "#1F8A55"} style={{ maxWidth: 220 }} />
                                 </td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#6B6B6B", fontSize: 12 }}>{qty}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", color: "#6B6B6B", fontSize: 12 }}>{days}</td>
@@ -698,7 +698,7 @@ export default function ProveedorDetailPage() {
                                       ✓ Pagado{row.pago_fecha ? ` ${fmtDate(row.pago_fecha)}` : ""}
                                     </span>
                                   ) : isThisProv && (
-                                    <button onClick={() => openPayEgreso(row)} style={payEgresoBtnStyle}>💳 Pagar</button>
+                                    <button onClick={() => openPayEgreso(row)} style={payEgresoBtnStyle}>Pagar</button>
                                   )}
                                   {canEdit && row.pago_estado !== "pagado" && <button onClick={() => startEdit(row)} style={editBtnStyle}>✎ Editar</button>}
                                 </td>
@@ -830,7 +830,7 @@ export default function ProveedorDetailPage() {
                               title="Descargar PDF de la factura"
                               style={facFileBtnStyle("#C2362B")}
                             >
-                              ⬇ PDF
+                              PDF
                             </button>
                           )}
                           {f.xml_path && (
@@ -839,7 +839,7 @@ export default function ProveedorDetailPage() {
                               title="Descargar XML de la factura"
                               style={facFileBtnStyle("#1D6FB8")}
                             >
-                              ⬇ XML
+                              XML
                             </button>
                           )}
                           {f.comprobante_path && (
@@ -851,7 +851,7 @@ export default function ProveedorDetailPage() {
                                 border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.10)", color: "#1F7A4D",
                               }}
                             >
-                              📎
+
                             </button>
                           )}
                         </div>
@@ -1113,7 +1113,7 @@ function SupplierCombobox({
           )}
           {filteredEmps.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>👤 Empleados RETRO</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>Empleados RETRO</div>
               {filteredEmps.map(e => {
                 const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
                 return (
@@ -1128,7 +1128,7 @@ function SupplierCombobox({
           )}
           {filteredProvs.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 2 }}>🏢 Proveedores</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 2 }}>Proveedores</div>
               {filteredProvs.map(p => {
                 const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
                 const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad
@@ -1150,10 +1150,10 @@ function SupplierCombobox({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function InfoCard({ icon, label, value }: { icon: string; label: string; value: string }) {
+function InfoCard({ icon, label, value }: { icon?: string; label: string; value: string }) {
   return (
     <div style={infoCardStyle}>
-      <span style={{ fontSize: 16 }}>{icon}</span>
+      {icon && <span style={{ fontSize: 16 }}>{icon}</span>}
       <div>
         <p style={{ margin: 0, color: "#737373", fontSize: 10, fontWeight: 600,}}>{label}</p>
         <p style={{ margin: "3px 0 0", color: "#262626", fontSize: 13, wordBreak: "break-word" }}>{value}</p>

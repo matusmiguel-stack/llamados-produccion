@@ -112,7 +112,7 @@ export function ComplementosPagoModal({
     <div style={fOverlay}>
       <div style={fModal(720)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Complementos de pago</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Complementos de pago</h2>
           <button onClick={onClose} style={fClose}>✕</button>
         </div>
         <div style={fBody}>

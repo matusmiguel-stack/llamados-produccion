@@ -543,7 +543,7 @@ export default function ProjectDetailPage() {
                     opacity: generatingReport ? 0.6 : 1,
                   }}
                 >
-                  {generatingReport ? "⏳ Generando..." : "📄 Reporte PDF"}
+                  {generatingReport ? "Generando..." : "Reporte PDF"}
                 </button>
                 <button
                   onClick={() => handleGenerarReporte("xlsx")}
@@ -558,7 +558,7 @@ export default function ProjectDetailPage() {
                     opacity: generatingXlsx ? 0.6 : 1,
                   }}
                 >
-                  {generatingXlsx ? "⏳ Generando..." : "📊 Reporte Excel"}
+                  {generatingXlsx ? "Generando..." : "Reporte Excel"}
                 </button>
               </div>
             )}
@@ -1577,7 +1577,7 @@ function QuoteModal({
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: isMobile ? 1 : 0, flexWrap: "wrap" }}>
             <Link href={`/cotizaciones?quoteId=${quote.id}`} style={editQuoteBtnStyle}>
-              ✏ Editar
+              Editar
             </Link>
             {quote.status === "approved" && projectCode ? (
               <Link
@@ -1882,7 +1882,6 @@ function QuoteModal({
             style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 20, boxShadow: "0 32px 80px rgba(0,0,0,0.13)", padding: "28px 28px 24px", width: "100%", maxWidth: 400 }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
             <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#141414", textAlign: "center" }}>{aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}</h2>
             <p style={{ margin: "0 0 18px", color: "#6B6B6B", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
               Esto creará una entrada en <strong style={{ color: "#262626" }}>Ingresos</strong> con los totales de esta cotización.

@@ -227,7 +227,7 @@ export function NuevoComplementoModal({
     <div style={fOverlay}>
       <div style={fModal(620)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Nuevo complemento de pago</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Nuevo complemento de pago</h2>
           <button onClick={onClose} disabled={emitiendo} style={fClose}>✕</button>
         </div>
         <div style={fBody}>
@@ -351,7 +351,7 @@ export function NuevoComplementoModal({
               disabled={emitiendo || !detalle || pagada}
               style={fBtnPrimary(emitiendo || !detalle || pagada)}
             >
-              {emitiendo ? "Emitiendo…" : "🧾 Emitir complemento"}
+              {emitiendo ? "Emitiendo…" : "Emitir complemento"}
             </button>
           </div>
         </div>

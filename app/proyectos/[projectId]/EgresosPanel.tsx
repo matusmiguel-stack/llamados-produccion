@@ -822,7 +822,7 @@ export function EgresosPanel({
         return (
           <button key={s.id} onClick={() => setActiveSubListId(s.id)}
             style={active ? subTabActiveStyle : subTabStyle}>
-            🗂 {s.name}
+            {s.name}
           </button>
         )
       })}
@@ -849,7 +849,7 @@ export function EgresosPanel({
             background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.30)",
             color: "#1F7A4D", fontSize: 14, fontWeight: 700 }}
         >
-          ➕ Agregar gasto
+          Agregar gasto
         </button>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -966,16 +966,16 @@ export function EgresosPanel({
           <label style={payLabelStyle}>{etiqueta} {requerido ? "*" : "(opcional)"}</label>
           {nuevo ? (
             <div style={epArchivoRowStyle}>
-              <span style={{ ...epArchivoNombreStyle, color: "#1F7A4D" }} title={nuevo.name}>⬆ {nuevo.name}</span>
+              <span style={{ ...epArchivoNombreStyle, color: "#1F7A4D" }} title={nuevo.name}>{nuevo.name}</span>
               <button type="button" onClick={() => setEpFiles(f => ({ ...f, [clave]: null }))} style={epLinkBtnStyle}>Cancelar</button>
             </div>
           ) : actual && !quitado ? (
             <div style={epArchivoRowStyle}>
               {actual.url ? (
                 <a href={actual.url} target="_blank" rel="noreferrer" title="Abrir el archivo actual"
-                  style={{ ...epArchivoNombreStyle, color: "#1D5FA8" }}>📎 {actual.nombre}</a>
+                  style={{ ...epArchivoNombreStyle, color: "#1D5FA8" }}>{actual.nombre}</a>
               ) : (
-                <span style={{ ...epArchivoNombreStyle, color: "#6B6B6B" }}>📎 {actual.nombre}</span>
+                <span style={{ ...epArchivoNombreStyle, color: "#6B6B6B" }}>{actual.nombre}</span>
               )}
               {!requerido && (
                 <button type="button" onClick={() => setEpQuitar(q => ({ ...q, [clave]: true }))} style={{ ...epLinkBtnStyle, color: "#C2362B" }}>Quitar</button>
@@ -1238,7 +1238,7 @@ export function EgresosPanel({
                     ) : (
                       <ContactChip
                         label={item.supplierLabel}
-                        icon={item.supplierType === "empleado" ? "👤" : "🏢"}
+                        icon={item.supplierType === "empleado" ? "" : ""}
                         color={item.supplierType === "empleado" ? "#1F8A55" : "#131313"}
                       />
                     )}
@@ -1259,7 +1259,7 @@ export function EgresosPanel({
                             {st.label}
                           </span>
                           {st.fecha && (
-                            <span style={{ fontSize: 10, color: "#737373", whiteSpace: "nowrap" }}>📅 {fechaCorta(st.fecha)}</span>
+                            <span style={{ fontSize: 10, color: "#737373", whiteSpace: "nowrap" }}>{fechaCorta(st.fecha)}</span>
                           )}
                         </span>
                       )
@@ -1275,7 +1275,7 @@ export function EgresosPanel({
                               ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
                             </span>
                             {item.pago_fecha && (
-                              <span style={{ fontSize: 10, color: "#737373", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
+                              <span style={{ fontSize: 10, color: "#737373", whiteSpace: "nowrap" }}>{fechaCorta(item.pago_fecha)}</span>
                             )}
                           </span>
                           {/* Solo pagos registrados desde la app (anticipo, comprobación o pago
@@ -1288,11 +1288,11 @@ export function EgresosPanel({
                           )}
                           </>
                         ) : item.pago_modo === "anticipo" && item.supplierType !== "none" ? (
-                          readOnly ? null : <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>💵 Pagar Anticipo</button>
+                          readOnly ? null : <button onClick={() => openPay(item, "anticipo")} style={payAnticipoBtnStyle}>Pagar Anticipo</button>
                         ) : item.pago_modo === "comprobacion" && item.supplierType !== "none" ? (
                           <>
-                            <span style={pendienteBadgeStyle}>⚠ Pendiente Cierre</span>
-                            {!readOnly && <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>🧾 Pagar Comprob.</button>}
+                            <span style={pendienteBadgeStyle}>Pendiente Cierre</span>
+                            {!readOnly && <button onClick={() => openPay(item, "comprobacion")} style={payCompBtnStyle}>Pagar Comprob.</button>}
                           </>
                         ) : null}
                       </div>
@@ -1311,12 +1311,12 @@ export function EgresosPanel({
                               opacity: sendingBilling === item.id ? 0.6 : 1,
                             }}
                           >
-                            {sendingBilling === item.id ? "…" : item.billing_sent_at ? "✉ Reenviar" : "✉ Facturar"}
+                            {sendingBilling === item.id ? "…" : item.billing_sent_at ? "Reenviar" : "Facturar"}
                           </button>
                         )}
                         <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
                         {directEnabled && item.pago_estado !== "pagado" && (
-                          <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#C2362B", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
+                          <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#C2362B", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">Borrar</button>
                         )}
                       </div>}
                     </div>
@@ -1369,7 +1369,7 @@ export function EgresosPanel({
               opacity: sendingAll ? 0.6 : 1,
             }}
           >
-            {sendingAll ? "⏳ Enviando..." : "✉ Facturar todos"}
+            {sendingAll ? "Enviando..." : "Facturar todos"}
           </button>
         </div>}
       </div>
@@ -1407,13 +1407,13 @@ export function EgresosPanel({
           <div>
             <div style={quoteHeaderStyle}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <span style={quoteLabelStyle}>🗂 {active.name}</span>
+                <span style={quoteLabelStyle}>{active.name}</span>
                 {!readOnly && (
                   <>
                     <button onClick={() => openRenameSubList(active.id, active.name)} title="Renombrar sub-lista"
                       style={{ background: "none", border: "none", color: "#737373", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>✎</button>
                     <button onClick={() => deleteSubList(active.id, active.name)} title="Eliminar sub-lista"
-                      style={{ background: "none", border: "none", color: "#C2362B", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>🗑</button>
+                      style={{ background: "none", border: "none", color: "#C2362B", cursor: "pointer", fontSize: 13, padding: "0 2px", display: "inline-flex" }} aria-label="Borrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
                   </>
                 )}
               </span>
@@ -1434,7 +1434,7 @@ export function EgresosPanel({
         return (
           <div key={quoteId}>
             <div style={quoteHeaderStyle}>
-              <span style={quoteLabelStyle}>📋 {quote_name}</span>
+              <span style={quoteLabelStyle}>{quote_name}</span>
               <span style={quoteTotalStyle}>{fmt(quoteTotal)}</span>
             </div>
             {renderEgresoTable(qItems)}
@@ -1822,7 +1822,7 @@ function SupplierCombobox({
           )}
           {filteredEmps.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>👤 Empleados RETRO</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>Empleados RETRO</div>
               {filteredEmps.map(e => {
                 return (
                   <div key={e.id}
@@ -1837,7 +1837,7 @@ function SupplierCombobox({
           )}
           {filteredProvs.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 2 }}>🏢 Proveedores</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 2 }}>Proveedores</div>
               {filteredProvs.map(p => {
                 const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
                 const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad

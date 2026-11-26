@@ -103,7 +103,7 @@ export async function cargarFacturaPPD(admin: SupabaseClient, uuidRaw: string): 
   }
   if (!receptor) {
     throw new ComplementoError(
-      `Faltan los datos fiscales de ${cfdi.receptor.nombre || cfdi.receptor.rfc || "el cliente"}. Captúralos en 🧾 Datos fiscales y vuelve a intentarlo.`,
+      `Faltan los datos fiscales de ${cfdi.receptor.nombre || cfdi.receptor.rfc || "el cliente"}. Captúralos en Datos fiscales y vuelve a intentarlo.`,
     )
   }
 

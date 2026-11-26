@@ -252,7 +252,11 @@ function ResourcePanel({
             >
               <div style={resourceCellStyle}>
                 <span style={resourceIconStyle(resource.type)}>
-                  {resource.type === "human" ? "👤" : "📦"}
+                  {resource.type === "human" ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.6" /><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z M4 7.5 12 12l8-4.5M12 12v9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
+                  )}
                 </span>
                 <p style={resourceNameStyle}>{resource.name}</p>
               </div>

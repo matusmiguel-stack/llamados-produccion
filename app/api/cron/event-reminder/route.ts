@@ -113,7 +113,7 @@ export async function GET(req: Request) {
       `junta-10min-${junta.id}-${junta.fecha}`,
       (attendees || []).map((a: any) => a.employee_id),
       {
-        title: `⏰ Junta en ${Math.round(diff as number)} min`,
+        title: `Junta en ${Math.round(diff as number)} min`,
         body: `${label} · ${String(junta.hora_inicio).slice(0, 5)} hrs${junta.link ? " — con link" : ""}`,
         url: "/",
       }
@@ -148,7 +148,7 @@ export async function GET(req: Request) {
       `shoot-10min-${shoot.id}-${fecha}`,
       (crew || []).map((a: any) => a.employee_id),
       {
-        title: `⏰ Llamado en ${Math.round(diff as number)} min`,
+        title: `Llamado en ${Math.round(diff as number)} min`,
         body: `${shoot.title || "Llamado"} · ${raw.slice(11, 16)} hrs`,
         url: "/",
       }

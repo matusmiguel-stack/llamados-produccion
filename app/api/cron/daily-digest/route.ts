@@ -71,7 +71,6 @@ function card(color: string, content: string) {
 function sectionHeader(emoji: string, title: string, count: number, color: string) {
   return `
     <div style="display:flex;align-items:center;gap:8px;margin:24px 0 10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <span style="font-size:18px;">${emoji}</span>
       <span style="color:${color};font-size:14px;font-weight:700;letter-spacing:0.3px;">${title}</span>
       <span style="background:${color}25;color:${color};border:1px solid ${color}50;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">${count}</span>
     </div>`
@@ -120,7 +119,7 @@ function buildDigestHtml(data: {
   // ── Llamados ────────────────────────────────────────────────────────────────
   let llamadosHtml = ""
   if (shoots.length > 0) {
-    llamadosHtml = sectionHeader("🎬", "Llamados", shoots.length, "#a78bfa")
+    llamadosHtml = sectionHeader("", "Llamados", shoots.length, "#a78bfa")
     for (const s of shoots) {
       const crew = shootEmployees
         .filter((se: any) => se.shoot_id === s.id)
@@ -130,8 +129,8 @@ function buildDigestHtml(data: {
       const hora = s.all_day ? "Todo el día" : `${s.start_time?.slice(11,16) || ""} – ${s.end_time?.slice(11,16) || ""} hrs`
       llamadosHtml += card("#a78bfa", `
         <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${s.title || "Sin título"}</p>
-        <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">🕐 ${hora}${s.location ? ` · 📍 ${s.location}` : ""}</p>
-        ${crew.length > 0 ? `<p style="margin:0;color:#64748b;font-size:12px;">👥 ${crew.join(" · ")}</p>` : ""}
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">${hora}${s.location ? ` · ${s.location}` : ""}</p>
+        ${crew.length > 0 ? `<p style="margin:0;color:#64748b;font-size:12px;">${crew.join(" · ")}</p>` : ""}
       `)
     }
   }
@@ -139,19 +138,18 @@ function buildDigestHtml(data: {
   // ── Juntas ──────────────────────────────────────────────────────────────────
   let juntasHtml = ""
   if (juntas.length > 0) {
-    juntasHtml = sectionHeader("📋", "Juntas", juntas.length, "#67e8f9")
+    juntasHtml = sectionHeader("", "Juntas", juntas.length, "#67e8f9")
     for (const j of juntas) {
-      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : "🤝"
       const asistentes = juntaAttendees
         .filter((a: any) => a.junta_id === j.id)
         .map((a: any) => employees.find((e: any) => e.id === a.employee_id))
         .filter(Boolean)
         .map((e: any) => dispName(e))
       juntasHtml += card("#67e8f9", `
-        <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${emoji} ${j.titulo || j.tipo}</p>
-        <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">🕐 ${j.hora_inicio}${j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs · <span style="color:#67e8f9;">${j.tipo}</span></p>
-        ${j.link ? `<p style="margin:4px 0 4px;"><a href="${j.link}" style="color:#38bdf8;font-size:12px;">🔗 Unirse a la reunión</a></p>` : ""}
-        ${asistentes.length > 0 ? `<p style="margin:0;color:#64748b;font-size:12px;">👥 ${asistentes.join(" · ")}</p>` : ""}
+        <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${j.titulo || j.tipo}</p>
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">${j.hora_inicio}${j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs · <span style="color:#67e8f9;">${j.tipo}</span></p>
+        ${j.link ? `<p style="margin:4px 0 4px;"><a href="${j.link}" style="color:#38bdf8;font-size:12px;">Unirse a la reunión</a></p>` : ""}
+        ${asistentes.length > 0 ? `<p style="margin:0;color:#64748b;font-size:12px;">${asistentes.join(" · ")}</p>` : ""}
         ${j.notas ? `<p style="margin:4px 0 0;color:#64748b;font-size:12px;">${j.notas}</p>` : ""}
       `)
     }
@@ -160,14 +158,14 @@ function buildDigestHtml(data: {
   // ── Ensayos ──────────────────────────────────────────────────────────────────
   let ensayosHtml = ""
   if (ensayos.length > 0) {
-    ensayosHtml = sectionHeader("🎭", "Ensayos", ensayos.length, "#ec4899")
+    ensayosHtml = sectionHeader("", "Ensayos", ensayos.length, "#ec4899")
     for (const e of ensayos) {
       const hora = e.all_day || !e.hora_inicio
         ? "Todo el día"
         : `${e.hora_inicio}${e.hora_fin ? ` – ${e.hora_fin}` : ""} hrs`
       ensayosHtml += card("#ec4899", `
-        <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">🎭 ${e.titulo || "Ensayo"}</p>
-        <p style="margin:0;color:#94a3b8;font-size:12px;">🕐 ${hora}</p>
+        <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${e.titulo || "Ensayo"}</p>
+        <p style="margin:0;color:#94a3b8;font-size:12px;">${hora}</p>
       `)
     }
   }
@@ -188,24 +186,24 @@ function buildDigestHtml(data: {
       html += card(color, `
         <p style="margin:0 0 4px;color:#f8fafc;font-size:14px;font-weight:700;">${e.titulo}</p>
         ${e.tipo ? `<span style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;background:${color}22;color:${color};border:1px solid ${color}44;">${e.tipo}</span>` : ""}
-        ${e.hora ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">🕐 ${e.hora} hrs</p>` : ""}
-        ${e.proyecto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">📁 ${e.proyecto}${e.cliente ? ` · ${e.cliente}` : ""}</p>` : ""}
-        ${editores.length > 0 ? `<p style="margin:4px 0 0;color:#64748b;font-size:12px;">✂️ ${editores.join(" · ")}</p>` : ""}
+        ${e.hora ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.hora} hrs</p>` : ""}
+        ${e.proyecto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.proyecto}${e.cliente ? ` · ${e.cliente}` : ""}</p>` : ""}
+        ${editores.length > 0 ? `<p style="margin:4px 0 0;color:#64748b;font-size:12px;">${editores.join(" · ")}</p>` : ""}
       `)
     }
     return html
   }
   const postHtml =
-    bloqueEntregas(entregas.filter((e: any) => e.area !== "diseno"), "🎞️", "Post Producción", "#f472b6") +
-    bloqueEntregas(entregas.filter((e: any) => e.area === "diseno"), "🎨", "Diseño", "#a78bfa")
+    bloqueEntregas(entregas.filter((e: any) => e.area !== "diseno"), "", "Post Producción", "#f472b6") +
+    bloqueEntregas(entregas.filter((e: any) => e.area === "diseno"), "", "Diseño", "#a78bfa")
 
   // ── Vacaciones ───────────────────────────────────────────────────────────────
   let vacacionesHtml = ""
   if (onVacation.length > 0) {
-    vacacionesHtml = sectionHeader("🏖️", "De vacaciones", onVacation.length, "#fb923c")
+    vacacionesHtml = sectionHeader("", "De vacaciones", onVacation.length, "#fb923c")
     for (const e of onVacation) {
       vacacionesHtml += card("#fb923c", `
-        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🏖️ ${dispName(e)}</p>
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">${dispName(e)}</p>
         ${e.puesto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
       `)
     }
@@ -214,10 +212,10 @@ function buildDigestHtml(data: {
   // ── Cumpleaños ──────────────────────────────────────────────────────────────
   let cumpleHtml = ""
   if (birthdays.length > 0) {
-    cumpleHtml = sectionHeader("🎂", "Cumpleaños", birthdays.length, "#f59e0b")
+    cumpleHtml = sectionHeader("", "Cumpleaños", birthdays.length, "#f59e0b")
     for (const e of birthdays) {
       cumpleHtml += card("#f59e0b", `
-        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎂 ${dispName(e)}</p>
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">${dispName(e)}</p>
         ${e.puesto ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
       `)
     }
@@ -226,10 +224,10 @@ function buildDigestHtml(data: {
   // ── Aniversarios ─────────────────────────────────────────────────────────────
   let anivHtml = ""
   if (anniversaries.length > 0) {
-    anivHtml = sectionHeader("🎉", "Aniversarios", anniversaries.length, "#14b8a6")
+    anivHtml = sectionHeader("", "Aniversarios", anniversaries.length, "#14b8a6")
     for (const e of anniversaries) {
       anivHtml += card("#14b8a6", `
-        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">🎉 ${dispName(e)}</p>
+        <p style="margin:0;color:#f8fafc;font-size:14px;font-weight:700;">${dispName(e)}</p>
         <p style="margin:4px 0 0;color:#2dd4bf;font-size:12px;font-weight:600;">${e.years} año${e.years !== 1 ? "s" : ""} en Retro Casa</p>
         ${e.puesto ? `<p style="margin:2px 0 0;color:#94a3b8;font-size:12px;">${e.puesto}</p>` : ""}
       `)
@@ -238,7 +236,6 @@ function buildDigestHtml(data: {
 
   const emptyMsg = total === 0 && birthdays.length === 0 && anniversaries.length === 0 && onVacation.length === 0 ? `
     <div style="text-align:center;padding:32px 0;color:#475569;">
-      <p style="font-size:32px;margin:0">😴</p>
       <p style="margin:8px 0 0;font-size:14px;">Sin actividad registrada para hoy.</p>
     </div>` : ""
 
@@ -254,7 +251,7 @@ function buildDigestHtml(data: {
         <tr>
           <td style="background:linear-gradient(135deg,#1e1b4b 0%,#0f0c2e 50%,#050714 100%);padding:32px 32px 28px;text-align:center;border-bottom:1px solid rgba(124,58,237,0.2);">
             <img src="${APP_URL}/logo-retro.png" alt="Retro" width="80" style="display:block;margin:0 auto 14px;max-width:80px;" />
-            <h1 style="margin:0 0 6px;color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:-0.3px;">📅 Resumen del día</h1>
+            <h1 style="margin:0 0 6px;color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:-0.3px;">Resumen del día</h1>
             <p style="margin:0;color:#94a3b8;font-size:14px;font-weight:500;">${fechaLabel}</p>
             ${total > 0 ? `<div style="margin-top:12px;display:inline-block;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:999px;padding:3px 14px;"><span style="color:#a78bfa;font-size:12px;font-weight:600;">${total} evento${total !== 1 ? "s" : ""} hoy</span></div>` : ""}
           </td>
@@ -377,7 +374,7 @@ export async function GET(req: Request) {
     + (entregas || []).length
 
   const [y, m, d] = todayMx.split("-")
-  const subject = `📅 Retro · ${parseInt(d)} ${MESES[parseInt(m)-1]} ${y} — ${total > 0 ? `${total} evento${total !== 1 ? "s" : ""} hoy` : "Sin actividad hoy"}`
+  const subject = `Retro · ${parseInt(d)} ${MESES[parseInt(m)-1]} ${y} — ${total > 0 ? `${total} evento${total !== 1 ? "s" : ""} hoy` : "Sin actividad hoy"}`
 
   // Versión texto plano (reduce spam score)
   const textLines: string[] = [`RETRO · Resumen del día — ${formatFecha(todayMx)}`, ""]
@@ -409,7 +406,7 @@ export async function GET(req: Request) {
   const onVacationPlain = (employees || []).filter((e: any) => vacationEmployeeIds.has(e.id))
   if (onVacationPlain.length > 0) {
     textLines.push("── DE VACACIONES ──")
-    for (const e of onVacationPlain) textLines.push(`🏖️ ${dispName(e)}`)
+    for (const e of onVacationPlain) textLines.push(`${dispName(e)}`)
     textLines.push("")
   }
 
@@ -427,14 +424,14 @@ export async function GET(req: Request) {
   })
   if (birthdaysPlain.length > 0) {
     textLines.push("── CUMPLEAÑOS ──")
-    for (const e of birthdaysPlain) textLines.push(`🎂 ${dispName(e)}`)
+    for (const e of birthdaysPlain) textLines.push(`${dispName(e)}`)
     textLines.push("")
   }
   if (anniversariesPlain.length > 0) {
     textLines.push("── ANIVERSARIOS ──")
     for (const e of anniversariesPlain) {
       const years = parseInt(todayMx.split("-")[0]) - parseInt(e.fecha_ingreso.split("-")[0])
-      textLines.push(`🎉 ${dispName(e)} · ${years} año${years !== 1 ? "s" : ""} en Retro`)
+      textLines.push(`${dispName(e)} · ${years} año${years !== 1 ? "s" : ""} en Retro`)
     }
     textLines.push("")
   }

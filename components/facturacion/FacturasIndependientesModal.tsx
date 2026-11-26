@@ -120,7 +120,7 @@ export function FacturasIndependientesModal({
 
   function onTimbrada(d: NuevaFacturaResultado) {
     const partes = [`Factura ${d.numeroFactura} (${d.metodoPago}) timbrada por ${money(d.total)}${d.pruebas ? " (modo pruebas)" : ""}.`]
-    if (d.metodoPago === "PPD") partes.push("Cuando se cobre, emite su complemento con 🧾 Complemento en esta lista.")
+    if (d.metodoPago === "PPD") partes.push("Cuando se cobre, emite su complemento con Complemento en esta lista.")
     if (d.correo) partes.push(`Se envió a ${d.correo}.`)
     if (d.correoFallo) partes.push("No se pudo enviar el correo; descárgala y mándala a mano.")
     alert(partes.join("\n"))
@@ -144,7 +144,7 @@ export function FacturasIndependientesModal({
     <div style={fOverlay}>
       <div style={fModal(720)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Facturas independientes</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Facturas independientes</h2>
           <button onClick={onClose} style={fClose}>✕</button>
         </div>
         <div style={fBody}>
@@ -217,12 +217,12 @@ export function FacturasIndependientesModal({
                       <button onClick={() => abrir(f.id, "pdf")} style={link}>PDF</button>
                       <button onClick={() => abrir(f.id, "xml")} style={link}>XML</button>
                       {ppd && !cancelada && f.uuid && saldo > 0.01 && (
-                        <button onClick={() => setComplementoDe(f.uuid)} style={{ ...link, color: "#1D6FB8" }}>🧾 Complemento</button>
+                        <button onClick={() => setComplementoDe(f.uuid)} style={{ ...link, color: "#1D6FB8" }}>Complemento</button>
                       )}
                       {!cancelada && (
                         <button
                           onClick={() => suyos.length
-                            ? alert(`La factura ${f.numero} tiene complementos de pago vigentes (${suyos.map(c => c.numero).join(", ")}). Cancélalos primero en 🧾 Complementos de pago.`)
+                            ? alert(`La factura ${f.numero} tiene complementos de pago vigentes (${suyos.map(c => c.numero).join(", ")}). Cancélalos primero en Complementos de pago.`)
                             : setCancelando({ f, motivo: "02", sustituidaPor: "" })}
                           style={{ ...link, color: "#C2362B", marginLeft: "auto" }}
                         >

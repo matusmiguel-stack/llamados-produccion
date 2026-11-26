@@ -347,7 +347,7 @@ export default function DashboardPage() {
                   color: pushTestStatus === "ok" ? "#1F8A55" : "#1D6FB8",
                   opacity: testingPush ? 0.6 : 1,
                 }}>
-                {testingPush ? "Enviando..." : pushTestStatus === "ok" ? "✓ Push enviado" : "🔔 Test push"}
+                {testingPush ? "Enviando..." : pushTestStatus === "ok" ? "✓ Push enviado" : "Test push"}
               </button>
             )}
 
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                   transition: "all 0.2s",
                 }}
               >
-                {sendingDigest ? "Enviando..." : digestStatus === "ok" ? "✓ Enviado" : "📧 Enviar resumen"}
+                {sendingDigest ? "Enviando..." : digestStatus === "ok" ? "✓ Enviado" : "Enviar resumen"}
               </button>
             )}
 
@@ -459,9 +459,6 @@ export default function DashboardPage() {
                 <div style={summaryChipGridStyle}>
                   {birthdaysToday.map((person) => (
                     <div key={person.id} style={birthdayChipStyle}>
-                      <span style={avatarStyle(employeeDisplayName(person), "birthday")}>
-                        🎂
-                      </span>
                       <div>
                         <p style={summaryNameStyle}>{employeeDisplayName(person)}</p>
                         <p style={summaryMetaStyle}>{person.puesto}</p>
@@ -487,9 +484,6 @@ export default function DashboardPage() {
                 <div style={summaryChipGridStyle}>
                   {anniversariesToday.map(({ employee, years }) => (
                     <div key={employee.id} style={anniversaryChipStyle}>
-                      <span style={avatarStyle(employeeDisplayName(employee), "anniversary")}>
-                        🎉
-                      </span>
                       <div>
                         <p style={summaryNameStyle}>{employeeDisplayName(employee)}</p>
                         <p style={summaryMetaStyle}>
@@ -540,7 +534,7 @@ export default function DashboardPage() {
                       </p>
                       {(shoot.location || shoot.address) && (
                         <p style={shootLocationStyle}>
-                          📍 {shoot.location || shoot.address}
+                          {shoot.location || shoot.address}
                         </p>
                       )}
                       {shoot.public_notes && (
@@ -585,12 +579,11 @@ export default function DashboardPage() {
               {juntasToday.length > 0 && (
                 <section style={panelStyle}>
                   <div style={panelHeaderStyle}>
-                    <p style={panelTitleStyle}>📋 Juntas del día</p>
+                    <p style={panelTitleStyle}>Juntas del día</p>
                     <p style={panelHintStyle}>{juntasToday.length} junta{juntasToday.length === 1 ? "" : "s"}</p>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {juntasToday.map((j) => {
-                      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : "🤝"
                       const attendeeIds = juntaAttendees.filter((a) => a.junta_id === j.id).map((a) => a.employee_id)
                       const attendeeNames = attendeeIds
                         .map((id: string) => employees.find((e) => e.id === id))
@@ -599,7 +592,6 @@ export default function DashboardPage() {
                       return (
                         <div key={j.id} style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(8,145,178,0.08)", border: "1px solid rgba(8,145,178,0.2)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontSize: 16 }}>{emoji}</span>
                             <span style={{ color: "#141414", fontWeight: 700, fontSize: 14 }}>{j.titulo || j.tipo}</span>
                             <span style={{ marginLeft: "auto", color: "#0E7490", fontSize: 13 }}>
                               {j.hora_inicio}{j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs
@@ -613,7 +605,7 @@ export default function DashboardPage() {
                           )}
                           {j.link && (
                             <a href={j.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, color: "#1D6FB8", fontSize: 12 }}>
-                              🔗 Unirse
+                              Unirse
                             </a>
                           )}
                         </div>
@@ -625,14 +617,13 @@ export default function DashboardPage() {
               {ensayosToday.length > 0 && (
                 <section style={panelStyle}>
                   <div style={panelHeaderStyle}>
-                    <p style={panelTitleStyle}>🎭 Ensayos del día</p>
+                    <p style={panelTitleStyle}>Ensayos del día</p>
                     <p style={panelHintStyle}>{ensayosToday.length} ensayo{ensayosToday.length === 1 ? "" : "s"}</p>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {ensayosToday.map((e) => (
                       <div key={e.id} style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(219,39,119,0.08)", border: "1px solid rgba(219,39,119,0.2)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 16 }}>🎭</span>
                           <span style={{ color: "#141414", fontWeight: 700, fontSize: 14 }}>{e.titulo || "Ensayo"}</span>
                           <span style={{ marginLeft: "auto", color: "#C93F5D", fontSize: 13 }}>
                             {e.all_day || !e.hora_inicio ? "Todo el día" : `${e.hora_inicio}${e.hora_fin ? ` – ${e.hora_fin}` : ""} hrs`}
@@ -646,7 +637,7 @@ export default function DashboardPage() {
               {entregasToday.length > 0 && (
                 <section style={panelStyle}>
                   <div style={panelHeaderStyle}>
-                    <p style={panelTitleStyle}>🎞️ Post Producción</p>
+                    <p style={panelTitleStyle}>Post Producción</p>
                     <p style={panelHintStyle}>{entregasToday.length} entrega{entregasToday.length === 1 ? "" : "s"}</p>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -768,7 +759,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
                   overflow: "hidden",
                 }}>
                   {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#262626", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    🎬 {s.title}
+                    {s.title}
                   </p>}
                   {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color || "#131313" }} />}
                 </div>
@@ -779,7 +770,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
                   background: "rgba(8,145,178,0.15)", borderLeft: "2px solid #2C6FB7",
                 }}>
                   {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#0E7490", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    📋 {j.titulo || j.tipo}
+                    {j.titulo || j.tipo}
                   </p>}
                   {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2C6FB7" }} />}
                 </div>
@@ -792,7 +783,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
                     background: `${color}22`, borderLeft: `2px solid ${color}`,
                   }}>
                     {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#262626", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      🎞️ {e.titulo}
+                      {e.titulo}
                     </p>}
                     {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />}
                   </div>
@@ -1281,7 +1272,7 @@ function DashboardTasksWidget({ tasks }: { tasks: any[] }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: overdue.length > 0 ? "#C2362B" : "#6B6B6B", margin: 0 }}>
-          {overdue.length > 0 ? `⚠ ${overdue.length} tarea${overdue.length === 1 ? "" : "s"} vencida${overdue.length === 1 ? "" : "s"}` : "Mis Tareas"}
+          {overdue.length > 0 ? `${overdue.length} tarea${overdue.length === 1 ? "" : "s"} vencida${overdue.length === 1 ? "" : "s"}` : "Mis Tareas"}
           {dueToday.length > 0 && overdue.length === 0 && ` · ${dueToday.length} para hoy`}
         </p>
         <Link href="/tasks" style={{ fontSize: 12, color: "#131313", textDecoration: "none" }}>Ver todas →</Link>

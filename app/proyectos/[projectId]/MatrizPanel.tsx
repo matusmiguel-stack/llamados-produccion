@@ -683,7 +683,7 @@ export function MatrizPanel({
                 </button>
               )}
               <button onClick={() => setEditing(true)} style={editBtnStyle}>
-                ✏ Editar
+                Editar
               </button>
             </>
           )}
@@ -827,7 +827,7 @@ export function MatrizPanel({
               hay que volver a generarlo.
             </p>
             <button onClick={descargarPdf} disabled={shareBusy} style={sharePdfStyle}>
-              {shareBusy ? "Generando…" : "⬇ Descargar PDF"}
+              {shareBusy ? "Generando…" : "Descargar PDF"}
             </button>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 22 }}>

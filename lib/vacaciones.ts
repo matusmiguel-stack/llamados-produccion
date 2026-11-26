@@ -182,9 +182,9 @@ export const VACACIONES_FINANZAS = [
 export type SolicitudStatus = "pendiente" | "aprobada" | "rechazada"
 
 export const STATUS_INFO: Record<SolicitudStatus, { emoji: string; label: string; color: string; bg: string }> = {
-  pendiente: { emoji: "⏳", label: "Pendiente", color: "#A86B00", bg: "rgba(234,179,8,0.12)" },
-  aprobada:  { emoji: "✅", label: "Aprobada",  color: "#1F8A55", bg: "rgba(52,211,153,0.12)" },
-  rechazada: { emoji: "❌", label: "Declinada", color: "#C2362B", bg: "rgba(248,113,113,0.12)" },
+  pendiente: { emoji: "", label: "Pendiente", color: "#A86B00", bg: "rgba(234,179,8,0.12)" },
+  aprobada:  { emoji: "", label: "Aprobada",  color: "#1F8A55", bg: "rgba(52,211,153,0.12)" },
+  rechazada: { emoji: "", label: "Declinada", color: "#C2362B", bg: "rgba(248,113,113,0.12)" },
 }
 
 export function isWeekend(iso: string): boolean {

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       if (!isNew) continue
 
       await sendPushToUser(profileId, {
-        title: "🎬 Nuevo llamado asignado",
+        title: "Nuevo llamado asignado",
         body: `${shootTitle || "Llamado"} · ${shootDate || ""}`,
         url: "/",
       })

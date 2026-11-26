@@ -213,7 +213,7 @@ export function NuevaFacturaModal({
     <div style={fOverlay}>
       <div style={fModal(720)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Nueva factura</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Nueva factura</h2>
           <button onClick={onClose} disabled={timbrando} style={fClose}>✕</button>
         </div>
         <div style={fBody}>
@@ -349,7 +349,7 @@ export function NuevaFacturaModal({
           </FRow>
           {metodo === "PPD" && (
             <p style={fNote("#1D6FB8")}>
-              PPD: cuando se cobre, emite su complemento de pago con 🧾 Complemento en la lista de facturas independientes.
+              PPD: cuando se cobre, emite su complemento de pago con Complemento en la lista de facturas independientes.
             </p>
           )}
 
@@ -386,10 +386,10 @@ export function NuevaFacturaModal({
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             <button onClick={onClose} disabled={timbrando} style={fBtnGhost}>Cancelar</button>
             <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#3F3F3F", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
-              {vista.cargando ? "Generando…" : "👁 Vista previa"}
+              {vista.cargando ? "Generando…" : "Vista previa"}
             </button>
             <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>
-              {timbrando ? "Timbrando…" : "🧾 Timbrar factura"}
+              {timbrando ? "Timbrando…" : "Timbrar factura"}
             </button>
           </div>
           {vista.overlay}

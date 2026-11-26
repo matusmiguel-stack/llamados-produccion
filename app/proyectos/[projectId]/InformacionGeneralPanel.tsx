@@ -280,7 +280,7 @@ export function InformacionGeneralPanel({
                   ? { background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.2)", color: "#3F3F3F" }
                   : { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", color: "#8A5B00" })
               }}>
-                {empresa === "retro_studio" ? "🎬 Retro Studio" : "🎞️ Retro Films"}
+                {empresa === "retro_studio" ? "Retro Studio" : "Retro Films"}
               </span>
             </div>
           )}

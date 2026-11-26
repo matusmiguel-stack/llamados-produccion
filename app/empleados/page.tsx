@@ -581,7 +581,7 @@ export default function EmpleadosPage() {
                           return (
                             <div style={vacBarStyle}>
                               <span style={{ color: "#737373", fontSize: 12 }}>
-                                🏖️ Vacaciones sin configurar · usa “Editar” para asignar años y mes de reseteo
+                                Vacaciones sin configurar · usa “Editar” para asignar años y mes de reseteo
                               </span>
                             </div>
                           )
@@ -591,7 +591,6 @@ export default function EmpleadosPage() {
                         const barColor = r.restantes <= 0 ? "#C2362B" : r.restantes <= 3 ? "#C2410C" : "#1F8A55"
                         return (
                           <div style={vacBarStyle}>
-                            <span style={{ fontSize: 14 }}>🏖️</span>
                             <span style={{ color: "#262626", fontSize: 12, fontWeight: 700 }}>
                               {r.restantes} <span style={{ color: "#737373", fontWeight: 400 }}>de {r.corresponden} días restantes</span>
                             </span>
@@ -855,7 +854,7 @@ function EmployeeFormFields({
       </div>
 
       {/* Vacaciones */}
-      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#858585",}}>🏖️ Vacaciones</p>
+      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#858585",}}>Vacaciones</p>
       <div
         style={{
           display: "grid",

@@ -180,7 +180,7 @@ export default function ReferenciasPage() {
           {/* Grid de proyectos */}
           {proyectos.length === 0 ? (
             <p style={{ color: "#858585", fontSize: 14, marginTop: 32, textAlign: "center" }}>
-              Aún no hay proyectos de referencias. Crea el primero arriba. ✨
+              Aún no hay proyectos de referencias. Crea el primero arriba.
             </p>
           ) : (
             <div style={{
@@ -228,7 +228,7 @@ export default function ReferenciasPage() {
                       )}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
                         <span style={countBadgeStyle}>
-                          🔗 {p.total} referencia{p.total === 1 ? "" : "s"}
+                          {p.total} referencia{p.total === 1 ? "" : "s"}
                         </span>
                         <span style={{ fontSize: 11, color: "#858585" }}>
                           por {p.creador}
@@ -249,7 +249,7 @@ export default function ReferenciasPage() {
                           title="Borrar proyecto"
                           style={deleteBtnStyle}
                         >
-                          🗑
+
                         </button>
                       </div>
                     )}

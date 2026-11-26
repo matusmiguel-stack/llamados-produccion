@@ -18,7 +18,7 @@ export const ordenSemaforo = (s: string | null | undefined): number =>
   s === "verde" ? 0 : s === "amarillo" ? 1 : s === "rojo" ? 3 : 2
 
 export const SEMAFORO_INFO: Record<Semaforo, { emoji: string; label: string; color: string }> = {
-  verde:    { emoji: "🟢", label: "Buena",   color: "#1F8A55" },
-  amarillo: { emoji: "🟡", label: "Regular", color: "#A86B00" },
-  rojo:     { emoji: "🔴", label: "Mala",    color: "#C2362B" },
+  verde:    { emoji: "", label: "Buena",   color: "#1F8A55" },
+  amarillo: { emoji: "", label: "Regular", color: "#A86B00" },
+  rojo:     { emoji: "", label: "Mala",    color: "#C2362B" },
 }

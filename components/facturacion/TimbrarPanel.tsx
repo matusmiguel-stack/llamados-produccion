@@ -281,10 +281,10 @@ export function TimbrarPanel({
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
         <button onClick={onCancel} disabled={timbrando} style={fBtnGhost}>Cancelar</button>
         <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#3F3F3F", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
-          {vista.cargando ? "Generando…" : "👁 Vista previa"}
+          {vista.cargando ? "Generando…" : "Vista previa"}
         </button>
         <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>
-          {timbrando ? "Timbrando…" : refacturar ? "🔁 Refacturar" : "🧾 Timbrar factura"}
+          {timbrando ? "Timbrando…" : refacturar ? "Refacturar" : "Timbrar factura"}
         </button>
       </div>
       {vista.overlay}

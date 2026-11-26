@@ -48,14 +48,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Este ingreso ya está pagado; no se puede volver a facturar" }, { status: 400 })
     }
     if (ingreso.estatus === "facturado" && !refacturar) {
-      return NextResponse.json({ error: "Este ingreso ya está facturado; para cambiar su factura usa 🔁 Refacturar" }, { status: 400 })
+      return NextResponse.json({ error: "Este ingreso ya está facturado; para cambiar su factura usa Refacturar" }, { status: 400 })
     }
     if (refacturar) {
       if (b.parcialSubtotal) return NextResponse.json({ error: "Al refacturar no se puede facturar parcialmente" }, { status: 400 })
       const { count } = await admin.from("complementos_pago")
         .select("id", { count: "exact", head: true }).eq("factura_uuid", ingreso.factura_uuid).eq("estatus", "vigente")
       if (count) {
-        return NextResponse.json({ error: "La factura actual tiene complementos de pago vigentes; cancélalos primero en 🧾 Complementos de pago" }, { status: 400 })
+        return NextResponse.json({ error: "La factura actual tiene complementos de pago vigentes; cancélalos primero en Complementos de pago" }, { status: 400 })
       }
     }
 

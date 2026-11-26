@@ -102,7 +102,7 @@ export function htmlNuevaSolicitud(params: {
     eyebrowColor: "#bfdbfe",
     titleColor: "#eff6ff",
     eyebrow: "Retro Casa Productora",
-    titulo: "Nueva solicitud de vacaciones 🏖️",
+    titulo: "Nueva solicitud de vacaciones",
     intro: `<strong style="color:#334155;">${escapeHtml(solicitante)}</strong> solicitó vacaciones y está esperando respuesta.`,
     filas: [
       fila("Solicitante", escapeHtml(solicitante)),
@@ -172,7 +172,7 @@ export function htmlAprobadaFinanzas(params: {
     eyebrowColor: "#6ee7b7",
     titleColor: "#ecfdf5",
     eyebrow: "Retro Casa Productora",
-    titulo: "Vacaciones aprobadas 🏖️",
+    titulo: "Vacaciones aprobadas",
     intro: `Se aprobaron vacaciones de <strong style="color:#334155;">${escapeHtml(solicitante)}</strong>. Ya quedaron bloqueadas en el calendario.`,
     filas: [
       fila("Quién", escapeHtml(solicitante)),

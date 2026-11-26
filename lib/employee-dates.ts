@@ -169,7 +169,7 @@ export function buildBirthdayCalendarEvents(
 
       events.push({
         id: `${BIRTHDAY_EVENT_PREFIX}${employee.id}:${year}`,
-        title: `🎂 ${employeeDisplayName(employee)}`,
+        title: `${employeeDisplayName(employee)}`,
         start: dateStr,
         allDay: true,
         backgroundColor: color,
@@ -227,7 +227,7 @@ export function buildAnniversaryCalendarEvents(
 
       events.push({
         id: `${ANNIVERSARY_EVENT_PREFIX}${employee.id}:${year}`,
-        title: `🎉 ${employeeDisplayName(employee)} · ${formatAnniversaryYears(years)}`,
+        title: `${employeeDisplayName(employee)} · ${formatAnniversaryYears(years)}`,
         start: dateStr,
         allDay: true,
         backgroundColor: color,

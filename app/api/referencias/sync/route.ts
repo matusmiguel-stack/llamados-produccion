@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       ...ordenadas.map((r: any) => {
         const sem = r.semaforo ? SEMAFORO_INFO[r.semaforo as Semaforo] : null
         return [
-          sem ? `${sem.emoji} ${sem.label}` : "",
+          sem ? sem.label : "",
           new Date(r.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Mexico_City" }),
           FUENTE_LABELS[r.fuente] || "Web",
           r.titulo || "",

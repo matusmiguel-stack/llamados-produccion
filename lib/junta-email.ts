@@ -81,7 +81,6 @@ function buildEmailHtml(junta: {
   direccion?: string | null
   maps_link?: string | null
 }): string {
-  const emoji = junta.tipo === "Brief" ? "📋" : junta.tipo === "PPM" ? "🎬" : "🤝"
   const headline = junta.titulo || junta.tipo
 
   const [year, month, day] = junta.fecha.split("-")
@@ -105,7 +104,7 @@ function buildEmailHtml(junta: {
         <tr>
           <td style="background:linear-gradient(135deg,#1e1b4b,#0f172a);padding:28px 32px;text-align:center;">
             <p style="margin:0;color:#a78bfa;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Retro Casa Productora</p>
-            <h1 style="margin:8px 0 0;color:#f8fafc;font-size:28px;font-weight:700;line-height:1.25;">${emoji} ${headline}</h1>
+            <h1 style="margin:8px 0 0;color:#f8fafc;font-size:28px;font-weight:700;line-height:1.25;">${headline}</h1>
             ${junta.titulo ? `<p style="margin:8px 0 0;"><span style="display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.30);color:#c4b5fd;font-size:12px;font-weight:600;">${junta.tipo}</span></p>` : ""}
           </td>
         </tr>
@@ -134,21 +133,21 @@ function buildEmailHtml(junta: {
                 <td style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:10px;border-left:3px solid #34d399;">
                   <p style="margin:0;color:#64748b;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Dirección</p>
                   <p style="margin:4px 0 0;color:#f8fafc;font-size:16px;font-weight:600;">${junta.direccion.replace(/\n/g, "<br>")}</p>
-                  ${junta.maps_link ? `<p style="margin:8px 0 0;"><a href="${junta.maps_link}" style="color:#34d399;text-decoration:none;font-size:13px;font-weight:600;">📍 Ver en Google Maps</a></p>` : ""}
+                  ${junta.maps_link ? `<p style="margin:8px 0 0;"><a href="${junta.maps_link}" style="color:#34d399;text-decoration:none;font-size:13px;font-weight:600;">Ver en Google Maps</a></p>` : ""}
                 </td>
               </tr>` : junta.maps_link ? `
               <tr><td style="height:10px;"></td></tr>
               <tr>
                 <td style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:10px;border-left:3px solid #34d399;">
                   <p style="margin:0;color:#64748b;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Ubicación</p>
-                  <p style="margin:8px 0 0;"><a href="${junta.maps_link}" style="color:#34d399;text-decoration:none;font-size:14px;font-weight:600;">📍 Ver en Google Maps</a></p>
+                  <p style="margin:8px 0 0;"><a href="${junta.maps_link}" style="color:#34d399;text-decoration:none;font-size:14px;font-weight:600;">Ver en Google Maps</a></p>
                 </td>
               </tr>` : ""}
               ${junta.link ? `
               <tr><td style="height:10px;"></td></tr>
               <tr>
                 <td style="text-align:center;padding-top:6px;">
-                  <a href="${junta.link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:700;">🔗 Unirse a la reunión</a>
+                  <a href="${junta.link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:700;">Unirse a la reunión</a>
                 </td>
               </tr>` : ""}
               ${junta.notas ? `
@@ -254,11 +253,10 @@ export async function sendJuntaInvites(params: {
   const icsContent = generateICS(junta)
   const html       = buildEmailHtml(junta)
 
-  const emoji = junta.tipo === "Brief" ? "📋" : junta.tipo === "PPM" ? "🎬" : "🤝"
   const [year, month, day] = junta.fecha.split("-")
   const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
   const subjectLabel = junta.titulo || junta.tipo
-  const subject = `${emoji} ${subjectLabel} · ${parseInt(day)} ${meses[parseInt(month)-1]} ${year} — Retro Casa`
+  const subject = `${subjectLabel} · ${parseInt(day)} ${meses[parseInt(month)-1]} ${year} — Retro Casa`
 
   // 4. Send one email per recipient (Resend free tier doesn't support BCC well)
   let sent = 0

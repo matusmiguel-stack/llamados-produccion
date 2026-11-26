@@ -56,7 +56,7 @@ export async function GET(req: Request) {
       }
 
       await sendPushToUser(userId, {
-        title: overdueCount > 0 ? "⚠ Tareas pendientes" : "📋 Tareas para hoy",
+        title: overdueCount > 0 ? "Tareas pendientes" : "Tareas para hoy",
         body,
         url: "/tasks",
       })
