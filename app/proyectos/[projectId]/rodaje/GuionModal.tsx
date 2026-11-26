@@ -15,17 +15,17 @@ const ESTILO_LINEA: Record<LineaGuion["t"], CSSProperties> = {
   accion: { margin: "0 0 10px", color: C.texto2, lineHeight: 1.55 },
   personaje: {
     margin: "14px 0 2px", paddingLeft: "22%", color: C.violetaClaro,
-    fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase",
+    fontWeight: 700,
   },
   dialogo: { margin: "0 0 10px", paddingLeft: "11%", paddingRight: "9%", color: C.texto, lineHeight: 1.5 },
   acotacion: { margin: "0 0 2px", paddingLeft: "17%", color: C.apagado, fontStyle: "italic" },
   super: {
     margin: "10px 0", padding: "8px 10px", borderRadius: 8, border: `1px solid ${C.linea}`,
-    background: "rgba(148,163,184,0.07)", color: C.texto, fontWeight: 600,
+    background: "rgba(0,0,0,0.03)", color: C.texto, fontWeight: 600,
   },
   transicion: {
     margin: "10px 0", textAlign: "right", color: C.apagado,
-    fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase",
+    fontSize: 12,
   },
   nota: {
     margin: "0 0 10px", paddingLeft: 10, borderLeft: `2px solid ${C.ambarBorde}`,
@@ -173,7 +173,7 @@ export function GuionModal(props: {
 
       {tomas.length > 0 && (
         <div style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.lineaSuave}`, background: C.hueco }}>
-          <p style={{ margin: "0 0 7px", color: C.apagado, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.9, textTransform: "uppercase" }}>
+          <p style={{ margin: "0 0 7px", color: C.apagado, fontSize: 10.5, fontWeight: 700,}}>
             Tomas
           </p>
           <ResumenTomas tomas={tomas} />
@@ -185,7 +185,7 @@ export function GuionModal(props: {
       <div
         style={{
           padding: "16px 16px 8px", borderRadius: 12, border: `1px solid ${C.lineaSuave}`,
-          background: "rgba(2,6,23,0.5)", fontSize: 14.5, minHeight: 120,
+          background: "#FFFFFF", fontSize: 14.5, minHeight: 120,
         }}
       >
         {falta && !error ? (

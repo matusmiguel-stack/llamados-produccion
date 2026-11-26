@@ -494,7 +494,7 @@ function avatarStyle(name: string): React.CSSProperties {
     flexShrink: 0,
     background: "linear-gradient(135deg, rgba(245,158,11,0.35), rgba(234,88,12,0.25))",
     border: "1px solid rgba(251,191,36,0.22)",
-    color: "#f8fafc",
+    color: "#141414",
     fontSize: 13,
     fontWeight: 700,
   }
@@ -510,7 +510,7 @@ const activityBadgeStyle: React.CSSProperties = {
   fontWeight: 600,
   background: "rgba(245,158,11,0.14)",
   border: "1px solid rgba(251,191,36,0.24)",
-  color: "#fde68a",
+  color: "#8A5B00",
 }
 
 const appShellStyle: React.CSSProperties = {
@@ -534,16 +534,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -551,14 +549,14 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -567,19 +565,19 @@ const panelStyle: React.CSSProperties = {
 const panelHeaderStyle: React.CSSProperties = {
   marginBottom: 14,
   paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const panelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -607,7 +605,7 @@ const fieldStyle: React.CSSProperties = {
 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -615,10 +613,10 @@ const fieldLabelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -629,11 +627,9 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(180px, 1.3fr) 140px 180px 180px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const tableBodyStyle: React.CSSProperties = {
@@ -644,10 +640,10 @@ const tableBodyStyle: React.CSSProperties = {
 const searchInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "11px 38px 11px 14px",
-  background: "rgba(2,6,23,0.55)",
-  border: "1px solid rgba(148,163,184,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.15)",
   borderRadius: 12,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 14,
   boxSizing: "border-box",
   outline: "none",
@@ -660,7 +656,7 @@ const searchClearStyle: React.CSSProperties = {
   transform: "translateY(-50%)",
   background: "none",
   border: "none",
-  color: "#7d8ca3",
+  color: "#737373",
   cursor: "pointer",
   fontSize: 14,
   lineHeight: 1,
@@ -672,14 +668,14 @@ const rowStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "10px 12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const editPanelStyle: React.CSSProperties = {
   padding: "12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
+  background: "#FFFFFF",
   border: "1px solid rgba(251,191,36,0.18)",
 }
 
@@ -692,7 +688,7 @@ const personCellStyle: React.CSSProperties = {
 
 const personNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
   wordBreak: "break-word",
@@ -700,7 +696,7 @@ const personNameStyle: React.CSSProperties = {
 
 const personMetaStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -717,7 +713,7 @@ const contactCellStyle: React.CSSProperties = {
 
 const contactLineStyle: React.CSSProperties = {
   margin: 0,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 12,
   wordBreak: "break-word",
 }
@@ -732,30 +728,30 @@ const emptyStateStyle: React.CSSProperties = {
   padding: "18px 12px",
   borderRadius: 12,
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
-  background: "rgba(255,255,255,0.02)",
-  border: "1px dashed rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px dashed rgba(0,0,0,0.1)",
 }
 
 const primaryButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
   whiteSpace: "nowrap",
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -766,7 +762,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 const dangerButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#f87171",
+  color: "#C2362B",
   border: "1px solid rgba(248,113,113,0.24)",
   borderRadius: 8,
   cursor: "pointer",

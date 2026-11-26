@@ -342,9 +342,9 @@ export default function DashboardPage() {
                 style={{
                   padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
                   cursor: testingPush ? "not-allowed" : "pointer",
-                  border: pushTestStatus === "ok" ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(148,163,184,0.2)",
+                  border: pushTestStatus === "ok" ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(0,0,0,0.14)",
                   background: pushTestStatus === "ok" ? "rgba(16,185,129,0.12)" : "rgba(56,189,248,0.1)",
-                  color: pushTestStatus === "ok" ? "#4ade80" : "#38bdf8",
+                  color: pushTestStatus === "ok" ? "#1F8A55" : "#1D6FB8",
                   opacity: testingPush ? 0.6 : 1,
                 }}>
                 {testingPush ? "Enviando..." : pushTestStatus === "ok" ? "✓ Push enviado" : "🔔 Test push"}
@@ -359,9 +359,9 @@ export default function DashboardPage() {
                 style={{
                   padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
                   cursor: sendingDigest ? "not-allowed" : "pointer",
-                  border: digestStatus === "ok" ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(148,163,184,0.2)",
-                  background: digestStatus === "ok" ? "rgba(16,185,129,0.12)" : "rgba(167,139,250,0.1)",
-                  color: digestStatus === "ok" ? "#4ade80" : "#a78bfa",
+                  border: digestStatus === "ok" ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(0,0,0,0.14)",
+                  background: digestStatus === "ok" ? "rgba(16,185,129,0.12)" : "rgba(0,0,0,0.05)",
+                  color: digestStatus === "ok" ? "#1F8A55" : "#131313",
                   opacity: sendingDigest ? 0.6 : 1,
                   transition: "all 0.2s",
                 }}
@@ -372,12 +372,12 @@ export default function DashboardPage() {
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {/* Toggle Día / Semana */}
-              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(148,163,184,0.2)" }}>
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(0,0,0,0.14)" }}>
                 {(["day", "week"] as const).map((mode) => (
                   <button key={mode} onClick={() => setViewMode(mode)} style={{
                     padding: "6px 14px", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    background: viewMode === mode ? "rgba(124,58,237,0.3)" : "transparent",
-                    color: viewMode === mode ? "#a78bfa" : "#64748b",
+                    background: viewMode === mode ? "rgba(0,0,0,0.08)" : "transparent",
+                    color: viewMode === mode ? "#131313" : "#8A8A8A",
                   }}>
                     {mode === "day" ? "Día" : "Semana"}
                   </button>
@@ -600,19 +600,19 @@ export default function DashboardPage() {
                         <div key={j.id} style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(8,145,178,0.08)", border: "1px solid rgba(8,145,178,0.2)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <span style={{ fontSize: 16 }}>{emoji}</span>
-                            <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: 14 }}>{j.titulo || j.tipo}</span>
-                            <span style={{ marginLeft: "auto", color: "#67e8f9", fontSize: 13 }}>
+                            <span style={{ color: "#141414", fontWeight: 700, fontSize: 14 }}>{j.titulo || j.tipo}</span>
+                            <span style={{ marginLeft: "auto", color: "#0E7490", fontSize: 13 }}>
                               {j.hora_inicio}{j.hora_fin ? ` – ${j.hora_fin}` : ""} hrs
                             </span>
                           </div>
-                          {j.notas && <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: 12 }}>{j.notas}</p>}
+                          {j.notas && <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 12 }}>{j.notas}</p>}
                           {attendeeNames.length > 0 && (
-                            <p style={{ margin: "6px 0 0", color: "#7d8ca3", fontSize: 12 }}>
+                            <p style={{ margin: "6px 0 0", color: "#737373", fontSize: 12 }}>
                               {attendeeNames.join(" · ")}
                             </p>
                           )}
                           {j.link && (
-                            <a href={j.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, color: "#7dd3fc", fontSize: 12 }}>
+                            <a href={j.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: 8, color: "#1D6FB8", fontSize: 12 }}>
                               🔗 Unirse
                             </a>
                           )}
@@ -633,8 +633,8 @@ export default function DashboardPage() {
                       <div key={e.id} style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(219,39,119,0.08)", border: "1px solid rgba(219,39,119,0.2)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 16 }}>🎭</span>
-                          <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: 14 }}>{e.titulo || "Ensayo"}</span>
-                          <span style={{ marginLeft: "auto", color: "#f9a8d4", fontSize: 13 }}>
+                          <span style={{ color: "#141414", fontWeight: 700, fontSize: 14 }}>{e.titulo || "Ensayo"}</span>
+                          <span style={{ marginLeft: "auto", color: "#C93F5D", fontSize: 13 }}>
                             {e.all_day || !e.hora_inicio ? "Todo el día" : `${e.hora_inicio}${e.hora_fin ? ` – ${e.hora_fin}` : ""} hrs`}
                           </span>
                         </div>
@@ -652,14 +652,14 @@ export default function DashboardPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {entregasToday.map((e) => {
                       const TIPO_COLORS: Record<string, string> = {
-                        "CDT Interna":       "#6366f1",
-                        "CDT Cliente":       "#0891b2",
+                        "CDT Interna":       "#131313",
+                        "CDT Cliente":       "#2C6FB7",
                         "Entrega final":     "#16a34a",
                         "Ronda Ajustes":     "#ea580c",
-                        "Edición y Post":    "#7c3aed",
-                        "Online CC y Audio": "#db2777",
+                        "Edición y Post":    "#131313",
+                        "Online CC y Audio": "#C93F5D",
                       }
-                      const color = TIPO_COLORS[e.tipo] || "#6366f1"
+                      const color = TIPO_COLORS[e.tipo] || "#131313"
                       return (
                         <div key={e.id} style={{ padding: "12px 16px", borderRadius: 10, background: `${color}11`, border: `1px solid ${color}33` }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -668,14 +668,14 @@ export default function DashboardPage() {
                                 {e.tipo}
                               </span>
                             )}
-                            <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: 14 }}>{e.titulo}</span>
+                            <span style={{ color: "#141414", fontWeight: 700, fontSize: 14 }}>{e.titulo}</span>
                             {e.hora && (
-                              <span style={{ marginLeft: "auto", color: "#94a3b8", fontSize: 13 }}>{e.hora} hrs</span>
+                              <span style={{ marginLeft: "auto", color: "#6B6B6B", fontSize: 13 }}>{e.hora} hrs</span>
                             )}
                           </div>
-                          {e.proyecto && <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: 12 }}>{e.proyecto}{e.cliente ? ` · ${e.cliente}` : ""}</p>}
-                          {e.editor && <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>Editor: {e.editor}</p>}
-                          {e.notas && <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>{e.notas}</p>}
+                          {e.proyecto && <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 12 }}>{e.proyecto}{e.cliente ? ` · ${e.cliente}` : ""}</p>}
+                          {e.editor && <p style={{ margin: "4px 0 0", color: "#737373", fontSize: 12 }}>Editor: {e.editor}</p>}
+                          {e.notas && <p style={{ margin: "4px 0 0", color: "#737373", fontSize: 12 }}>{e.notas}</p>}
                         </div>
                       )
                     })}
@@ -708,9 +708,9 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
   const today = getLocalDateString()
   const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
   const TIPO_COLORS: Record<string, string> = {
-    "CDT Interna": "#6366f1", "CDT Cliente": "#0891b2",
+    "CDT Interna": "#131313", "CDT Cliente": "#2C6FB7",
     "Entrega final": "#16a34a", "Ronda Ajustes": "#ea580c",
-    "Edición y Post": "#7c3aed", "Online CC y Audio": "#db2777",
+    "Edición y Post": "#131313", "Online CC y Audio": "#C93F5D",
   }
 
   return (
@@ -733,8 +733,8 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
             onClick={() => onDayClick(dateStr)}
             style={{
               borderRadius: 10,
-              border: isSelected ? "1px solid rgba(124,58,237,0.6)" : isToday ? "1px solid rgba(124,58,237,0.3)" : "1px solid rgba(148,163,184,0.12)",
-              background: isSelected ? "rgba(124,58,237,0.12)" : isToday ? "rgba(124,58,237,0.06)" : "rgba(255,255,255,0.03)",
+              border: isSelected ? "1px solid #131313" : isToday ? "1px solid rgba(0,0,0,0.2)" : "1px solid rgba(0,0,0,0.09)",
+              background: isSelected ? "rgba(0,0,0,0.05)" : isToday ? "rgba(0,0,0,0.05)" : "#FFFFFF",
               padding: isMobile ? "8px 4px" : "10px 10px",
               cursor: "pointer",
               minHeight: 100,
@@ -743,19 +743,19 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
           >
             {/* Header día */}
             <div style={{ textAlign: "center", marginBottom: 8 }}>
-              <p style={{ margin: 0, color: "#7d8ca3", fontSize: 10, fontWeight: 600, textTransform: "uppercase" }}>{DOW[i]}</p>
+              <p style={{ margin: 0, color: "#737373", fontSize: 10, fontWeight: 600,}}>{DOW[i]}</p>
               <p style={{
                 margin: "2px 0 0",
                 fontSize: isMobile ? 13 : 16,
                 fontWeight: 700,
-                color: isToday ? "#a78bfa" : isSelected ? "#c4b5fd" : "#f8fafc",
-                background: isToday ? "rgba(124,58,237,0.2)" : "transparent",
+                color: isToday ? "#131313" : isSelected ? "#3F3F3F" : "#141414",
+                background: isToday ? "rgba(0,0,0,0.08)" : "transparent",
                 borderRadius: "50%",
                 width: isMobile ? 22 : 28, height: isMobile ? 22 : 28,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 marginTop: 2, marginLeft: "auto", marginRight: "auto", marginBottom: 0,
               }}>{parseInt(d)}</p>
-              {!isMobile && <p style={{ margin: "2px 0 0", color: "#6b7c93", fontSize: 10 }}>{parseInt(m)}月</p>}
+              {!isMobile && <p style={{ margin: "2px 0 0", color: "#858585", fontSize: 10 }}>{parseInt(m)}月</p>}
             </div>
 
             {/* Eventos */}
@@ -763,35 +763,35 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
               {shoots.map((s) => (
                 <div key={s.id} style={{
                   borderRadius: 4, padding: isMobile ? "2px 3px" : "3px 6px",
-                  background: `${s.color || "#7c3aed"}33`,
-                  borderLeft: `2px solid ${s.color || "#7c3aed"}`,
+                  background: `${s.color || "#131313"}33`,
+                  borderLeft: `2px solid ${s.color || "#131313"}`,
                   overflow: "hidden",
                 }}>
-                  {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#262626", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     🎬 {s.title}
                   </p>}
-                  {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color || "#7c3aed" }} />}
+                  {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color || "#131313" }} />}
                 </div>
               ))}
               {juntas.map((j) => (
                 <div key={j.id} style={{
                   borderRadius: 4, padding: isMobile ? "2px 3px" : "3px 6px",
-                  background: "rgba(8,145,178,0.15)", borderLeft: "2px solid #0891b2",
+                  background: "rgba(8,145,178,0.15)", borderLeft: "2px solid #2C6FB7",
                 }}>
-                  {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#67e8f9", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#0E7490", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     📋 {j.titulo || j.tipo}
                   </p>}
-                  {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#0891b2" }} />}
+                  {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2C6FB7" }} />}
                 </div>
               ))}
               {entregas.map((e) => {
-                const color = TIPO_COLORS[e.tipo] || "#6366f1"
+                const color = TIPO_COLORS[e.tipo] || "#131313"
                 return (
                   <div key={e.id} style={{
                     borderRadius: 4, padding: isMobile ? "2px 3px" : "3px 6px",
                     background: `${color}22`, borderLeft: `2px solid ${color}`,
                   }}>
-                    {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {!isMobile && <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#262626", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       🎞️ {e.titulo}
                     </p>}
                     {isMobile && <div style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />}
@@ -799,7 +799,7 @@ function WeekView({ weekDays, selectedDate, allShoots, allJuntas, allEntregas, s
                 )
               })}
               {shoots.length === 0 && juntas.length === 0 && entregas.length === 0 && !isMobile && (
-                <p style={{ margin: 0, color: "#6b7c93", fontSize: 10, textAlign: "center", marginTop: 8 }}>–</p>
+                <p style={{ margin: 0, color: "#858585", fontSize: 10, textAlign: "center", marginTop: 8 }}>–</p>
               )}
             </div>
           </div>
@@ -832,9 +832,9 @@ function statusEmoji(status: string) {
 
 function getStatusColor(status: string) {
   if (status === "confirmed") return "#16a34a"
-  if (status === "cancelled") return "#dc2626"
-  if (status === "wrap") return "#64748b"
-  return "#eab308"
+  if (status === "cancelled") return "#C2362B"
+  if (status === "wrap") return "#8A8A8A"
+  return "#A86B00"
 }
 
 function statusBadgeStyle(status: string): React.CSSProperties {
@@ -848,7 +848,7 @@ function statusBadgeStyle(status: string): React.CSSProperties {
     fontWeight: 600,
     background: `${color}22`,
     border: `1px solid ${color}44`,
-    color: "#f8fafc",
+    color: "#141414",
   }
 }
 
@@ -860,9 +860,9 @@ function timeBadgeStyle(status: string): React.CSSProperties {
     borderRadius: 8,
     fontSize: 11,
     fontWeight: 600,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(148,163,184,0.14)",
-    color: "#e2e8f0",
+    background: "#FFFFFF",
+    border: "1px solid rgba(0,0,0,0.1)",
+    color: "#262626",
   }
 }
 
@@ -879,9 +879,9 @@ function avatarStyle(
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
-      background: "rgba(147,51,234,0.22)",
-      border: "1px solid rgba(167,139,250,0.28)",
-      color: "#f8fafc",
+      background: "rgba(0,0,0,0.08)",
+      border: "1px solid rgba(0,0,0,0.12)",
+      color: "#141414",
       fontSize: 13,
       fontWeight: 700,
     }
@@ -898,7 +898,7 @@ function avatarStyle(
       flexShrink: 0,
       background: "rgba(245,158,11,0.18)",
       border: "1px solid rgba(251,191,36,0.28)",
-      color: "#fde68a",
+      color: "#8A5B00",
       fontSize: 15,
       fontWeight: 700,
     }
@@ -915,7 +915,7 @@ function avatarStyle(
       flexShrink: 0,
       background: "rgba(20,184,166,0.18)",
       border: "1px solid rgba(45,212,191,0.28)",
-      color: "#99f6e4",
+      color: "#0E857D",
       fontSize: 15,
       fontWeight: 700,
     }
@@ -932,12 +932,12 @@ function avatarStyle(
     justifyContent: "center",
     flexShrink: 0,
     background: muted
-      ? "rgba(148,163,184,0.12)"
-      : "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(14,165,233,0.22))",
+      ? "rgba(0,0,0,0.05)"
+      : "rgba(0,0,0,0.05)",
     border: muted
-      ? "1px solid rgba(148,163,184,0.16)"
-      : "1px solid rgba(167,139,250,0.22)",
-    color: muted ? "#94a3b8" : "#f8fafc",
+      ? "1px solid rgba(0,0,0,0.12)"
+      : "1px solid rgba(0,0,0,0.12)",
+    color: muted ? "#6B6B6B" : "#141414",
     fontSize: 13,
     fontWeight: 700,
   }
@@ -969,14 +969,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const pageTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 22,
   letterSpacing: -0.5,
 }
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -994,8 +994,8 @@ const datePickerWrapStyle: React.CSSProperties = {
 const ghostButtonStyle: React.CSSProperties = {
   padding: "7px 10px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -1007,13 +1007,13 @@ const dateBannerStyle: React.CSSProperties = {
   marginBottom: 14,
   borderRadius: 12,
   background:
-    "linear-gradient(135deg, rgba(124,58,237,0.14), rgba(14,165,233,0.08))",
-  border: "1px solid rgba(167,139,250,0.16)",
+    "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const dateBannerTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 15,
   fontWeight: 600,
   textTransform: "capitalize",
@@ -1021,7 +1021,7 @@ const dateBannerTitleStyle: React.CSSProperties = {
 
 const dateBannerHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
 }
 
@@ -1032,8 +1032,8 @@ const summaryGridStyle: React.CSSProperties = {
 }
 
 const summaryPanelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 16,
   padding: "14px 16px",
 }
@@ -1046,20 +1046,20 @@ const summaryChipGridStyle: React.CSSProperties = {
 
 const summaryNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
 }
 
 const summaryMetaStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
 }
 
 const summaryEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1069,8 +1069,8 @@ const vacationChipStyle: React.CSSProperties = {
   gap: 10,
   padding: "8px 10px",
   borderRadius: 10,
-  background: "rgba(147,51,234,0.10)",
-  border: "1px solid rgba(167,139,250,0.18)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const birthdayChipStyle: React.CSSProperties = {
@@ -1100,9 +1100,9 @@ const shootsGridStyle: React.CSSProperties = {
 }
 
 const shootCardStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "14px 16px",
@@ -1111,21 +1111,19 @@ const shootCardStyle: React.CSSProperties = {
 const shootCrewSectionStyle: React.CSSProperties = {
   marginTop: 12,
   paddingTop: 12,
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
 }
 
 const shootCrewLabelStyle: React.CSSProperties = {
   margin: "0 0 8px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
 }
 
 const shootCrewEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1141,20 +1139,20 @@ const participantChipStyle: React.CSSProperties = {
   gap: 10,
   padding: "8px 10px",
   borderRadius: 10,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const participantNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
 }
 
 const participantRoleStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
 }
 
@@ -1169,20 +1167,20 @@ const shootRowTopStyle: React.CSSProperties = {
 
 const shootTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const shootMetaStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
 }
 
 const shootLocationStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 12,
 }
 
@@ -1190,17 +1188,17 @@ const shootNotesStyle: React.CSSProperties = {
   margin: "8px 0 0",
   padding: "8px 10px",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.45)",
-  border: "1px solid rgba(148,163,184,0.10)",
-  color: "#94a3b8",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
+  color: "#6B6B6B",
   fontSize: 12,
   lineHeight: 1.4,
 }
 
 const panelStyle: React.CSSProperties = {
   marginTop: 14,
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 16,
   padding: "14px 16px",
 }
@@ -1211,14 +1209,14 @@ const panelHeaderStyle: React.CSSProperties = {
 
 const panelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1234,20 +1232,20 @@ const idleChipStyle: React.CSSProperties = {
   gap: 10,
   padding: "8px 10px",
   borderRadius: 10,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const idleNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 13,
   fontWeight: 500,
 }
 
 const idleRoleStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
 }
 
@@ -1255,10 +1253,10 @@ const emptyPanelStyle: React.CSSProperties = {
   padding: "24px 16px",
   borderRadius: 16,
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px dashed rgba(148,163,184,0.16)",
+  background: "#FFFFFF",
+  border: "1px dashed rgba(0,0,0,0.12)",
 }
 
 function getLocalDateStringSimple() {
@@ -1285,32 +1283,32 @@ function DashboardTasksWidget({ tasks }: { tasks: any[] }) {
 
   return (
     <section style={{
-      background: "rgba(255,255,255,0.03)",
-      border: overdue.length > 0 ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(148,163,184,0.1)",
+      background: "#FFFFFF",
+      border: overdue.length > 0 ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(0,0,0,0.08)",
       borderRadius: 12, padding: "14px 16px", marginTop: 20,
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: overdue.length > 0 ? "#f87171" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: overdue.length > 0 ? "#C2362B" : "#6B6B6B", margin: 0 }}>
           {overdue.length > 0 ? `⚠ ${overdue.length} tarea${overdue.length === 1 ? "" : "s"} vencida${overdue.length === 1 ? "" : "s"}` : "Mis Tareas"}
           {dueToday.length > 0 && overdue.length === 0 && ` · ${dueToday.length} para hoy`}
         </p>
-        <Link href="/tasks" style={{ fontSize: 12, color: "#7c3aed", textDecoration: "none" }}>Ver todas →</Link>
+        <Link href="/tasks" style={{ fontSize: 12, color: "#131313", textDecoration: "none" }}>Ver todas →</Link>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {[...overdue, ...dueToday].slice(0, 5).map(task => {
           const isOvd = overdue.includes(task)
           return (
             <div key={task.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOvd ? "#ef4444" : "#94a3b8", flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: isOvd ? "#fca5a5" : "#cbd5e1", flex: 1 }}>{task.title}</span>
-              <span style={{ fontSize: 11, color: isOvd ? "#f87171" : "#64748b" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOvd ? "#D92D20" : "#6B6B6B", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: isOvd ? "#B42318" : "#3F3F3F", flex: 1 }}>{task.title}</span>
+              <span style={{ fontSize: 11, color: isOvd ? "#C2362B" : "#8A8A8A" }}>
                 {isOvd ? "Vencida" : task.due_time ? task.due_time.slice(0, 5) : "Hoy"}
               </span>
             </div>
           )
         })}
         {tasks.length > 5 && (
-          <Link href="/tasks" style={{ fontSize: 12, color: "#7d8ca3", textDecoration: "none", marginTop: 2 }}>
+          <Link href="/tasks" style={{ fontSize: 12, color: "#737373", textDecoration: "none", marginTop: 2 }}>
             +{tasks.length - 5} más…
           </Link>
         )}

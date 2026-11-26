@@ -136,7 +136,7 @@ export function FacturasIndependientesModal({
   }
 
   const link: React.CSSProperties = {
-    background: "none", border: "none", padding: 0, color: "#a78bfa", fontSize: 12,
+    background: "none", border: "none", padding: 0, color: "#131313", fontSize: 12,
     textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer",
   }
 
@@ -144,12 +144,12 @@ export function FacturasIndependientesModal({
     <div style={fOverlay}>
       <div style={fModal(720)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>🧾 Facturas independientes</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Facturas independientes</h2>
           <button onClick={onClose} style={fClose}>✕</button>
         </div>
         <div style={fBody}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <p style={{ ...fNote("#94a3b8"), flex: "1 1 260px" }}>
+            <p style={{ ...fNote("#6B6B6B"), flex: "1 1 260px" }}>
               Facturas que no están en el control de ingresos (como préstamos entre Retro Studio y Retro Films). No suman a los totales de Ingresos.
             </p>
             <button onClick={() => setNueva(true)} style={{ ...fBtnPrimary(), flex: "0 0 auto", padding: "9px 16px" }}>＋ Nueva factura</button>
@@ -157,13 +157,13 @@ export function FacturasIndependientesModal({
 
           {cancelando && (
             <div style={{ display: "grid", gap: 10, padding: "12px 14px", borderRadius: 12, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(248,113,113,0.25)" }}>
-              <span style={{ fontSize: 13, color: "#fca5a5", fontWeight: 600 }}>
+              <span style={{ fontSize: 13, color: "#B42318", fontWeight: 600 }}>
                 Cancelar ante el SAT la factura {cancelando.f.numero} · {money(cancelando.f.total)}
               </span>
               <MotivoCancelacionFields motivo={cancelando.motivo} sustituidaPor={cancelando.sustituidaPor} onChange={v => setCancelando({ ...cancelando, ...v })} />
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setCancelando(null)} disabled={ocupado} style={fBtnSmall}>No cancelar</button>
-                <button onClick={confirmarCancelacion} disabled={ocupado} style={{ ...fBtnSmall, color: "#f87171", borderColor: "rgba(248,113,113,0.4)" }}>
+                <button onClick={confirmarCancelacion} disabled={ocupado} style={{ ...fBtnSmall, color: "#C2362B", borderColor: "rgba(248,113,113,0.4)" }}>
                   {ocupado ? "Cancelando…" : "Sí, cancelar factura"}
                 </button>
               </div>
@@ -171,9 +171,9 @@ export function FacturasIndependientesModal({
           )}
 
           {loading ? (
-            <p style={fNote("#94a3b8")}>Cargando…</p>
+            <p style={fNote("#6B6B6B")}>Cargando…</p>
           ) : facturas.length === 0 ? (
-            <p style={fNote("#94a3b8")}>Todavía no hay facturas independientes.</p>
+            <p style={fNote("#6B6B6B")}>Todavía no hay facturas independientes.</p>
           ) : (
             <div style={{ display: "grid", gap: 6 }}>
               {facturas.map(f => {
@@ -184,29 +184,29 @@ export function FacturasIndependientesModal({
                 return (
                   <div key={f.id} style={{
                     display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10,
-                    background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)", opacity: cancelada ? 0.55 : 1,
+                    background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", opacity: cancelada ? 0.55 : 1,
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", overflowWrap: "anywhere" }}>
-                        <span style={{ fontFamily: "var(--font-mono)", color: "#a78bfa" }}>{f.numero || "—"}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#262626", overflowWrap: "anywhere" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", color: "#131313" }}>{f.numero || "—"}</span>
                         {" · "}{EMPRESA_LABEL[f.empresa] || f.empresa} → {f.receptor_nombre}
-                        {cancelada && <span style={{ color: "#f87171", fontWeight: 700 }}> · CANCELADA</span>}
+                        {cancelada && <span style={{ color: "#C2362B", fontWeight: 700 }}> · CANCELADA</span>}
                       </span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#f8fafc", fontWeight: 700, fontSize: 13 }}>{money(f.total)}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#141414", fontWeight: 700, fontSize: 13 }}>{money(f.total)}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: "#7d8ca3", overflowWrap: "anywhere" }}>
+                    <div style={{ fontSize: 11, color: "#737373", overflowWrap: "anywhere" }}>
                       {new Date(f.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}
                       {" · "}{f.conceptos.length === 1 ? f.conceptos[0].descripcion : `${f.conceptos.length} conceptos`}
                       {f.notas ? ` · ${f.notas}` : ""}
                     </div>
                     {ppd && !cancelada && (
-                      <div style={{ fontSize: 11, color: saldo > 0.01 ? "#38bdf8" : "#4ade80", overflowWrap: "anywhere" }}>
+                      <div style={{ fontSize: 11, color: saldo > 0.01 ? "#1D6FB8" : "#1F8A55", overflowWrap: "anywhere" }}>
                         PPD · {saldo > 0.01 ? `saldo pendiente ${money(saldo)}` : "pagada"}
-                        {suyos.length > 0 && <span style={{ color: "#7d8ca3" }}> · complementos: </span>}
+                        {suyos.length > 0 && <span style={{ color: "#737373" }}> · complementos: </span>}
                         {suyos.map((c, i) => (
                           <span key={c.id}>
                             {i > 0 && ", "}
-                            <button onClick={() => abrirComplemento(c.id)} style={{ ...link, fontSize: 11, color: "#38bdf8" }} title={`Complemento de pago por ${money(c.monto)} (PDF)`}>
+                            <button onClick={() => abrirComplemento(c.id)} style={{ ...link, fontSize: 11, color: "#1D6FB8" }} title={`Complemento de pago por ${money(c.monto)} (PDF)`}>
                               {c.numero || "complemento"}
                             </button>
                           </span>
@@ -217,14 +217,14 @@ export function FacturasIndependientesModal({
                       <button onClick={() => abrir(f.id, "pdf")} style={link}>PDF</button>
                       <button onClick={() => abrir(f.id, "xml")} style={link}>XML</button>
                       {ppd && !cancelada && f.uuid && saldo > 0.01 && (
-                        <button onClick={() => setComplementoDe(f.uuid)} style={{ ...link, color: "#38bdf8" }}>🧾 Complemento</button>
+                        <button onClick={() => setComplementoDe(f.uuid)} style={{ ...link, color: "#1D6FB8" }}>🧾 Complemento</button>
                       )}
                       {!cancelada && (
                         <button
                           onClick={() => suyos.length
                             ? alert(`La factura ${f.numero} tiene complementos de pago vigentes (${suyos.map(c => c.numero).join(", ")}). Cancélalos primero en 🧾 Complementos de pago.`)
                             : setCancelando({ f, motivo: "02", sustituidaPor: "" })}
-                          style={{ ...link, color: "#f87171", marginLeft: "auto" }}
+                          style={{ ...link, color: "#C2362B", marginLeft: "auto" }}
                         >
                           ⊘ Cancelar
                         </button>

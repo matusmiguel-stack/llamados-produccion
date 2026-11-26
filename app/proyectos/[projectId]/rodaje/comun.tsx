@@ -77,7 +77,7 @@ export function Modal(props: {
           <div
             style={{
               display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap",
-              padding: "12px 20px", borderTop: `1px solid ${C.lineaSuave}`, background: "rgba(2,6,23,0.4)",
+              padding: "12px 20px", borderTop: `1px solid ${C.lineaSuave}`, background: "#FFFFFF",
             }}
           >
             {props.pie}
@@ -92,7 +92,7 @@ export function BarraProgreso({ hecho, total, color }: { hecho: number; total: n
   const pct = total > 0 ? Math.min(100, Math.round((hecho / total) * 100)) : 0
   return (
     <div
-      style={{ height: 6, borderRadius: 999, background: "rgba(148,163,184,0.14)", overflow: "hidden" }}
+      style={{ height: 6, borderRadius: 999, background: "rgba(0,0,0,0.06)", overflow: "hidden" }}
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}
@@ -200,9 +200,9 @@ export function TarjetaEscena(props: {
     <span
       style={{
         ...palomita,
-        border: `1.5px solid ${filmada ? C.verde : "rgba(148,163,184,0.4)"}`,
+        border: `1.5px solid ${filmada ? C.verde : "rgba(0,0,0,0.2)"}`,
         background: filmada ? C.verde : "transparent",
-        color: filmada ? "#052e1f" : "transparent",
+        color: filmada ? "#141414" : "transparent",
       }}
     >
       ✓
@@ -219,7 +219,7 @@ export function TarjetaEscena(props: {
         padding: filmada ? "7px 10px" : "10px 10px",
         borderRadius: 12,
         border: `1px solid ${filmada ? C.verdeBorde : C.linea}`,
-        background: filmada ? "rgba(52,211,153,0.06)" : "rgba(255,255,255,0.025)",
+        background: filmada ? "rgba(52,211,153,0.06)" : "#FFFFFF",
       }}
     >
       {puedeEditar ? (

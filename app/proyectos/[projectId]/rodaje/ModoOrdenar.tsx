@@ -25,7 +25,7 @@ const asa: CSSProperties = {
   height: 34,
   borderRadius: 8,
   border: `1px solid ${C.linea}`,
-  background: "rgba(255,255,255,0.04)",
+  background: "#FFFFFF",
   color: C.tenue,
   fontSize: 16,
   cursor: "grab",
@@ -40,7 +40,7 @@ const renglon: CSSProperties = {
   padding: "7px 8px",
   borderRadius: 11,
   border: `1px solid ${C.linea}`,
-  background: "rgba(255,255,255,0.025)",
+  background: "#FFFFFF",
 }
 
 export function ModoOrdenar(props: {
@@ -181,7 +181,7 @@ export function ModoOrdenar(props: {
     : { display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }
 
   const lineaDestino = (
-    <div style={{ height: 4, borderRadius: 4, background: C.violeta, boxShadow: "0 0 0 3px rgba(167,139,250,0.22)", margin: "1px 0" }} />
+    <div style={{ height: 4, borderRadius: 4, background: C.violeta, boxShadow: "0 0 0 3px rgba(0,0,0,0.06)", margin: "1px 0" }} />
   )
 
   const escenasEn = (clave: string) =>
@@ -260,7 +260,7 @@ export function ModoOrdenar(props: {
                   style={{
                     display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
                     padding: "9px 10px", marginTop: i === 0 ? 0 : 6, borderRadius: 11,
-                    background: d.id ? C.violetaFondo : "rgba(148,163,184,0.08)",
+                    background: d.id ? C.violetaFondo : "rgba(0,0,0,0.03)",
                     border: `1px solid ${d.id ? C.violetaBorde : C.linea}`,
                   }}
                 >
@@ -359,7 +359,7 @@ export function ModoOrdenar(props: {
                     onKeyDown={(ev) => {
                       if (ev.key === "Enter") ev.currentTarget.blur()
                     }}
-                    style={{ ...campoChico, flex: 1, fontWeight: 700, letterSpacing: 0.5, color: C.ambar, textTransform: "uppercase" }}
+                    style={{ ...campoChico, flex: 1, fontWeight: 700, color: C.ambar,}}
                   />
                   {flechas(f.clave, `separador ${s.titulo}`)}
                   <button type="button" style={botonIcono} aria-label={`Borrar separador ${s.titulo}`} title="Borrar separador" onClick={() => acc.borrarSeparador(s.id)}>
@@ -385,7 +385,7 @@ export function ModoOrdenar(props: {
                   {manija(f.clave, nombre)}
                   <div style={{ flex: "1 1 160px", minWidth: 0 }}>
                     <div style={{ display: "flex", gap: 6, alignItems: "baseline", minWidth: 0 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violetaClaro, whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.violetaClaro, whiteSpace: "nowrap" }}>
                         {nombre}
                       </span>
                       <span style={{ color: C.texto, fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

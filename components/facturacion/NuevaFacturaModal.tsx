@@ -213,7 +213,7 @@ export function NuevaFacturaModal({
     <div style={fOverlay}>
       <div style={fModal(720)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>🧾 Nueva factura</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Nueva factura</h2>
           <button onClick={onClose} disabled={timbrando} style={fClose}>✕</button>
         </div>
         <div style={fBody}>
@@ -222,18 +222,18 @@ export function NuevaFacturaModal({
             {["retro_studio", "retro_films"].map(e => (
               <button key={e} onClick={() => cambiarEmpresa(e)} style={{
                 ...fBtnSmall,
-                ...(empresa === e ? { background: "rgba(124,58,237,0.18)", borderColor: "rgba(167,139,250,0.45)", color: "#c4b5fd" } : {}),
+                ...(empresa === e ? { background: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.2)", color: "#3F3F3F" } : {}),
               }}>
                 {EMPRESA_LABEL[e]}
               </button>
             ))}
           </div>
           {amb === null ? (
-            <p style={{ ...fNote("#fbbf24"), padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
+            <p style={{ ...fNote("#A86B00"), padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
               Facturapi todavía no está conectado para {EMPRESA_LABEL[empresa]}; el timbrado fallará hasta que se configure la llave.
             </p>
           ) : amb === "pruebas" ? (
-            <p style={{ ...fNote("#38bdf8"), padding: "8px 10px", borderRadius: 8, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.25)" }}>
+            <p style={{ ...fNote("#1D6FB8"), padding: "8px 10px", borderRadius: 8, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.25)" }}>
               Modo pruebas: la factura se genera pero no es válida ante el SAT.
             </p>
           ) : null}
@@ -273,11 +273,11 @@ export function NuevaFacturaModal({
 
           {/* ── Conceptos ── */}
           <div style={{ display: "grid", gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Conceptos *</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#737373" }}>Conceptos *</span>
             {conceptos.map((c, i) => (
-              <div key={c.key} style={{ display: "grid", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)" }}>
+              <div key={c.key} style={{ display: "grid", gap: 8, padding: "10px 12px", borderRadius: 10, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                  <span style={{ fontSize: 11, color: "#64748b", fontFamily: "var(--font-mono)", paddingTop: 9, minWidth: 14 }}>{i + 1}</span>
+                  <span style={{ fontSize: 11, color: "#8A8A8A", fontFamily: "var(--font-mono)", paddingTop: 9, minWidth: 14 }}>{i + 1}</span>
                   <textarea
                     value={c.descripcion}
                     onChange={e => cambiar(c.key, "descripcion", e.target.value)}
@@ -286,7 +286,7 @@ export function NuevaFacturaModal({
                     style={{ ...fInput, resize: "vertical", fontFamily: "inherit", flex: 1 }}
                   />
                   {conceptos.length > 1 && (
-                    <button onClick={() => quitar(c.key)} style={{ ...fClose, color: "#f87171", paddingTop: 8 }} title="Quitar concepto">✕</button>
+                    <button onClick={() => quitar(c.key)} style={{ ...fClose, color: "#C2362B", paddingTop: 8 }} title="Quitar concepto">✕</button>
                   )}
                 </div>
                 <FRow>
@@ -348,7 +348,7 @@ export function NuevaFacturaModal({
             </div>
           </FRow>
           {metodo === "PPD" && (
-            <p style={fNote("#38bdf8")}>
+            <p style={fNote("#1D6FB8")}>
               PPD: cuando se cobre, emite su complemento de pago con 🧾 Complemento en la lista de facturas independientes.
             </p>
           )}
@@ -362,30 +362,30 @@ export function NuevaFacturaModal({
           <FField label="Nota interna (opcional)">
             <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="ej. Préstamo de Retro Studio a Retro Films" style={fInput} />
           </FField>
-          <p style={fNote("#94a3b8")}>Esta factura no se suma al control de ingresos; queda en la lista de facturas independientes.</p>
+          <p style={fNote("#6B6B6B")}>Esta factura no se suma al control de ingresos; queda en la lista de facturas independientes.</p>
 
           <DetallistaFields value={detallista} onChange={setDetallista} />
 
           <SustitucionField value={sustituye} onChange={setSustituye} />
 
-          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
-            <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
+            <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#131313", width: 15, height: 15 }} />
             Enviar la factura por correo al cliente
           </label>
           {enviar && (
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="facturas@cliente.com" style={fInput} />
           )}
 
-          <div style={{ display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)", fontSize: 12, color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", fontSize: 12, color: "#6B6B6B", fontVariantNumeric: "tabular-nums" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(subtotal)}</span></div>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>IVA {iva * 100}%</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(ivaMonto)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", color: "#f8fafc", fontWeight: 700, fontSize: 13 }}><span>Total</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(total)}</span></div>
-            {emisor?.serie && <div style={{ fontSize: 11, color: "#64748b" }}>Serie {emisor.serie} · el folio lo asigna Facturapi</div>}
+            <div style={{ display: "flex", justifyContent: "space-between", color: "#141414", fontWeight: 700, fontSize: 13 }}><span>Total</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(total)}</span></div>
+            {emisor?.serie && <div style={{ fontSize: 11, color: "#8A8A8A" }}>Serie {emisor.serie} · el folio lo asigna Facturapi</div>}
           </div>
 
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
             <button onClick={onClose} disabled={timbrando} style={fBtnGhost}>Cancelar</button>
-            <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#cbd5e1", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
+            <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#3F3F3F", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
               {vista.cargando ? "Generando…" : "👁 Vista previa"}
             </button>
             <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>

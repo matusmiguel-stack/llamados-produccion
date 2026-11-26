@@ -48,15 +48,15 @@ export function useVistaPrevia() {
   const overlay = url ? (
     <div
       onClick={() => setUrl(null)}
-      style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(17,17,17,0.32)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 900, height: "92vh", display: "flex", flexDirection: "column", borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.18)", background: "#0b1120" }}
+        style={{ width: "100%", maxWidth: 900, height: "92vh", display: "flex", flexDirection: "column", borderRadius: 14, overflow: "hidden", border: "1px solid rgba(0,0,0,0.13)", background: "#FFFFFF" }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(148,163,184,0.12)", flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 700, color: "#f8fafc", fontSize: 14 }}>Vista previa</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", background: "rgba(245,158,11,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 6, padding: "2px 7px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(0,0,0,0.09)", flexWrap: "wrap" }}>
+          <span style={{ fontWeight: 700, color: "#141414", fontSize: 14 }}>Vista previa</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#A86B00", background: "rgba(245,158,11,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 6, padding: "2px 7px" }}>
             SIN TIMBRAR · no es válida ante el SAT
           </span>
           <span style={{ flex: 1 }} />

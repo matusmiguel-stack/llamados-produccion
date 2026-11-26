@@ -96,9 +96,9 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelado",
 }
 const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }> = {
-  tentative: { bg: "rgba(251,191,36,0.12)", border: "rgba(251,191,36,0.30)", text: "#fbbf24" },
-  confirmed: { bg: "rgba(34,197,94,0.12)", border: "rgba(74,222,128,0.22)", text: "#86efac" },
-  cancelled: { bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.22)", text: "#f87171" },
+  tentative: { bg: "rgba(251,191,36,0.12)", border: "rgba(251,191,36,0.30)", text: "#A86B00" },
+  confirmed: { bg: "rgba(34,197,94,0.12)", border: "rgba(74,222,128,0.22)", text: "#1F7A4D" },
+  cancelled: { bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.22)", text: "#C2362B" },
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -271,14 +271,14 @@ export function InformacionGeneralPanel({
           <KV label="Carpeta" value={subfolderName} />
           {empresa && (
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Empresa</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#737373",}}>Empresa</span>
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "4px 12px", borderRadius: 999, width: "fit-content",
                 fontSize: 12, fontWeight: 700,
                 ...(empresa === "retro_studio"
-                  ? { background: "rgba(99,102,241,0.14)", border: "1px solid rgba(99,102,241,0.30)", color: "#a5b4fc" }
-                  : { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", color: "#fde68a" })
+                  ? { background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.2)", color: "#3F3F3F" }
+                  : { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", color: "#8A5B00" })
               }}>
                 {empresa === "retro_studio" ? "🎬 Retro Studio" : "🎞️ Retro Films"}
               </span>
@@ -305,7 +305,7 @@ export function InformacionGeneralPanel({
       {showEdit && (
         <div style={editOverlayStyle}>
           <div style={editModalStyle} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>Editar información del proyecto</h3>
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "#141414" }}>Editar información del proyecto</h3>
 
             <div style={{ display: "grid", gap: 12 }}>
               <div style={{ display: "grid", gap: 5 }}>
@@ -370,8 +370,8 @@ export function InformacionGeneralPanel({
           <p style={mutedStyle}>Cargando llamados...</p>
         ) : shoots.length === 0 ? (
           <div style={emptyBoxStyle}>
-            <p style={{ margin: 0, color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>Sin llamados registrados</p>
-            <p style={{ margin: "6px 0 0", color: "#7d8ca3", fontSize: 13 }}>
+            <p style={{ margin: 0, color: "#262626", fontSize: 14, fontWeight: 600 }}>Sin llamados registrados</p>
+            <p style={{ margin: "6px 0 0", color: "#737373", fontSize: 13 }}>
               {isAdmin ? "Usa el botón de arriba para crear el primer llamado." : "No hay llamados para este proyecto aún."}
             </p>
           </div>
@@ -385,7 +385,7 @@ export function InformacionGeneralPanel({
             )}
             {past.length > 0 && (
               <>
-                <p style={{ ...groupLabelStyle, color: "#6b7c93" }}>Anteriores</p>
+                <p style={{ ...groupLabelStyle, color: "#858585" }}>Anteriores</p>
                 {past.map((s) => <ShootCard key={s.id} shoot={s} isMobile={isMobile} dimmed />)}
               </>
             )}
@@ -409,7 +409,7 @@ export function InformacionGeneralPanel({
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 8, marginTop: 10 }}>
               {quotes.slice(0, 3).map((q) => (
                 <div key={q.id} style={quoteChipStyle}>
-                  <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{q.name}</span>
+                  <span style={{ color: "#262626", fontSize: 13, fontWeight: 600 }}>{q.name}</span>
                   <span style={statusBadge(q.status as any)}>
                     {q.status === "draft" ? "Borrador" : q.status === "sent" ? "Enviada" : "Aprobada"}
                   </span>
@@ -420,35 +420,35 @@ export function InformacionGeneralPanel({
         ) : (
           <div>
             <p style={{ ...mutedStyle, marginBottom: 12 }}>
-              Basado en: <strong style={{ color: "#e2e8f0" }}>{releasedQuote.name}</strong>
+              Basado en: <strong style={{ color: "#262626" }}>{releasedQuote.name}</strong>
               {!financials?.hasReal && (
-                <span style={{ color: "#fbbf24", marginLeft: 8 }}>· Sin costos reales aún</span>
+                <span style={{ color: "#A86B00", marginLeft: 8 }}>· Sin costos reales aún</span>
               )}
             </p>
             {financials && (
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                 {/* Proyectado */}
-                <div style={finCardStyle("rgba(167,139,250,0.06)", "rgba(167,139,250,0.20)")}>
-                  <p style={{ ...finTitleStyle, color: "#a78bfa" }}>Proyectado</p>
+                <div style={finCardStyle("rgba(0,0,0,0.05)", "rgba(0,0,0,0.08)")}>
+                  <p style={{ ...finTitleStyle, color: "#131313" }}>Proyectado</p>
                   <FinRow label="Gasto liberado" value={fmt(financials.libGasto)} />
                   {(financials as any).markupPct > 0 && (
-                    <FinRow label={`Markup general (${(financials as any).markupPct}%)`} value={fmt((financials as any).markupAmt)} valueColor="#fbbf24" />
+                    <FinRow label={`Markup general (${(financials as any).markupPct}%)`} value={fmt((financials as any).markupAmt)} valueColor="#A86B00" />
                   )}
                   <FinRow label="Venta al cliente" value={fmt(financials.libVenta)} />
                   <div style={finDividerStyle} />
                   <FinRow
                     label="Utilidad"
                     value={fmt(financials.libUtilidad)}
-                    valueColor="#a78bfa"
+                    valueColor="#131313"
                     bold
                   />
-                  <FinRow label="% sobre venta" value={`${financials.libPct.toFixed(1)}%`} valueColor="#a78bfa" />
+                  <FinRow label="% sobre venta" value={`${financials.libPct.toFixed(1)}%`} valueColor="#131313" />
                 </div>
                 {/* Real */}
                 {(() => {
                   const rc = financials.realUtilidad >= financials.libUtilidad
-                    ? "#34d399"
-                    : financials.realUtilidad > 0 ? "#fbbf24" : "#f87171"
+                    ? "#1F8A55"
+                    : financials.realUtilidad > 0 ? "#A86B00" : "#C2362B"
                   return (
                     <div style={finCardStyle(`${rc}0f`, `${rc}33`)}>
                       <p style={{ ...finTitleStyle, color: rc }}>
@@ -456,7 +456,7 @@ export function InformacionGeneralPanel({
                       </p>
                       <FinRow label="Gasto real (ítems)" value={fmt(financials.realTotal - financials.extra)} />
                       {financials.extra > 0 && (
-                        <FinRow label="Gastos adicionales" value={fmt(financials.extra)} valueColor="#f87171" />
+                        <FinRow label="Gastos adicionales" value={fmt(financials.extra)} valueColor="#C2362B" />
                       )}
                       <FinRow label="Venta al cliente" value={fmt(financials.libVenta)} />
                       <div style={finDividerStyle} />
@@ -487,8 +487,8 @@ function ShootCard({ shoot, isMobile, dimmed }: { shoot: Shoot; isMobile: boolea
     <div style={{ ...shootCardStyle, opacity: dimmed ? 0.6 : 1 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
         <div>
-          <p style={{ margin: 0, color: "#f8fafc", fontSize: 14, fontWeight: 700 }}>{shoot.title}</p>
-          <p style={{ margin: "3px 0 0", color: "#94a3b8", fontSize: 12 }}>
+          <p style={{ margin: 0, color: "#141414", fontSize: 14, fontWeight: 700 }}>{shoot.title}</p>
+          <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 12 }}>
             {fmtDate(shoot.start_time)}
             {!shoot.all_day && ` · ${fmtTime(shoot.start_time)} – ${fmtTime(shoot.end_time)}`}
           </p>
@@ -512,7 +512,7 @@ function ShootCard({ shoot, isMobile, dimmed }: { shoot: Shoot; isMobile: boolea
         </div>
       )}
       {shoot.production_notes && (
-        <p style={{ margin: "8px 0 0", color: "#7d8ca3", fontSize: 12, fontStyle: "italic" }}>
+        <p style={{ margin: "8px 0 0", color: "#737373", fontSize: 12, fontStyle: "italic" }}>
           {shoot.production_notes}
         </p>
       )}
@@ -526,7 +526,7 @@ function KV({ label, value, accent }: { label: string; value: string; accent?: b
   return (
     <div style={kvStyle}>
       <p style={kvLabelStyle}>{label}</p>
-      <p style={{ ...kvValueStyle, color: accent ? "#e2e8f0" : "#94a3b8", fontWeight: accent ? 600 : 400 }}>{value}</p>
+      <p style={{ ...kvValueStyle, color: accent ? "#262626" : "#6B6B6B", fontWeight: accent ? 600 : 400 }}>{value}</p>
     </div>
   )
 }
@@ -534,8 +534,8 @@ function KV({ label, value, accent }: { label: string; value: string; accent?: b
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}: </span>
-      <span style={{ color: "#cbd5e1", fontSize: 12 }}>{value}</span>
+      <span style={{ color: "#858585", fontSize: 10, fontWeight: 700,}}>{label}: </span>
+      <span style={{ color: "#3F3F3F", fontSize: 12 }}>{value}</span>
     </div>
   )
 }
@@ -544,17 +544,17 @@ function Detail({ label, value }: { label: string; value: string }) {
 function FinRow({ label, value, valueColor, bold }: { label: string; value: string; valueColor?: string; bold?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-      <span style={{ color: "#7d8ca3", fontSize: 12 }}>{label}</span>
-      <span style={{ color: valueColor || "#94a3b8", fontSize: bold ? 16 : 13, fontWeight: bold ? 700 : 500, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+      <span style={{ color: "#737373", fontSize: 12 }}>{label}</span>
+      <span style={{ color: valueColor || "#6B6B6B", fontSize: bold ? 16 : 13, fontWeight: bold ? 700 : 500, fontVariantNumeric: "tabular-nums" }}>{value}</span>
     </div>
   )
 }
 
 function statusBadge(status: "draft" | "sent" | "approved"): React.CSSProperties {
   const m = {
-    draft: { bg: "rgba(148,163,184,0.10)", border: "rgba(148,163,184,0.18)", text: "#94a3b8" },
-    sent:  { bg: "rgba(14,165,233,0.12)",  border: "rgba(56,189,248,0.22)",  text: "#bae6fd" },
-    approved: { bg: "rgba(34,197,94,0.12)", border: "rgba(74,222,128,0.22)", text: "#86efac" },
+    draft: { bg: "rgba(0,0,0,0.04)", border: "rgba(0,0,0,0.13)", text: "#6B6B6B" },
+    sent:  { bg: "rgba(14,165,233,0.12)",  border: "rgba(56,189,248,0.22)",  text: "#1D5FA8" },
+    approved: { bg: "rgba(34,197,94,0.12)", border: "rgba(74,222,128,0.22)", text: "#1F7A4D" },
   }
   const c = m[status] || m.draft
   return {
@@ -570,17 +570,15 @@ function statusBadge(status: "draft" | "sent" | "approved"): React.CSSProperties
 const cardStyle: React.CSSProperties = {
   padding: "16px 18px",
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(2,6,23,0.22)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
 }
 
 const cardEyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
 }
 
 const kvStyle: React.CSSProperties = {
@@ -588,17 +586,15 @@ const kvStyle: React.CSSProperties = {
   gap: 3,
   padding: "10px 12px",
   borderRadius: 8,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.07)",
 }
 
 const kvLabelStyle: React.CSSProperties = {
   margin: 0,
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 10,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
 }
 
 const kvValueStyle: React.CSSProperties = {
@@ -609,13 +605,13 @@ const kvValueStyle: React.CSSProperties = {
 const shootCardStyle: React.CSSProperties = {
   padding: "12px 14px",
   borderRadius: 10,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(255,255,255,0.025)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
 }
 
 const mutedStyle: React.CSSProperties = {
   margin: "10px 0 0",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 13,
 }
 
@@ -623,18 +619,16 @@ const emptyBoxStyle: React.CSSProperties = {
   marginTop: 12,
   padding: "20px 16px",
   borderRadius: 10,
-  border: "1px dashed rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.015)",
+  border: "1px dashed rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
   textAlign: "center",
 }
 
 const groupLabelStyle: React.CSSProperties = {
   margin: "4px 0 6px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
 }
 
 const addShootBtnStyle: React.CSSProperties = {
@@ -642,9 +636,9 @@ const addShootBtnStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "6px 13px",
   borderRadius: 8,
-  border: "1px solid rgba(167,139,250,0.30)",
-  background: "rgba(124,58,237,0.10)",
-  color: "#c4b5fd",
+  border: "1px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#3F3F3F",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -654,9 +648,9 @@ const addShootBtnStyle: React.CSSProperties = {
 const editInfoBtnStyle: React.CSSProperties = {
   padding: "4px 12px",
   borderRadius: 7,
-  border: "1px solid rgba(148,163,184,0.18)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.13)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   fontSize: 12,
   fontWeight: 600,
   cursor: "pointer",
@@ -665,7 +659,7 @@ const editInfoBtnStyle: React.CSSProperties = {
 const editOverlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.65)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(6px)",
   zIndex: 999999,
   display: "flex",
@@ -675,10 +669,10 @@ const editOverlayStyle: React.CSSProperties = {
 }
 
 const editModalStyle: React.CSSProperties = {
-  background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 16,
-  boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+  boxShadow: "0 24px 60px rgba(0,0,0,0.13)",
   padding: "24px 24px 20px",
   width: "100%",
   maxWidth: 420,
@@ -687,15 +681,15 @@ const editModalStyle: React.CSSProperties = {
 const editLabelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: "#7d8ca3",
+  color: "#737373",
 }
 
 const editInputStyle: React.CSSProperties = {
   padding: "9px 12px",
   borderRadius: 9,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 13,
   outline: "none",
   width: "100%",
@@ -705,9 +699,9 @@ const editInputStyle: React.CSSProperties = {
 const editSaveBtnStyle: React.CSSProperties = {
   padding: "9px 20px",
   borderRadius: 9,
-  background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))",
-  border: "1px solid rgba(167,139,250,0.25)",
-  color: "#f8fafc",
+  background: "#131313",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#FFFFFF",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
@@ -717,8 +711,8 @@ const editCancelBtnStyle: React.CSSProperties = {
   padding: "9px 16px",
   borderRadius: 9,
   background: "transparent",
-  border: "1px solid rgba(148,163,184,0.14)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.1)",
+  color: "#6B6B6B",
   fontSize: 13,
   cursor: "pointer",
 }
@@ -729,8 +723,8 @@ const quoteChipStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "8px 12px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
   gap: 8,
 }
 
@@ -749,12 +743,10 @@ const finTitleStyle: React.CSSProperties = {
   margin: "0 0 4px",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const finDividerStyle: React.CSSProperties = {
-  borderTop: "1px solid rgba(148,163,184,0.12)",
+  borderTop: "1px solid rgba(0,0,0,0.09)",
   paddingTop: 6,
   marginTop: 2,
 }

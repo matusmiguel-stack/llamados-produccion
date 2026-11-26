@@ -19,11 +19,11 @@ export function SustitucionField({ value, onChange, bloqueado }: { value: string
         readOnly={!!bloqueado}
       />
       {bloqueado ? (
-        <span style={fNote("#a78bfa")}>Refacturando {bloqueado}: la nueva factura la sustituye (relación 04) y la anterior se cancela con motivo 01 (sola, si se timbró en la app).</span>
+        <span style={fNote("#131313")}>Refacturando {bloqueado}: la nueva factura la sustituye (relación 04) y la anterior se cancela con motivo 01 (sola, si se timbró en la app).</span>
       ) : error ? (
-        <span style={fNote("#f87171")}>{error}</span>
+        <span style={fNote("#C2362B")}>{error}</span>
       ) : uuid ? (
-        <span style={fNote("#a78bfa")}>Se emitirá con relación 04 · Sustitución de los CFDI previos. Después cancela la factura anterior con motivo 01.</span>
+        <span style={fNote("#131313")}>Se emitirá con relación 04 · Sustitución de los CFDI previos. Después cancela la factura anterior con motivo 01.</span>
       ) : (
         <span style={fNote()}>Déjalo vacío para una factura normal. Pega el UUID solo si estás refacturando.</span>
       )}

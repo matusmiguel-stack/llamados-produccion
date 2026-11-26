@@ -28,7 +28,7 @@ export function MotivoCancelacionFields({ motivo, sustituidaPor, onChange, selec
             autoComplete="off"
             style={{ ...(selectStyle || fInput), fontFamily: "var(--font-mono)", fontSize: 12, ...(error ? { borderColor: "rgba(248,113,113,0.6)" } : {}) }}
           />
-          <span style={fNote(error ? "#f87171" : undefined)}>
+          <span style={fNote(error ? "#C2362B" : undefined)}>
             {error || "La factura nueva debe estar timbrada antes, con relación 04 a esta."}
           </span>
         </>

@@ -243,7 +243,7 @@ export default function SolicitudesVacacionesPage() {
                       </div>
                       {resumen && (
                         <p style={saldoStyle}>
-                          Le quedan <strong style={{ color: resumen.restantes - (esPendiente ? dias : 0) < 0 ? "#f87171" : "#34d399" }}>
+                          Le quedan <strong style={{ color: resumen.restantes - (esPendiente ? dias : 0) < 0 ? "#C2362B" : "#1F8A55" }}>
                             {resumen.restantes}
                           </strong> de {resumen.corresponden} días
                           {esPendiente && ` · quedarían ${resumen.restantes - dias}`}
@@ -348,16 +348,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -365,7 +363,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
@@ -384,16 +382,16 @@ const filtroButtonStyle: React.CSSProperties = {
   borderRadius: 999,
   fontSize: 12,
   fontWeight: 600,
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   background: "transparent",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   cursor: "pointer",
 }
 
 const filtroActivoStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.16)",
-  border: "1px solid rgba(167,139,250,0.30)",
-  color: "#ddd6fe",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.2)",
+  color: "#262626",
 }
 
 const filtroCountStyle: React.CSSProperties = {
@@ -403,9 +401,9 @@ const filtroCountStyle: React.CSSProperties = {
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -414,7 +412,7 @@ const panelStyle: React.CSSProperties = {
 
 const emptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
   textAlign: "center",
   padding: "12px 0",
@@ -427,19 +425,19 @@ const cardHeaderStyle: React.CSSProperties = {
   gap: 12,
   paddingBottom: 12,
   marginBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const solicitanteStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 15,
   fontWeight: 700,
 }
 
 const puestoStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -465,8 +463,8 @@ const diasBlockStyle: React.CSSProperties = {
   gap: 1,
   padding: "8px 14px",
   borderRadius: 12,
-  background: "rgba(124,58,237,0.10)",
-  border: "1px solid rgba(167,139,250,0.16)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
   textAlign: "center",
   minWidth: 78,
 }
@@ -474,14 +472,14 @@ const diasBlockStyle: React.CSSProperties = {
 const diasNumStyle: React.CSSProperties = {
   fontSize: 24,
   fontWeight: 700,
-  color: "#ddd6fe",
+  color: "#262626",
   lineHeight: 1.1,
   fontVariantNumeric: "tabular-nums",
 }
 
 const diasLabelStyle: React.CSSProperties = {
   fontSize: 10,
-  color: "#a78bfa",
+  color: "#131313",
   fontWeight: 600,
 }
 
@@ -496,14 +494,14 @@ const chipStyle: React.CSSProperties = {
   borderRadius: 999,
   fontSize: 11,
   fontWeight: 600,
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  color: "#e2e8f0",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  color: "#262626",
 }
 
 const saldoStyle: React.CSSProperties = {
   margin: "8px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -511,9 +509,9 @@ const notaStyle: React.CSSProperties = {
   margin: "12px 0 0",
   padding: "10px 12px",
   borderRadius: 10,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
-  color: "#cbd5e1",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
+  color: "#3F3F3F",
   fontSize: 13,
   fontStyle: "italic",
   lineHeight: 1.45,
@@ -521,14 +519,14 @@ const notaStyle: React.CSSProperties = {
 
 const motivoRechazoStyle: React.CSSProperties = {
   margin: "12px 0 0",
-  color: "#fca5a5",
+  color: "#B42318",
   fontSize: 12,
   lineHeight: 1.45,
 }
 
 const resueltoPorStyle: React.CSSProperties = {
   margin: "10px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
 }
 
@@ -543,8 +541,8 @@ const approveButtonStyle: React.CSSProperties = {
   padding: "9px 18px",
   border: "none",
   borderRadius: 8,
-  background: "linear-gradient(135deg, #059669, #10b981)",
-  color: "white",
+  background: "#1F8A55",
+  color: "#FFFFFF",
   fontWeight: 600,
   fontSize: 13,
   cursor: "pointer",
@@ -556,7 +554,7 @@ const dangerButtonStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(248,113,113,0.28)",
   background: "rgba(248,113,113,0.10)",
-  color: "#fca5a5",
+  color: "#B42318",
   fontWeight: 600,
   fontSize: 13,
   cursor: "pointer",
@@ -565,9 +563,9 @@ const dangerButtonStyle: React.CSSProperties = {
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "9px 16px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   background: "transparent",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontWeight: 600,
   fontSize: 13,
   cursor: "pointer",
@@ -576,7 +574,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 const rechazoPanelStyle: React.CSSProperties = {
   marginTop: 14,
   paddingTop: 14,
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -585,7 +583,7 @@ const fieldStyle: React.CSSProperties = {
 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -595,9 +593,9 @@ const textareaStyle: React.CSSProperties = {
   padding: "8px 10px",
   borderRadius: 8,
   resize: "vertical",
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.4,

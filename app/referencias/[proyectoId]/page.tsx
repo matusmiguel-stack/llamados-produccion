@@ -39,15 +39,15 @@ function detectarFuente(url: string): string {
 }
 
 const FUENTES: Record<string, { label: string; emoji: string; color: string }> = {
-  instagram: { label: "Instagram", emoji: "📸", color: "#e879a6" },
-  youtube:   { label: "YouTube",   emoji: "▶️", color: "#f87171" },
-  tiktok:    { label: "TikTok",    emoji: "🎵", color: "#5eead4" },
-  vimeo:     { label: "Vimeo",     emoji: "🎬", color: "#60a5fa" },
-  pinterest: { label: "Pinterest", emoji: "📌", color: "#fb7185" },
-  behance:   { label: "Behance",   emoji: "🎨", color: "#818cf8" },
-  drive:     { label: "Drive",     emoji: "📁", color: "#fbbf24" },
-  x:         { label: "X",         emoji: "🐦", color: "#94a3b8" },
-  web:       { label: "Web",       emoji: "🔗", color: "#a78bfa" },
+  instagram: { label: "Instagram", emoji: "📸", color: "#C93F5D" },
+  youtube:   { label: "YouTube",   emoji: "▶️", color: "#C2362B" },
+  tiktok:    { label: "TikTok",    emoji: "🎵", color: "#0E857D" },
+  vimeo:     { label: "Vimeo",     emoji: "🎬", color: "#1D6FB8" },
+  pinterest: { label: "Pinterest", emoji: "📌", color: "#C93F5D" },
+  behance:   { label: "Behance",   emoji: "🎨", color: "#3F3F3F" },
+  drive:     { label: "Drive",     emoji: "📁", color: "#A86B00" },
+  x:         { label: "X",         emoji: "🐦", color: "#6B6B6B" },
+  web:       { label: "Web",       emoji: "🔗", color: "#131313" },
 }
 const fuenteInfo = (f: string) => FUENTES[f] || FUENTES.web
 
@@ -230,16 +230,16 @@ export default function ReferenciaProyectoPage() {
 
       <main style={{ flex: 1, minWidth: 0, padding: isMobile ? "76px 14px 24px" : "28px 32px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <Link href="/referencias" style={{ fontSize: 12, color: "#a78bfa", textDecoration: "none" }}>
+          <Link href="/referencias" style={{ fontSize: 12, color: "#131313", textDecoration: "none" }}>
             ← Referencias
           </Link>
 
           {!proyecto ? (
-            <p style={{ color: "#7d8ca3", marginTop: 24 }}>Este proyecto de referencias no existe (o fue borrado).</p>
+            <p style={{ color: "#737373", marginTop: 24 }}>Este proyecto de referencias no existe (o fue borrado).</p>
           ) : (
             <>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "10px 0 4px" }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
                   {proyecto.nombre}
                 </h1>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -262,7 +262,7 @@ export default function ReferenciaProyectoPage() {
                   </button>
                 </div>
               </div>
-              <p style={{ fontSize: 13, color: "#7d8ca3", marginBottom: 24 }}>
+              <p style={{ fontSize: 13, color: "#737373", marginBottom: 24 }}>
                 {proyecto.descripcion || "Referencias del proyecto"}
               </p>
 
@@ -297,7 +297,7 @@ export default function ReferenciaProyectoPage() {
                     </button>
                   </div>
                   {newUrl.trim() && (
-                    <p style={{ margin: 0, fontSize: 11, color: "#7d8ca3" }}>
+                    <p style={{ margin: 0, fontSize: 11, color: "#737373" }}>
                       Se guardará como{" "}
                       <span style={{ color: fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).color }}>
                         {fuenteInfo(detectarFuente(/^https?:\/\//i.test(newUrl.trim()) ? newUrl.trim() : `https://${newUrl.trim()}`)).emoji}{" "}
@@ -311,7 +311,7 @@ export default function ReferenciaProyectoPage() {
               {/* Filtros por fuente */}
               {fuentesPresentes.length > 1 && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 18 }}>
-                  <button onClick={() => setFiltro("todas")} style={chipStyle(filtro === "todas", "#a78bfa")}>
+                  <button onClick={() => setFiltro("todas")} style={chipStyle(filtro === "todas", "#131313")}>
                     Todas ({referencias.length})
                   </button>
                   {fuentesPresentes.map(f => {
@@ -328,7 +328,7 @@ export default function ReferenciaProyectoPage() {
 
               {/* Lista de referencias */}
               {visibles.length === 0 ? (
-                <p style={{ color: "#6b7c93", fontSize: 14, marginTop: 32, textAlign: "center" }}>
+                <p style={{ color: "#858585", fontSize: 14, marginTop: 32, textAlign: "center" }}>
                   Aún no hay referencias aquí. Pega el primer link arriba. 🎬
                 </p>
               ) : (
@@ -353,16 +353,16 @@ export default function ReferenciaProyectoPage() {
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <a href={r.url} target="_blank" rel="noopener noreferrer"
-                            style={{ color: "#f1f5f9", fontSize: 14, fontWeight: 600, textDecoration: "none", wordBreak: "break-word" }}>
+                            style={{ color: "#1A1A1A", fontSize: 14, fontWeight: 600, textDecoration: "none", wordBreak: "break-word" }}>
                             {r.titulo || hostLabel || r.url} ↗
                           </a>
                           {r.titulo && (
-                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7c93", wordBreak: "break-all" }}>{hostLabel}</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#858585", wordBreak: "break-all" }}>{hostLabel}</p>
                           )}
                           {r.nota && (
-                            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#94a3b8", lineHeight: 1.5, wordBreak: "break-word" }}>{r.nota}</p>
+                            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B6B6B", lineHeight: 1.5, wordBreak: "break-word" }}>{r.nota}</p>
                           )}
-                          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#737373" }}>
                             👤 {r.autor} · {fechaCorta(r.created_at)}
                             {sem && !soyCalificador && (
                               <span style={{ marginLeft: 8, color: sem.color, fontWeight: 600 }}>
@@ -386,7 +386,7 @@ export default function ReferenciaProyectoPage() {
                                     width: 22, height: 22, borderRadius: "50%", cursor: "pointer",
                                     padding: 0, lineHeight: 1, fontSize: 12,
                                     background: activo ? `${c.color}33` : "transparent",
-                                    border: activo ? `2px solid ${c.color}` : "1px solid rgba(148,163,184,0.25)",
+                                    border: activo ? `2px solid ${c.color}` : "1px solid rgba(0,0,0,0.17)",
                                     opacity: activo ? 1 : 0.45,
                                   }}
                                 >
@@ -414,34 +414,33 @@ export default function ReferenciaProyectoPage() {
 
 const appShellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh",
-  background: "#05070d", fontFamily: "var(--font-sans)",
+  background: "#F3F3F3", fontFamily: "var(--font-sans)",
 }
 const panelStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.1)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 12, padding: 16,
 }
 const panelTitleStyle: React.CSSProperties = {
-  fontSize: 12, fontWeight: 700, color: "#94a3b8",
-  textTransform: "uppercase", letterSpacing: "0.05em",
+  fontSize: 12, fontWeight: 700, color: "#6B6B6B",
   marginBottom: 12,
 }
 const inputStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(148,163,184,0.2)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 8, padding: "8px 12px",
-  color: "#f1f5f9", fontSize: 14, boxSizing: "border-box",
+  color: "#1A1A1A", fontSize: 14, boxSizing: "border-box",
 }
 const primaryButtonStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.25)",
-  border: "1px solid rgba(124,58,237,0.4)",
+  background: "rgba(0,0,0,0.08)",
+  border: "1px solid rgba(0,0,0,0.2)",
   borderRadius: 8, padding: "8px 16px",
-  color: "#a78bfa", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  color: "#131313", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 const refCardStyle: React.CSSProperties = {
   display: "flex", alignItems: "flex-start", gap: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.1)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 12, padding: "12px 14px",
 }
 const fuenteBadgeStyle: React.CSSProperties = {
@@ -452,7 +451,7 @@ const fuenteBadgeStyle: React.CSSProperties = {
 }
 const deleteBtnStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer",
-  color: "#7d8ca3", fontSize: 14, padding: 4, flexShrink: 0,
+  color: "#737373", fontSize: 14, padding: 4, flexShrink: 0,
 }
 const driveBtnStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 5,
@@ -460,12 +459,12 @@ const driveBtnStyle: React.CSSProperties = {
   fontSize: 12, fontWeight: 600, textDecoration: "none",
   background: "rgba(52,211,153,0.10)",
   border: "1px solid rgba(52,211,153,0.28)",
-  color: "#6ee7b7",
+  color: "#1F7A4D",
 }
 const chipStyle = (active: boolean, color: string): React.CSSProperties => ({
   padding: "5px 12px", borderRadius: 999, cursor: "pointer",
   fontSize: 12, fontWeight: 600,
-  border: active ? `1px solid ${color}66` : "1px solid rgba(148,163,184,0.18)",
+  border: active ? `1px solid ${color}66` : "1px solid rgba(0,0,0,0.13)",
   background: active ? `${color}1f` : "transparent",
-  color: active ? color : "#94a3b8",
+  color: active ? color : "#6B6B6B",
 })

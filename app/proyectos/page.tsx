@@ -1142,16 +1142,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -1159,14 +1157,14 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
 const drivePanelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -1194,9 +1192,9 @@ const backButtonStyle: React.CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: 10,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#e2e8f0",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#262626",
   cursor: "pointer",
   fontSize: 16,
   flexShrink: 0,
@@ -1213,7 +1211,7 @@ const breadcrumbStyle: React.CSSProperties = {
 const breadcrumbItemStyle: React.CSSProperties = {
   border: "none",
   background: "transparent",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 500,
@@ -1222,17 +1220,17 @@ const breadcrumbItemStyle: React.CSSProperties = {
 }
 
 const breadcrumbActiveStyle: React.CSSProperties = {
-  color: "#f8fafc",
-  background: "rgba(124,58,237,0.12)",
+  color: "#141414",
+  background: "rgba(0,0,0,0.05)",
 }
 
 const breadcrumbDividerStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 12,
 }
 
 const breadcrumbCurrentStyle: React.CSSProperties = {
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
   padding: "4px 6px",
@@ -1248,7 +1246,7 @@ const driveActionsStyle: React.CSSProperties = {
 
 const driveHintStyle: React.CSSProperties = {
   margin: "0 0 14px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1256,13 +1254,13 @@ const inlinePanelStyle: React.CSSProperties = {
   marginBottom: 14,
   padding: "12px 14px",
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(2,6,23,0.35)",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
 }
 
 const inlinePanelTitleStyle: React.CSSProperties = {
   margin: "0 0 10px",
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 13,
   fontWeight: 600,
 }
@@ -1286,7 +1284,7 @@ const fieldStyle: React.CSSProperties = {
 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -1294,10 +1292,10 @@ const fieldLabelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -1308,7 +1306,7 @@ const selectStyle: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
   backgroundImage:
-    "linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%)",
+    "linear-gradient(45deg, transparent 50%, #6B6B6B 50%), linear-gradient(135deg, #6B6B6B 50%, transparent 50%)",
   backgroundPosition: "calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px)",
   backgroundSize: "5px 5px, 5px 5px",
   backgroundRepeat: "no-repeat",
@@ -1317,33 +1315,33 @@ const selectStyle: React.CSSProperties = {
 
 const moveHintStyle: React.CSSProperties = {
   margin: "0 0 10px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   lineHeight: 1.5,
 }
 
 const moveHintStrongStyle: React.CSSProperties = {
-  color: "#e2e8f0",
+  color: "#262626",
   fontWeight: 600,
 }
 
 const primaryButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
-  background: "rgba(255,255,255,0.04)",
-  color: "#cbd5e1",
-  border: "1px solid rgba(148,163,184,0.16)",
+  background: "#FFFFFF",
+  color: "#3F3F3F",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -1352,14 +1350,14 @@ const secondaryButtonStyle: React.CSSProperties = {
 
 const dangerButtonStyle: React.CSSProperties = {
   ...secondaryButtonStyle,
-  color: "#fca5a5",
+  color: "#B42318",
   border: "1px solid rgba(248,113,113,0.24)",
 }
 
 const emptyStateStyle: React.CSSProperties = {
   padding: "56px 16px",
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
@@ -1374,17 +1372,17 @@ const driveItemStyle: React.CSSProperties = {
   gap: 8,
   padding: "16px 12px",
   borderRadius: 14,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
   cursor: "pointer",
   textAlign: "center",
   transition: "background 0.15s ease, border-color 0.15s ease, transform 0.15s ease",
 }
 
 const driveItemSelectedStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.10)",
-  border: "1px solid rgba(167,139,250,0.28)",
-  boxShadow: "0 10px 30px rgba(124,58,237,0.12)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
 }
 
 const clientIconWrapStyle: React.CSSProperties = {
@@ -1394,7 +1392,7 @@ const clientIconWrapStyle: React.CSSProperties = {
   width: 56,
   height: 56,
   borderRadius: 14,
-  color: "#fbbf24",
+  color: "#A86B00",
   background: "rgba(245,158,11,0.10)",
   border: "1px solid rgba(251,191,36,0.16)",
 }
@@ -1406,7 +1404,7 @@ const subfolderIconWrapStyle: React.CSSProperties = {
   width: 52,
   height: 52,
   borderRadius: 13,
-  color: "#5eead4",
+  color: "#0E857D",
   background: "rgba(20,184,166,0.10)",
   border: "1px solid rgba(45,212,191,0.16)",
 }
@@ -1418,13 +1416,13 @@ const projectIconWrapStyle: React.CSSProperties = {
   width: 48,
   height: 48,
   borderRadius: 12,
-  color: "#93c5fd",
+  color: "#1D5FA8",
   background: "rgba(59,130,246,0.10)",
   border: "1px solid rgba(96,165,250,0.16)",
 }
 
 const driveItemNameStyle: React.CSSProperties = {
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
   lineHeight: 1.35,
@@ -1432,13 +1430,13 @@ const driveItemNameStyle: React.CSSProperties = {
 }
 
 const driveItemMetaStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   lineHeight: 1.4,
   wordBreak: "break-word",
 }
 
 const driveItemHintStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 10,
 }

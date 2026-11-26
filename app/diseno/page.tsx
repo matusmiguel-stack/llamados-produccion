@@ -15,8 +15,8 @@ import { DatePickerField } from "../../components/DatePickerField"
 import { CalendarSearch, type CalendarSearchItem } from "../../components/CalendarSearch"
 
 const TIPOS_ENTREGA = [
-  { label: "Entrega Interna", color: "#6366f1" },
-  { label: "Entrega Cliente", color: "#0891b2" },
+  { label: "Entrega Interna", color: "#131313" },
+  { label: "Entrega Cliente", color: "#2C6FB7" },
   { label: "Entrega Final",   color: "#16a34a" },
 ] as const
 
@@ -39,7 +39,7 @@ function coincideTexto(texto: string, candidatos: string[]): boolean {
 }
 
 function colorForTipo(tipo: string): string {
-  return TIPOS_ENTREGA.find((t) => t.label === tipo)?.color || "#6366f1"
+  return TIPOS_ENTREGA.find((t) => t.label === tipo)?.color || "#131313"
 }
 
 export default function DisenoPage() {
@@ -166,7 +166,7 @@ export default function DisenoPage() {
         return coincideTexto(e.proyecto || "", variantes)
       })
       .map((e) => {
-        const color = colorForTipo(e.tipo) || e.color || "#6366f1"
+        const color = colorForTipo(e.tipo) || e.color || "#131313"
         // fecha_fin es inclusiva → FullCalendar necesita +1 día como end exclusivo
         let end: string | undefined
         if (e.fecha_fin && e.fecha_fin >= e.fecha) {
@@ -182,7 +182,7 @@ export default function DisenoPage() {
           allDay: !e.hora,
           backgroundColor: color,
           borderColor:     color,
-          textColor: "#ffffff",
+          textColor: "#FFFFFF",
         }
       })
     setEvents(evs)
@@ -322,10 +322,10 @@ export default function DisenoPage() {
 
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 800, color: "#f8fafc" }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 800, color: "#141414" }}>
               🎨 Diseño
             </h1>
-            <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 13 }}>
+            <p style={{ margin: "4px 0 0", color: "#737373", fontSize: 13 }}>
               Calendario de entregas de diseño
             </p>
           </div>
@@ -343,19 +343,19 @@ export default function DisenoPage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           <CalendarSearch items={searchItems} onSelect={(it) => irAFecha(it.date)} placeholder="Buscar entrega…" />
           <select value={filtroEditor} onChange={(e) => setFiltroEditor(e.target.value)}
-            style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroEditor ? "#f8fafc" : "#64748b", fontSize: 12 }}>
+            style={{ padding: "6px 10px", borderRadius: 8, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)", color: filtroEditor ? "#141414" : "#8A8A8A", fontSize: 12 }}>
             <option value="">Diseñador</option>
             {disenadores.map((e: any) => (
               <option key={e.id} value={e.id}>{employeeDisplayName(e)}</option>
             ))}
           </select>
           <select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setFiltroProyecto("") }}
-            style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroCliente ? "#f8fafc" : "#64748b", fontSize: 12 }}>
+            style={{ padding: "6px 10px", borderRadius: 8, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)", color: filtroCliente ? "#141414" : "#8A8A8A", fontSize: 12 }}>
             <option value="">Cliente</option>
             {allClients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
           <select value={filtroProyecto} onChange={(e) => setFiltroProyecto(e.target.value)}
-            style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)", color: filtroProyecto ? "#f8fafc" : "#64748b", fontSize: 12 }}>
+            style={{ padding: "6px 10px", borderRadius: 8, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)", color: filtroProyecto ? "#141414" : "#8A8A8A", fontSize: 12 }}>
             <option value="">Proyecto</option>
             {allProjects
               .filter((p) => !filtroCliente || (p.name || "").toLowerCase().includes(filtroCliente.toLowerCase()) || allClients.find((c) => c.id === p.client_id)?.name === filtroCliente)
@@ -363,7 +363,7 @@ export default function DisenoPage() {
           </select>
           {(filtroEditor || filtroCliente || filtroProyecto) && (
             <button onClick={() => { setFiltroEditor(""); setFiltroCliente(""); setFiltroProyecto("") }}
-              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#7d8ca3", fontSize: 12, cursor: "pointer" }}>
+              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.14)", background: "transparent", color: "#737373", fontSize: 12, cursor: "pointer" }}>
               Limpiar
             </button>
           )}
@@ -383,9 +383,9 @@ export default function DisenoPage() {
                 })
               }} style={{
                 padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                border: `1px solid ${active ? t.color : "rgba(148,163,184,0.2)"}`,
+                border: `1px solid ${active ? t.color : "rgba(0,0,0,0.14)"}`,
                 background: active ? `${t.color}22` : "transparent",
-                color: active ? t.color : "#64748b",
+                color: active ? t.color : "#8A8A8A",
                 opacity: active ? 1 : 0.5,
                 transition: "all 0.15s",
               }}>
@@ -398,7 +398,7 @@ export default function DisenoPage() {
         {/* Calendario */}
         <section style={calendarPanelStyle}>
           <div style={{ marginBottom: 8 }}>
-            <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11 }}>
+            <p style={{ margin: 0, color: "#737373", fontSize: 11 }}>
               {canManage ? "Clic en la celda para crear una entrega; clic en un evento para ver detalle" : "Clic en un evento para ver detalle"}
             </p>
           </div>
@@ -463,16 +463,16 @@ export default function DisenoPage() {
               <div style={{ display: "flex", gap: 8 }}>
                 <button type="button" onClick={() => setModoLibre(false)}
                   style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    border: !modoLibre ? "1px solid #6366f1" : "1px solid rgba(148,163,184,0.2)",
-                    background: !modoLibre ? "rgba(99,102,241,0.15)" : "transparent",
-                    color: !modoLibre ? "#a5b4fc" : "#64748b" }}>
+                    border: !modoLibre ? "1px solid #131313" : "1px solid rgba(0,0,0,0.14)",
+                    background: !modoLibre ? "rgba(0,0,0,0.05)" : "transparent",
+                    color: !modoLibre ? "#3F3F3F" : "#8A8A8A" }}>
                   📂 Desde catálogo
                 </button>
                 <button type="button" onClick={() => setModoLibre(true)}
                   style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    border: modoLibre ? "1px solid #6366f1" : "1px solid rgba(148,163,184,0.2)",
-                    background: modoLibre ? "rgba(99,102,241,0.15)" : "transparent",
-                    color: modoLibre ? "#a5b4fc" : "#64748b" }}>
+                    border: modoLibre ? "1px solid #131313" : "1px solid rgba(0,0,0,0.14)",
+                    background: modoLibre ? "rgba(0,0,0,0.05)" : "transparent",
+                    color: modoLibre ? "#3F3F3F" : "#8A8A8A" }}>
                   ✏️ Escribir manualmente
                 </button>
               </div>
@@ -545,9 +545,9 @@ export default function DisenoPage() {
                     <button key={t.label} type="button" onClick={() => setFormTipo(t.label)}
                       style={{
                         padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                        border: formTipo === t.label ? `1px solid ${t.color}` : "1px solid rgba(148,163,184,0.2)",
+                        border: formTipo === t.label ? `1px solid ${t.color}` : "1px solid rgba(0,0,0,0.14)",
                         background: formTipo === t.label ? `${t.color}22` : "transparent",
-                        color: formTipo === t.label ? t.color : "#64748b",
+                        color: formTipo === t.label ? t.color : "#8A8A8A",
                       }}>
                       {t.label}
                     </button>
@@ -568,12 +568,12 @@ export default function DisenoPage() {
                       return (
                         <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "3px 10px", borderRadius: 999,
-                          background: esFreelance ? "rgba(251,191,36,0.12)" : "rgba(99,102,241,0.12)",
-                          border: `1px solid ${esFreelance ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.3)"}`,
-                          color: esFreelance ? "#fbbf24" : "#a5b4fc", fontSize: 12, fontWeight: 600 }}>
+                          background: esFreelance ? "rgba(251,191,36,0.12)" : "rgba(0,0,0,0.05)",
+                          border: `1px solid ${esFreelance ? "rgba(251,191,36,0.35)" : "rgba(0,0,0,0.08)"}`,
+                          color: esFreelance ? "#A86B00" : "#3F3F3F", fontSize: 12, fontWeight: 600 }}>
                           {etiqueta}
                           <button type="button" onClick={() => setFormEditores((prev) => prev.filter((i) => i !== id))}
-                            style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+                            style={{ background: "none", border: "none", color: "#3F3F3F", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
                         </span>
                       )
                     })}
@@ -614,15 +614,15 @@ export default function DisenoPage() {
                   const yaEsFreelance = formEditores.includes(FREELANCE_PREFIX + escrito)
                   const ofrecerFreelance = !yaEsFreelance && escrito.toLowerCase() !== FREELANCE.nombre.toLowerCase()
                   return (
-                    <div style={{ marginTop: 4, borderRadius: 8, border: "1px solid rgba(148,163,184,0.2)", overflow: "hidden" }}>
+                    <div style={{ marginTop: 4, borderRadius: 8, border: "1px solid rgba(0,0,0,0.14)", overflow: "hidden" }}>
                       {sugerencias.map((e: any) => (
                         <button key={e.id} type="button"
                           onClick={() => { setFormEditores((prev) => [...prev, e.id]); setEditorSearch("") }}
                           style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
-                            background: "rgba(255,255,255,0.03)", border: "none", borderBottom: "1px solid rgba(148,163,184,0.1)",
-                            color: "#e2e8f0", fontSize: 13, cursor: "pointer" }}>
+                            background: "#FFFFFF", border: "none", borderBottom: "1px solid rgba(0,0,0,0.08)",
+                            color: "#262626", fontSize: 13, cursor: "pointer" }}>
                           {employeeDisplayName(e)}
-                          <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
+                          <span style={{ color: "#737373", fontSize: 11, marginLeft: 8 }}>{e.puesto}</span>
                         </button>
                       ))}
                       {ofrecerFreelance && (
@@ -633,19 +633,19 @@ export default function DisenoPage() {
                           }}
                           style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px",
                             background: "rgba(251,191,36,0.08)", border: "none",
-                            color: "#fbbf24", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+                            color: "#A86B00", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
                           + Freelance: “{escrito}”
-                          <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: 8, fontWeight: 400 }}>externo</span>
+                          <span style={{ color: "#737373", fontSize: 11, marginLeft: 8, fontWeight: 400 }}>externo</span>
                         </button>
                       )}
                       {!sugerencias.length && !ofrecerFreelance && (
-                        <p style={{ margin: 0, padding: "8px 12px", color: "#7d8ca3", fontSize: 12 }}>Sin resultados</p>
+                        <p style={{ margin: 0, padding: "8px 12px", color: "#737373", fontSize: 12 }}>Sin resultados</p>
                       )}
                     </div>
                   )
                 })()}
                 {disenadores.length === 0 && (
-                  <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 11 }}>
+                  <p style={{ margin: "4px 0 0", color: "#737373", fontSize: 11 }}>
                     No hay empleados con puesto de diseño registrados.
                   </p>
                 )}
@@ -674,10 +674,10 @@ export default function DisenoPage() {
           <div style={{ ...panelStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <div style={panelHeaderStyle}>
               <div>
-                <h2 style={{ ...panelTitleStyle, borderLeft: `4px solid ${colorForTipo(selectedEntrega.tipo) || "#6366f1"}`, paddingLeft: 10 }}>
+                <h2 style={{ ...panelTitleStyle, borderLeft: `4px solid ${colorForTipo(selectedEntrega.tipo) || "#131313"}`, paddingLeft: 10 }}>
                   {selectedEntrega.titulo}
                 </h2>
-                <p style={{ margin: "4px 0 0 14px", color: "#7d8ca3", fontSize: 13 }}>
+                <p style={{ margin: "4px 0 0 14px", color: "#737373", fontSize: 13 }}>
                   {formatFecha(selectedEntrega.fecha)}
                   {selectedEntrega.hora ? ` · ${selectedEntrega.hora} hrs` : ""}
                 </p>
@@ -708,7 +708,7 @@ export default function DisenoPage() {
                   <span style={detailLabelStyle}>Proyecto</span>
                   {selectedEntrega.project_id ? (
                     <a href={`/proyectos/${selectedEntrega.project_id}`}
-                      style={{ color: "#a5b4fc", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+                      style={{ color: "#3F3F3F", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
                       {selectedEntrega.proyecto} →
                     </a>
                   ) : (
@@ -723,9 +723,9 @@ export default function DisenoPage() {
                 </div>
               )}
               {selectedEntrega.notas && (
-                <div style={{ padding: "12px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(148,163,184,0.1)" }}>
-                  <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", fontWeight: 600 }}>Notas</p>
-                  <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: 14, lineHeight: 1.6 }}>{selectedEntrega.notas}</p>
+                <div style={{ padding: "12px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)" }}>
+                  <p style={{ margin: 0, color: "#737373", fontSize: 11, fontWeight: 600 }}>Notas</p>
+                  <p style={{ margin: "6px 0 0", color: "#3F3F3F", fontSize: 14, lineHeight: 1.6 }}>{selectedEntrega.notas}</p>
                 </div>
               )}
             </div>
@@ -769,13 +769,13 @@ export default function DisenoPage() {
 // ── Estilos ───────────────────────────────────────────────────────────────────
 
 const shellStyle: React.CSSProperties = {
-  display: "flex", minHeight: "100vh", background: "transparent", color: "#f8fafc",
+  display: "flex", minHeight: "100vh", background: "transparent", color: "#141414",
 }
 
 const calendarPanelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "10px 12px 12px",
@@ -786,16 +786,16 @@ const calendarPanelStyle: React.CSSProperties = {
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 50,
-  background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+  background: "rgba(17,17,17,0.32)", backdropFilter: "blur(4px)",
   display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
 }
 
 const panelStyle: React.CSSProperties = {
   width: "100%", maxWidth: 560,
-  background: "rgba(15,23,42,0.97)",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 16,
-  boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+  boxShadow: "0 24px 80px rgba(0,0,0,0.12)",
   backdropFilter: "blur(20px)",
   display: "flex", flexDirection: "column",
   maxHeight: "90vh", overflow: "hidden",
@@ -803,11 +803,11 @@ const panelStyle: React.CSSProperties = {
 
 const panelHeaderStyle: React.CSSProperties = {
   display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-  padding: "20px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.1)",
+  padding: "20px 24px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const panelTitleStyle: React.CSSProperties = {
-  margin: 0, fontSize: 18, fontWeight: 700, color: "#f8fafc",
+  margin: 0, fontSize: 18, fontWeight: 700, color: "#141414",
 }
 
 const panelBodyStyle: React.CSSProperties = {
@@ -815,24 +815,24 @@ const panelBodyStyle: React.CSSProperties = {
 }
 
 const panelFooterStyle: React.CSSProperties = {
-  padding: "14px 24px", borderTop: "1px solid rgba(148,163,184,0.1)",
+  padding: "14px 24px", borderTop: "1px solid rgba(0,0,0,0.08)",
   display: "flex", justifyContent: "flex-end", gap: 8,
 }
 
 const closeStyle: React.CSSProperties = {
-  background: "none", border: "none", color: "#7d8ca3", fontSize: 22,
+  background: "none", border: "none", color: "#737373", fontSize: 22,
   cursor: "pointer", padding: "0 4px", lineHeight: 1,
 }
 
 const labelStyle: React.CSSProperties = {
   display: "block", marginBottom: 5, fontSize: 12, fontWeight: 600,
-  color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px",
+  color: "#6B6B6B",
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "9px 12px", borderRadius: 8, boxSizing: "border-box",
-  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(148,163,184,0.2)",
-  color: "#f8fafc", fontSize: 14, outline: "none",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+  color: "#141414", fontSize: 14, outline: "none",
 }
 
 const rowStyle: React.CSSProperties = {
@@ -841,32 +841,31 @@ const rowStyle: React.CSSProperties = {
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: "8px 18px", borderRadius: 8, border: "none",
-  background: "rgba(99,102,241,0.8)", color: "#fff",
+  background: "#131313", color: "#FFFFFF",
   fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 
 const secondaryBtnStyle: React.CSSProperties = {
   padding: "8px 18px", borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.2)", background: "transparent",
-  color: "#94a3b8", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  border: "1px solid rgba(0,0,0,0.14)", background: "transparent",
+  color: "#6B6B6B", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 
 const dangerBtnStyle: React.CSSProperties = {
   padding: "8px 18px", borderRadius: 8, border: "none",
-  background: "rgba(220,38,38,0.15)", color: "#f87171",
+  background: "rgba(220,38,38,0.15)", color: "#C2362B",
   fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 
 const detailRowStyle: React.CSSProperties = {
   display: "flex", gap: 12, alignItems: "baseline",
-  padding: "8px 0", borderBottom: "1px solid rgba(148,163,184,0.08)",
+  padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,0.07)",
 }
 
 const detailLabelStyle: React.CSSProperties = {
-  minWidth: 80, color: "#7d8ca3", fontSize: 12, fontWeight: 600,
-  textTransform: "uppercase", letterSpacing: "0.6px",
+  minWidth: 80, color: "#737373", fontSize: 12, fontWeight: 600,
 }
 
 const detailValueStyle: React.CSSProperties = {
-  color: "#f8fafc", fontSize: 14,
+  color: "#141414", fontSize: 14,
 }

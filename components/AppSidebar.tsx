@@ -24,7 +24,7 @@ type AppSidebarProps = {
   onLogout: () => void
 }
 
-type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "employees" | "users" | "postpro" | "diseno" | "tasks" | "workspace" | "referencias" | "history" | "vacaciones"
+type NavIconType = "calendar" | "dashboard" | "inventory" | "quotes" | "projects" | "suppliers" | "ingresos" | "finanzas" | "flujo" | "employees" | "users" | "postpro" | "diseno" | "tasks" | "workspace" | "referencias" | "history" | "vacaciones"
 
 const ROLE_LABELS: Record<string, string> = {
   admin:     "Admin",
@@ -36,25 +36,26 @@ const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
 
 // roles: null/undefined = visible para todos; array = visible solo para esos roles
 // aprobadorVacaciones: se muestra solo a quienes resuelven solicitudes (por correo)
-export const navItems: { href: string; label: string; icon: NavIconType; roles?: string[]; aprobadorVacaciones?: boolean }[] = [
+// group: sección del menú lateral (sin grupo = arriba, antes de las secciones)
+export const navItems: { href: string; label: string; icon: NavIconType; roles?: string[]; aprobadorVacaciones?: boolean; group?: string }[] = [
   { href: "/",            label: "Calendario",   icon: "calendar"   },
   { href: "/workspace",   label: "Escritorio",   icon: "workspace"  },
-  { href: "/dashboard",   label: "Dashboard",    icon: "dashboard",  roles: ["admin", "editor", "editor_premium", "productor", "viewer", "finanzas"] },
-  { href: "/resources",   label: "Inventario",   icon: "inventory",  roles: ["admin", "editor", "editor_premium", "viewer"] },
-  { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     roles: ["admin", "editor", "editor_premium"] },
-  { href: "/proyectos",   label: "Proyectos",    icon: "projects",   roles: ["admin", "editor", "editor_premium", "productor", "finanzas"] },
-  { href: "/postproduccion", label: "Post Producción", icon: "postpro", roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
-  { href: "/diseno",         label: "Diseño",          icon: "diseno",  roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
-  { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  roles: ["admin", "editor", "editor_premium", "finanzas"] },
-  { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   roles: ["admin", "finanzas"] },
-  { href: "/finanzas",    label: "Finanzas",     icon: "ingresos",   roles: ["admin", "finanzas"] },
-  { href: "/flujo",       label: "Flujo de Caja", icon: "ingresos",  roles: ["admin", "finanzas"] },
-  { href: "/empleados",   label: "Empleados",    icon: "employees",  roles: ["admin", "editor_premium"] },
-  { href: "/users",       label: "Usuarios",     icon: "users",      roles: ["admin", "editor_premium"] },
-  { href: "/actividad",   label: "Historial",    icon: "history",    roles: ["admin"] },
-  { href: "/solicitudes-vacaciones", label: "Solicitud de Vacaciones", icon: "vacaciones", aprobadorVacaciones: true },
-  { href: "/referencias", label: "Referencias",  icon: "referencias" },
-  { href: "/tasks",       label: "Mis Tareas",   icon: "tasks" },
+  { href: "/tasks",       label: "Mis tareas",   icon: "tasks" },
+  { href: "/proyectos",   label: "Proyectos",    icon: "projects",   group: "Producción", roles: ["admin", "editor", "editor_premium", "productor", "finanzas"] },
+  { href: "/postproduccion", label: "Post producción", icon: "postpro", group: "Producción", roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
+  { href: "/diseno",      label: "Diseño",       icon: "diseno",     group: "Producción", roles: ["admin", "editor", "editor_premium", "productor", "viewer"] },
+  { href: "/resources",   label: "Inventario",   icon: "inventory",  group: "Producción", roles: ["admin", "editor", "editor_premium", "viewer"] },
+  { href: "/referencias", label: "Referencias",  icon: "referencias", group: "Producción" },
+  { href: "/cotizaciones",label: "Cotizaciones", icon: "quotes",     group: "Comercial", roles: ["admin", "editor", "editor_premium"] },
+  { href: "/proveedores", label: "Proveedores",  icon: "suppliers",  group: "Comercial", roles: ["admin", "editor", "editor_premium", "finanzas"] },
+  { href: "/ingresos",    label: "Ingresos",     icon: "ingresos",   group: "Finanzas", roles: ["admin", "finanzas"] },
+  { href: "/finanzas",    label: "Finanzas",     icon: "finanzas",   group: "Finanzas", roles: ["admin", "finanzas"] },
+  { href: "/flujo",       label: "Flujo de caja", icon: "flujo",     group: "Finanzas", roles: ["admin", "finanzas"] },
+  { href: "/dashboard",   label: "Dashboard crew", icon: "dashboard", group: "Equipo", roles: ["admin", "editor", "editor_premium", "productor", "viewer", "finanzas"] },
+  { href: "/empleados",   label: "Empleados",    icon: "employees",  group: "Equipo", roles: ["admin", "editor_premium"] },
+  { href: "/solicitudes-vacaciones", label: "Vacaciones", icon: "vacaciones", group: "Equipo", aprobadorVacaciones: true },
+  { href: "/users",       label: "Usuarios",     icon: "users",      group: "Equipo", roles: ["admin", "editor_premium"] },
+  { href: "/actividad",   label: "Historial",    icon: "history",    group: "Equipo", roles: ["admin"] },
 ]
 
 export function AppSidebar({
@@ -132,6 +133,13 @@ export function AppSidebar({
         return !item.roles || item.roles.includes(role)
       })
 
+  const navGroups: { group?: string; items: typeof visibleNavItems }[] = []
+  for (const item of visibleNavItems) {
+    const last = navGroups[navGroups.length - 1]
+    if (last && last.group === item.group) last.items.push(item)
+    else navGroups.push({ group: item.group, items: [item] })
+  }
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/"
     return pathname.startsWith(href)
@@ -187,8 +195,8 @@ export function AppSidebar({
               <Image
                 src="/logo-retro.png"
                 alt="Retro"
-                width={132}
-                height={48}
+                width={96}
+                height={35}
                 style={{ objectFit: "contain", height: "auto" }}
                 priority
               />
@@ -197,45 +205,48 @@ export function AppSidebar({
 
           {!mustChangePassword && (
             <div style={searchWrapStyle}>
-              <GlobalSearch onNavigate={() => isMobile && onMenuClose()} />
+              <GlobalSearch tone="dark" onNavigate={() => isMobile && onMenuClose()} />
             </div>
           )}
 
           <nav style={navStyle}>
-            {visibleNavItems.map((item) => {
-                const active = isActive(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => isMobile && onMenuClose()}
-                    style={{
-                      ...navItemStyle,
-                      ...(active ? activeNavItemStyle : {}),
-                    }}
-                  >
-                    <span style={navIconWrapStyle(active)}>
-                      <NavIcon type={item.icon} />
-                      {item.href === "/tasks" && overdueTasks > 0 && (
-                        <span
-                          style={taskAlertDotStyle}
-                          title={`${overdueTasks} tarea${overdueTasks !== 1 ? "s" : ""} vencida${overdueTasks !== 1 ? "s" : ""}`}
-                          aria-label={`${overdueTasks} tareas vencidas`}
-                        />
+            {navGroups.map(({ group, items }) => (
+              <div key={group || "_top"} style={navGroupStyle}>
+                {group && <p style={navGroupHeadStyle}>{group}</p>}
+                {items.map((item) => {
+                  const active = isActive(item.href)
+                  const count =
+                    item.href === "/tasks" ? overdueTasks :
+                    item.href === "/solicitudes-vacaciones" ? pendingVacaciones : 0
+                  const countTitle =
+                    item.href === "/tasks"
+                      ? `${count} tarea${count !== 1 ? "s" : ""} vencida${count !== 1 ? "s" : ""}`
+                      : `${count} solicitud${count !== 1 ? "es" : ""} de vacaciones sin responder`
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => isMobile && onMenuClose()}
+                      aria-current={active ? "page" : undefined}
+                      style={{
+                        ...navItemStyle,
+                        ...(active ? activeNavItemStyle : {}),
+                      }}
+                    >
+                      <span style={navIconWrapStyle(active)}>
+                        <NavIcon type={item.icon} />
+                      </span>
+                      <span style={navLabelStyle}>{item.label}</span>
+                      {count > 0 && (
+                        <span style={countBadgeStyle} title={countTitle} aria-label={countTitle}>
+                          {count}
+                        </span>
                       )}
-                      {item.href === "/solicitudes-vacaciones" && pendingVacaciones > 0 && (
-                        <span
-                          style={taskAlertDotStyle}
-                          title={`${pendingVacaciones} solicitud${pendingVacaciones !== 1 ? "es" : ""} de vacaciones sin responder`}
-                          aria-label={`${pendingVacaciones} solicitudes de vacaciones pendientes`}
-                        />
-                      )}
-                    </span>
-                    <span style={navLabelStyle}>{item.label}</span>
-                    {active && <span style={activeIndicatorStyle} />}
-                  </Link>
-                )
-              })}
+                    </Link>
+                  )
+                })}
+              </div>
+            ))}
           </nav>
         </div>
 
@@ -243,26 +254,22 @@ export function AppSidebar({
           <Link
             href="/perfil"
             onClick={() => isMobile && onMenuClose()}
+            aria-label="Mi perfil"
             style={{
-              ...profileCardStyle,
-              ...(pathname === "/perfil" ? profileCardActiveStyle : {}),
-              textDecoration: "none",
-              color: "inherit",
+              ...profileLinkStyle,
+              ...(pathname === "/perfil" ? profileLinkActiveStyle : {}),
             }}
           >
-            <div style={profileRowStyle}>
-              <span style={avatarStyle}>{initial}</span>
-              <div style={profileMetaStyle}>
-                <p style={profileNameStyle}>{displayName}</p>
-              </div>
-            </div>
-            <div style={profileFooterRowStyle}>
-              <span style={roleBadgeStyle(role)}>{roleLabel(role)}</span>
-              <span style={profileLinkHintStyle}>Mi perfil</span>
-            </div>
+            <span style={avatarStyle}>{initial}</span>
+            <span style={profileMetaStyle}>
+              <span style={profileNameStyle}>{displayName}</span>
+              <span style={profileRoleStyle}>{roleLabel(role)}</span>
+            </span>
           </Link>
-          <button onClick={onLogout} style={logoutButtonStyle}>
-            Salir
+          <button onClick={onLogout} style={logoutButtonStyle} aria-label="Salir" title="Salir">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M14 4.5h4.5a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H14M10 16l4-4-4-4M14 12H4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
       </aside>
@@ -379,6 +386,22 @@ export function NavIcon({
     )
   }
 
+  if (type === "finanzas") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M5 20V11M10 20V5M15 20v-7M20 20V9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (type === "flujo") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M3 15c3 0 3-6 6-6s3 6 6 6 3-6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
   if (type === "postpro") {
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -458,182 +481,143 @@ function MenuIcon() {
   )
 }
 
-function roleBadgeStyle(role: string): React.CSSProperties {
-  const colors: Record<string, { bg: string; border: string; text: string }> = {
-    admin: {
-      bg: "rgba(124,58,237,0.16)",
-      border: "rgba(167,139,250,0.24)",
-      text: "#ddd6fe",
-    },
-    editor: {
-      bg: "rgba(14,165,233,0.12)",
-      border: "rgba(56,189,248,0.22)",
-      text: "#bae6fd",
-    },
-    productor: {
-      bg: "rgba(52,211,153,0.12)",
-      border: "rgba(52,211,153,0.22)",
-      text: "#6ee7b7",
-    },
-    viewer: {
-      bg: "rgba(148,163,184,0.10)",
-      border: "rgba(148,163,184,0.18)",
-      text: "#cbd5e1",
-    },
-  }
-
-  const palette = colors[role] || colors.viewer
-
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "3px 8px",
-    borderRadius: 999,
-    fontSize: 10,
-    fontWeight: 600,
-    textTransform: "none",
-    background: palette.bg,
-    border: `1px solid ${palette.border}`,
-    color: palette.text,
-  }
-}
+// ── Barra grafito ─────────────────────────────────────────────────────────
+// Fondo grafito, opción activa en blanco, contadores en píldora roja y el
+// avatar en lima (el único acento de color de la barra).
 
 const sidebarStyle: React.CSSProperties = {
   flexShrink: 0,
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
-  padding: "16px 12px",
-  background:
-    "linear-gradient(180deg, rgba(10,14,26,0.98) 0%, rgba(6,9,18,0.98) 100%)",
-  borderRight: "1px solid rgba(148,163,184,0.08)",
-  boxShadow: "inset -1px 0 0 rgba(255,255,255,0.03)",
-  backdropFilter: "blur(20px)",
-  color: "#f8fafc",
+  padding: "20px 12px 12px",
+  background: "#18181A",
+  color: "#D6D6D6",
 }
 
 const sidebarTopStyle: React.CSSProperties = {
   display: "grid",
-  gap: 16,
+  gap: 14,
 }
 
 const brandZoneStyle: React.CSSProperties = {
   display: "flex",
-  justifyContent: "center",
-  padding: "8px 6px 12px",
-  borderBottom: "1px solid rgba(148,163,184,0.08)",
+  justifyContent: "flex-start",
+  padding: "2px 10px 4px",
 }
 
 const searchWrapStyle: React.CSSProperties = {
-  padding: "0 2px",
+  padding: 0,
 }
 
 const navStyle: React.CSSProperties = {
   display: "grid",
-  gap: 4,
+  gap: 12,
+}
+
+const navGroupStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 1,
+}
+
+const navGroupHeadStyle: React.CSSProperties = {
+  margin: 0,
+  padding: "0 10px 4px",
+  fontSize: 12,
+  fontWeight: 500,
+  color: "#7C7C80",
 }
 
 const navItemStyle: React.CSSProperties = {
-  position: "relative",
   display: "flex",
   alignItems: "center",
   gap: 10,
-  padding: "8px 10px",
-  borderRadius: 10,
-  color: "#94a3b8",
+  height: 32,
+  padding: "0 10px",
+  borderRadius: 7,
+  color: "#D6D6D6",
   textDecoration: "none",
-  fontSize: 13,
-  fontWeight: 500,
+  fontSize: 13.5,
+  fontWeight: 450,
   transition: "background 0.15s ease, color 0.15s ease",
 }
 
 const activeNavItemStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.12)",
-  color: "#f8fafc",
-  boxShadow: "inset 0 0 0 1px rgba(167,139,250,0.12)",
+  background: "#FFFFFF",
+  color: "#131313",
+  fontWeight: 600,
 }
 
 const navIconWrapStyle = (active: boolean): React.CSSProperties => ({
-  position: "relative",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 28,
-  height: 28,
-  borderRadius: 8,
-  color: active ? "#ddd6fe" : "#64748b",
-  background: active ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.03)",
+  width: 16,
+  height: 16,
+  color: active ? "#131313" : "#8E8E93",
   flexShrink: 0,
 })
-
-// Alarma roja de tareas vencidas — pequeño círculo en la esquina superior
-// izquierda del ícono de "Mis Tareas".
-const taskAlertDotStyle: React.CSSProperties = {
-  position: "absolute",
-  top: -2,
-  left: -2,
-  width: 9,
-  height: 9,
-  borderRadius: 999,
-  background: "#ef4444",
-  border: "1.5px solid #0a0e1a",
-  boxShadow: "0 0 6px rgba(239,68,68,0.9)",
-  animation: "pulse-alert 1.6s ease-in-out infinite",
-}
 
 const navLabelStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 }
 
-const activeIndicatorStyle: React.CSSProperties = {
-  width: 6,
-  height: 6,
-  borderRadius: 999,
-  background: "#a78bfa",
-  boxShadow: "0 0 10px rgba(167,139,250,0.8)",
-  flexShrink: 0,
+// Tareas vencidas o solicitudes pendientes: píldora roja con el número
+const countBadgeStyle: React.CSSProperties = {
+  marginLeft: "auto",
+  minWidth: 20,
+  height: 18,
+  padding: "0 6px",
+  borderRadius: 9,
+  background: "#E5533D",
+  color: "#FFFFFF",
+  fontSize: 11.5,
+  fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontVariantNumeric: "tabular-nums",
 }
 
 const sidebarFooterStyle: React.CSSProperties = {
+  marginTop: 16,
   paddingTop: 12,
-  borderTop: "1px solid rgba(148,163,184,0.08)",
-  display: "grid",
-  gap: 8,
+  borderTop: "1px solid #2E2E31",
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
 }
 
-const profileCardStyle: React.CSSProperties = {
-  padding: 10,
-  borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.10)",
-  display: "block",
-  transition: "background 0.15s ease, border-color 0.15s ease",
-}
-
-const profileCardActiveStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.10)",
-  border: "1px solid rgba(167,139,250,0.18)",
-}
-
-const profileRowStyle: React.CSSProperties = {
+const profileLinkStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
   display: "flex",
   alignItems: "center",
   gap: 10,
-  minWidth: 0,
+  padding: "6px 8px",
+  borderRadius: 8,
+  textDecoration: "none",
+  color: "inherit",
+}
+
+const profileLinkActiveStyle: React.CSSProperties = {
+  background: "#242427",
 }
 
 const avatarStyle: React.CSSProperties = {
-  width: 34,
-  height: 34,
-  borderRadius: 10,
+  width: 30,
+  height: 30,
+  borderRadius: "50%",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
-  background: "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(14,165,233,0.22))",
-  border: "1px solid rgba(167,139,250,0.20)",
-  color: "#f8fafc",
+  background: "#CDF46A",
+  color: "#131313",
   fontSize: 13,
   fontWeight: 700,
 }
@@ -641,41 +625,36 @@ const avatarStyle: React.CSSProperties = {
 const profileMetaStyle: React.CSSProperties = {
   minWidth: 0,
   flex: 1,
+  display: "grid",
 }
 
 const profileNameStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#f8fafc",
-  fontSize: 13,
+  color: "#FFFFFF",
+  fontSize: 13.5,
   fontWeight: 600,
+  lineHeight: 1.25,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 }
 
-const profileFooterRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
-  marginTop: 10,
-}
-
-const profileLinkHintStyle: React.CSSProperties = {
-  color: "#a78bfa",
-  fontSize: 11,
-  fontWeight: 600,
+const profileRoleStyle: React.CSSProperties = {
+  color: "#8E8E93",
+  fontSize: 12,
+  lineHeight: 1.25,
 }
 
 const logoutButtonStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.14)",
+  width: 32,
+  height: 32,
+  flexShrink: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: 7,
+  border: "none",
   background: "transparent",
-  color: "#94a3b8",
-  fontSize: 11,
-  fontWeight: 500,
+  color: "#8E8E93",
   cursor: "pointer",
 }
 
@@ -689,21 +668,19 @@ const hamburgerStyle: React.CSSProperties = {
   justifyContent: "center",
   width: 40,
   height: 40,
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "none",
   borderRadius: 10,
   padding: 0,
-  background: "rgba(10,14,26,0.92)",
-  color: "#e2e8f0",
+  background: "#18181A",
+  color: "#FFFFFF",
   cursor: "pointer",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-  backdropFilter: "blur(12px)",
+  boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
 }
 
 const backdropStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.50)",
-  backdropFilter: "blur(2px)",
+  background: "rgba(17,17,17,0.32)",
   zIndex: 9998,
   border: "none",
   cursor: "pointer",

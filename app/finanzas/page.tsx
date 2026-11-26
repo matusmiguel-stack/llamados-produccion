@@ -76,7 +76,7 @@ function ProvLink({ f }: { f: Factura }) {
   if (f.proveedor_id) {
     return <Link href={`/proveedores/${f.proveedor_id}`} style={provLinkStyle} title={`Ver proveedor: ${label}`}>{label}</Link>
   }
-  return <span style={{ color: "#e2e8f0" }}>{label}</span>
+  return <span style={{ color: "#262626" }}>{label}</span>
 }
 
 // Proyecto como hipervínculo a su ficha (si tenemos su id)
@@ -85,7 +85,7 @@ function ProjLink({ f }: { f: Factura }) {
   if (f.project_id) {
     return <Link href={`/proyectos/${f.project_id}`} style={projLinkStyle} title={`Ver proyecto: ${label}`}>{label}</Link>
   }
-  return <span style={{ color: "#7d8ca3" }}>{label}</span>
+  return <span style={{ color: "#737373" }}>{label}</span>
 }
 
 function nextFridayISO(): string {
@@ -148,12 +148,12 @@ function MiniCalendar({ value, onPick, highlight }: {
     <div style={calPopupStyle} onClick={e => e.stopPropagation()}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <button onClick={prevMonth} style={calNavBtn}>‹</button>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", textTransform: "capitalize" }}>{monthName}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#262626", textTransform: "capitalize" }}>{monthName}</span>
         <button onClick={nextMonth} style={calNavBtn}>›</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
         {["D", "L", "M", "M", "J", "V", "S"].map((w, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#6b7c93", padding: "2px 0" }}>{w}</div>
+          <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#858585", padding: "2px 0" }}>{w}</div>
         ))}
         {cells.map((d, i) => {
           if (d === null) return <div key={i} />
@@ -170,19 +170,19 @@ function MiniCalendar({ value, onPick, highlight }: {
                 position: "relative", aspectRatio: "1", padding: 0,
                 border: isSelected ? "1px solid rgba(6,182,212,0.6)" : "1px solid transparent",
                 borderRadius: 8,
-                background: isSelected ? "rgba(6,182,212,0.18)" : isFriday ? "rgba(148,163,184,0.06)" : "transparent",
-                color: !isFriday ? "#334155" : isSelected ? "#67e8f9" : "#cbd5e1",
+                background: isSelected ? "rgba(6,182,212,0.18)" : isFriday ? "rgba(0,0,0,0.02)" : "transparent",
+                color: !isFriday ? "#BDBDBD" : isSelected ? "#0E7490" : "#3F3F3F",
                 fontSize: 12, fontWeight: isFriday ? 600 : 400,
                 cursor: isFriday ? "pointer" : "default",
               }}
             >
               {d}
-              {hasPago && <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: 999, background: "#fbbf24" }} />}
+              {hasPago && <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: 999, background: "#A86B00" }} />}
             </button>
           )
         })}
       </div>
-      <p style={{ margin: "10px 0 0", fontSize: 10, color: "#6b7c93", textAlign: "center" }}>Solo se pueden elegir viernes · ● = con pagos</p>
+      <p style={{ margin: "10px 0 0", fontSize: 10, color: "#858585", textAlign: "center" }}>Solo se pueden elegir viernes · ● = con pagos</p>
     </div>
   )
 }
@@ -394,7 +394,7 @@ export default function FinanzasPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0b1322" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#FFFFFF" }}>
       <AppSidebar
         profile={profile}
         user={null}
@@ -408,29 +408,29 @@ export default function FinanzasPage() {
 
       <main style={{ flex: 1, padding: isMobile ? "76px 14px 32px" : "32px 36px", maxWidth: 1200, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>💰 Finanzas — Facturas</h1>
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#7d8ca3" }}>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>💰 Finanzas — Facturas</h1>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#737373" }}>
             Facturas recibidas de proveedores y programación de pagos
           </p>
         </div>
 
         {/* Summary cards */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
-          <div style={cardStyle("#f59e0b")}>
+          <div style={cardStyle("#B8800E")}>
             <p style={cardLabelStyle}>Pagos este viernes ({fechaCorta(viernes)})</p>
-            <p style={{ ...cardValueStyle, color: "#fbbf24" }}>{fmtMx(totalViernes.sinIva)}</p>
+            <p style={{ ...cardValueStyle, color: "#A86B00" }}>{fmtMx(totalViernes.sinIva)}</p>
             <ConIva sinIva={totalViernes.sinIva} conIva={totalViernes.conIva} />
             <p style={cardHintStyle}>{pagosEsteViernes.length} factura{pagosEsteViernes.length !== 1 ? "s" : ""}</p>
           </div>
-          <div style={cardStyle("#f87171")}>
+          <div style={cardStyle("#C2362B")}>
             <p style={cardLabelStyle}>Total por pagar</p>
-            <p style={{ ...cardValueStyle, color: "#f87171" }}>{fmtMx(totalPorPagar.sinIva)}</p>
+            <p style={{ ...cardValueStyle, color: "#C2362B" }}>{fmtMx(totalPorPagar.sinIva)}</p>
             <ConIva sinIva={totalPorPagar.sinIva} conIva={totalPorPagar.conIva} />
             <p style={cardHintStyle}>{facturas.filter(f => f.status === "aceptada" && !f.es_historico).length} pendientes</p>
           </div>
-          <div style={cardStyle("#34d399")}>
+          <div style={cardStyle("#1F8A55")}>
             <p style={cardLabelStyle}>Pagadas</p>
-            <p style={{ ...cardValueStyle, color: "#34d399" }}>{fmtMx(totalPagado.sinIva)}</p>
+            <p style={{ ...cardValueStyle, color: "#1F8A55" }}>{fmtMx(totalPagado.sinIva)}</p>
             <ConIva sinIva={totalPagado.sinIva} conIva={totalPagado.conIva} />
             <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada" && !f.es_historico).length} facturas</p>
           </div>
@@ -439,19 +439,19 @@ export default function FinanzasPage() {
         {/* Deuda histórica (previa a la app) — aparte, para no mezclarla con la de arriba */}
         {(totalPorPagarHistorico.sinIva > 0 || totalPagadoHistorico.sinIva > 0) && (
           <div style={{ marginBottom: 24 }}>
-            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#fb923c", textTransform: "uppercase", letterSpacing: 0.6 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#C2410C",}}>
               🕰️ Deuda histórica (pasada, previa a la app)
             </p>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 12 }}>
-              <div style={cardStyle("#fb923c")}>
+              <div style={cardStyle("#C2410C")}>
                 <p style={cardLabelStyle}>Total por pagar (pasadas)</p>
-                <p style={{ ...cardValueStyle, color: "#fb923c" }}>{fmtMx(totalPorPagarHistorico.sinIva)}</p>
+                <p style={{ ...cardValueStyle, color: "#C2410C" }}>{fmtMx(totalPorPagarHistorico.sinIva)}</p>
                 <ConIva sinIva={totalPorPagarHistorico.sinIva} conIva={totalPorPagarHistorico.conIva} />
                 <p style={cardHintStyle}>{facturas.filter(f => f.status === "aceptada" && f.es_historico).length} pendientes</p>
               </div>
-              <div style={cardStyle("#fdba74")}>
+              <div style={cardStyle("#C2410C")}>
                 <p style={cardLabelStyle}>Pagadas (pasadas)</p>
-                <p style={{ ...cardValueStyle, color: "#fdba74" }}>{fmtMx(totalPagadoHistorico.sinIva)}</p>
+                <p style={{ ...cardValueStyle, color: "#C2410C" }}>{fmtMx(totalPagadoHistorico.sinIva)}</p>
                 <ConIva sinIva={totalPagadoHistorico.sinIva} conIva={totalPagadoHistorico.conIva} />
                 <p style={cardHintStyle}>{facturas.filter(f => f.status === "pagada" && f.es_historico).length} facturas</p>
               </div>
@@ -477,8 +477,8 @@ export default function FinanzasPage() {
 
               <div ref={calWrapRef} style={{ position: "relative" }}>
                 <button onClick={() => setCalOpen(o => !o)} style={dateJumpBtnStyle} title="Saltar a un viernes específico">
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{fechaViernes(selectedViernes)}</span>
-                  <span style={{ fontSize: 12, color: "#7d8ca3" }}>📅</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#1A1A1A" }}>{fechaViernes(selectedViernes)}</span>
+                  <span style={{ fontSize: 12, color: "#737373" }}>📅</span>
                 </button>
                 {calOpen && (
                   <MiniCalendar value={selectedViernes} onPick={goViernes} highlight={fridaysWithPagos} />
@@ -508,30 +508,30 @@ export default function FinanzasPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14, padding: "14px 18px", background: selVencido && selFacturas.length ? "rgba(248,113,113,0.07)" : "rgba(245,158,11,0.06)", border: `1px solid ${selVencido && selFacturas.length ? "rgba(248,113,113,0.28)" : "rgba(245,158,11,0.22)"}`, borderRadius: 14 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#cbd5e1", textTransform: "uppercase", letterSpacing: 0.6 }}>A liberar</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3F3F3F",}}>A liberar</span>
                   {selVencido && selFacturas.length > 0 && (
-                    <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}>Atrasado</span>
+                    <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(248,113,113,0.14)", border: "1px solid rgba(248,113,113,0.3)", color: "#C2362B" }}>Atrasado</span>
                   )}
                 </div>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#737373" }}>
                   {selFacturas.length} factura{selFacturas.length !== 1 ? "s" : ""}
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: selVencido && selFacturas.length ? "#f87171" : "#fbbf24" }}>{fmtMx(selTotal.sinIva)}</span>
+                <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: selVencido && selFacturas.length ? "#C2362B" : "#A86B00" }}>{fmtMx(selTotal.sinIva)}</span>
                 <ConIva sinIva={selTotal.sinIva} conIva={selTotal.conIva} />
               </div>
             </div>
 
             {/* Detalle completo de cada factura de este viernes */}
             {selFacturas.length === 0 ? (
-              <p style={{ color: "#6b7c93", textAlign: "center", padding: "48px 0" }}>
+              <p style={{ color: "#858585", textAlign: "center", padding: "48px 0" }}>
                 No hay pagos programados para este viernes.
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {selFacturas.map(f => (
-                  <div key={f.id} style={{ padding: "16px 18px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12 }}>
+                  <div key={f.id} style={{ padding: "16px 18px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -541,18 +541,18 @@ export default function FinanzasPage() {
                           )}
                         </div>
                         {f.concepto && (
-                          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
+                          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#3F3F3F" }}>{f.concepto}</p>
                         )}
-                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#737373" }}>
                           <ProjLink f={f} />
-                          {f.forma_pago && <> · <span style={{ color: "#93c5fd" }}>Pago: {f.forma_pago}</span></>}
+                          {f.forma_pago && <> · <span style={{ color: "#1D5FA8" }}>Pago: {f.forma_pago}</span></>}
                         </p>
                         {f.uuid_fiscal && (
-                          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#6b7c93", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>UUID: {f.uuid_fiscal}</p>
+                          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#858585", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>UUID: {f.uuid_fiscal}</p>
                         )}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                        <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
+                        <span style={{ color: "#A86B00", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
                           {fmtMx(montoPagar(f))}
                         </span>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -577,7 +577,7 @@ export default function FinanzasPage() {
         {/* Pagos este viernes */}
         {pagosEsteViernes.length > 0 && (
           <div style={{ marginBottom: 28, padding: "18px 20px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 14 }}>
-            <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: 0.6 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#A86B00",}}>
               ⚡ Liberar este viernes
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -588,7 +588,7 @@ export default function FinanzasPage() {
                     <span style={{ fontSize: 12, marginLeft: 8 }}><ProjLink f={f} /></span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: "#fbbf24", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 14 }}>
+                    <span style={{ color: "#A86B00", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 14 }}>
                       {fmtMx(montoPagar(f))}
                     </span>
                     <button
@@ -615,8 +615,8 @@ export default function FinanzasPage() {
             ))}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "rgba(2,6,23,0.35)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#737373",}}>Periodo</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <span style={dateLabelStyle}>Del</span>
                 <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} max={dateTo || undefined} style={dateInputStyle} />
@@ -633,20 +633,20 @@ export default function FinanzasPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar proveedor, proyecto, UUID..."
-              style={{ marginLeft: isMobile ? 0 : "auto", padding: "8px 12px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 8, color: "#e2e8f0", fontSize: 13, outline: "none", width: isMobile ? "100%" : 260 }}
+              style={{ marginLeft: isMobile ? 0 : "auto", padding: "8px 12px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)", borderRadius: 8, color: "#262626", fontSize: 13, outline: "none", width: isMobile ? "100%" : 260 }}
             />
           </div>
         </div>
 
         {/* Lista */}
         {filtered.length === 0 ? (
-          <p style={{ color: "#6b7c93", textAlign: "center", padding: "48px 0" }}>
+          <p style={{ color: "#858585", textAlign: "center", padding: "48px 0" }}>
             No hay facturas {filter !== "todas" || dateFrom || dateTo ? "con esos filtros" : "todavía"}.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {filtered.map(f => (
-              <div key={f.id} style={{ padding: "16px 18px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12 }}>
+              <div key={f.id} style={{ padding: "16px 18px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -660,25 +660,25 @@ export default function FinanzasPage() {
                       {f.es_historico && <span style={historicoBadgeStyle}>PASADO</span>}
                     </div>
                     {f.concepto && (
-                      <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{f.concepto}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 13, color: "#3F3F3F" }}>{f.concepto}</p>
                     )}
-                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#737373" }}>
                       <ProjLink f={f} /> · Registrada {fechaCorta(f.created_at)}
-                      {f.status === "aceptada" && f.fecha_pago && <> · <span style={{ color: "#fbbf24" }}>Pago: {fechaCorta(f.fecha_pago)}</span></>}
-                      {f.status === "pagada" && f.paid_at && <> · <span style={{ color: "#34d399" }}>Pagada {fechaCorta(f.paid_at)}</span></>}
-                      {f.forma_pago && <> · <span style={{ color: "#93c5fd" }}>Pago: {f.forma_pago}</span></>}
+                      {f.status === "aceptada" && f.fecha_pago && <> · <span style={{ color: "#A86B00" }}>Pago: {fechaCorta(f.fecha_pago)}</span></>}
+                      {f.status === "pagada" && f.paid_at && <> · <span style={{ color: "#1F8A55" }}>Pagada {fechaCorta(f.paid_at)}</span></>}
+                      {f.forma_pago && <> · <span style={{ color: "#1D5FA8" }}>Pago: {f.forma_pago}</span></>}
                     </p>
                     {f.status === "rechazada" && f.motivo_rechazo && (
-                      <p style={{ margin: "6px 0 0", fontSize: 12, color: "#fca5a5", lineHeight: 1.5 }}>{f.motivo_rechazo}</p>
+                      <p style={{ margin: "6px 0 0", fontSize: 12, color: "#B42318", lineHeight: 1.5 }}>{f.motivo_rechazo}</p>
                     )}
                     {f.uuid_fiscal && (
-                      <p style={{ margin: "4px 0 0", fontSize: 10, color: "#6b7c93", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>UUID: {f.uuid_fiscal}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 10, color: "#858585", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>UUID: {f.uuid_fiscal}</p>
                     )}
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                     {(f.total != null || f.subtotal != null) && (
-                      <span style={{ color: "#e2e8f0", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
+                      <span style={{ color: "#262626", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }} title="Total a pagar (IVA − retenciones)">
                         {fmtMx(montoPagar(f))}
                       </span>
                     )}
@@ -711,22 +711,22 @@ export default function FinanzasPage() {
         {payModal && (
           <div style={modalBackdropStyle} onClick={() => working ? null : setPayModal(null)}>
             <div style={modalPanelStyle} onClick={e => e.stopPropagation()}>
-              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>
                 Marcar pago — {provLabel(payModal)}
               </p>
-              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
-                {projLabel(payModal)} · <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#e2e8f0", fontWeight: 700 }}>{fmtMx(montoPagar(payModal))}</span>
+              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#6B6B6B" }}>
+                {projLabel(payModal)} · <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#262626", fontWeight: 700 }}>{fmtMx(montoPagar(payModal))}</span>
               </p>
-              <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
-                Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>
+              <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#3F3F3F" }}>
+                Comprobante de pago del banco <span style={{ color: "#C2362B" }}>*</span>
               </p>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                 onChange={e => setPayFile(e.target.files?.[0] || null)}
-                style={{ fontSize: 12, color: "#94a3b8", width: "100%" }}
+                style={{ fontSize: 12, color: "#6B6B6B", width: "100%" }}
               />
-              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#737373", lineHeight: 1.5 }}>
                 PDF o JPG. Queda guardado y vinculado a esta transacción. Al confirmar se
                 le envía el correo de pago al proveedor.
               </p>
@@ -748,22 +748,21 @@ export default function FinanzasPage() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const provLinkStyle: React.CSSProperties = { color: "#7dd3fc", textDecoration: "none", fontWeight: 600 }
-const projLinkStyle: React.CSSProperties = { color: "#a78bfa", textDecoration: "none" }
+const provLinkStyle: React.CSSProperties = { color: "#1D6FB8", textDecoration: "none", fontWeight: 600 }
+const projLinkStyle: React.CSSProperties = { color: "#131313", textDecoration: "none" }
 
 function cardStyle(accent: string): React.CSSProperties {
   return {
     padding: "16px 20px",
     borderRadius: 14,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(148,163,184,0.10)",
+    background: "#FFFFFF",
+    border: "1px solid rgba(0,0,0,0.08)",
     boxShadow: `0 0 0 1px ${accent}22`,
   }
 }
 
 const cardLabelStyle: React.CSSProperties = {
-  margin: 0, fontSize: 11, fontWeight: 600, textTransform: "uppercase",
-  letterSpacing: 0.6, color: "#7d8ca3",
+  margin: 0, fontSize: 11, fontWeight: 600, color: "#737373",
 }
 
 const cardValueStyle: React.CSSProperties = {
@@ -771,12 +770,12 @@ const cardValueStyle: React.CSSProperties = {
 }
 
 const cardHintStyle: React.CSSProperties = {
-  margin: "4px 0 0", fontSize: 11, color: "#6b7c93",
+  margin: "4px 0 0", fontSize: 11, color: "#858585",
 }
 
 // Línea chiquita del "con IVA" debajo del total grande (que va sin IVA).
 const cardIvaStyle: React.CSSProperties = {
-  margin: "2px 0 0", fontSize: 11, color: "#7d8ca3",
+  margin: "2px 0 0", fontSize: 11, color: "#737373",
 }
 
 // El total grande siempre va sin IVA; si el con-IVA es distinto, se muestra
@@ -789,17 +788,17 @@ function ConIva({ sinIva, conIva }: { sinIva: number; conIva: number }) {
 function filterBtnStyle(active: boolean): React.CSSProperties {
   return {
     padding: "7px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
-    border: active ? "1px solid rgba(6,182,212,0.45)" : "1px solid rgba(148,163,184,0.18)",
+    border: active ? "1px solid rgba(6,182,212,0.45)" : "1px solid rgba(0,0,0,0.13)",
     background: active ? "rgba(6,182,212,0.14)" : "transparent",
-    color: active ? "#67e8f9" : "#94a3b8",
+    color: active ? "#0E7490" : "#6B6B6B",
   }
 }
 
 function statusBadgeStyle(status: string): React.CSSProperties {
   const colors: Record<string, { bg: string; border: string; text: string }> = {
-    aceptada:  { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#fbbf24" },
-    pagada:    { bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#34d399" },
-    rechazada: { bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#f87171" },
+    aceptada:  { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#A86B00" },
+    pagada:    { bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#1F8A55" },
+    rechazada: { bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#C2362B" },
   }
   const c = colors[status] || colors.aceptada
   return {
@@ -811,14 +810,14 @@ function statusBadgeStyle(status: string): React.CSSProperties {
 // Navegación de viernes
 const navArrowStyle: React.CSSProperties = {
   width: 38, height: 38, borderRadius: 10, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.2)", background: "rgba(148,163,184,0.06)",
-  color: "#cbd5e1", fontSize: 18, fontWeight: 700, lineHeight: 1,
+  border: "1px solid rgba(0,0,0,0.14)", background: "rgba(0,0,0,0.02)",
+  color: "#3F3F3F", fontSize: 18, fontWeight: 700, lineHeight: 1,
   display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
 }
 
 const dateJumpBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 12, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.2)", background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF",
 }
 
 function chipStyle(active: boolean, vencido: boolean): React.CSSProperties {
@@ -826,77 +825,77 @@ function chipStyle(active: boolean, vencido: boolean): React.CSSProperties {
     flexShrink: 0, padding: "7px 12px", borderRadius: 999, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
     border: active
       ? "1px solid rgba(6,182,212,0.5)"
-      : vencido ? "1px solid rgba(248,113,113,0.3)" : "1px solid rgba(148,163,184,0.18)",
+      : vencido ? "1px solid rgba(248,113,113,0.3)" : "1px solid rgba(0,0,0,0.13)",
     background: active ? "rgba(6,182,212,0.14)" : "transparent",
-    color: active ? "#67e8f9" : vencido ? "#f87171" : "#94a3b8",
+    color: active ? "#0E7490" : vencido ? "#C2362B" : "#6B6B6B",
   }
 }
 
 // Mini-calendario
 const calPopupStyle: React.CSSProperties = {
   position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", zIndex: 50,
-  width: 268, padding: 14, background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.2)",
-  borderRadius: 14, boxShadow: "0 20px 48px rgba(0,0,0,0.5)",
+  width: 268, padding: 14, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+  borderRadius: 14, boxShadow: "0 20px 48px rgba(0,0,0,0.11)",
 }
 
 const calNavBtn: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 8, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.18)", background: "transparent",
-  color: "#cbd5e1", fontSize: 16, fontWeight: 700, lineHeight: 1,
+  border: "1px solid rgba(0,0,0,0.13)", background: "transparent",
+  color: "#3F3F3F", fontSize: 16, fontWeight: 700, lineHeight: 1,
 }
 
 // Rango de fechas
-const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#7d8ca3" }
+const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#737373" }
 
 const dateInputStyle: React.CSSProperties = {
-  padding: "6px 8px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)",
-  borderRadius: 8, color: "#e2e8f0", fontSize: 12, outline: "none", colorScheme: "dark",
+  padding: "6px 8px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+  borderRadius: 8, color: "#262626", fontSize: 12, outline: "none", colorScheme: "dark",
 }
 
 const clearDateBtnStyle: React.CSSProperties = {
   width: 24, height: 24, borderRadius: 6, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.18)", background: "transparent",
-  color: "#94a3b8", fontSize: 12, lineHeight: 1,
+  border: "1px solid rgba(0,0,0,0.13)", background: "transparent",
+  color: "#6B6B6B", fontSize: 12, lineHeight: 1,
 }
 
 const modalBackdropStyle: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 10000,
-  background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
+  background: "rgba(17,17,17,0.32)", backdropFilter: "blur(3px)",
   display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
 }
 
 const modalPanelStyle: React.CSSProperties = {
   width: "100%", maxWidth: 440,
-  background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.13)",
   borderRadius: 14, padding: 22,
-  boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+  boxShadow: "0 24px 64px rgba(0,0,0,0.11)",
 }
 
 const modalCancelBtnStyle: React.CSSProperties = {
   padding: "8px 16px", borderRadius: 8, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.2)", background: "transparent",
-  color: "#94a3b8", fontSize: 13, fontWeight: 600,
+  border: "1px solid rgba(0,0,0,0.14)", background: "transparent",
+  color: "#6B6B6B", fontSize: 13, fontWeight: 600,
 }
 
 const miniBtnStyle: React.CSSProperties = {
   padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.22)", background: "rgba(148,163,184,0.08)", color: "#cbd5e1",
+  border: "1px solid rgba(0,0,0,0.15)", background: "rgba(0,0,0,0.03)", color: "#3F3F3F",
 }
 
 const origenBadgeStyle: React.CSSProperties = {
   padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700,
-  background: "rgba(96,165,250,0.14)", border: "1px solid rgba(96,165,250,0.3)", color: "#93c5fd",
+  background: "rgba(96,165,250,0.14)", border: "1px solid rgba(96,165,250,0.3)", color: "#1D5FA8",
 }
 
 const historicoBadgeStyle: React.CSSProperties = {
   padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700,
-  background: "rgba(251,146,60,0.14)", border: "1px solid rgba(251,146,60,0.35)", color: "#fb923c",
+  background: "rgba(251,146,60,0.14)", border: "1px solid rgba(251,146,60,0.35)", color: "#C2410C",
 }
 
 function payBtnStyle(busy: boolean): React.CSSProperties {
   return {
     padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700,
     cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1,
-    border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#fdba74",
+    border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#C2410C",
   }
 }

@@ -736,7 +736,7 @@ export function HojaLlamadoPanel({
               onChange={(e) => setField("fecha_rodaje", e.target.value)}
               style={inputStyle}
             />
-            <span style={{ color: "#6b7c93", fontSize: 10 }}>
+            <span style={{ color: "#858585", fontSize: 10 }}>
               El clima y amanecer/atardecer se cargan automáticamente para CDMX
             </span>
           </Field>
@@ -821,7 +821,7 @@ export function HojaLlamadoPanel({
         {/* Row 4: Direcciones (múltiples) */}
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#737373",}}>
               Direcciones / Locaciones
             </span>
             <button
@@ -1003,7 +1003,7 @@ export function HojaLlamadoPanel({
 
       {/* ══ SECCIÓN 4: CREW LIST ══════════════════════════════════════════ */}
       <Section title="Crew List">
-        <p style={{ margin: "0 0 10px", color: "#7d8ca3", fontSize: 12 }}>
+        <p style={{ margin: "0 0 10px", color: "#737373", fontSize: 12 }}>
           El crew se autocompleta desde los proveedores asignados en la liberación. Solo rellena los horarios.
         </p>
         <div style={tableWrapStyle}>
@@ -1014,9 +1014,9 @@ export function HojaLlamadoPanel({
                 <th style={{ ...thStyle, width: 32 }}>#</th>
                 <th style={thStyle}>Puesto</th>
                 <th style={thStyle}>Nombre</th>
-                <th style={{ ...thStyle, background: "rgba(124,58,237,0.14)", color: "#c4b5fd" }}>RETRO</th>
-                <th style={{ ...thStyle, background: "rgba(14,165,233,0.10)", color: "#7dd3fc" }}>LOCACIÓN</th>
-                <th style={{ ...thStyle, background: "rgba(34,197,94,0.10)", color: "#86efac" }}>PICKUP</th>
+                <th style={{ ...thStyle, background: "rgba(0,0,0,0.05)", color: "#3F3F3F" }}>RETRO</th>
+                <th style={{ ...thStyle, background: "rgba(14,165,233,0.10)", color: "#1D6FB8" }}>LOCACIÓN</th>
+                <th style={{ ...thStyle, background: "rgba(34,197,94,0.10)", color: "#1F7A4D" }}>PICKUP</th>
                 <th style={thStyle}>Notas</th>
                 <th style={thStyle}></th>
               </tr>
@@ -1033,10 +1033,10 @@ export function HojaLlamadoPanel({
                   onDragEnd={() => { dragSrcIdx.current = null; setDragOverIdx(null) }}
                   style={dragOverIdx === idx ? { ...crewDragOverStyle } : undefined}
                 >
-                  <td style={{ ...tdStyle, width: 28, textAlign: "center", cursor: "grab", color: "#6b7c93", fontSize: 14, userSelect: "none" }}>
+                  <td style={{ ...tdStyle, width: 28, textAlign: "center", cursor: "grab", color: "#858585", fontSize: 14, userSelect: "none" }}>
                     ⠿
                   </td>
-                  <td style={{ ...tdStyle, width: 32, color: "#6b7c93", fontSize: 12, textAlign: "center" }}>
+                  <td style={{ ...tdStyle, width: 32, color: "#858585", fontSize: 12, textAlign: "center" }}>
                     {idx + 1}
                   </td>
                   <td style={{ ...tdStyle, minWidth: 140 }}>
@@ -1055,7 +1055,7 @@ export function HojaLlamadoPanel({
                       placeholder="Nombre completo"
                     />
                   </td>
-                  <td style={{ ...tdStyle, width: 90, background: "rgba(124,58,237,0.05)" }}>
+                  <td style={{ ...tdStyle, width: 90, background: "rgba(0,0,0,0.05)" }}>
                     <input
                       value={row.retro}
                       onChange={(e) => updateCrew(idx, "retro", e.target.value)}
@@ -1212,7 +1212,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const emptyStyle: React.CSSProperties = {
   padding: "28px 16px",
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
@@ -1222,20 +1222,20 @@ const panelHeaderStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   paddingBottom: 14,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
   flexWrap: "wrap",
 }
 
 const panelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 15,
   fontWeight: 600,
 }
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1245,8 +1245,8 @@ const saveBtnStyle: React.CSSProperties = {
   padding: "8px 18px",
   borderRadius: 8,
   border: "none",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "#fff",
+  background: "#131313",
+  color: "#FFFFFF",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
@@ -1261,7 +1261,7 @@ const loadCrewBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(14,165,233,0.30)",
   background: "rgba(14,165,233,0.08)",
-  color: "#7dd3fc",
+  color: "#1D6FB8",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -1273,9 +1273,9 @@ const pdfBtnStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "8px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.22)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -1285,34 +1285,30 @@ const pdfBtnStyle: React.CSSProperties = {
 const sectionStyle: React.CSSProperties = {
   padding: "14px 16px",
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(2,6,23,0.20)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
 }
 
 const sectionTitleStyle: React.CSSProperties = {
   margin: "0 0 12px",
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
 }
 
 const labelStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   boxSizing: "border-box",
@@ -1322,9 +1318,9 @@ const textareaStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   resize: "vertical",
@@ -1335,7 +1331,7 @@ const textareaStyle: React.CSSProperties = {
 const tableWrapStyle: React.CSSProperties = {
   overflowX: "auto",
   borderRadius: 10,
-  border: "1px solid rgba(148,163,184,0.12)",
+  border: "1px solid rgba(0,0,0,0.09)",
 }
 
 const tableStyle: React.CSSProperties = {
@@ -1346,20 +1342,18 @@ const tableStyle: React.CSSProperties = {
 
 const thStyle: React.CSSProperties = {
   padding: "8px 10px",
-  background: "rgba(15,23,42,0.7)",
-  color: "#7d8ca3",
+  background: "#FFFFFF",
+  color: "#737373",
   fontSize: 10,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
   textAlign: "left",
   whiteSpace: "nowrap",
-  borderBottom: "1px solid rgba(148,163,184,0.12)",
+  borderBottom: "1px solid rgba(0,0,0,0.09)",
 }
 
 const tdStyle: React.CSSProperties = {
   padding: "4px 6px",
-  borderBottom: "1px solid rgba(148,163,184,0.07)",
+  borderBottom: "1px solid rgba(0,0,0,0.06)",
   verticalAlign: "middle",
 }
 
@@ -1369,7 +1363,7 @@ const cellInputStyle: React.CSSProperties = {
   borderRadius: 6,
   border: "1px solid transparent",
   background: "transparent",
-  color: "#e2e8f0",
+  color: "#262626",
   outline: "none",
   fontSize: 12,
   transition: "border-color 0.15s, background 0.15s",
@@ -1382,7 +1376,7 @@ const removeRowBtnStyle: React.CSSProperties = {
   borderRadius: 6,
   border: "1px solid rgba(248,113,113,0.20)",
   background: "transparent",
-  color: "#f87171",
+  color: "#C2362B",
   cursor: "pointer",
   fontSize: 11,
   display: "flex",
@@ -1395,9 +1389,9 @@ const addRowBtnStyle: React.CSSProperties = {
   marginTop: 8,
   padding: "6px 12px",
   borderRadius: 8,
-  border: "1px dashed rgba(148,163,184,0.20)",
+  border: "1px dashed rgba(0,0,0,0.14)",
   background: "transparent",
-  color: "#7d8ca3",
+  color: "#737373",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 500,
@@ -1430,9 +1424,9 @@ const grid4Style: React.CSSProperties = {
 const addDirBtnStyle: React.CSSProperties = {
   padding: "4px 12px",
   borderRadius: 7,
-  border: "1px solid rgba(167,139,250,0.30)",
-  background: "rgba(167,139,250,0.08)",
-  color: "#a78bfa",
+  border: "1px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#131313",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -1443,7 +1437,7 @@ const removeDirBtnStyle: React.CSSProperties = {
   borderRadius: 7,
   border: "1px solid rgba(248,113,113,0.25)",
   background: "transparent",
-  color: "#f87171",
+  color: "#C2362B",
   cursor: "pointer",
   fontSize: 13,
   lineHeight: 1,
@@ -1452,6 +1446,6 @@ const removeDirBtnStyle: React.CSSProperties = {
 }
 
 const crewDragOverStyle: React.CSSProperties = {
-  outline: "2px solid rgba(167,139,250,0.5)",
-  background: "rgba(167,139,250,0.06)",
+  outline: "2px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
 }

@@ -48,11 +48,11 @@ type RubroDef = {
 
 const RUBROS: RubroDef[] = [
   {
-    id: "r1", num: 1, label: "Preproducción", color: "#6366f1",
+    id: "r1", num: 1, label: "Preproducción", color: "#131313",
     items: [{ id: "guiones", label: "Desarrollo de guiones" }],
   },
   {
-    id: "r2", num: 2, label: "Personal Técnico", color: "#a78bfa",
+    id: "r2", num: 2, label: "Personal Técnico", color: "#131313",
     items: [
       { id: "productor", label: "Productor" },
       { id: "asist_produccion", label: "Asistente Producción" },
@@ -75,7 +75,7 @@ const RUBROS: RubroDef[] = [
     ],
   },
   {
-    id: "r3", num: 3, label: "Gastos de Producción", color: "#38bdf8",
+    id: "r3", num: 3, label: "Gastos de Producción", color: "#1D6FB8",
     items: [
       { id: "alimentacion", label: "Alimentación" },
       { id: "camionetas", label: "Camionetas de producción" },
@@ -87,14 +87,14 @@ const RUBROS: RubroDef[] = [
     ],
   },
   {
-    id: "r4", num: 4, label: "Utilería y Vestuario", color: "#34d399",
+    id: "r4", num: 4, label: "Utilería y Vestuario", color: "#1F8A55",
     items: [
       { id: "presup_vestuario", label: "Presupuesto Vestuario" },
       { id: "presup_arte", label: "Presupuesto Arte y Props" },
     ],
   },
   {
-    id: "r5", num: 5, label: "Foro y Escenografía", color: "#fbbf24",
+    id: "r5", num: 5, label: "Foro y Escenografía", color: "#A86B00",
     items: [
       { id: "renta_locacion", label: "Renta de locación" },
       { id: "construccion_sets", label: "Construcción de sets" },
@@ -102,7 +102,7 @@ const RUBROS: RubroDef[] = [
     ],
   },
   {
-    id: "r6", num: 6, label: "Renta de Equipo", color: "#fb923c",
+    id: "r6", num: 6, label: "Renta de Equipo", color: "#C2410C",
     items: [
       { id: "paquete_camara", label: "Paquete de cámara" },
       { id: "optica", label: "Óptica" },
@@ -112,7 +112,7 @@ const RUBROS: RubroDef[] = [
     ],
   },
   {
-    id: "r7", num: 7, label: "Talento", color: "#f472b6",
+    id: "r7", num: 7, label: "Talento", color: "#C93F5D",
     items: [
       { id: "talento_principal", label: "Talento Principal" },
       { id: "talento_secundario", label: "Talento Secundario" },
@@ -121,11 +121,11 @@ const RUBROS: RubroDef[] = [
     ],
   },
   {
-    id: "r8", num: 8, label: "Edición y Audio", color: "#818cf8",
+    id: "r8", num: 8, label: "Edición y Audio", color: "#3F3F3F",
     items: [{ id: "edicion_video", label: "Edición de video" }],
   },
   {
-    id: "r9", num: 9, label: "Postproducción", color: "#c084fc",
+    id: "r9", num: 9, label: "Postproducción", color: "#3F3F3F",
     items: [
       { id: "correccion_color", label: "Corrección de color" },
       { id: "diseno_sonoro", label: "Diseño sonoro" },
@@ -1139,8 +1139,8 @@ export default function CotizacionesPage() {
               href={`/proyectos/${projectId}`}
               style={{
                 display: "inline-flex", alignItems: "center", width: "fit-content",
-                padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.16)",
-                background: "rgba(255,255,255,0.04)", color: "#cbd5e1",
+                padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)",
+                background: "#FFFFFF", color: "#3F3F3F",
                 textDecoration: "none", fontSize: 13, fontWeight: 500,
               }}
             >
@@ -1160,8 +1160,8 @@ export default function CotizacionesPage() {
                 padding: "6px 12px", borderRadius: 999,
                 background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.3)",
               }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 1.5s infinite" }} />
-                <span style={{ color: "#6ee7b7", fontSize: 12, fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#1F8A55", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+                <span style={{ color: "#1F7A4D", fontSize: 12, fontWeight: 600 }}>
                   Editando en vivo: {collaborators.join(", ")}
                 </span>
               </div>
@@ -1185,10 +1185,10 @@ export default function CotizacionesPage() {
                       onKeyDown={(e) => e.key === "Enter" && handleCreateClient()}
                       autoFocus
                     />
-                    <button onClick={handleCreateClient} disabled={creatingClient || !newClientName.trim()} style={inlineBtnStyle("#6366f1")}>
+                    <button onClick={handleCreateClient} disabled={creatingClient || !newClientName.trim()} style={inlineBtnStyle("#131313")}>
                       {creatingClient ? "…" : "✓"}
                     </button>
-                    <button onClick={() => { setShowNewClient(false); setNewClientName("") }} style={inlineBtnStyle("#475569")}>✕</button>
+                    <button onClick={() => { setShowNewClient(false); setNewClientName("") }} style={inlineBtnStyle("#A3A3A3")}>✕</button>
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: 6 }}>
@@ -1196,7 +1196,7 @@ export default function CotizacionesPage() {
                       <option value="">Selecciona...</option>
                       {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    <button onClick={() => setShowNewClient(true)} style={inlineBtnStyle("#6366f1")} title="Nuevo cliente">+</button>
+                    <button onClick={() => setShowNewClient(true)} style={inlineBtnStyle("#131313")} title="Nuevo cliente">+</button>
                   </div>
                 )}
               </Field>
@@ -1232,10 +1232,10 @@ export default function CotizacionesPage() {
                       />
                     )}
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={handleCreateProject} disabled={creatingProject || !newProjectName.trim()} style={{ ...inlineBtnStyle("#6366f1"), flex: 1, fontSize: 12 }}>
+                      <button onClick={handleCreateProject} disabled={creatingProject || !newProjectName.trim()} style={{ ...inlineBtnStyle("#131313"), flex: 1, fontSize: 12 }}>
                         {creatingProject ? "Creando..." : "✓ Crear proyecto"}
                       </button>
-                      <button onClick={() => { setShowNewProject(false); setNewProjectName(""); setNewSubfolderName(""); setShowNewSubfolder(false); setNewProjectSubfolderId("") }} style={inlineBtnStyle("#475569")}>✕</button>
+                      <button onClick={() => { setShowNewProject(false); setNewProjectName(""); setNewSubfolderName(""); setShowNewSubfolder(false); setNewProjectSubfolderId("") }} style={inlineBtnStyle("#A3A3A3")}>✕</button>
                     </div>
                   </div>
                 ) : (
@@ -1247,7 +1247,7 @@ export default function CotizacionesPage() {
                     {clientId && (
                       <button
                         onClick={() => { setShowNewProject(true); setShowNewSubfolder(clientSubfolders.length === 0) }}
-                        style={inlineBtnStyle("#6366f1")}
+                        style={inlineBtnStyle("#131313")}
                         title="Nuevo proyecto"
                       >+</button>
                     )}
@@ -1271,7 +1271,7 @@ export default function CotizacionesPage() {
                     style={{ ...inputStyle, paddingRight: 28 }}
                     placeholder="0"
                   />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#7d8ca3", fontSize: 13, pointerEvents: "none" }}>%</span>
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#737373", fontSize: 13, pointerEvents: "none" }}>%</span>
                 </div>
               </Field>
               <Field label="Financiamiento %">
@@ -1285,7 +1285,7 @@ export default function CotizacionesPage() {
                     style={{ ...inputStyle, paddingRight: 28 }}
                     placeholder="0"
                   />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#7d8ca3", fontSize: 13, pointerEvents: "none" }}>%</span>
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#737373", fontSize: 13, pointerEvents: "none" }}>%</span>
                 </div>
               </Field>
             </div>
@@ -1377,10 +1377,10 @@ export default function CotizacionesPage() {
 
             <div style={{ display: "grid", gap: isMobile ? 20 : 0, gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "1fr auto" }}>
               {/* Breakdown por rubro */}
-              <div style={{ minWidth: 0, paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)" }}>
+              <div style={{ minWidth: 0, paddingRight: isMobile ? 0 : 32, borderRight: isMobile ? "none" : "1px solid rgba(0,0,0,0.08)" }}>
                 {/* Header */}
                 <div style={summaryHeaderRowStyle}>
-                  <span style={{ flex: 1, color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Rubro</span>
+                  <span style={{ flex: 1, color: "#858585", fontSize: 10, fontWeight: 700,}}>Rubro</span>
                   <span style={{ ...summaryColHeaderStyle, ...summaryColMobile }}>Gasto</span>
                   <span style={{ ...summaryColHeaderStyle, ...summaryColMobile }}>Utilidad</span>
                   <span style={{ ...summaryColHeaderStyle, ...summaryColMobile }}>Venta</span>
@@ -1393,13 +1393,13 @@ export default function CotizacionesPage() {
                     <div key={r.id} style={summaryRowStyle}>
                       <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                         <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
-                        <span style={{ color: hasValue ? "#cbd5e1" : "#475569", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ color: hasValue ? "#3F3F3F" : "#A3A3A3", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {r.num}. {r.label}
                         </span>
                       </div>
-                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#94a3b8" : "#334155" }}>{fmt(f.gasto)}</span>
-                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#34d399" : "#334155" }}>{fmt(f.utilidad)}</span>
-                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#e2e8f0" : "#334155", fontWeight: hasValue ? 600 : 400 }}>{fmt(f.venta)}</span>
+                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#6B6B6B" : "#BDBDBD" }}>{fmt(f.gasto)}</span>
+                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#1F8A55" : "#BDBDBD" }}>{fmt(f.utilidad)}</span>
+                      <span style={{ ...summaryColStyle, ...summaryColMobile, color: hasValue ? "#262626" : "#BDBDBD", fontWeight: hasValue ? 600 : 400 }}>{fmt(f.venta)}</span>
                     </div>
                   )
                 })}
@@ -1407,48 +1407,48 @@ export default function CotizacionesPage() {
 
               {/* Totales globales + guardar */}
               <div style={{ paddingLeft: isMobile ? 0 : 32, display: "grid", gap: 0, alignContent: "start", minWidth: isMobile ? 0 : 240 }}>
-                <TotalBlock label="Total gasto" value={fmt(globalFinancials.gasto)} color="#94a3b8" />
-                <TotalBlock label="Total utilidad" value={fmt(globalFinancials.utilidad)} color="#34d399" />
-                <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
-                <TotalBlock label="Subtotal (precio de venta)" value={fmt(globalFinancials.venta)} color="#a78bfa" large />
+                <TotalBlock label="Total gasto" value={fmt(globalFinancials.gasto)} color="#6B6B6B" />
+                <TotalBlock label="Total utilidad" value={fmt(globalFinancials.utilidad)} color="#1F8A55" />
+                <div style={{ margin: "8px 0", borderTop: "1px solid rgba(0,0,0,0.1)" }} />
+                <TotalBlock label="Subtotal (precio de venta)" value={fmt(globalFinancials.venta)} color="#131313" large />
                 {(parseFloat(markupGeneral) || 0) > 0 && (
                   <TotalBlock
                     label={`Markup general (${markupGeneral}%)`}
                     value={fmt(globalFinancials.venta * ((parseFloat(markupGeneral) || 0) / 100))}
-                    color="#fbbf24"
+                    color="#A86B00"
                   />
                 )}
                 {(parseFloat(financiamientoGeneral) || 0) > 0 && (
                   <TotalBlock
                     label={`Financiamiento (${financiamientoGeneral}%)`}
                     value={fmt(globalFinancials.venta * ((parseFloat(financiamientoGeneral) || 0) / 100))}
-                    color="#38bdf8"
+                    color="#1D6FB8"
                   />
                 )}
-                <div style={{ margin: "8px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
+                <div style={{ margin: "8px 0", borderTop: "1px solid rgba(0,0,0,0.1)" }} />
                 <TotalBlock
                   label="Total al cliente"
                   value={fmt(globalFinancials.venta * (1 + ((parseFloat(markupGeneral) || 0) + (parseFloat(financiamientoGeneral) || 0)) / 100))}
-                  color="#f0abfc"
+                  color="#C93F5D"
                   large
                 />
 
                 {/* Margen */}
                 <div style={marginBarContainerStyle}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                    <span style={{ color: "#7d8ca3", fontSize: 11 }}>Margen de utilidad</span>
-                    <span style={{ color: marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171", fontSize: 12, fontWeight: 700 }}>
+                    <span style={{ color: "#737373", fontSize: 11 }}>Margen de utilidad</span>
+                    <span style={{ color: marginPct >= 20 ? "#1F8A55" : marginPct >= 10 ? "#A86B00" : "#C2362B", fontSize: 12, fontWeight: 700 }}>
                       {fmtPct(marginPct)}
                     </span>
                   </div>
                   <div style={marginBarBgStyle}>
-                    <div style={{ ...marginBarFillStyle, width: `${Math.min(marginPct, 100)}%`, background: marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171" }} />
+                    <div style={{ ...marginBarFillStyle, width: `${Math.min(marginPct, 100)}%`, background: marginPct >= 20 ? "#1F8A55" : marginPct >= 10 ? "#A86B00" : "#C2362B" }} />
                   </div>
                 </div>
 
                 <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
                   {editQuoteId && autoSaveStatus !== "idle" && (
-                    <p style={{ margin: 0, fontSize: 11, color: autoSaveStatus === "saved" ? "#4ade80" : "#94a3b8", textAlign: "center" }}>
+                    <p style={{ margin: 0, fontSize: 11, color: autoSaveStatus === "saved" ? "#1F8A55" : "#6B6B6B", textAlign: "center" }}>
                       {autoSaveStatus === "saving" ? "Autoguardando..." : "✓ Autoguardado"}
                     </p>
                   )}
@@ -1494,11 +1494,11 @@ export default function CotizacionesPage() {
         <div style={aprobarOverlayStyle}>
           <div style={aprobarModalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#141414", textAlign: "center" }}>
               {aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}
             </h2>
-            <p style={{ margin: "0 0 20px", color: "#94a3b8", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
-              Esto creará una entrada en <strong style={{ color: "#e2e8f0" }}>Ingresos</strong> con los totales de esta cotización.
+            <p style={{ margin: "0 0 20px", color: "#6B6B6B", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
+              Esto creará una entrada en <strong style={{ color: "#262626" }}>Ingresos</strong> con los totales de esta cotización.
             </p>
 
             {/* Resumen */}
@@ -1520,9 +1520,9 @@ export default function CotizacionesPage() {
 
             {aprobarCodigo?.adicional && (
               <div style={{ marginTop: 16 }}>
-                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Nombre en Ingresos</p>
-                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#6b7c93", lineHeight: 1.5 }}>
-                  El proyecto ya tiene una línea aprobada, esta se agrega aparte como <strong style={{ color: "#cbd5e1" }}>{aprobarCodigo.codigo}</strong>.
+                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#737373" }}>Nombre en Ingresos</p>
+                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#858585", lineHeight: 1.5 }}>
+                  El proyecto ya tiene una línea aprobada, esta se agrega aparte como <strong style={{ color: "#3F3F3F" }}>{aprobarCodigo.codigo}</strong>.
                 </p>
                 <input
                   value={aprobarNombre}
@@ -1530,26 +1530,26 @@ export default function CotizacionesPage() {
                   placeholder="Ej. Resizing"
                   style={{
                     width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 9, fontSize: 13,
-                    border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
-                    color: "#e2e8f0", outline: "none",
+                    border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF",
+                    color: "#262626", outline: "none",
                   }}
                 />
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
-                  Quedará como: <strong style={{ color: "#e2e8f0" }}>{aprobarCodigo.codigo} {aprobarNombre.trim() || quoteName.trim()}</strong>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#737373" }}>
+                  Quedará como: <strong style={{ color: "#262626" }}>{aprobarCodigo.codigo} {aprobarNombre.trim() || quoteName.trim()}</strong>
                 </p>
               </div>
             )}
 
             {/* Responsable */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Responsable</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#737373" }}>Responsable</p>
               <select
                 value={aprobarResponsable}
                 onChange={(e) => setAprobarResponsable(e.target.value)}
                 style={{
                   width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
-                  border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
-                  color: aprobarResponsable ? "#e2e8f0" : "#64748b", outline: "none",
+                  border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF",
+                  color: aprobarResponsable ? "#262626" : "#8A8A8A", outline: "none",
                 }}
               >
                 <option value="">Sin asignar</option>
@@ -1561,7 +1561,7 @@ export default function CotizacionesPage() {
 
             {/* Empresa selector */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Empresa</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#737373" }}>Empresa</p>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["retro_studio", "retro_films"] as const).map(e => (
                   <button
@@ -1569,9 +1569,9 @@ export default function CotizacionesPage() {
                     onClick={() => setAprobarEmpresa(e)}
                     style={{
                       flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      border: aprobarEmpresa === e ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(148,163,184,0.14)",
+                      border: aprobarEmpresa === e ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(0,0,0,0.1)",
                       background: aprobarEmpresa === e ? "rgba(16,185,129,0.15)" : "transparent",
-                      color: aprobarEmpresa === e ? "#34d399" : "#64748b",
+                      color: aprobarEmpresa === e ? "#1F8A55" : "#8A8A8A",
                     }}
                   >
                     {e === "retro_studio" ? "Retro Studio" : "Retro Films"}
@@ -1585,14 +1585,14 @@ export default function CotizacionesPage() {
               <button
                 onClick={() => setShowAprobarModal(false)}
                 disabled={aproving}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmarAprobacion}
                 disabled={aproving}
-                style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "linear-gradient(135deg, rgba(16,185,129,0.8), rgba(5,150,105,0.8))", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}
+                style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "#1F8A55", color: "#FFFFFF", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}
               >
                 {aproving ? "Aprobando…" : "✓ Confirmar aprobación"}
               </button>
@@ -1620,9 +1620,9 @@ export default function CotizacionesPage() {
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
-      <span style={{ color: "#7d8ca3", fontSize: 13 }}>{label}</span>
-      <span style={{ color: bold ? "#f8fafc" : "#cbd5e1", fontWeight: bold ? 700 : 500, fontSize: 13, fontFamily: bold ? "monospace" : undefined }}>{value}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+      <span style={{ color: "#737373", fontSize: 13 }}>{label}</span>
+      <span style={{ color: bold ? "#141414" : "#3F3F3F", fontWeight: bold ? 700 : 500, fontSize: 13, fontFamily: bold ? "monospace" : undefined }}>{value}</span>
     </div>
   )
 }
@@ -1643,7 +1643,7 @@ function FloatingSummary({
   totalCliente: number
   marginPct: number
 }) {
-  const marginColor = marginPct >= 20 ? "#34d399" : marginPct >= 10 ? "#fbbf24" : "#f87171"
+  const marginColor = marginPct >= 20 ? "#1F8A55" : marginPct >= 10 ? "#A86B00" : "#C2362B"
 
   if (!open) {
     return (
@@ -1653,9 +1653,9 @@ function FloatingSummary({
         style={{
           position: "fixed", top: 20, right: 20, zIndex: 60,
           padding: "9px 14px", borderRadius: 999,
-          background: "rgba(15,23,42,0.92)", backdropFilter: "blur(10px)",
-          border: "1px solid rgba(148,163,184,0.22)", boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
-          color: "#f0abfc", fontSize: 13, fontWeight: 700, cursor: "pointer",
+          background: "#FFFFFF", backdropFilter: "blur(10px)",
+          border: "1px solid rgba(0,0,0,0.15)", boxShadow: "0 10px 28px rgba(0,0,0,0.08)",
+          color: "#C93F5D", fontSize: 13, fontWeight: 700, cursor: "pointer",
         }}
       >
         {fmt(totalCliente)}
@@ -1667,46 +1667,46 @@ function FloatingSummary({
     <DraggableModalPanel
       style={{
         position: "fixed", top: 20, right: 20, zIndex: 60, width: 220,
-        background: "rgba(15,23,42,0.92)", backdropFilter: "blur(10px)",
-        border: "1px solid rgba(148,163,184,0.18)", borderRadius: 14,
-        boxShadow: "0 16px 40px rgba(0,0,0,0.4)", padding: "12px 14px",
+        background: "#FFFFFF", backdropFilter: "blur(10px)",
+        border: "1px solid rgba(0,0,0,0.13)", borderRadius: 14,
+        boxShadow: "0 16px 40px rgba(0,0,0,0.09)", padding: "12px 14px",
       }}
     >
       <div data-drag-handle style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, cursor: "grab" }}>
-        <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>
+        <span style={{ color: "#858585", fontSize: 10, fontWeight: 700,}}>
           ⠿ Resumen
         </span>
         <button
           onClick={onToggle}
           title="Minimizar"
-          style={{ background: "transparent", border: "none", color: "#64748b", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 2 }}
+          style={{ background: "transparent", border: "none", color: "#8A8A8A", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 2 }}
         >
           −
         </button>
       </div>
 
-      <MiniRow label="Total gasto" value={fmt(gasto)} color="#94a3b8" />
-      <MiniRow label="Total utilidad" value={fmt(utilidad)} color="#34d399" />
-      <div style={{ margin: "5px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
-      <MiniRow label="Subtotal" value={fmt(venta)} color="#a78bfa" bold />
+      <MiniRow label="Total gasto" value={fmt(gasto)} color="#6B6B6B" />
+      <MiniRow label="Total utilidad" value={fmt(utilidad)} color="#1F8A55" />
+      <div style={{ margin: "5px 0", borderTop: "1px solid rgba(0,0,0,0.1)" }} />
+      <MiniRow label="Subtotal" value={fmt(venta)} color="#131313" bold />
       {(parseFloat(markupGeneral) || 0) > 0 && (
-        <MiniRow label={`Markup (${markupGeneral}%)`} value={fmt(venta * ((parseFloat(markupGeneral) || 0) / 100))} color="#fbbf24" />
+        <MiniRow label={`Markup (${markupGeneral}%)`} value={fmt(venta * ((parseFloat(markupGeneral) || 0) / 100))} color="#A86B00" />
       )}
       {(parseFloat(financiamientoGeneral) || 0) > 0 && (
-        <MiniRow label={`Financiam. (${financiamientoGeneral}%)`} value={fmt(venta * ((parseFloat(financiamientoGeneral) || 0) / 100))} color="#38bdf8" />
+        <MiniRow label={`Financiam. (${financiamientoGeneral}%)`} value={fmt(venta * ((parseFloat(financiamientoGeneral) || 0) / 100))} color="#1D6FB8" />
       )}
-      <div style={{ margin: "5px 0", borderTop: "1px solid rgba(148,163,184,0.14)" }} />
+      <div style={{ margin: "5px 0", borderTop: "1px solid rgba(0,0,0,0.1)" }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "4px 0" }}>
-        <span style={{ color: "#7d8ca3", fontSize: 11 }}>Total al cliente</span>
-        <span style={{ color: "#f0abfc", fontSize: 16, fontWeight: 800 }}>{fmt(totalCliente)}</span>
+        <span style={{ color: "#737373", fontSize: 11 }}>Total al cliente</span>
+        <span style={{ color: "#C93F5D", fontSize: 16, fontWeight: 800 }}>{fmt(totalCliente)}</span>
       </div>
 
       <div style={{ marginTop: 6 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-          <span style={{ color: "#7d8ca3", fontSize: 10 }}>Margen</span>
+          <span style={{ color: "#737373", fontSize: 10 }}>Margen</span>
           <span style={{ color: marginColor, fontSize: 11, fontWeight: 700 }}>{fmtPct(marginPct)}</span>
         </div>
-        <div style={{ height: 4, borderRadius: 999, background: "rgba(148,163,184,0.15)", overflow: "hidden" }}>
+        <div style={{ height: 4, borderRadius: 999, background: "rgba(0,0,0,0.06)", overflow: "hidden" }}>
           <div style={{ height: "100%", borderRadius: 999, width: `${Math.min(marginPct, 100)}%`, background: marginColor }} />
         </div>
       </div>
@@ -1717,7 +1717,7 @@ function FloatingSummary({
 function MiniRow({ label, value, color, bold }: { label: string; value: string; color: string; bold?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "2px 0" }}>
-      <span style={{ color: "#7d8ca3", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ color: "#737373", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
       <span style={{ color, fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 600, whiteSpace: "nowrap" }}>{value}</span>
     </div>
   )
@@ -1726,7 +1726,7 @@ function MiniRow({ label, value, color, bold }: { label: string; value: string; 
 function TotalBlock({ label, value, color, large }: { label: string; value: string; color: string; large?: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "8px 0" }}>
-      <span style={{ color: "#7d8ca3", fontSize: large ? 13 : 12 }}>{label}</span>
+      <span style={{ color: "#737373", fontSize: large ? 13 : 12 }}>{label}</span>
       <span style={{ color, fontSize: large ? 20 : 14, fontWeight: 700 }}>{value}</span>
     </div>
   )
@@ -1851,7 +1851,7 @@ function RubroCard({
 
       if (isMobile) {
         return sortableRow(key, idx,
-          <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
+          <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(0,0,0,0.07)", background: item.isInternal ? "#FFFFFF" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
               <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1 }} />
               <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
@@ -1865,14 +1865,14 @@ function RubroCard({
               <input type="number" value={item.cost} onChange={(e) => onUpdateExtra(item.tempId, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
               <input type="number" value={item.markup} onChange={(e) => onUpdateExtra(item.tempId, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
               <span style={sepStyle}>%</span>
-              <span style={{ color: item.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
+              <span style={{ color: item.isInternal ? "#1F8A55" : "#3F3F3F", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
             </div>
           </div>
         )
       }
 
       return sortableRow(key, idx,
-        <div style={{ ...itemRowStyle, gap: 6, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: item.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
+        <div style={{ ...itemRowStyle, gap: 6, borderBottom: isLast ? "none" : "1px solid rgba(0,0,0,0.06)", background: item.isInternal ? "#FFFFFF" : "transparent", borderRadius: 6, paddingLeft: item.isInternal ? 4 : 0 }}>
           <input value={item.description} onChange={(e) => onUpdateExtra(item.tempId, { description: e.target.value })} placeholder="Nombre del concepto" style={{ ...extraDescInputStyle, flex: 1, minWidth: 80 }} />
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             <input type="number" value={item.qty} onChange={(e) => onUpdateExtra(item.tempId, { qty: e.target.value })} min="0" style={numInputStyle} title="Cantidad" />
@@ -1884,7 +1884,7 @@ function RubroCard({
             <span style={sepStyle}>%</span>
             <button onClick={() => onUpdateExtra(item.tempId, { isInternal: !item.isInternal })} style={internalToggleStyle(item.isInternal)}>INT</button>
             <span style={{ ...gastoStyle, opacity: item.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
-            <span style={{ ...ventaStyle, color: item.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
+            <span style={{ ...ventaStyle, color: item.isInternal ? "#1F8A55" : "#3F3F3F" }}>{fmt(c.venta)}</span>
             <button onClick={() => onRemoveExtra(item.tempId)} style={removeExtraStyle} title="Quitar">✕</button>
           </div>
         </div>
@@ -1899,7 +1899,7 @@ function RubroCard({
       const commCalc = calcCommission(cg, commissionMarkup || "0")
       const cv = commCalc.venta
       return sortableRow(key, idx,
-        <div style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+        <div style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(0,0,0,0.06)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <span style={itemLabelStyle}>{item.label}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             <input type="number" value={commissionPct} onChange={(e) => onCommissionPctChange?.(e.target.value)} min="0" style={{ ...numInputStyle, width: 34 }} title="% comisión" />
@@ -1918,7 +1918,7 @@ function RubroCard({
 
     if (isMobile) {
       return sortableRow(key, idx,
-        <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.08)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
+        <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(0,0,0,0.07)", background: v.isInternal ? "#FFFFFF" : "transparent", borderRadius: 6, padding: "7px 4px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5, gap: 8 }}>
             <input
               value={v.label != null ? v.label : item.label}
@@ -1936,14 +1936,14 @@ function RubroCard({
             <input type="number" value={v.cost} onChange={(e) => onUpdate(item.id, { cost: e.target.value })} min="0" style={{ ...numInputStyle, width: 80 }} placeholder="0" />
             <input type="number" value={v.markup} onChange={(e) => onUpdate(item.id, { markup: e.target.value })} min="0" style={{ ...numInputStyle, width: 38 }} placeholder="0" />
             <span style={sepStyle}>%</span>
-            <span style={{ color: v.isInternal ? "#4ade80" : "#c4b5fd", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
+            <span style={{ color: v.isInternal ? "#1F8A55" : "#3F3F3F", fontSize: 12, fontWeight: 700, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{fmt(c.venta)}</span>
           </div>
         </div>
       )
     }
 
     return sortableRow(key, idx,
-      <div style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(148,163,184,0.06)", background: v.isInternal ? "rgba(5,46,22,0.18)" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
+      <div style={{ ...itemRowStyle, borderBottom: isLast ? "none" : "1px solid rgba(0,0,0,0.06)", background: v.isInternal ? "#FFFFFF" : "transparent", borderRadius: 6, paddingLeft: v.isInternal ? 4 : 0 }}>
         <input
           value={v.label != null ? v.label : item.label}
           onChange={(e) => onUpdate(item.id, { label: e.target.value })}
@@ -1960,7 +1960,7 @@ function RubroCard({
           <span style={sepStyle}>%</span>
           <button onClick={() => onUpdate(item.id, { isInternal: !v.isInternal })} style={internalToggleStyle(v.isInternal)} title={v.isInternal ? "Interno: click para quitar" : "Marcar como interno (va directo a utilidad)"}>INT</button>
           <span style={{ ...gastoStyle, opacity: v.isInternal ? 0.3 : 1 }}>{fmt(c.gasto)}</span>
-          <span style={{ ...ventaStyle, color: v.isInternal ? "#4ade80" : "#c4b5fd" }}>{fmt(c.venta)}</span>
+          <span style={{ ...ventaStyle, color: v.isInternal ? "#1F8A55" : "#3F3F3F" }}>{fmt(c.venta)}</span>
         </div>
       </div>
     )
@@ -1977,15 +1977,15 @@ function RubroCard({
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {hasValue && (
             <>
-              <span style={{ color: "#7d8ca3", fontSize: 11 }}>
-                Gasto <strong style={{ color: "#94a3b8" }}>{fmt(financials.gasto)}</strong>
+              <span style={{ color: "#737373", fontSize: 11 }}>
+                Gasto <strong style={{ color: "#6B6B6B" }}>{fmt(financials.gasto)}</strong>
               </span>
-              <span style={{ color: "#7d8ca3", fontSize: 11 }}>
-                Utilidad <strong style={{ color: "#34d399" }}>{fmt(financials.utilidad)}</strong>
+              <span style={{ color: "#737373", fontSize: 11 }}>
+                Utilidad <strong style={{ color: "#1F8A55" }}>{fmt(financials.utilidad)}</strong>
               </span>
             </>
           )}
-          <span style={{ color: hasValue ? rubro.color : "#334155", fontSize: 13, fontWeight: 700 }}>
+          <span style={{ color: hasValue ? rubro.color : "#BDBDBD", fontSize: 13, fontWeight: 700 }}>
             {fmt(financials.venta)}
           </span>
         </div>
@@ -1993,7 +1993,7 @@ function RubroCard({
 
       {/* Encabezados de columna */}
       {!isMobile && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingBottom: 4, borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, paddingBottom: 4, borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
           <span style={colHdrStyle}>Cantidad</span>
           <span style={{ width: 10, flexShrink: 0 }} />
           <span style={colHdrStyle}>Días</span>
@@ -2020,7 +2020,7 @@ function RubroCard({
 
 const dragHandleStyle: React.CSSProperties = {
   cursor: "grab",
-  color: "#64748b",
+  color: "#8A8A8A",
   fontSize: 14,
   lineHeight: 1,
   letterSpacing: -2,
@@ -2033,7 +2033,7 @@ function moveArrowStyle(disabled: boolean): React.CSSProperties {
   return {
     background: "transparent",
     border: "none",
-    color: disabled ? "#334155" : "#94a3b8",
+    color: disabled ? "#BDBDBD" : "#6B6B6B",
     fontSize: 9,
     lineHeight: 1,
     padding: "3px 4px",
@@ -2044,7 +2044,7 @@ function moveArrowStyle(disabled: boolean): React.CSSProperties {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: "grid", gap: 5, minWidth: 0 }}>
-      <span style={{ color: "#94a3b8", fontSize: 11, fontWeight: 500 }}>{label}</span>
+      <span style={{ color: "#6B6B6B", fontSize: 11, fontWeight: 500 }}>{label}</span>
       {children}
     </label>
   )
@@ -2054,8 +2054,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function rubroCardStyle(color: string): React.CSSProperties {
   return {
-    background: "rgba(15, 23, 42, 0.72)",
-    border: "1px solid rgba(148,163,184,0.12)",
+    background: "#FFFFFF",
+    border: "1px solid rgba(0,0,0,0.09)",
     borderLeft: `3px solid ${color}`,
     backdropFilter: "blur(16px)",
     borderRadius: 14,
@@ -2071,7 +2071,7 @@ const rubroHeaderStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   paddingBottom: 10,
-  borderBottom: "1px solid rgba(148,163,184,0.08)",
+  borderBottom: "1px solid rgba(0,0,0,0.07)",
   flexWrap: "wrap",
 }
 
@@ -2094,7 +2094,7 @@ function rubroNumStyle(color: string): React.CSSProperties {
 
 const rubroLabelStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
 }
@@ -2108,7 +2108,7 @@ const itemRowStyle: React.CSSProperties = {
 }
 
 const itemLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   flex: 1,
   minWidth: 60,
@@ -2118,7 +2118,7 @@ const itemLabelStyle: React.CSSProperties = {
 }
 
 const editableLabelStyle: React.CSSProperties = {
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 12,
   flex: 1,
   minWidth: 60,
@@ -2130,7 +2130,7 @@ const editableLabelStyle: React.CSSProperties = {
 }
 
 const gastoStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   minWidth: 70,
   textAlign: "right",
@@ -2138,7 +2138,7 @@ const gastoStyle: React.CSSProperties = {
 }
 
 const ventaStyle: React.CSSProperties = {
-  color: "#c4b5fd",
+  color: "#3F3F3F",
   fontSize: 12,
   fontWeight: 600,
   minWidth: 78,
@@ -2149,10 +2149,10 @@ const ventaStyle: React.CSSProperties = {
 const numInputStyle: React.CSSProperties = {
   width: 34,
   padding: "4px 4px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 6,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 12,
   textAlign: "right",
@@ -2165,7 +2165,7 @@ const costInputStyle: React.CSSProperties = {
 }
 
 const sepStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 11,
   flexShrink: 0,
   whiteSpace: "nowrap",
@@ -2173,10 +2173,10 @@ const sepStyle: React.CSSProperties = {
 
 const extraDescInputStyle: React.CSSProperties = {
   padding: "4px 8px",
-  border: "1px solid rgba(148,163,184,0.20)",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 6,
-  background: "rgba(124,58,237,0.06)",
-  color: "#e2e8f0",
+  background: "rgba(0,0,0,0.05)",
+  color: "#262626",
   outline: "none",
   fontSize: 12,
   minWidth: 0,
@@ -2189,7 +2189,7 @@ const removeExtraStyle: React.CSSProperties = {
   borderRadius: 5,
   border: "1px solid rgba(248,113,113,0.24)",
   background: "transparent",
-  color: "#f87171",
+  color: "#C2362B",
   cursor: "pointer",
   fontSize: 10,
   flexShrink: 0,
@@ -2202,9 +2202,9 @@ function internalToggleStyle(active: boolean): React.CSSProperties {
   return {
     padding: "2px 6px",
     borderRadius: 5,
-    border: active ? "1px solid rgba(22,163,74,0.55)" : "1px solid rgba(148,163,184,0.18)",
-    background: active ? "rgba(5,46,22,0.7)" : "transparent",
-    color: active ? "#4ade80" : "#475569",
+    border: active ? "1px solid rgba(22,163,74,0.55)" : "1px solid rgba(0,0,0,0.13)",
+    background: active ? "#FFFFFF" : "transparent",
+    color: active ? "#1F8A55" : "#A3A3A3",
     fontSize: 9,
     fontWeight: 800,
     cursor: "pointer",
@@ -2233,11 +2233,9 @@ function addExtraButtonStyle(color: string): React.CSSProperties {
 }
 
 const colHdrStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 9,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.4,
   minWidth: 34,
   textAlign: "center",
   flexShrink: 0,
@@ -2248,16 +2246,14 @@ const summaryHeaderRowStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 8,
   paddingBottom: 8,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
   marginBottom: 4,
 }
 
 const summaryColHeaderStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 10,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
   minWidth: 90,
   textAlign: "right",
 }
@@ -2279,13 +2275,13 @@ const summaryColStyle: React.CSSProperties = {
 const marginBarContainerStyle: React.CSSProperties = {
   marginTop: 12,
   padding: "10px 0 0",
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
 }
 
 const marginBarBgStyle: React.CSSProperties = {
   height: 6,
   borderRadius: 999,
-  background: "rgba(148,163,184,0.12)",
+  background: "rgba(0,0,0,0.05)",
   overflow: "hidden",
 }
 
@@ -2301,23 +2297,22 @@ const pageContainerStyle: React.CSSProperties = { maxWidth: 1200, margin: "0 aut
 const pageHeaderStyle: React.CSSProperties = { marginBottom: 18 }
 
 const eyebrowStyle: React.CSSProperties = {
-  margin: 0, color: "#a78bfa", fontSize: 11,
-  textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700,
+  margin: 0, color: "#131313", fontSize: 11, fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
-  margin: "6px 0 0", color: "#f8fafc", fontSize: 28,
+  margin: "6px 0 0", color: "#141414", fontSize: 28,
   letterSpacing: -0.6, lineHeight: 1.1,
 }
 
 const pageSubtitleStyle: React.CSSProperties = {
-  margin: "6px 0 0", color: "#7d8ca3", fontSize: 13,
+  margin: "6px 0 0", color: "#737373", fontSize: 13,
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -2326,20 +2321,20 @@ const panelStyle: React.CSSProperties = {
 const panelHeaderStyle: React.CSSProperties = {
   marginBottom: 14,
   paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const panelTitleStyle: React.CSSProperties = {
-  margin: 0, color: "#f8fafc", fontSize: 14, fontWeight: 600,
+  margin: 0, color: "#141414", fontSize: 14, fontWeight: 600,
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -2369,22 +2364,22 @@ function inlineBtnStyle(color: string): React.CSSProperties {
 const primaryButtonStyle: React.CSSProperties = {
   width: "100%",
   padding: "11px 20px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 14,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
 }
 
 const pdfButtonStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 20px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.22)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.15)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
@@ -2395,7 +2390,7 @@ const excelButtonStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 20px",
   background: "rgba(22,163,74,0.12)",
-  color: "#4ade80",
+  color: "#1F8A55",
   border: "1px solid rgba(34,197,94,0.28)",
   borderRadius: 8,
   cursor: "pointer",
@@ -2407,7 +2402,7 @@ const duplicarBtnStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 20px",
   background: "rgba(96,165,250,0.12)",
-  color: "#93c5fd",
+  color: "#1D5FA8",
   border: "1px solid rgba(96,165,250,0.3)",
   borderRadius: 8,
   cursor: "pointer",
@@ -2418,8 +2413,8 @@ const duplicarBtnStyle: React.CSSProperties = {
 const aprobarBtnStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 20px",
-  background: "linear-gradient(135deg, rgba(16,185,129,0.75), rgba(5,150,105,0.75))",
-  color: "#fff",
+  background: "#1F8A55",
+  color: "#FFFFFF",
   border: "1px solid rgba(52,211,153,0.3)",
   borderRadius: 8,
   cursor: "pointer",
@@ -2431,7 +2426,7 @@ const aprobarBtnStyle: React.CSSProperties = {
 const aprobarOverlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.65)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(6px)",
   zIndex: 99999,
   display: "flex",
@@ -2441,10 +2436,10 @@ const aprobarOverlayStyle: React.CSSProperties = {
 }
 
 const aprobarModalStyle: React.CSSProperties = {
-  background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 20,
-  boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+  boxShadow: "0 32px 80px rgba(0,0,0,0.13)",
   padding: "28px 28px 24px",
   width: "100%",
   maxWidth: 400,
@@ -2453,6 +2448,6 @@ const aprobarModalStyle: React.CSSProperties = {
 const aprobarSummaryStyle: React.CSSProperties = {
   padding: "12px 16px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(148,163,184,0.10)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
 }

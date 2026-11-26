@@ -37,23 +37,20 @@ export default function ResetPasswordPage() {
 
   return (
     <main style={mainStyle}>
+      {/* Logo blanco sobre el grafito, fuera de la tarjeta */}
+      <Image
+        src="/logo-retro.png"
+        alt="Retro"
+        width={150}
+        height={54}
+        style={{ objectFit: "contain", height: "auto", marginBottom: 28 }}
+        priority
+      />
       <div style={cardStyle}>
-
-        {/* Logo */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-          <Image
-            src="/logo-retro.png"
-            alt="Retro"
-            width={180}
-            height={65}
-            style={{ objectFit: "contain", filter: "drop-shadow(0 8px 28px rgba(255,255,255,0.07))" }}
-            priority
-          />
-        </div>
 
         {/* ── Loading ── */}
         {view === "loading" && (
-          <p style={{ color: "#7d8ca3", textAlign: "center", fontSize: 14 }}>Verificando enlace…</p>
+          <p style={{ color: "#737373", textAlign: "center", fontSize: 14 }}>Verificando enlace…</p>
         )}
 
         {/* ── Invalid / expired ── */}
@@ -146,7 +143,7 @@ function strengthText(pw: string) {
 
 function strengthBar(pw: string): React.CSSProperties {
   const l = strengthLevel(pw)
-  const colors = ["#ef4444", "#f97316", "#eab308", "#22c55e"]
+  const colors = ["#D92D20", "#C2410C", "#A86B00", "#1F8A55"]
   const widths = ["20%", "45%", "70%", "100%"]
   return {
     height: 4,
@@ -158,7 +155,7 @@ function strengthBar(pw: string): React.CSSProperties {
 }
 
 function strengthLabel(pw: string): React.CSSProperties {
-  const colors = ["#ef4444", "#f97316", "#eab308", "#22c55e"]
+  const colors = ["#D92D20", "#C2410C", "#A86B00", "#1F8A55"]
   return {
     fontSize: 11,
     color: colors[strengthLevel(pw)],
@@ -174,32 +171,30 @@ const mainStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   padding: 20,
-  background: "radial-gradient(circle at top left, rgba(124,58,237,0.22), transparent 32%), radial-gradient(circle at bottom right, rgba(14,165,233,0.16), transparent 28%), #05070d",
-  color: "#f8fafc",
+  flexDirection: "column",
+  background: "#18181A",
+  color: "#141414",
 }
 
 const cardStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 420,
-  background: "rgba(15,23,42,0.82)",
-  border: "1px solid rgba(148,163,184,0.22)",
-  boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
-  backdropFilter: "blur(16px)",
-  padding: "36px 32px 32px",
-  borderRadius: 24,
+  maxWidth: 400,
+  background: "#FFFFFF",
+  padding: "28px 28px 22px",
+  borderRadius: 14,
 }
 
 const titleStyle: React.CSSProperties = {
   margin: "0 0 8px",
   fontSize: 20,
   fontWeight: 700,
-  color: "#f8fafc",
+  color: "#141414",
   textAlign: "center",
 }
 
 const subtitleStyle: React.CSSProperties = {
   margin: "0 0 20px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 14,
   lineHeight: 1.6,
   textAlign: "center",
@@ -215,9 +210,9 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "14px 16px",
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.22)",
-  background: "rgba(2,6,23,0.7)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 14,
   outline: "none",
   boxSizing: "border-box",
@@ -228,7 +223,7 @@ const strengthBarWrap: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  background: "rgba(255,255,255,0.04)",
+  background: "#FFFFFF",
   borderRadius: 8,
   padding: "6px 10px",
 }
@@ -237,14 +232,14 @@ const primaryBtnStyle: React.CSSProperties = {
   width: "100%",
   marginTop: 20,
   padding: "14px 0",
-  background: "linear-gradient(135deg, #7c3aed, #0ea5e9)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 12,
   cursor: "pointer",
   fontWeight: 700,
   fontSize: 15,
-  boxShadow: "0 18px 45px rgba(124,58,237,0.28)",
+  boxShadow: "0 18px 45px rgba(0,0,0,0.06)",
 }
 
 const errorStyle: React.CSSProperties = {
@@ -253,6 +248,6 @@ const errorStyle: React.CSSProperties = {
   borderRadius: 10,
   background: "rgba(239,68,68,0.10)",
   border: "1px solid rgba(239,68,68,0.22)",
-  color: "#fca5a5",
+  color: "#B42318",
   fontSize: 13,
 }

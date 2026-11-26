@@ -217,8 +217,8 @@ export function SubirGuiones(props: {
           style={{
             display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6, justifyItems: "center", textAlign: "center",
             padding: "26px 16px", borderRadius: 14, cursor: "pointer",
-            border: `1.5px dashed ${sobre ? C.violeta : "rgba(148,163,184,0.28)"}`,
-            background: sobre ? C.violetaFondo : "rgba(255,255,255,0.02)",
+            border: `1.5px dashed ${sobre ? C.violeta : "rgba(0,0,0,0.19)"}`,
+            background: sobre ? C.violetaFondo : "#FFFFFF",
           }}
         >
           <span style={{ ...botonPrimario, pointerEvents: "none" }}>Elegir archivos</span>
@@ -272,7 +272,7 @@ export function SubirGuiones(props: {
               </strong>
               {leyendo && <span style={chipAmbar}>Leyendo…</span>}
               {!leyendo && a.estado === "leido" && <span style={chipVerde}>Listo para revisar</span>}
-              {!leyendo && a.estado === "error" && <span style={{ ...chip, color: "#fca5a5", border: `1px solid ${C.rojoBorde}` }}>No se pudo leer</span>}
+              {!leyendo && a.estado === "error" && <span style={{ ...chip, color: "#B42318", border: `1px solid ${C.rojoBorde}` }}>No se pudo leer</span>}
             </div>
 
             {leyendo && (
@@ -351,7 +351,7 @@ export function SubirGuiones(props: {
                     {b.indice.guiones.map((g, gi) => (
                       <div key={gi} style={{ border: `1px solid ${C.lineaSuave}`, borderRadius: 12, padding: 10, background: C.hueco }}>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violetaClaro, whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: C.violetaClaro, whiteSpace: "nowrap" }}>
                             {etq.uno}
                           </span>
                           <input

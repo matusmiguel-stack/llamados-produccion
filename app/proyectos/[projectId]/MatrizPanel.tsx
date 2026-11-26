@@ -88,7 +88,7 @@ function renderLineWithLinks(line: string): React.ReactNode {
         target="_blank"
         rel="noreferrer"
         style={{
-          color: "#60a5fa",
+          color: "#1D6FB8",
           textDecoration: "underline",
           wordBreak: "break-all",
         }}
@@ -110,7 +110,7 @@ function ValueView({
   center?: boolean
   bold?: boolean
 }) {
-  if (!val || !val.trim()) return <span style={{ color: "#2d3748" }}>—</span>
+  if (!val || !val.trim()) return <span style={{ color: "#D4D4D4" }}>—</span>
   // Cada línea se muestra por separado; los enlaces se vuelven clickeables.
   const lines = val.split("\n")
   return (
@@ -119,7 +119,7 @@ function ValueView({
         display: "flex",
         flexDirection: "column",
         gap: 4,
-        color: "#e2e8f0",
+        color: "#262626",
         fontSize: 13,
         lineHeight: 1.5,
         fontWeight: bold ? 700 : 400,
@@ -194,7 +194,7 @@ function GenCell({
   const labelCell: React.CSSProperties = {
     ...genLabelCellStyle,
     ...(rightSide
-      ? { borderLeft: "1px solid rgba(148,163,184,0.12)" }
+      ? { borderLeft: "1px solid rgba(0,0,0,0.09)" }
       : {}),
   }
   return (
@@ -241,7 +241,7 @@ function FieldRow({
       style={{
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
-        borderBottom: "1px solid rgba(148,163,184,0.08)",
+        borderBottom: "1px solid rgba(0,0,0,0.07)",
       }}
     >
       <div style={singleLabelCellStyle(isMobile)}>{label}</div>
@@ -279,7 +279,7 @@ function BackupRow({
       style={{
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
-        borderBottom: "1px solid rgba(148,163,184,0.08)",
+        borderBottom: "1px solid rgba(0,0,0,0.07)",
       }}
     >
       <div style={singleLabelCellStyle(isMobile)}>Backup</div>
@@ -294,7 +294,7 @@ function BackupRow({
                 alignItems: "center",
               }}
             >
-              <span style={{ color: "#7d8ca3", fontSize: 12 }}>Backup de producción:</span>
+              <span style={{ color: "#737373", fontSize: 12 }}>Backup de producción:</span>
               <textarea
                 value={draft.backup_produccion}
                 onChange={(e) => onChange("backup_produccion", e.target.value)}
@@ -311,7 +311,7 @@ function BackupRow({
                 alignItems: "center",
               }}
             >
-              <span style={{ color: "#7d8ca3", fontSize: 12 }}>Backup de post:</span>
+              <span style={{ color: "#737373", fontSize: 12 }}>Backup de post:</span>
               <textarea
                 value={draft.backup_post}
                 onChange={(e) => onChange("backup_post", e.target.value)}
@@ -324,11 +324,11 @@ function BackupRow({
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div>
-              <span style={{ fontSize: 12, color: "#7d8ca3" }}>Backup de producción:</span>
+              <span style={{ fontSize: 12, color: "#737373" }}>Backup de producción:</span>
               <ValueView val={draft.backup_produccion} />
             </div>
             <div>
-              <span style={{ fontSize: 12, color: "#7d8ca3" }}>Backup de post:</span>
+              <span style={{ fontSize: 12, color: "#737373" }}>Backup de post:</span>
               <ValueView val={draft.backup_post} />
             </div>
           </div>
@@ -578,7 +578,7 @@ export function MatrizPanel({
   if (loading) {
     return (
       <div style={{ padding: "32px 16px", textAlign: "center" }}>
-        <p style={{ color: "#7d8ca3", fontSize: 13 }}>Cargando matriz...</p>
+        <p style={{ color: "#737373", fontSize: 13 }}>Cargando matriz...</p>
       </div>
     )
   }
@@ -630,7 +630,7 @@ export function MatrizPanel({
           flexWrap: "wrap",
           gap: 16,
           paddingBottom: 14,
-          borderBottom: "1px solid rgba(148,163,184,0.10)",
+          borderBottom: "1px solid rgba(0,0,0,0.08)",
         }}
       >
         <div style={{ flex: "1 1 180px", minWidth: 0 }}>
@@ -648,11 +648,11 @@ export function MatrizPanel({
               }}
             />
           ) : (
-            <p style={{ margin: 0, color: "#f8fafc", fontSize: 15, fontWeight: 600 }}>
+            <p style={{ margin: 0, color: "#141414", fontSize: 15, fontWeight: 600 }}>
               {draft.nombre || "Matriz de proyecto"}
             </p>
           )}
-          <p style={{ margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }}>
+          <p style={{ margin: "4px 0 0", color: "#737373", fontSize: 12 }}>
             {isNew
               ? "Sin datos aún — llena el formulario y guarda"
               : "Información general, recursos y entregables del proyecto"}
@@ -745,7 +745,7 @@ export function MatrizPanel({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderBottom: "1px solid rgba(148,163,184,0.08)",
+            borderBottom: "1px solid rgba(0,0,0,0.07)",
           }}
         >
           {editing ? (
@@ -785,10 +785,10 @@ export function MatrizPanel({
       {shareOpen && (
         <div style={shareOverlayStyle} onClick={() => !shareBusy && setShareOpen(false)}>
           <div style={sharePanelStyle} onClick={(e) => e.stopPropagation()}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#93c5fd" }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#1D5FA8" }}>
               Compartir matriz
             </p>
-            <p style={{ margin: "6px 0 18px", fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+            <p style={{ margin: "6px 0 18px", fontSize: 13, color: "#6B6B6B", lineHeight: 1.5 }}>
               {draft.nombre || "Matriz de proyecto"}
             </p>
 
@@ -799,7 +799,7 @@ export function MatrizPanel({
                   <input readOnly value={shareUrl} onFocus={(e) => e.currentTarget.select()} style={shareInputStyle} />
                   <button onClick={copiarLiga} style={shareCopyStyle}>{copiado ? "✓ Copiada" : "Copiar"}</button>
                 </div>
-                <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "#7d8ca3", lineHeight: 1.6 }}>
+                <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "#737373", lineHeight: 1.6 }}>
                   Quien tenga esta liga puede ver la matriz sin usuario, y siempre verá la versión
                   actual. No puede editar nada. Si se comparte de más, revócala y genera otra.
                 </p>
@@ -809,7 +809,7 @@ export function MatrizPanel({
               </>
             ) : (
               <>
-                <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#94a3b8", lineHeight: 1.6 }}>
+                <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#6B6B6B", lineHeight: 1.6 }}>
                   Genera una liga secreta para que alguien de fuera pueda ver esta matriz sin
                   necesidad de usuario. Es de solo lectura y la puedes revocar cuando quieras.
                 </p>
@@ -819,10 +819,10 @@ export function MatrizPanel({
               </>
             )}
 
-            <div style={{ height: 1, background: "rgba(148,163,184,0.14)", margin: "20px 0 16px" }} />
+            <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "20px 0 16px" }} />
 
             <p style={shareLabelStyle}>Descargar</p>
-            <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#94a3b8", lineHeight: 1.6 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#6B6B6B", lineHeight: 1.6 }}>
               PDF con las ligas clickeables. Es una foto del momento: si la matriz cambia,
               hay que volver a generarlo.
             </p>
@@ -845,50 +845,49 @@ export function MatrizPanel({
 const shareBtnStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 16px", borderRadius: 8,
   border: "1px solid rgba(96,165,250,0.32)", background: "rgba(59,130,246,0.10)",
-  color: "#93c5fd", cursor: "pointer", fontSize: 13, fontWeight: 600,
+  color: "#1D5FA8", cursor: "pointer", fontSize: 13, fontWeight: 600,
 }
 const shareOverlayStyle: React.CSSProperties = {
-  position: "fixed", inset: 0, zIndex: 1000020, background: "rgba(2,6,23,0.78)",
+  position: "fixed", inset: 0, zIndex: 1000020, background: "rgba(17,17,17,0.32)",
   display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
 }
 const sharePanelStyle: React.CSSProperties = {
-  width: "100%", maxWidth: 470, background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-  border: "1px solid rgba(148,163,184,0.16)", borderRadius: 16,
-  padding: "22px 22px 18px", boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+  width: "100%", maxWidth: 470, background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)", borderRadius: 16,
+  padding: "22px 22px 18px", boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
   maxHeight: "88vh", overflowY: "auto",
 }
 const shareLabelStyle: React.CSSProperties = {
-  margin: "0 0 8px", fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-  letterSpacing: 0.5, color: "#7d8ca3",
+  margin: "0 0 8px", fontSize: 11, fontWeight: 700, color: "#737373",
 }
 const shareInputStyle: React.CSSProperties = {
   flex: 1, minWidth: 0, padding: "9px 11px", borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.22)", background: "rgba(2,6,23,0.55)",
-  color: "#e2e8f0", fontSize: 12, outline: "none",
+  border: "1px solid rgba(0,0,0,0.15)", background: "#FFFFFF",
+  color: "#262626", fontSize: 12, outline: "none",
 }
 const shareCopyStyle: React.CSSProperties = {
   padding: "9px 14px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.4)",
-  background: "rgba(59,130,246,0.16)", color: "#93c5fd", cursor: "pointer",
+  background: "rgba(59,130,246,0.16)", color: "#1D5FA8", cursor: "pointer",
   fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
 }
 const shareCreateStyle: React.CSSProperties = {
   padding: "10px 18px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.4)",
-  background: "rgba(59,130,246,0.16)", color: "#93c5fd", cursor: "pointer",
+  background: "rgba(59,130,246,0.16)", color: "#1D5FA8", cursor: "pointer",
   fontSize: 13, fontWeight: 700,
 }
 const shareRevokeStyle: React.CSSProperties = {
   marginTop: 12, padding: "8px 14px", borderRadius: 8,
   border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)",
-  color: "#f87171", cursor: "pointer", fontSize: 12.5, fontWeight: 600,
+  color: "#C2362B", cursor: "pointer", fontSize: 12.5, fontWeight: 600,
 }
 const sharePdfStyle: React.CSSProperties = {
   padding: "10px 18px", borderRadius: 8, border: "1px solid rgba(52,211,153,0.32)",
-  background: "rgba(52,211,153,0.10)", color: "#34d399", cursor: "pointer",
+  background: "rgba(52,211,153,0.10)", color: "#1F8A55", cursor: "pointer",
   fontSize: 13, fontWeight: 700,
 }
 const shareCloseStyle: React.CSSProperties = {
-  padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.22)",
-  background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: 13,
+  padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)",
+  background: "transparent", color: "#6B6B6B", cursor: "pointer", fontSize: 13,
 }
 
 const sectionHeaderStyle: React.CSSProperties = {
@@ -896,23 +895,21 @@ const sectionHeaderStyle: React.CSSProperties = {
   borderTop: "1px solid rgba(59,130,246,0.20)",
   borderBottom: "1px solid rgba(59,130,246,0.20)",
   padding: "8px 16px",
-  color: "#bfdbfe",
+  color: "#1D5FA8",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 1.4,
   textAlign: "center",
 }
 
 // GENERALES label cell
 const genLabelCellStyle: React.CSSProperties = {
   padding: "10px 12px",
-  background: "rgba(255,255,255,0.022)",
-  color: "#7d8ca3",
+  background: "#FFFFFF",
+  color: "#737373",
   fontSize: 11,
   textAlign: "right",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
-  borderRight: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
+  borderRight: "1px solid rgba(0,0,0,0.08)",
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "flex-end",
@@ -922,8 +919,8 @@ const genLabelCellStyle: React.CSSProperties = {
 // GENERALES value cell
 const genValueCellStyle: React.CSSProperties = {
   padding: "10px 14px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
-  color: "#e2e8f0",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
+  color: "#262626",
   fontSize: 13,
   lineHeight: 1.45,
   minHeight: 44,
@@ -933,11 +930,11 @@ const genValueCellStyle: React.CSSProperties = {
 function singleLabelCellStyle(isMobile: boolean): React.CSSProperties {
   return {
     padding: isMobile ? "10px 12px 4px" : "12px 14px",
-    background: "rgba(255,255,255,0.022)",
-    color: "#7d8ca3",
+    background: "#FFFFFF",
+    color: "#737373",
     fontSize: 11,
     textAlign: isMobile ? "left" : "right",
-    borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)",
+    borderRight: isMobile ? "none" : "1px solid rgba(0,0,0,0.08)",
     display: "flex",
     alignItems: "flex-start",
     justifyContent: isMobile ? "flex-start" : "flex-end",
@@ -948,26 +945,26 @@ function singleLabelCellStyle(isMobile: boolean): React.CSSProperties {
 // Single-column value cell
 const singleValueCellStyle: React.CSSProperties = {
   padding: "12px 16px",
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 13,
   lineHeight: 1.5,
 }
 
 const matrixDocStyle: React.CSSProperties = {
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 14,
   overflow: "hidden",
-  background: "rgba(8,12,28,0.82)",
+  background: "#FFFFFF",
   backdropFilter: "blur(14px)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
 }
 
 const tabStyle: React.CSSProperties = {
   padding: "7px 16px",
   borderRadius: 999,
-  border: "1px solid rgba(148,163,184,0.20)",
-  background: "rgba(255,255,255,0.03)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.14)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   cursor: "pointer",
   fontSize: 12.5,
   fontWeight: 600,
@@ -979,9 +976,9 @@ const tabStyle: React.CSSProperties = {
 
 const tabActiveStyle: React.CSSProperties = {
   ...tabStyle,
-  border: "1px solid rgba(99,102,241,0.55)",
-  background: "rgba(99,102,241,0.16)",
-  color: "#c7d2fe",
+  border: "1px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#3F3F3F",
   cursor: "default",
 }
 
@@ -989,7 +986,7 @@ const addTabStyle: React.CSSProperties = {
   ...tabStyle,
   border: "1px dashed rgba(52,211,153,0.40)",
   background: "rgba(52,211,153,0.06)",
-  color: "#34d399",
+  color: "#1F8A55",
 }
 
 const deleteBtnStyle: React.CSSProperties = {
@@ -999,7 +996,7 @@ const deleteBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(248,113,113,0.30)",
   background: "rgba(248,113,113,0.08)",
-  color: "#f87171",
+  color: "#C2362B",
   cursor: "pointer",
   fontSize: 13,
 }
@@ -1010,12 +1007,12 @@ const saveBtnStyle: React.CSSProperties = {
   padding: "8px 20px",
   borderRadius: 8,
   border: "none",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "#fff",
+  background: "#131313",
+  color: "#FFFFFF",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
-  boxShadow: "0 6px 20px rgba(124,58,237,0.22)",
+  boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
 }
 
 const cancelBtnStyle: React.CSSProperties = {
@@ -1023,9 +1020,9 @@ const cancelBtnStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "8px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.20)",
+  border: "1px solid rgba(0,0,0,0.14)",
   background: "transparent",
-  color: "#7d8ca3",
+  color: "#737373",
   cursor: "pointer",
   fontSize: 13,
 }
@@ -1038,7 +1035,7 @@ const editBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(52,211,153,0.30)",
   background: "rgba(52,211,153,0.08)",
-  color: "#34d399",
+  color: "#1F8A55",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
@@ -1048,9 +1045,9 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "6px 10px",
   borderRadius: 6,
-  border: "1px solid rgba(148,163,184,0.22)",
-  background: "rgba(2,6,23,0.60)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 13,
   outline: "none",
   boxSizing: "border-box",
@@ -1060,9 +1057,9 @@ const textareaStyle: React.CSSProperties = {
   width: "100%",
   padding: "6px 10px",
   borderRadius: 6,
-  border: "1px solid rgba(148,163,184,0.22)",
-  background: "rgba(2,6,23,0.60)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 13,
   outline: "none",
   resize: "vertical",

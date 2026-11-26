@@ -1,16 +1,33 @@
 @import "tailwindcss";
 
+/* ── Tema ──────────────────────────────────────────────────────────────────
+   Escritorio gris neutro, hojas blancas, negro de contraste y lima solo para
+   marcar "hoy". Los colores de cada pantalla siguen escritos en línea; estos
+   tokens son la referencia para lo nuevo. */
+:root {
+  --ink: #131313;
+  --desk: #F3F3F3;
+  --sheet: #FFFFFF;
+  --line: #E2E2E2;
+  --line-2: #EDEDED;
+  --text: #141414;
+  --text-2: #595959;
+  --text-3: #8A8A8A;
+  --lime: #CDF46A;
+  --side: #18181A;
+  /* Dinero, horas y códigos usan la misma Archivo con cifras tabulares */
+  --font-mono: var(--font-sans);
+  --font-display: var(--font-sans);
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  background:
-    radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 32%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 28%),
-    #05070d;
-  color: #f8fafc;
+  background: var(--desk);
+  color: var(--text);
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -28,22 +45,23 @@ button {
   font-family: inherit;
 }
 
-/* Dinero, horas y códigos RS: mono real con dígitos de ancho fijo, para que
-   las columnas alineen. Sustituye al `monospace` genérico (Courier en Windows). */
+/* Dinero, horas y códigos RS: cifras de ancho fijo para que las columnas
+   alineen, en la versión angosta de Archivo. */
 .tabular,
 [data-num] {
-  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
+  font-stretch: 88%;
 }
 
-/* Títulos de página: recogen la voz cursiva del wordmark de Retro. Solo en
-   los <h1>, nunca en tablas ni formularios. Peso 500 para que la Bodoni no se
-   afine sobre el fondo oscuro. Los estilos inline siguen mandando el tamaño. */
+/* Títulos de página: Archivo ancha y firme. Los estilos inline siguen
+   mandando el tamaño. */
 h1 {
-  font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  font-stretch: 115%;
+  font-weight: 720 !important;
+  letter-spacing: -0.02em;
 }
 
 /* ── Foco visible ───────────────────────────────────────────────────────────
@@ -52,7 +70,7 @@ h1 {
    teclado sin tocar esas 55 líneas. Solo aplica a :focus-visible, así que
    el clic con mouse no dibuja el anillo. */
 :focus-visible {
-  outline: 2px solid #a78bfa !important;
+  outline: 2px solid var(--ink) !important;
   outline-offset: 2px !important;
   border-radius: 4px;
 }
@@ -62,6 +80,11 @@ textarea,
 select,
 button {
   font-size: 16px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #A3A3A3;
 }
 
 /* Ocultar flechas de inputs numéricos */
@@ -75,6 +98,9 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* ── Calendario (FullCalendar) ─────────────────────────────────────────────
+   Rejilla blanca con líneas finas; los eventos son tiras rectas estilo
+   stripboard. Hoy se marca con la píldora lima. */
 .calendar-shell {
   display: flex;
   flex-direction: column;
@@ -89,11 +115,11 @@ input[type="number"] {
   border: none;
   border-radius: 0;
   padding: 0;
-  color: #e2e8f0;
-  /* La vista de meses apilados pinta estas variables sobre la cuadrícula; por
-     defecto son blancas y rompen el tema oscuro. */
+  color: var(--text);
   --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: rgba(255, 255, 255, 0.02);
+  --fc-neutral-bg-color: #FAFAFA;
+  --fc-border-color: var(--line-2);
+  --fc-today-bg-color: #FBFDF4;
 }
 
 .calendar-shell .fc-view-harness {
@@ -114,8 +140,8 @@ input[type="number"] {
 
 /* Botón "months" activo (es un customButton, FullCalendar no le pone la clase) */
 .calendar-shell-stacked .fc-stackMonths-button {
-  background: rgba(124, 58, 237, 0.85) !important;
-  border-color: rgba(124, 58, 237, 0.9) !important;
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
   color: #fff !important;
 }
 
@@ -125,44 +151,59 @@ input[type="number"] {
 
 .calendar-shell .fc-theme-standard td,
 .calendar-shell .fc-theme-standard th {
-  border-color: rgba(148, 163, 184, 0.10);
+  border-color: var(--line-2);
 }
 
 .calendar-shell .fc-theme-standard .fc-scrollgrid {
-  border-color: rgba(148, 163, 184, 0.10);
-  border-radius: 12px;
+  border-color: var(--line);
+  border-radius: 10px;
   overflow: hidden;
+  background: var(--sheet);
 }
 
 .calendar-shell .fc-col-header-cell {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--sheet);
+  text-align: left;
 }
 
 .calendar-shell .fc-col-header-cell-cushion {
-  padding: 10px 4px;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  padding: 9px 10px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-weight: 500;
   text-decoration: none;
 }
 
 .calendar-shell .fc-daygrid-day-number,
 .calendar-shell .fc-timegrid-axis-cushion,
 .calendar-shell .fc-timegrid-slot-label-cushion {
-  color: #94a3b8;
-  font-size: 12px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
   text-decoration: none;
 }
 
+/* Número del día arriba a la izquierda, como en la hoja de llamado */
+.calendar-shell .fc-dayGridMonth-view .fc-daygrid-day-top {
+  flex-direction: row;
+}
+
 .calendar-shell .fc-daygrid-day-number {
-  padding: 8px 10px;
+  padding: 7px 10px;
+}
+
+.calendar-shell .fc-day-sat,
+.calendar-shell .fc-day-sun {
+  background: #FAFAFA;
+}
+
+.calendar-shell .fc-day-other .fc-daygrid-day-number {
+  color: #BDBDBD;
 }
 
 .calendar-shell .fc-daygrid-day.fc-day-today {
-  background: rgba(124, 58, 237, 0.14);
-  box-shadow: inset 0 0 0 1.5px rgba(167, 139, 250, 0.45);
+  background: #FBFDF4;
+  box-shadow: none;
 }
 
 .calendar-shell .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
@@ -170,24 +211,24 @@ input[type="number"] {
   align-items: center;
   justify-content: center;
   min-width: 26px;
-  height: 26px;
-  margin: 4px 6px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #7c3aed;
-  color: #ffffff !important;
+  height: 22px;
+  margin: 5px 4px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--lime);
+  color: var(--ink) !important;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.55);
+  box-shadow: none;
 }
 
 .calendar-shell .fc-daygrid-day.fc-day-today .fc-daygrid-day-number:hover {
-  background: #8b5cf6;
-  color: #ffffff;
+  background: #BFEA52;
+  color: var(--ink);
 }
 
 .calendar-shell .fc-timegrid-col.fc-day-today .fc-timegrid-col-frame,
 .calendar-shell .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {
-  color: #ddd6fe;
+  color: var(--text);
   font-weight: 700;
 }
 
@@ -196,7 +237,7 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-daygrid-day:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: #F7F7F7;
 }
 
 .calendar-shell .fc-toolbar {
@@ -205,18 +246,19 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-toolbar-title {
-  font-size: 16px !important;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  color: #f8fafc;
+  font-size: 20px !important;
+  font-weight: 700;
+  font-stretch: 115%;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
 .calendar-shell .fc-button {
   padding: 7px 11px !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(148, 163, 184, 0.16) !important;
-  border-radius: 8px !important;
-  color: #cbd5e1 !important;
+  background: var(--sheet) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 7px !important;
+  color: var(--text) !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   box-shadow: none !important;
@@ -224,39 +266,64 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-button:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(148, 163, 184, 0.24) !important;
-  color: #f8fafc !important;
+  background: #F5F5F5 !important;
+  border-color: #D4D4D4 !important;
+  color: var(--text) !important;
 }
 
 .calendar-shell .fc-button:focus {
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12) !important;
 }
 
 .calendar-shell .fc-button-active,
 .calendar-shell .fc-button-active:hover {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.85), rgba(99, 102, 241, 0.75)) !important;
-  border-color: rgba(167, 139, 250, 0.35) !important;
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
   color: #ffffff !important;
 }
 
 .calendar-shell .fc-button-primary:not(:disabled).fc-button-active:focus,
 .calendar-shell .fc-button-primary:not(:disabled):active:focus {
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12) !important;
 }
 
+/* Tiras: rectas, sin sombra, hora en la versión angosta de Archivo */
 .calendar-shell .fc-event {
-  border: none !important;
-  border-radius: 7px !important;
-  padding: 3px 6px !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  line-height: 1.35 !important;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  border-width: 0 !important;
+  border-style: solid !important;
+  border-radius: 3px !important;
+  padding: 2px 7px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  box-shadow: none;
+}
+
+.calendar-shell .fc-event .fc-event-time {
+  font-stretch: 72%;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .calendar-shell .fc-event:hover {
-  filter: brightness(1.06);
+  filter: brightness(0.94);
+}
+
+/* Tiras claras (juntas, ensayos, vacaciones…): orilla izquierda con el color
+   del tipo, que FullCalendar pone como border-color en línea. */
+.calendar-shell .fc-event.ev-strip {
+  border-left-width: 3px !important;
+}
+
+/* Llamado tentativo: tira blanca con contorno negro. Cancelado: contorno rojo
+   y título tachado. Wrap: gris (ya se filmó). */
+.calendar-shell .fc-event.ev-tent,
+.calendar-shell .fc-event.ev-cancel {
+  border-width: 1.5px !important;
+}
+
+.calendar-shell .fc-event.ev-cancel .fc-event-title {
+  text-decoration: line-through;
 }
 
 .calendar-shell .fc-daygrid-event {
@@ -268,7 +335,7 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-highlight {
-  background: rgba(124, 58, 237, 0.14) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
 }
 
 .calendar-shell .fc-dayGridMonth-view .fc-daygrid-day-number {
@@ -279,8 +346,8 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-dayGridMonth-view .fc-daygrid-day-number:hover {
-  color: #ede9fe;
-  background: rgba(124, 58, 237, 0.18);
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .calendar-shell .fc-timegrid-slot {
@@ -288,15 +355,15 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-timegrid-col.fc-day-today {
-  background: rgba(124, 58, 237, 0.05);
+  background: rgba(205, 244, 106, 0.10);
 }
 
 .calendar-shell .fc-scrollgrid-section > * {
-  border-color: rgba(148, 163, 184, 0.10);
+  border-color: var(--line-2);
 }
 
 .calendar-shell .fc-list-event:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: #F5F5F5;
 }
 
 @media (max-width: 768px) {
@@ -338,7 +405,7 @@ input[type="number"] {
     border-left: none !important;
     border-right: none !important;
     border-top: none !important;
-    border-bottom-color: rgba(148, 163, 184, 0.10) !important;
+    border-bottom-color: var(--line-2) !important;
   }
 
   /* Cabecera de días (D L M M J V S) sin caja de fondo */
@@ -368,7 +435,7 @@ input[type="number"] {
     padding: 5px 0 2px !important;
     font-size: 15px;
     font-weight: 500;
-    color: #e2e8f0;
+    color: var(--text);
   }
 
   /* Barritas de color sin texto, centradas bajo el número (como en iPhone).
@@ -396,6 +463,17 @@ input[type="number"] {
     border-radius: 3px;
     overflow: hidden;
     white-space: nowrap;
+  }
+
+  /* En las barritas, las tiras claras y los llamados con contorno se pintan
+     con su color de orilla para que se distingan. */
+  .calendar-shell-mobile .fc-daygrid-event.ev-strip,
+  .calendar-shell-mobile .fc-daygrid-event.ev-tent,
+  .calendar-shell-mobile .fc-daygrid-event.ev-cancel {
+    height: 0 !important;
+    min-height: 0 !important;
+    border-width: 4px 0 0 0 !important;
+    border-style: solid !important;
   }
 
   /* Las barritas son solo indicadores visuales: no interceptan el tap, así
@@ -431,7 +509,7 @@ input[type="number"] {
     margin: 2px auto;
     padding: 0 !important;
     border-radius: 999px;
-    background: rgba(226, 232, 240, 0.16);
+    background: var(--ink);
     color: #ffffff !important;
     font-weight: 700;
   }
@@ -535,8 +613,8 @@ input[type="number"] {
 }
 
 @keyframes pulse-live {
-  0%, 100% { opacity: 1; box-shadow: 0 0 6px #34d399; }
-  50%       { opacity: 0.5; box-shadow: 0 0 2px #34d399; }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(31, 138, 85, 0.18); }
+  50%       { opacity: 0.5; box-shadow: 0 0 0 1px rgba(31, 138, 85, 0.12); }
 }
 
 /* Alarma roja de tareas vencidas (badge junto a "Mis Tareas") */
@@ -549,7 +627,7 @@ input[type="number"] {
    (nació en el menú lateral, ahora es global). */
 html {
   scrollbar-width: thin;                                  /* Firefox — se hereda a los hijos */
-  scrollbar-color: rgba(148, 163, 184, 0.28) transparent; /* thumb / track */
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* thumb / track */
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -560,14 +638,14 @@ html {
 }
 *::-webkit-scrollbar-thumb {
   /* El borde transparente + background-clip deja el pulgar delgado y con aire */
-  background: rgba(148, 163, 184, 0.24);
+  background: rgba(0, 0, 0, 0.16);
   border: 2px solid transparent;
   background-clip: padding-box;
   border-radius: 999px;
   transition: background 0.15s ease;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(167, 139, 250, 0.55); /* acento violeta al pasar el cursor */
+  background: rgba(0, 0, 0, 0.32);
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-corner {
@@ -591,7 +669,7 @@ html {
   table.egresos-table thead { display: none; }
   table.egresos-table tbody tr {
     padding: 12px 12px 10px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.16) !important;
+    border-bottom: 1px solid var(--line-2) !important;
   }
   table.egresos-table td {
     padding: 4px 0 !important;
@@ -601,12 +679,10 @@ html {
   table.egresos-table tbody td::before {
     display: block;
     margin-bottom: 2px;
-    color: #6b7c93;
+    color: var(--text-3);
     font-family: inherit;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    font-size: 11.5px;
+    font-weight: 600;
   }
   table.egresos-table tbody td:nth-child(1)::before { content: "Sección"; }
   table.egresos-table tbody td:nth-child(2) { font-size: 14px !important; font-weight: 600; }
@@ -623,4 +699,9 @@ html {
     padding: 10px 12px;
   }
   table.egresos-table tfoot td:empty { display: none; }
+}
+
+/* Buscador dentro de la barra grafito */
+.search-dark::placeholder {
+  color: #8E8E93;
 }

@@ -6,10 +6,12 @@ import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
+import esLocale from "@fullcalendar/core/locales/es"
 import { supabase } from "../lib/supabase"
 import { requireSessionProfile } from "../lib/session-profile"
 import { AppSidebar } from "../components/AppSidebar"
 import { PageLoader } from "../components/PageLoader"
+import { ProximosLlamados } from "../components/ProximosLlamados"
 import { PushNotificationManager } from "../components/PushNotificationManager"
 import { DatePickerField } from "../components/DatePickerField"
 import { CalendarSearch, type CalendarSearchItem } from "../components/CalendarSearch"
@@ -26,16 +28,69 @@ import {
 } from "../lib/employee-dates"
 import { puedeEventosPersonales } from "../lib/eventos-personales"
 
-const VACATION_COLOR = "#9333ea"
+const VACATION_COLOR = "#3A875A"
 const VACATION_EVENT_PREFIX = "vacation:"
-const BIRTHDAY_COLOR = "#f59e0b"
-const ANNIVERSARY_COLOR = "#14b8a6"
+const BIRTHDAY_COLOR = "#B8800E"
+const ANNIVERSARY_COLOR = "#0E857D"
 const JUNTA_EVENT_PREFIX = "junta:"
-const JUNTA_COLOR = "#0891b2"
+const JUNTA_COLOR = "#2C6FB7"
 const ENSAYO_EVENT_PREFIX = "ensayo:"
-const ENSAYO_COLOR = "#db2777"
+const ENSAYO_COLOR = "#C93F5D"
 const PERSONAL_EVENT_PREFIX = "personal:"
-const PERSONAL_COLOR = "#334155"
+const PERSONAL_COLOR = "#7D7369"
+
+// ── Tiras del calendario ────────────────────────────────────────────────────
+// Los llamados son el evento principal: tira negra sólida. Su estatus se lee en
+// el estilo de la tira (tentativo = contorno, wrap = gris, cancelado = rojo
+// tachado). El resto de tipos son tiras claras con la orilla de su color.
+const STRIP_BG: Record<string, string> = {
+  [VACATION_COLOR]: "#E5F2EA",
+  [BIRTHDAY_COLOR]: "#FAF0D7",
+  [ANNIVERSARY_COLOR]: "#E0F2F0",
+  [JUNTA_COLOR]: "#E5EEF8",
+  [ENSAYO_COLOR]: "#FAE6EA",
+  [PERSONAL_COLOR]: "#EFECE8",
+}
+
+function stripEvent<T extends Record<string, any>>(ev: T, color: string) {
+  return {
+    ...ev,
+    backgroundColor: STRIP_BG[color] || "#F0F0F0",
+    borderColor: color,
+    textColor: "#141414",
+    classNames: ["ev-strip"],
+    stripColor: color,
+  }
+}
+
+// Quita el emoji inicial de los títulos que vienen armados (cumpleaños, etc.)
+function sinEmojiInicial(title: string) {
+  return title.replace(/^\S+\s+/, (m) => (/[A-Za-z0-9ÁÉÍÓÚÑáéíóúñ]/.test(m) ? m : ""))
+}
+
+// Colores que la app guardaba según el estatus (antes y después del
+// rediseño). Si el llamado trae otro color, es uno elegido a mano y se respeta.
+const STATUS_DEFAULT_COLORS = new Set([
+  "#16a34a", "#dc2626", "#64748b", "#eab308", "#7c3aed",
+  "#c2362b", "#8a8a8a", "#a86b00", "#131313",
+])
+
+function llamadoLook(shoot: { color?: string | null; status?: string | null }) {
+  const color = String(shoot.color || "").toLowerCase()
+  if (color && !STATUS_DEFAULT_COLORS.has(color)) {
+    return { backgroundColor: shoot.color as string, borderColor: shoot.color as string, textColor: "#FFFFFF", classNames: ["ev-llamado"], stripColor: shoot.color as string }
+  }
+  if (shoot.status === "confirmed") {
+    return { backgroundColor: "#131313", borderColor: "#131313", textColor: "#FFFFFF", classNames: ["ev-llamado"], stripColor: "#131313" }
+  }
+  if (shoot.status === "cancelled") {
+    return { backgroundColor: "#FFFFFF", borderColor: "#C2362B", textColor: "#C2362B", classNames: ["ev-llamado", "ev-cancel"], stripColor: "#C2362B" }
+  }
+  if (shoot.status === "wrap") {
+    return { backgroundColor: "#E7E7E7", borderColor: "#E7E7E7", textColor: "#595959", classNames: ["ev-llamado", "ev-wrap"], stripColor: "#8A8A8A" }
+  }
+  return { backgroundColor: "#FFFFFF", borderColor: "#131313", textColor: "#131313", classNames: ["ev-llamado", "ev-tent"], stripColor: "#131313" }
+}
 
 // Nombre completo de un empleado (para el valor guardado de responsable)
 function fullEmployeeName(e: { nombre: string; apellido_paterno?: string | null; apellido_materno?: string | null }) {
@@ -211,7 +266,7 @@ export default function Home() {
   const [privateNotes, setPrivateNotes] = useState("")
   const [productionNotes, setProductionNotes] = useState("")
   const [status, setStatus] = useState("tentative")
-  const [color, setColor] = useState("#7c3aed")
+  const [color, setColor] = useState("#131313")
   const [useCustomColor, setUseCustomColor] = useState(false)
   const [allDay, setAllDay] = useState(false)
   const [startTime, setStartTime] = useState("09:00")
@@ -601,37 +656,32 @@ export default function Home() {
 
       return {
         id: shoot.id,
-        title: `${statusEmoji(shoot.status)} ${shoot.title}`,
+        title: shoot.title,
         start,
         end,
         allDay: shoot.all_day,
-        backgroundColor: shoot.color || "#7c3aed",
-        borderColor: shoot.color || "#7c3aed",
-        textColor: "#ffffff",
+        ...llamadoLook(shoot),
       }
     })
 
-    const vacationEvents = filteredVacations.map((vacation) => ({
+    const vacationEvents = filteredVacations.map((vacation) => stripEvent({
       id: `${VACATION_EVENT_PREFIX}${vacation.id}`,
-      title: `🏖️ ${formatVacationTitle(vacation, vacationEmployees)}`,
+      title: formatVacationTitle(vacation, vacationEmployees),
       start: vacation.start_date,
       end: addDaysToDateString(vacation.end_date, 1),
       allDay: true,
-      backgroundColor: VACATION_COLOR,
-      borderColor: VACATION_COLOR,
-      textColor: "#ffffff",
       editable: false,
-    }))
+    }, VACATION_COLOR))
 
     const birthdayEvents = buildBirthdayCalendarEvents(employees, {
       filterEmployeeId: filterHumanResource || undefined,
       color: BIRTHDAY_COLOR,
-    })
+    }).map((ev) => stripEvent({ ...ev, title: sinEmojiInicial(ev.title) }, BIRTHDAY_COLOR))
 
     const anniversaryEvents = buildAnniversaryCalendarEvents(employees, {
       filterEmployeeId: filterHumanResource || undefined,
       color: ANNIVERSARY_COLOR,
-    })
+    }).map((ev) => stripEvent({ ...ev, title: sinEmojiInicial(ev.title) }, ANNIVERSARY_COLOR))
 
     // Las juntas solo tienen asistentes: no guardan cliente, proyecto ni estatus.
     // Si se filtra por alguno de esos (que son propios del llamado), no pueden
@@ -648,45 +698,33 @@ export default function Home() {
     const filteredEnsayos =
       filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allEnsayos
 
-    const juntaEvents = filteredJuntas.map((j) => {
-      const emoji = j.tipo === "Brief" ? "📋" : j.tipo === "PPM" ? "🎬" : j.tipo === "Junta Interna" ? "🏠" : j.tipo === "Invitación por correo" ? "📧" : "🤝"
-      return {
-        id: `${JUNTA_EVENT_PREFIX}${j.id}`,
-        title: j.titulo ? `${emoji} ${j.titulo}` : `${emoji} ${j.tipo}`,
-        start: j.hora_inicio ? `${j.fecha}T${j.hora_inicio}` : j.fecha,
-        end:   j.hora_fin    ? `${j.fecha}T${j.hora_fin}`    : undefined,
-        allDay: !j.hora_inicio,
-        backgroundColor: JUNTA_COLOR,
-        borderColor:     JUNTA_COLOR,
-        textColor: "#ffffff",
-        editable: false,
-      }
-    })
+    const juntaEvents = filteredJuntas.map((j) => stripEvent({
+      id: `${JUNTA_EVENT_PREFIX}${j.id}`,
+      title: j.titulo || j.tipo,
+      start: j.hora_inicio ? `${j.fecha}T${j.hora_inicio}` : j.fecha,
+      end:   j.hora_fin    ? `${j.fecha}T${j.hora_fin}`    : undefined,
+      allDay: !j.hora_inicio,
+      editable: false,
+    }, JUNTA_COLOR))
 
-    const ensayoEvents = filteredEnsayos.map((e) => ({
+    const ensayoEvents = filteredEnsayos.map((e) => stripEvent({
       id: `${ENSAYO_EVENT_PREFIX}${e.id}`,
-      title: e.titulo ? `🎭 ${e.titulo}` : "🎭 Ensayo",
+      title: e.titulo || "Ensayo",
       start: !e.all_day && e.hora_inicio ? `${e.fecha}T${e.hora_inicio}` : e.fecha,
       end:   !e.all_day && e.hora_fin    ? `${e.fecha}T${e.hora_fin}`    : undefined,
       allDay: !!e.all_day || !e.hora_inicio,
-      backgroundColor: ENSAYO_COLOR,
-      borderColor:     ENSAYO_COLOR,
-      textColor: "#ffffff",
       editable: false,
-    }))
+    }, ENSAYO_COLOR))
 
     // Personales: solo existen para su dueño (RLS) y no tienen cliente/participantes.
-    const personalEvents = (filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allPersonal).map((e) => ({
+    const personalEvents = (filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allPersonal).map((e) => stripEvent({
       id: `${PERSONAL_EVENT_PREFIX}${e.id}`,
-      title: `🔒 ${e.titulo || "Personal"}`,
+      title: e.titulo || "Personal",
       start: !e.all_day && e.hora_inicio ? `${e.fecha}T${e.hora_inicio}` : e.fecha,
       end:   !e.all_day && e.hora_fin    ? `${e.fecha}T${e.hora_fin}`    : undefined,
       allDay: !!e.all_day || !e.hora_inicio,
-      backgroundColor: PERSONAL_COLOR,
-      borderColor:     "#94a3b8",
-      textColor: "#e2e8f0",
       editable: false,
-    }))
+    }, PERSONAL_COLOR))
 
     setEvents([
       ...(showLlamados ? shootEvents : []),
@@ -1295,7 +1333,7 @@ function openEditShoot() {
     setPrivateNotes(selectedShoot.private_notes || "")
     setProductionNotes(selectedShoot.production_notes || "")
     setStatus(selectedShoot.status || "tentative")
-    setColor(selectedShoot.color || "#7c3aed")
+    setColor(selectedShoot.color || "#131313")
     setSelectedDate(startDate)
     setSelectedEndDate(endDate)
     setStartTime(timePartFromTimestamp(selectedShoot.start_time))
@@ -2214,35 +2252,35 @@ function openEditVacation() {
   const selectThemeStyles = {
     control: (base: any) => ({
       ...base,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      borderColor: "rgba(148, 163, 184, 0.28)",
+      backgroundColor: "#FFFFFF",
+      borderColor: "rgba(0,0,0,0.19)",
       borderRadius: 12,
       minHeight: 46,
       boxShadow: "none",
     }),
     menu: (base: any) => ({
       ...base,
-      backgroundColor: "#0f172a",
-      border: "1px solid rgba(148, 163, 184, 0.22)",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid rgba(0,0,0,0.15)",
       overflow: "hidden",
       zIndex: 1000000,
     }),
     option: (base: any, state: any) => ({
       ...base,
-      backgroundColor: state.isFocused ? "rgba(124, 58, 237, 0.35)" : "#0f172a",
-      color: state.isDisabled ? "#64748b" : "#f8fafc",
+      backgroundColor: state.isFocused ? "rgba(0,0,0,0.08)" : "#FFFFFF",
+      color: state.isDisabled ? "#8A8A8A" : "#141414",
       cursor: state.isDisabled ? "not-allowed" : "pointer",
     }),
     multiValue: (base: any) => ({
       ...base,
-      backgroundColor: "rgba(124, 58, 237, 0.28)",
+      backgroundColor: "rgba(0,0,0,0.08)",
       borderRadius: 999,
     }),
-    multiValueLabel: (base: any) => ({ ...base, color: "#f8fafc" }),
-    multiValueRemove: (base: any) => ({ ...base, color: "#f8fafc" }),
-    input: (base: any) => ({ ...base, color: "#f8fafc" }),
-    placeholder: (base: any) => ({ ...base, color: "#94a3b8" }),
-    singleValue: (base: any) => ({ ...base, color: "#f8fafc" }),
+    multiValueLabel: (base: any) => ({ ...base, color: "#141414" }),
+    multiValueRemove: (base: any) => ({ ...base, color: "#141414" }),
+    input: (base: any) => ({ ...base, color: "#141414" }),
+    placeholder: (base: any) => ({ ...base, color: "#6B6B6B" }),
+    singleValue: (base: any) => ({ ...base, color: "#141414" }),
   }
 
   const compactSelectThemeStyles = {
@@ -2306,10 +2344,6 @@ function openEditVacation() {
           <header style={pageHeaderStyle}>
             <div>
               <h1 style={pageTitleStyle}>Calendario</h1>
-              <p style={pageSubtitleStyle}>
-                {events.length} visibles · {allShoots.length} total · {resources.length}{" "}
-                recursos
-              </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2328,7 +2362,7 @@ function openEditVacation() {
                   title="Importar invite de cliente (.ics)"
                   style={importIcsBtnStyle}
                 >
-                  📅 Importar invite
+                  Importar invitación
                 </button>
               )}
               {/* Indicador de sincronización en vivo */}
@@ -2343,22 +2377,21 @@ function openEditVacation() {
                   fontSize: 11,
                   fontWeight: 600,
                   letterSpacing: 0.3,
-                  background: liveConnected ? "rgba(52,211,153,0.10)" : "rgba(148,163,184,0.08)",
-                  border: `1px solid ${liveConnected ? "rgba(52,211,153,0.25)" : "rgba(148,163,184,0.15)"}`,
-                  color: liveConnected ? "#34d399" : "#64748b",
+                  background: liveConnected ? "rgba(52,211,153,0.10)" : "rgba(0,0,0,0.03)",
+                  border: `1px solid ${liveConnected ? "rgba(52,211,153,0.25)" : "rgba(0,0,0,0.11)"}`,
+                  color: liveConnected ? "#1F8A55" : "#8A8A8A",
                   transition: "all 0.4s ease",
                 }}
               >
                 <span style={{
                   width: 7, height: 7, borderRadius: "50%",
-                  background: liveConnected ? "#34d399" : "#475569",
-                  boxShadow: liveConnected ? "0 0 6px #34d399" : "none",
+                  background: liveConnected ? "#1F8A55" : "#D4D4D4",
+                  boxShadow: "none",
                   animation: liveConnected ? "pulse-live 2s infinite" : "none",
                   flexShrink: 0,
                 }} />
-                {liveConnected ? "EN VIVO" : "Conectando"}
+                {liveConnected ? "En vivo" : "Conectando"}
               </div>
-              <span style={roleBadgeStyle(profile?.role)}>{profile?.role || "..."}</span>
             </div>
           </header>
 
@@ -2429,41 +2462,57 @@ function openEditVacation() {
           </section>
 
           {/* ── Chips de visibilidad ── */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
             {([
-              { key: "llamados",   label: "🎬 Llamados",   color: "#7c3aed", active: showLlamados,   set: setShowLlamados },
-              { key: "vacaciones", label: "🏖️ Vacaciones", color: "#9333ea", active: showVacaciones, set: setShowVacaciones },
-              { key: "juntas",     label: "📋 Juntas",     color: "#0891b2", active: showJuntas,     set: setShowJuntas },
-              { key: "ensayos",    label: "🎭 Ensayos",    color: "#db2777", active: showEnsayos,    set: setShowEnsayos },
-              ...(canPersonal ? [{ key: "personal", label: "🔒 Personal", color: "#64748b", active: showPersonal, set: setShowPersonal }] : []),
-              { key: "cumple",     label: "🎂 Cumpleaños", color: "#f59e0b", active: showCumpleanos, set: setShowCumpleanos },
-              { key: "aniv",       label: "🎉 Aniversarios", color: "#14b8a6", active: showAniversarios, set: setShowAniversarios },
+              { key: "llamados",   label: "Llamados",     color: "#131313",         active: showLlamados,     set: setShowLlamados },
+              { key: "juntas",     label: "Juntas",       color: JUNTA_COLOR,       active: showJuntas,       set: setShowJuntas },
+              { key: "ensayos",    label: "Ensayos",      color: ENSAYO_COLOR,      active: showEnsayos,      set: setShowEnsayos },
+              { key: "vacaciones", label: "Vacaciones",   color: VACATION_COLOR,    active: showVacaciones,   set: setShowVacaciones },
+              ...(canPersonal ? [{ key: "personal", label: "Personal", color: PERSONAL_COLOR, active: showPersonal, set: setShowPersonal }] : []),
+              { key: "cumple",     label: "Cumpleaños",   color: BIRTHDAY_COLOR,    active: showCumpleanos,   set: setShowCumpleanos },
+              { key: "aniv",       label: "Aniversarios", color: ANNIVERSARY_COLOR, active: showAniversarios, set: setShowAniversarios },
             ] as const).map(({ key, label, color, active, set }) => (
               <button
                 key={key}
                 onClick={() => set(!active)}
+                aria-pressed={active}
                 style={{
-                  padding: "4px 12px",
-                  borderRadius: 999,
-                  border: `1px solid ${active ? color : "rgba(148,163,184,0.2)"}`,
-                  background: active ? `${color}26` : "transparent",
-                  color: active ? color : "#64748b",
-                  fontSize: 12,
-                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  height: 30,
+                  padding: "0 10px 0 8px",
+                  borderRadius: 6,
+                  border: `1px ${active ? "solid" : "dashed"} ${active ? "#E2E2E2" : "#D4D4D4"}`,
+                  background: active ? "#FFFFFF" : "transparent",
+                  color: active ? "#141414" : "#8A8A8A",
+                  fontSize: 13,
+                  fontWeight: 500,
                   cursor: "pointer",
-                  transition: "all 0.15s",
-                  opacity: active ? 1 : 0.5,
                 }}
               >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 10,
+                    height: 14,
+                    borderRadius: 2,
+                    background: active ? color : "transparent",
+                    boxShadow: active ? "none" : `inset 0 0 0 1.5px ${color}`,
+                  }}
+                />
                 {label}
               </button>
             ))}
           </div>
 
+          <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
           <section
             style={{
               ...calendarPanelStyle,
               ...(isMobile ? calendarPanelMobileStyle : {}),
+              flex: 1,
+              minWidth: 0,
             }}
           >
             <div style={calendarPanelHeaderStyle}>
@@ -2490,10 +2539,12 @@ function openEditVacation() {
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
+                locale={esLocale}
+                firstDay={0}
+                buttonText={{ today: "Hoy", month: "Mes", week: "Semana", day: "Día" }}
                 customButtons={{
                   stackMonths: {
-                    // Los demás botones usan los textos por defecto de FullCalendar (en inglés)
-                    text: "months",
+                    text: "Meses",
                     click: () => setStackedMonths((v) => !v),
                   },
                 }}
@@ -2563,6 +2614,8 @@ function openEditVacation() {
                       <FullCalendar
                         plugins={[dayGridPlugin, interactionPlugin]}
                         initialView="dayGridMonth"
+                        locale={esLocale}
+                        firstDay={0}
                         initialDate={d}
                         headerToolbar={false}
                         height="auto"
@@ -2623,7 +2676,7 @@ function openEditVacation() {
                         <span
                           style={{
                             ...mobileDayEventBarStyle,
-                            background: ev.backgroundColor || "#7c3aed",
+                            background: ev.stripColor || ev.backgroundColor || "#131313",
                           }}
                         />
                         <span style={mobileDayEventTitleStyle}>{ev.title}</span>
@@ -2637,6 +2690,15 @@ function openEditVacation() {
               </div>
             )}
           </section>
+
+          {!isMobile && (
+            <ProximosLlamados
+              shoots={allShoots}
+              shootEmployees={shootEmployees}
+              onOpen={(id) => handleEventClick({ event: { id } })}
+            />
+          )}
+          </div>
         </div>
 
         {modalOpen && (
@@ -2800,7 +2862,7 @@ function openEditVacation() {
                 {entryMode === "personal" && canPersonal && !selectedShoot && !selectedVacation && !selectedJunta ? (
                   <div style={formModalColumnStyle}>
                     <p style={formModalSectionLabelStyle}>{selectedPersonal ? "Editar evento personal" : "Nuevo evento personal"}</p>
-                    <p style={{ margin: 0, color: "#94a3b8", fontSize: 12 }}>
+                    <p style={{ margin: 0, color: "#6B6B6B", fontSize: 12 }}>
                       🔒 Solo tú ves este evento. No se avisa ni se muestra a nadie más.
                     </p>
 
@@ -2822,7 +2884,7 @@ function openEditVacation() {
                       onChange={setPersonalDate}
                     />
 
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#cbd5e1", fontSize: 13 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#3F3F3F", fontSize: 13 }}>
                       <input
                         type="checkbox"
                         checked={personalAllDay}
@@ -2886,7 +2948,7 @@ function openEditVacation() {
                       onChange={setEnsayoDate}
                     />
 
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#cbd5e1", fontSize: 13 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#3F3F3F", fontSize: 13 }}>
                       <input
                         type="checkbox"
                         checked={ensayoAllDay}
@@ -2934,9 +2996,9 @@ function openEditVacation() {
                             style={{
                               padding: "6px 14px",
                               borderRadius: 8,
-                              border: juntaTipo === tipo ? "1px solid #0891b2" : "1px solid rgba(148,163,184,0.2)",
+                              border: juntaTipo === tipo ? "1px solid #2C6FB7" : "1px solid rgba(0,0,0,0.14)",
                               background: juntaTipo === tipo ? "rgba(8,145,178,0.15)" : "transparent",
-                              color: juntaTipo === tipo ? "#67e8f9" : "#94a3b8",
+                              color: juntaTipo === tipo ? "#0E7490" : "#6B6B6B",
                               fontSize: 13,
                               fontWeight: 600,
                               cursor: "pointer",
@@ -2973,7 +3035,7 @@ function openEditVacation() {
                       <div style={{ flex: 1 }}>
                         <label style={formModalLabelStyle}>
                           Hora inicio
-                          <span style={{ marginLeft: 6, fontSize: 10, color: "#7d8ca3", fontWeight: 400 }}>
+                          <span style={{ marginLeft: 6, fontSize: 10, color: "#737373", fontWeight: 400 }}>
                             (hora del invite — ajusta si es necesario)
                           </span>
                         </label>
@@ -3009,7 +3071,7 @@ function openEditVacation() {
                         </label>
                         {juntaRecurrente && (
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                            <span style={{ fontSize: 13, color: "#94a3b8" }}>Repetir durante</span>
+                            <span style={{ fontSize: 13, color: "#6B6B6B" }}>Repetir durante</span>
                             <input
                               type="number"
                               min={1}
@@ -3018,7 +3080,7 @@ function openEditVacation() {
                               onChange={(e) => setJuntaRecurrenteSemanas(Math.max(1, Math.min(52, Number(e.target.value) || 1)))}
                               style={{ ...formModalInputStyle, width: 64, textAlign: "center" }}
                             />
-                            <span style={{ fontSize: 13, color: "#94a3b8" }}>
+                            <span style={{ fontSize: 13, color: "#6B6B6B" }}>
                               semana{juntaRecurrenteSemanas === 1 ? "" : "s"} (crea {juntaRecurrenteSemanas} junta{juntaRecurrenteSemanas === 1 ? "" : "s"} independientes, una por semana; borrar una no afecta a las demás)
                             </span>
                           </div>
@@ -3031,7 +3093,7 @@ function openEditVacation() {
                       <label style={formModalLabelStyle}>
                         Liga de reunión
                         {juntaLink && (
-                          <span style={{ marginLeft: 8, fontSize: 10, color: "#34d399", fontWeight: 700 }}>
+                          <span style={{ marginLeft: 8, fontSize: 10, color: "#1F8A55", fontWeight: 700 }}>
                             ✓ Detectada automáticamente
                           </span>
                         )}
@@ -3097,13 +3159,13 @@ function openEditVacation() {
                                 padding: "3px 10px", borderRadius: 999,
                                 background: "rgba(8,145,178,0.15)",
                                 border: "1px solid rgba(8,145,178,0.35)",
-                                color: "#67e8f9", fontSize: 12,
+                                color: "#0E7490", fontSize: 12,
                               }}>
                                 {employeeDisplayName(emp)}
                                 <button
                                   type="button"
                                   onClick={() => setJuntaAttendees(prev => prev.filter(id => id !== empId))}
-                                  style={{ background: "none", border: "none", color: "#67e8f9", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, marginLeft: 2 }}
+                                  style={{ background: "none", border: "none", color: "#0E7490", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, marginLeft: 2 }}
                                 >×</button>
                               </span>
                             )
@@ -3157,9 +3219,9 @@ function openEditVacation() {
                           return (
                             <div style={{
                               position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
-                              background: "#0f172a", border: "1px solid rgba(148,163,184,0.2)",
+                              background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
                               borderRadius: 10, marginTop: 4, maxHeight: 200, overflowY: "auto",
-                              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.09)",
                             }}>
                               {filtered.map((emp: any) => (
                                 <button
@@ -3173,14 +3235,14 @@ function openEditVacation() {
                                   style={{
                                     display: "block", width: "100%", textAlign: "left",
                                     padding: "8px 12px", background: "none", border: "none",
-                                    color: "#e2e8f0", fontSize: 13, cursor: "pointer",
-                                    borderBottom: "1px solid rgba(148,163,184,0.08)",
+                                    color: "#262626", fontSize: 13, cursor: "pointer",
+                                    borderBottom: "1px solid rgba(0,0,0,0.07)",
                                   }}
-                                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(148,163,184,0.08)")}
+                                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,0,0,0.07)")}
                                   onMouseLeave={e => (e.currentTarget.style.background = "none")}
                                 >
                                   <span style={{ fontWeight: 500 }}>{employeeDisplayName(emp)}</span>
-                                  {emp.puesto && <span style={{ color: "#7d8ca3", marginLeft: 6, fontSize: 11 }}>· {emp.puesto}</span>}
+                                  {emp.puesto && <span style={{ color: "#737373", marginLeft: 6, fontSize: 11 }}>· {emp.puesto}</span>}
                                 </button>
                               ))}
                             </div>
@@ -3193,7 +3255,7 @@ function openEditVacation() {
                     <div>
                       <label style={formModalLabelStyle}>
                         Invitar personas externas
-                        <span style={{ marginLeft: 6, fontSize: 10, color: "#7d8ca3", fontWeight: 400 }}>
+                        <span style={{ marginLeft: 6, fontSize: 10, color: "#737373", fontWeight: 400 }}>
                           (recibirán email con .ics)
                         </span>
                       </label>
@@ -3206,13 +3268,13 @@ function openEditVacation() {
                               padding: "3px 10px", borderRadius: 999,
                               background: "rgba(14,165,233,0.12)",
                               border: "1px solid rgba(56,189,248,0.25)",
-                              color: "#7dd3fc", fontSize: 12,
+                              color: "#1D6FB8", fontSize: 12,
                             }}>
                               {email}
                               <button
                                 type="button"
                                 onClick={() => setJuntaExternalEmails(prev => prev.filter(e => e !== email))}
-                                style={{ background: "none", border: "none", color: "#7dd3fc", cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}
+                                style={{ background: "none", border: "none", color: "#1D6FB8", cursor: "pointer", padding: 0, fontSize: 13, lineHeight: 1 }}
                               >×</button>
                             </span>
                           ))}
@@ -3253,11 +3315,11 @@ function openEditVacation() {
                           return (
                             <div style={{
                               position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50,
-                              background: "rgba(8,12,24,0.98)", border: "1px solid rgba(56,189,248,0.25)",
-                              borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+                              background: "#FFFFFF", border: "1px solid rgba(56,189,248,0.25)",
+                              borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.12)",
                               maxHeight: 200, overflowY: "auto", padding: "4px 0",
                             }}>
-                              <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase", letterSpacing: 0.7 }}>
+                              <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>
                                 Contactos anteriores
                               </div>
                               {matches.map((email) => (
@@ -3272,7 +3334,7 @@ function openEditVacation() {
                                   style={{
                                     display: "block", width: "100%", textAlign: "left",
                                     padding: "7px 12px", background: "none", border: "none",
-                                    color: "#7dd3fc", fontSize: 12, cursor: "pointer",
+                                    color: "#1D6FB8", fontSize: 12, cursor: "pointer",
                                   }}
                                 >
                                   {email}
@@ -3293,7 +3355,7 @@ function openEditVacation() {
                           }}
                           style={{
                             padding: "0 14px", borderRadius: 8, border: "1px solid rgba(56,189,248,0.25)",
-                            background: "rgba(14,165,233,0.10)", color: "#7dd3fc",
+                            background: "rgba(14,165,233,0.10)", color: "#1D6FB8",
                             fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
                           }}
                         >
@@ -3854,7 +3916,7 @@ function openEditVacation() {
           const { type, employee, year } = selectedDateEvent
           const isBirthday = type === "birthday"
           const emoji = isBirthday ? "🎂" : "🎉"
-          const color = isBirthday ? "#f59e0b" : "#14b8a6"
+          const color = isBirthday ? "#B8800E" : "#0E857D"
           const nombre = employeeDisplayName(employee)
 
           let subtitle = ""
@@ -3882,8 +3944,8 @@ function openEditVacation() {
                   <div style={formModalColumnStyle}>
                     <div style={{ padding: "16px", borderRadius: 12, background: `rgba(${isBirthday ? "245,158,11" : "20,184,166"},0.08)`, border: `1px solid rgba(${isBirthday ? "245,158,11" : "20,184,166"},0.2)`, textAlign: "center" }}>
                       <p style={{ margin: 0, fontSize: 32 }}>{emoji}</p>
-                      <p style={{ margin: "8px 0 4px", color: "#f8fafc", fontSize: 18, fontWeight: 700 }}>{nombre}</p>
-                      {employee.puesto && <p style={{ margin: 0, color: "#94a3b8", fontSize: 13 }}>{employee.puesto}</p>}
+                      <p style={{ margin: "8px 0 4px", color: "#141414", fontSize: 18, fontWeight: 700 }}>{nombre}</p>
+                      {employee.puesto && <p style={{ margin: 0, color: "#6B6B6B", fontSize: 13 }}>{employee.puesto}</p>}
                       <p style={{ margin: "12px 0 0", color, fontSize: 15, fontWeight: 600 }}>{subtitle}</p>
                     </div>
                   </div>
@@ -3960,7 +4022,7 @@ function openEditVacation() {
                           borderRadius: 8,
                           background: "rgba(8,145,178,0.12)",
                           border: "1px solid rgba(8,145,178,0.30)",
-                          color: "#67e8f9",
+                          color: "#0E7490",
                           fontSize: 13,
                           fontWeight: 600,
                           textDecoration: "none",
@@ -3992,7 +4054,7 @@ function openEditVacation() {
                           borderRadius: 8,
                           background: "rgba(16,185,129,0.12)",
                           border: "1px solid rgba(16,185,129,0.30)",
-                          color: "#6ee7b7",
+                          color: "#1F7A4D",
                           fontSize: 13,
                           fontWeight: 600,
                           textDecoration: "none",
@@ -4029,13 +4091,13 @@ function openEditVacation() {
                                 borderRadius: 6,
                                 background: "rgba(8,145,178,0.14)",
                                 border: "1px solid rgba(8,145,178,0.28)",
-                                color: "#f8fafc",
+                                color: "#141414",
                                 fontSize: 12,
                                 fontWeight: 600,
                               }}
                             >
                               {employeeDisplayName(emp)}
-                              <span style={{ color: "#67e8f9", fontWeight: 500 }}>{emp.puesto}</span>
+                              <span style={{ color: "#0E7490", fontWeight: 500 }}>{emp.puesto}</span>
                             </span>
                           )
                         })}
@@ -4060,9 +4122,9 @@ function openEditVacation() {
                               gap: 6,
                               padding: "4px 8px",
                               borderRadius: 6,
-                              background: "rgba(148,163,184,0.14)",
-                              border: "1px solid rgba(148,163,184,0.28)",
-                              color: "#f8fafc",
+                              background: "rgba(0,0,0,0.06)",
+                              border: "1px solid rgba(0,0,0,0.19)",
+                              color: "#141414",
                               fontSize: 12,
                               fontWeight: 600,
                             }}
@@ -4141,8 +4203,8 @@ function openEditVacation() {
                 <button onClick={() => { setPersonalDetailsOpen(false); setSelectedPersonal(null) }} style={formModalCloseStyle} aria-label="Cerrar">×</button>
               </div>
               <div style={formModalBodyStyle}>
-                <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(100,116,139,0.12)", border: "1px solid rgba(148,163,184,0.25)" }}>
-                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: 13 }}>🔒 Evento personal: solo tú lo ves.</p>
+                <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.17)" }}>
+                  <p style={{ margin: 0, color: "#3F3F3F", fontSize: 13 }}>🔒 Evento personal: solo tú lo ves.</p>
                 </div>
                 {selectedPersonal.notas && (
                   <FormModalPreviewField label="Notas" value={selectedPersonal.notas} multiline />
@@ -4178,10 +4240,10 @@ function openEditVacation() {
               <div style={formModalBodyStyle}>
                 <div style={{ padding: "16px", borderRadius: 12, background: "rgba(219,39,119,0.08)", border: "1px solid rgba(219,39,119,0.2)", textAlign: "center" }}>
                   <p style={{ margin: 0, fontSize: 32 }}>🎭</p>
-                  <p style={{ margin: "8px 0 4px", color: "#f8fafc", fontSize: 17, fontWeight: 700 }}>
+                  <p style={{ margin: "8px 0 4px", color: "#141414", fontSize: 17, fontWeight: 700 }}>
                     {selectedEnsayo.titulo || "Ensayo de la obra"}
                   </p>
-                  <p style={{ margin: 0, color: "#f9a8d4", fontSize: 14, fontWeight: 600 }}>
+                  <p style={{ margin: 0, color: "#C93F5D", fontSize: 14, fontWeight: 600 }}>
                     {selectedEnsayo.all_day || !selectedEnsayo.hora_inicio
                       ? "Todo el día"
                       : `${selectedEnsayo.hora_inicio}${selectedEnsayo.hora_fin ? ` – ${selectedEnsayo.hora_fin}` : ""} hrs`}
@@ -4227,21 +4289,19 @@ function openEditVacation() {
                 }}
               >
                 <div>
-                  <h2 style={formModalTitleStyle}>
-                    {statusEmoji(selectedShoot.status)} {selectedShoot.title}
-                  </h2>
+                  <p style={{ ...formModalMetaStyle, margin: "0 0 2px" }}>
+                    {selectedShoot.client || "Sin cliente"}
+                  </p>
+                  <h2 style={formModalTitleStyle}>{selectedShoot.title}</h2>
                   <p style={formModalMetaStyle}>
-                    {selectedShoot.client || "Sin cliente"} ·{" "}
-                    {allProjects.find((item) => item.id === selectedShoot.project_id)
-                      ? allSubfolders.find(
-                          (subfolder) =>
-                            subfolder.id ===
-                            allProjects.find(
-                              (project) => project.id === selectedShoot.project_id
-                            )?.subfolder_id
-                        )?.name || "Sin subcarpeta"
-                      : "Sin subcarpeta"}{" "}
-                    · {selectedShoot.project || "Sin proyecto"}
+                    {[
+                      allSubfolders.find(
+                        (subfolder) =>
+                          subfolder.id ===
+                          allProjects.find((project) => project.id === selectedShoot.project_id)?.subfolder_id
+                      )?.name,
+                      selectedShoot.project,
+                    ].filter(Boolean).join(" / ") || "Sin proyecto"}
                   </p>
                 </div>
 
@@ -4255,6 +4315,70 @@ function openEditVacation() {
               </div>
 
               <div style={formModalBodyStyle}>
+                {/* Horarios del llamado: la hora general manda, en grande */}
+                {(() => {
+                  const inicio = selectedShoot.all_day ? "" : String(selectedShoot.start_time || "").slice(11, 16)
+                  const fin = selectedShoot.all_day ? "" : String(selectedShoot.end_time || "").slice(11, 16)
+                  const celdas = [
+                    ...(selectedShoot.horario_avanzada ? [{ label: "Avanzada Retro", value: String(selectedShoot.horario_avanzada) }] : []),
+                    ...(fin ? [{ label: "Fin estimado", value: fin }] : []),
+                  ]
+                  return (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: isMobile ? "1fr" : ["1.3fr", ...celdas.map(() => "1fr")].join(" "),
+                        border: "1px solid #E2E2E2",
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div style={{ background: "#131313", padding: "14px 16px 15px" }}>
+                        <div style={{ fontSize: 12.5, color: "#A3A3A3" }}>Llamado general</div>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: inicio ? (isMobile ? 44 : 52) : 28,
+                            lineHeight: 0.95,
+                            fontStretch: "64%",
+                            fontWeight: 760,
+                            color: "#FFFFFF",
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
+                          {inicio || "Todo el día"}
+                        </div>
+                      </div>
+                      {celdas.map((c) => (
+                        <div
+                          key={c.label}
+                          style={{
+                            padding: "14px 16px 15px",
+                            borderLeft: isMobile ? "none" : "1px solid #E2E2E2",
+                            borderTop: isMobile ? "1px solid #E2E2E2" : "none",
+                          }}
+                        >
+                          <div style={{ fontSize: 12.5, color: "#595959" }}>{c.label}</div>
+                          <div
+                            style={{
+                              marginTop: 10,
+                              fontSize: 30,
+                              lineHeight: 1,
+                              fontStretch: "68%",
+                              fontWeight: 650,
+                              color: "#141414",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {c.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+
                 <div
                   style={{
                     ...formModalColumnsStyle,
@@ -4302,13 +4426,6 @@ function openEditVacation() {
                       label="Fechas"
                       value={formatShootSchedule(selectedShoot)}
                     />
-
-                    {selectedShoot.horario_avanzada && (
-                      <FormModalPreviewField
-                        label="Horario Avanzada (Retro)"
-                        value={selectedShoot.horario_avanzada}
-                      />
-                    )}
 
                     <div style={formModalFieldStyle}>
                       <span style={formModalLabelStyle}>
@@ -4408,17 +4525,17 @@ function openEditVacation() {
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 1000001,
-            background: "rgba(2,6,23,0.72)",
+            background: "rgba(17,17,17,0.32)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-              border: "1px solid rgba(148,163,184,0.15)",
+              background: "#FFFFFF",
+              border: "1px solid rgba(0,0,0,0.11)",
               borderRadius: 16,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
               width: 320,
               overflow: "hidden",
             }}
@@ -4426,26 +4543,26 @@ function openEditVacation() {
             {/* Header */}
             <div style={{
               padding: "16px 18px 12px",
-              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <div>
-                <p style={{ color: "#7d8ca3", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 3 }}>
+                <p style={{ color: "#737373", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
                   Duplicar llamado
                 </p>
-                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>
+                <p style={{ color: "#262626", fontSize: 14, fontWeight: 600 }}>
                   {selectedShoot.title}
                 </p>
               </div>
               <button
                 onClick={() => { setShowDupePicker(false); setDupeDate("") }}
-                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#737373", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
 
             {/* Body */}
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#94a3b8", fontSize: 12, marginBottom: 10 }}>
+              <p style={{ color: "#6B6B6B", fontSize: 12, marginBottom: 10 }}>
                 ¿En qué fecha quieres colocar el duplicado?
               </p>
               <input
@@ -4456,10 +4573,10 @@ function openEditVacation() {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  background: "rgba(15,23,42,0.6)",
-                  border: "1px solid rgba(148,163,184,0.20)",
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(0,0,0,0.14)",
                   borderRadius: 10,
-                  color: "#e2e8f0",
+                  color: "#262626",
                   fontSize: 15,
                   fontWeight: 500,
                   cursor: "pointer",
@@ -4468,7 +4585,7 @@ function openEditVacation() {
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter" && dupeDate) duplicateShoot() }}
               />
-              <p style={{ color: "#6b7c93", fontSize: 11, marginTop: 8 }}>
+              <p style={{ color: "#858585", fontSize: 11, marginTop: 8 }}>
                 Se copiará el llamado completo: equipo, recursos y todas las notas.
               </p>
             </div>
@@ -4476,7 +4593,7 @@ function openEditVacation() {
             {/* Footer */}
             <div style={{
               padding: "12px 18px",
-              borderTop: "1px solid rgba(148,163,184,0.10)",
+              borderTop: "1px solid rgba(0,0,0,0.08)",
               display: "flex", gap: 8, justifyContent: "flex-end",
             }}>
               <button
@@ -4506,41 +4623,41 @@ function openEditVacation() {
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 1000002,
-            background: "rgba(2,6,23,0.80)",
+            background: "rgba(17,17,17,0.32)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-              border: "1px solid rgba(148,163,184,0.15)",
+              background: "#FFFFFF",
+              border: "1px solid rgba(0,0,0,0.11)",
               borderRadius: 16,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
               width: 340,
               overflow: "hidden",
             }}
           >
             <div style={{
               padding: "16px 18px 12px",
-              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <div>
-                <p style={{ color: "#34d399", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                <p style={{ color: "#1F8A55", fontSize: 10, fontWeight: 700, margin: 0 }}>
                   Nueva subcarpeta
                 </p>
-                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                <p style={{ color: "#262626", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
                   Agregar a {allClients.find((c) => c.id === clientId)?.name || "cliente"}
                 </p>
               </div>
               <button
                 onClick={() => setShowAddSubfolder(false)}
-                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#737373", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#737373", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
                 Nombre de la subcarpeta
               </p>
               <input
@@ -4553,10 +4670,10 @@ function openEditVacation() {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  background: "rgba(15,23,42,0.6)",
-                  border: "1px solid rgba(148,163,184,0.20)",
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(0,0,0,0.14)",
                   borderRadius: 10,
-                  color: "#e2e8f0",
+                  color: "#262626",
                   fontSize: 14,
                   boxSizing: "border-box",
                   outline: "none",
@@ -4565,7 +4682,7 @@ function openEditVacation() {
             </div>
             <div style={{
               padding: "12px 18px",
-              borderTop: "1px solid rgba(148,163,184,0.10)",
+              borderTop: "1px solid rgba(0,0,0,0.08)",
               display: "flex", gap: 8, justifyContent: "flex-end",
             }}>
               <button onClick={() => setShowAddSubfolder(false)} style={formModalSecondaryButtonStyle}>
@@ -4592,41 +4709,41 @@ function openEditVacation() {
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 1000002,
-            background: "rgba(2,6,23,0.80)",
+            background: "rgba(17,17,17,0.32)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-              border: "1px solid rgba(148,163,184,0.15)",
+              background: "#FFFFFF",
+              border: "1px solid rgba(0,0,0,0.11)",
               borderRadius: 16,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
               width: 340,
               overflow: "hidden",
             }}
           >
             <div style={{
               padding: "16px 18px 12px",
-              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <div>
-                <p style={{ color: "#60a5fa", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                <p style={{ color: "#1D6FB8", fontSize: 10, fontWeight: 700, margin: 0 }}>
                   Nuevo proyecto
                 </p>
-                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                <p style={{ color: "#262626", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
                   En {allSubfolders.find((s) => s.id === subfolderId)?.name || "subcarpeta"}
                 </p>
               </div>
               <button
                 onClick={() => setShowAddProject(false)}
-                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#737373", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#737373", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
                 Nombre del proyecto
               </p>
               <input
@@ -4639,10 +4756,10 @@ function openEditVacation() {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  background: "rgba(15,23,42,0.6)",
-                  border: "1px solid rgba(148,163,184,0.20)",
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(0,0,0,0.14)",
                   borderRadius: 10,
-                  color: "#e2e8f0",
+                  color: "#262626",
                   fontSize: 14,
                   boxSizing: "border-box",
                   outline: "none",
@@ -4651,7 +4768,7 @@ function openEditVacation() {
             </div>
             <div style={{
               padding: "12px 18px",
-              borderTop: "1px solid rgba(148,163,184,0.10)",
+              borderTop: "1px solid rgba(0,0,0,0.08)",
               display: "flex", gap: 8, justifyContent: "flex-end",
             }}>
               <button onClick={() => setShowAddProject(false)} style={formModalSecondaryButtonStyle}>
@@ -4678,17 +4795,17 @@ function openEditVacation() {
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 1000002,
-            background: "rgba(2,6,23,0.80)",
+            background: "rgba(17,17,17,0.32)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-              border: "1px solid rgba(148,163,184,0.15)",
+              background: "#FFFFFF",
+              border: "1px solid rgba(0,0,0,0.11)",
               borderRadius: 16,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
               width: 340,
               overflow: "hidden",
             }}
@@ -4696,26 +4813,26 @@ function openEditVacation() {
             {/* Header */}
             <div style={{
               padding: "16px 18px 12px",
-              borderBottom: "1px solid rgba(148,163,184,0.10)",
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <div>
-                <p style={{ color: "#a78bfa", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                <p style={{ color: "#131313", fontSize: 10, fontWeight: 700, margin: 0 }}>
                   Nuevo cliente
                 </p>
-                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                <p style={{ color: "#262626", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
                   Agregar al catálogo
                 </p>
               </div>
               <button
                 onClick={() => setShowAddClient(false)}
-                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
+                style={{ background: "none", border: "none", color: "#737373", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 2px" }}
               >×</button>
             </div>
 
             {/* Body */}
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#737373", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
                 Nombre del cliente
               </p>
               <input
@@ -4728,10 +4845,10 @@ function openEditVacation() {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  background: "rgba(15,23,42,0.6)",
-                  border: "1px solid rgba(148,163,184,0.20)",
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(0,0,0,0.14)",
                   borderRadius: 10,
-                  color: "#e2e8f0",
+                  color: "#262626",
                   fontSize: 14,
                   boxSizing: "border-box",
                   outline: "none",
@@ -4742,7 +4859,7 @@ function openEditVacation() {
             {/* Footer */}
             <div style={{
               padding: "12px 18px",
-              borderTop: "1px solid rgba(148,163,184,0.10)",
+              borderTop: "1px solid rgba(0,0,0,0.08)",
               display: "flex", gap: 8, justifyContent: "flex-end",
             }}>
               <button
@@ -5108,36 +5225,36 @@ function formModalStatusBadgeStyle(status: string): React.CSSProperties {
     fontWeight: 600,
     background: `${color}22`,
     border: `1px solid ${color}44`,
-    color: "#f8fafc",
+    color: "#141414",
   }
 }
 
 function roleBadgeStyle(role?: string): React.CSSProperties {
   const colors: Record<string, { bg: string; border: string; text: string }> = {
     admin: {
-      bg: "rgba(124,58,237,0.18)",
-      border: "rgba(167,139,250,0.28)",
-      text: "#ddd6fe",
+      bg: "rgba(0,0,0,0.05)",
+      border: "rgba(0,0,0,0.12)",
+      text: "#262626",
     },
     editor: {
       bg: "rgba(14,165,233,0.14)",
       border: "rgba(56,189,248,0.24)",
-      text: "#bae6fd",
+      text: "#1D5FA8",
     },
     editor_premium: {
       bg: "rgba(236,72,153,0.14)",
       border: "rgba(236,72,153,0.28)",
-      text: "#fbcfe8",
+      text: "#C93F5D",
     },
     finanzas: {
       bg: "rgba(245,158,11,0.14)",
       border: "rgba(245,158,11,0.28)",
-      text: "#fde68a",
+      text: "#8A5B00",
     },
     viewer: {
-      bg: "rgba(148,163,184,0.12)",
-      border: "rgba(148,163,184,0.22)",
-      text: "#cbd5e1",
+      bg: "rgba(0,0,0,0.05)",
+      border: "rgba(0,0,0,0.15)",
+      text: "#3F3F3F",
     },
   }
 
@@ -5176,11 +5293,11 @@ function statusEmoji(status: string) {
 function getStatusColor(status: string) {
   if (status === "confirmed") return "#16a34a"
 
-  if (status === "cancelled") return "#dc2626"
+  if (status === "cancelled") return "#C2362B"
 
-  if (status === "wrap") return "#64748b"
+  if (status === "wrap") return "#8A8A8A"
 
-  return "#eab308"
+  return "#A86B00"
 }
 
 const appShellStyle: React.CSSProperties = {
@@ -5189,7 +5306,7 @@ const appShellStyle: React.CSSProperties = {
   height: "auto",
   overflow: "visible",
   background: "transparent",
-  color: "#f8fafc",
+  color: "#141414",
 }
 
 const appShellMobileStyle: React.CSSProperties = {
@@ -5212,7 +5329,7 @@ const mainMobileStyle: React.CSSProperties = {
 }
 
 const pageContainerStyle: React.CSSProperties = {
-  maxWidth: 1180,
+  maxWidth: 1520,
   margin: "0 auto",
   width: "100%",
   display: "flex",
@@ -5239,14 +5356,13 @@ const pageHeaderStyle: React.CSSProperties = {
 const pageTitleStyle: React.CSSProperties = {
   margin: 0,
   lineHeight: 1.1,
-  letterSpacing: -0.5,
-  color: "#f8fafc",
-  fontSize: 22,
+  color: "#141414",
+  fontSize: 28,
 }
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -5255,21 +5371,20 @@ const filtersToolbarStyle: React.CSSProperties = {
   gap: 6,
   alignItems: "center",
   padding: "6px 8px",
-  marginBottom: 8,
-  borderRadius: 12,
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 12px 40px rgba(0,0,0,0.16)",
+  marginBottom: 10,
+  borderRadius: 10,
+  background: "#FFFFFF",
+  border: "1px solid #E2E2E2",
   flexShrink: 0,
 }
 
 const compactFilterSelectStyle: React.CSSProperties = {
   width: "100%",
   padding: "6px 8px",
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 12,
   lineHeight: 1.2,
@@ -5277,12 +5392,8 @@ const compactFilterSelectStyle: React.CSSProperties = {
 }
 
 const calendarPanelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
-  backdropFilter: "blur(16px)",
-  borderRadius: 16,
-  padding: "10px 12px 12px",
+  background: "transparent",
+  padding: 0,
   display: "flex",
   flexDirection: "column",
   overflow: "visible",
@@ -5314,7 +5425,7 @@ const calendarShellMobileStyle: React.CSSProperties = {
 
 const panelHintStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
 }
 
@@ -5325,9 +5436,9 @@ const eventTooltipStyle: React.CSSProperties = {
   maxWidth: 280,
   padding: "10px 12px",
   borderRadius: 10,
-  background: "rgba(15, 23, 42, 0.97)",
-  border: "1px solid rgba(148,163,184,0.22)",
-  boxShadow: "0 14px 40px rgba(0,0,0,0.45)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.15)",
+  boxShadow: "0 14px 40px rgba(0,0,0,0.1)",
   backdropFilter: "blur(8px)",
   pointerEvents: "none",
   animation: "modal-overlay-in 0.12s ease-out both",
@@ -5335,7 +5446,7 @@ const eventTooltipStyle: React.CSSProperties = {
 
 const eventTooltipTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 700,
   lineHeight: 1.3,
@@ -5343,7 +5454,7 @@ const eventTooltipTitleStyle: React.CSSProperties = {
 
 const eventTooltipTimeStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 12,
   fontWeight: 500,
 }
@@ -5351,20 +5462,20 @@ const eventTooltipTimeStyle: React.CSSProperties = {
 const eventTooltipPeopleStyle: React.CSSProperties = {
   marginTop: 6,
   paddingTop: 6,
-  borderTop: "1px solid rgba(148,163,184,0.16)",
+  borderTop: "1px solid rgba(0,0,0,0.12)",
   display: "flex",
   gap: 6,
 }
 
 const eventTooltipPeopleLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 700,
   flexShrink: 0,
 }
 
 const eventTooltipPeopleNamesStyle: React.CSSProperties = {
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 11.5,
   fontWeight: 500,
   lineHeight: 1.35,
@@ -5374,7 +5485,7 @@ const eventTooltipPeopleNamesStyle: React.CSSProperties = {
 const mobileDayListStyle: React.CSSProperties = {
   marginTop: 14,
   paddingTop: 14,
-  borderTop: "1px solid rgba(148,163,184,0.14)",
+  borderTop: "1px solid rgba(0,0,0,0.1)",
 }
 
 const mobileDayListHeaderStyle: React.CSSProperties = {
@@ -5386,7 +5497,7 @@ const mobileDayListHeaderStyle: React.CSSProperties = {
 }
 
 const mobileDayListDateStyle: React.CSSProperties = {
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 14,
   fontWeight: 700,
   textTransform: "capitalize",
@@ -5395,9 +5506,9 @@ const mobileDayListDateStyle: React.CSSProperties = {
 const mobileDayAddBtnStyle: React.CSSProperties = {
   padding: "5px 12px",
   borderRadius: 999,
-  border: "1px solid rgba(167,139,250,0.35)",
-  background: "rgba(124,58,237,0.15)",
-  color: "#a78bfa",
+  border: "1px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#131313",
   fontSize: 12,
   fontWeight: 600,
   cursor: "pointer",
@@ -5406,7 +5517,7 @@ const mobileDayAddBtnStyle: React.CSSProperties = {
 
 const mobileDayEmptyStyle: React.CSSProperties = {
   margin: "6px 0 4px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
@@ -5418,7 +5529,7 @@ const mobileDayEventRowStyle: React.CSSProperties = {
   padding: "9px 6px",
   background: "transparent",
   border: "none",
-  borderBottom: "1px solid rgba(148,163,184,0.08)",
+  borderBottom: "1px solid rgba(0,0,0,0.07)",
   cursor: "pointer",
   textAlign: "left",
 }
@@ -5433,7 +5544,7 @@ const mobileDayEventBarStyle: React.CSSProperties = {
 
 const mobileDayEventTitleStyle: React.CSSProperties = {
   flex: 1,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 14,
   fontWeight: 600,
   lineHeight: 1.3,
@@ -5442,7 +5553,7 @@ const mobileDayEventTitleStyle: React.CSSProperties = {
 }
 
 const mobileDayEventTimeStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   fontWeight: 500,
   whiteSpace: "nowrap",
@@ -5452,8 +5563,8 @@ const mobileDayEventTimeStyle: React.CSSProperties = {
 const ghostButtonStyle: React.CSSProperties = {
   padding: "6px 10px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -5466,27 +5577,25 @@ const ghostButtonStyle: React.CSSProperties = {
 const stackedMonthBlockStyle: React.CSSProperties = {
   marginTop: 34,
   paddingTop: 28,
-  borderTop: "2px solid rgba(167,139,250,0.22)",
+  borderTop: "2px solid rgba(0,0,0,0.12)",
 }
 
 // Banda del mes, en el mismo idioma visual que las cabeceras de sección de Matriz
 const stackedMonthTitleStyle: React.CSSProperties = {
   margin: "0 0 14px",
   padding: "10px 16px",
-  background: "linear-gradient(90deg, rgba(124,58,237,0.32), rgba(30,58,138,0.12), transparent)",
-  borderLeft: "3px solid #a78bfa",
+  background: "linear-gradient(90deg, rgba(0,0,0,0.08), rgba(30,58,138,0.12), transparent)",
+  borderLeft: "3px solid #131313",
   borderRadius: 8,
-  color: "#ede9fe",
+  color: "#FFFFFF",
   fontSize: 14,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 1.8,
 }
 
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.72)",
+  background: "rgba(17,17,17,0.32)",
   zIndex: 999999,
   display: "flex",
   alignItems: "center",
@@ -5496,7 +5605,7 @@ const overlayStyle: React.CSSProperties = {
 
 const peekOverlayStyle: React.CSSProperties = {
   ...overlayStyle,
-  background: "rgba(0,0,0,0.16)",
+  background: "#FFFFFF",
   pointerEvents: "none",
 }
 
@@ -5504,12 +5613,12 @@ const modalStyle: React.CSSProperties = {
   maxWidth: "calc(100vw - 32px)",
   maxHeight: "92vh",
   overflowY: "auto",
-  background: "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   borderRadius: 24,
   padding: 24,
-  border: "1px solid rgba(148,163,184,0.18)",
-  boxShadow: "0 30px 120px rgba(0,0,0,0.62)",
+  border: "1px solid rgba(0,0,0,0.13)",
+  boxShadow: "0 30px 120px rgba(0,0,0,0.14)",
 }
 
 const modalHeaderStyle: React.CSSProperties = {
@@ -5530,30 +5639,28 @@ const iconButtonStyle: React.CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: 14,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(255,255,255,0.08)",
-  color: "white",
+  border: "1px solid rgba(0,0,0,0.14)",
+  background: "#F5F5F5",
+  color: "#141414",
   fontSize: 24,
   cursor: "pointer",
 }
 
 const sectionTitleStyle: React.CSSProperties = {
   margin: "24px 0 8px",
-  color: "#c4b5fd",
+  color: "#3F3F3F",
   fontSize: 13,
   fontWeight: 800,
-  textTransform: "uppercase",
-  letterSpacing: 1,
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: 13,
   marginTop: 8,
-  border: "1px solid rgba(148,163,184,0.28)",
+  border: "1px solid rgba(0,0,0,0.19)",
   borderRadius: 12,
-  background: "rgba(15,23,42,0.88)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
 }
 
@@ -5565,7 +5672,7 @@ const textareaStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   marginTop: 14,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 13,
 }
 
@@ -5573,8 +5680,8 @@ const checkRowStyle: React.CSSProperties = {
   marginTop: 18,
   padding: 12,
   borderRadius: 14,
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
 }
 
 const stickyActionsStyle: React.CSSProperties = {
@@ -5582,30 +5689,30 @@ const stickyActionsStyle: React.CSSProperties = {
   bottom: -24,
   margin: "24px -24px -24px",
   padding: 18,
-  background: "linear-gradient(180deg, rgba(2,6,23,0.80), rgba(2,6,23,0.98))",
-  borderTop: "1px solid rgba(148,163,184,0.16)",
+  background: "#FFFFFF",
+  borderTop: "1px solid rgba(0,0,0,0.12)",
 }
 
 const primaryButton: React.CSSProperties = {
   marginTop: 0,
   width: "100%",
   padding: 14,
-  background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 14,
   cursor: "pointer",
   fontWeight: 800,
-  boxShadow: "0 16px 40px rgba(124,58,237,0.28)",
+  boxShadow: "0 16px 40px rgba(0,0,0,0.06)",
 }
 
 const secondaryButton: React.CSSProperties = {
   marginTop: 10,
   width: "100%",
   padding: 13,
-  background: "rgba(255,255,255,0.08)",
-  color: "#f8fafc",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#F5F5F5",
+  color: "#141414",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 14,
   cursor: "pointer",
 }
@@ -5619,28 +5726,28 @@ const detailGridStyle: React.CSSProperties = {
 const detailCardStyle: React.CSSProperties = {
   borderRadius: 16,
   padding: 12,
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
 }
 
 const detailLabelStyle: React.CSSProperties = {
   margin: 0,
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
 }
 
 const detailValueStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontWeight: 700,
 }
 
 const noteBoxStyle: React.CSSProperties = {
   padding: 12,
   borderRadius: 14,
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  color: "#cbd5e1",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
+  color: "#3F3F3F",
 }
 
 const resourceListStyle: React.CSSProperties = {
@@ -5654,9 +5761,9 @@ const resourceListStyle: React.CSSProperties = {
 const resourcePillStyle: React.CSSProperties = {
   padding: "8px 10px",
   borderRadius: 999,
-  background: "rgba(124,58,237,0.24)",
-  border: "1px solid rgba(167,139,250,0.24)",
-  color: "#ddd6fe",
+  background: "rgba(0,0,0,0.08)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#262626",
 }
 
 const formModalStyle: React.CSSProperties = {
@@ -5664,10 +5771,10 @@ const formModalStyle: React.CSSProperties = {
   flexDirection: "column",
   maxWidth: "calc(100vw - 28px)",
   overflow: "hidden",
-  background: "rgba(15, 23, 42, 0.96)",
-  color: "#f8fafc",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset",
+  background: "#FFFFFF",
+  color: "#141414",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 24px 80px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0) inset",
   backdropFilter: "blur(20px)",
 }
 
@@ -5677,7 +5784,7 @@ const formModalHeaderStyle: React.CSSProperties = {
   alignItems: "flex-start",
   gap: 12,
   padding: "14px 16px 12px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const formModalTitleStyle: React.CSSProperties = {
@@ -5690,7 +5797,7 @@ const formModalTitleStyle: React.CSSProperties = {
 
 const formModalMetaStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -5698,9 +5805,9 @@ const formModalCloseStyle: React.CSSProperties = {
   width: 28,
   height: 28,
   borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.14)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   fontSize: 18,
   lineHeight: 1,
   cursor: "pointer",
@@ -5732,11 +5839,9 @@ const formModalColumnStyle: React.CSSProperties = {
 
 const formModalSectionLabelStyle: React.CSSProperties = {
   margin: "0 0 2px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const formModalFieldStyle: React.CSSProperties = {
@@ -5747,7 +5852,7 @@ const formModalFieldStyle: React.CSSProperties = {
 
 const formModalLabelStyle: React.CSSProperties = {
   margin: 0,
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -5761,10 +5866,10 @@ const formModalRowStyle: React.CSSProperties = {
 const formModalInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "7px 10px",
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -5775,7 +5880,7 @@ const formModalSelectStyle: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
   backgroundImage:
-    "linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%)",
+    "linear-gradient(45deg, transparent 50%, #6B6B6B 50%), linear-gradient(135deg, #6B6B6B 50%, transparent 50%)",
   backgroundPosition: "calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px)",
   backgroundSize: "5px 5px, 5px 5px",
   backgroundRepeat: "no-repeat",
@@ -5784,13 +5889,13 @@ const formModalSelectStyle: React.CSSProperties = {
 
 const formModalHintStyle: React.CSSProperties = {
   margin: "0 0 4px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
   lineHeight: 1.45,
 }
 
 const formModalLinkStyle: React.CSSProperties = {
-  color: "#a78bfa",
+  color: "#131313",
   textDecoration: "none",
   fontWeight: 600,
 }
@@ -5814,7 +5919,7 @@ const formModalInlineCheckStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 12,
   cursor: "pointer",
   minHeight: 32,
@@ -5825,14 +5930,14 @@ const formModalColorInputStyle: React.CSSProperties = {
   height: 32,
   padding: 2,
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(2,6,23,0.55)",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
   cursor: "pointer",
 }
 
 const formModalNotesBlockStyle: React.CSSProperties = {
   paddingTop: 12,
-  borderTop: "1px solid rgba(148,163,184,0.08)",
+  borderTop: "1px solid rgba(0,0,0,0.07)",
 }
 
 const formModalNotesGridStyle: React.CSSProperties = {
@@ -5849,27 +5954,27 @@ const formModalFooterStyle: React.CSSProperties = {
   flexWrap: "wrap",
   gap: 8,
   padding: "12px 16px",
-  borderTop: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(2,6,23,0.72)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
 }
 
 const formModalPrimaryButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
 }
 
 const formModalSecondaryButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -5879,7 +5984,7 @@ const formModalSecondaryButtonStyle: React.CSSProperties = {
 const formModalWhatsAppButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
   background: "rgba(37, 211, 102, 0.14)",
-  color: "#bbf7d0",
+  color: "#1F7A4D",
   border: "1px solid rgba(37, 211, 102, 0.28)",
   borderRadius: 8,
   cursor: "pointer",
@@ -5890,7 +5995,7 @@ const formModalWhatsAppButtonStyle: React.CSSProperties = {
 const formModalDuplicateButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
   background: "rgba(56,189,248,0.10)",
-  color: "#7dd3fc",
+  color: "#1D6FB8",
   border: "1px solid rgba(56,189,248,0.25)",
   borderRadius: 8,
   cursor: "pointer",
@@ -5901,10 +6006,10 @@ const formModalDuplicateButtonStyle: React.CSSProperties = {
 const formModalValueStyle: React.CSSProperties = {
   width: "100%",
   padding: "7px 10px",
-  border: "1px solid rgba(148,163,184,0.10)",
+  border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.35)",
-  color: "#e2e8f0",
+  background: "#FFFFFF",
+  color: "#262626",
   fontSize: 13,
   lineHeight: 1.35,
   minHeight: 32,
@@ -5931,15 +6036,15 @@ const formModalPillStyle: React.CSSProperties = {
   gap: 6,
   padding: "4px 8px",
   borderRadius: 6,
-  background: "rgba(124,58,237,0.16)",
-  border: "1px solid rgba(167,139,250,0.22)",
-  color: "#f8fafc",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#141414",
   fontSize: 12,
   fontWeight: 600,
 }
 
 const formModalPillMetaStyle: React.CSSProperties = {
-  color: "#a78bfa",
+  color: "#131313",
   fontWeight: 500,
 }
 
@@ -5949,9 +6054,9 @@ const formModalVacationPillStyle: React.CSSProperties = {
   gap: 6,
   padding: "4px 8px",
   borderRadius: 6,
-  background: "rgba(147,51,234,0.18)",
-  border: "1px solid rgba(167,139,250,0.28)",
-  color: "#f8fafc",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#141414",
   fontSize: 12,
   fontWeight: 600,
 }
@@ -5962,8 +6067,8 @@ const entryModeSwitchWrapStyle: React.CSSProperties = {
   gap: 8,
   padding: 4,
   borderRadius: 10,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.12)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.09)",
   marginBottom: 14,
 }
 
@@ -5974,23 +6079,23 @@ const entryModeSwitchButtonStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid transparent",
   background: "transparent",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
 }
 
 const entryModeSwitchActiveStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.18)",
-  border: "1px solid rgba(167,139,250,0.24)",
-  color: "#f8fafc",
-  boxShadow: "inset 0 0 0 1px rgba(167,139,250,0.08)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#141414",
+  boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
 }
 
 const formModalDangerButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #dc2626, #991b1b)",
-  color: "white",
+  background: "#C2362B",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
@@ -6004,10 +6109,10 @@ const compactModalStyle: React.CSSProperties = {
   maxHeight: "92vh",
   overflowY: "auto",
   background:
-    "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))",
-  color: "#f8fafc",
-  border: "1px solid rgba(148,163,184,0.18)",
-  boxShadow: "0 40px 140px rgba(0,0,0,0.7)",
+    "#FFFFFF",
+  color: "#141414",
+  border: "1px solid rgba(0,0,0,0.13)",
+  boxShadow: "0 40px 140px rgba(0,0,0,0.14)",
   backdropFilter: "blur(24px)",
   padding: 18,
 }
@@ -6019,7 +6124,7 @@ const compactHeaderStyle: React.CSSProperties = {
   alignItems: "flex-start",
   paddingBottom: 14,
   marginBottom: 14,
-  borderBottom: "1px solid rgba(148,163,184,0.14)",
+  borderBottom: "1px solid rgba(0,0,0,0.1)",
 }
 
 const compactTitleStyle: React.CSSProperties = {
@@ -6031,7 +6136,7 @@ const compactTitleStyle: React.CSSProperties = {
 
 const compactMutedStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 13,
 }
 
@@ -6039,9 +6144,9 @@ const compactCloseButtonStyle: React.CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.07)",
-  color: "white",
+  border: "1px solid rgba(0,0,0,0.14)",
+  background: "#F5F5F5",
+  color: "#141414",
   fontSize: 22,
   cursor: "pointer",
 }
@@ -6058,22 +6163,20 @@ const compactGridStyle: React.CSSProperties = {
 }
 
 const compactCardStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.045)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 18,
   padding: 14,
-  boxShadow: "0 18px 50px rgba(0,0,0,0.18)",
+  boxShadow: "0 18px 50px rgba(0,0,0,0.04)",
 }
 
 const compactSectionHeaderStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  color: "#c4b5fd",
+  color: "#3F3F3F",
   fontSize: 12,
   fontWeight: 800,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   marginBottom: 10,
 }
 
@@ -6081,10 +6184,10 @@ const compactInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "11px 12px",
   marginTop: 0,
-  border: "1px solid rgba(148,163,184,0.18)",
+  border: "1px solid rgba(0,0,0,0.13)",
   borderRadius: 14,
-  background: "rgba(2,6,23,0.62)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 14,
 }
@@ -6103,19 +6206,17 @@ const compactCheckStyle: React.CSSProperties = {
   marginTop: 10,
   padding: "10px 12px",
   borderRadius: 14,
-  background: "rgba(255,255,255,0.045)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  color: "#cbd5e1",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
+  color: "#3F3F3F",
   fontSize: 13,
 }
 
 const compactFieldLabelStyle: React.CSSProperties = {
   margin: "10px 0 6px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
 }
 
 const compactFooterStyle: React.CSSProperties = {
@@ -6126,30 +6227,30 @@ const compactFooterStyle: React.CSSProperties = {
   display: "grid",
   gap: 10,
   background:
-    "linear-gradient(180deg, rgba(2,6,23,0.72), rgba(2,6,23,0.98))",
-  borderTop: "1px solid rgba(148,163,184,0.14)",
+    "#FFFFFF",
+  borderTop: "1px solid rgba(0,0,0,0.1)",
   backdropFilter: "blur(18px)",
 }
 
 const compactPrimaryButtonStyle: React.CSSProperties = {
   width: "100%",
   padding: 13,
-  background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 16,
   cursor: "pointer",
   fontWeight: 800,
   fontSize: 14,
-  boxShadow: "0 16px 40px rgba(124,58,237,0.28)",
+  boxShadow: "0 16px 40px rgba(0,0,0,0.06)",
 }
 
 const compactSecondaryButtonStyle: React.CSSProperties = {
   width: "100%",
   padding: 12,
-  background: "rgba(255,255,255,0.08)",
-  color: "#f8fafc",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#F5F5F5",
+  color: "#141414",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 16,
   cursor: "pointer",
   fontWeight: 700,
@@ -6165,8 +6266,8 @@ const compactProducerCardStyle: React.CSSProperties = {
   borderRadius: 20,
   padding: 16,
   background:
-    "linear-gradient(135deg, rgba(124,58,237,0.22), rgba(14,165,233,0.12))",
-  border: "1px solid rgba(167,139,250,0.24)",
+    "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const compactProducerNameStyle: React.CSSProperties = {
@@ -6201,8 +6302,8 @@ const compactMiniGridStyle: React.CSSProperties = {
 const compactDetailCardStyle: React.CSSProperties = {
   borderRadius: 16,
   padding: 12,
-  background: "rgba(255,255,255,0.045)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   display: "grid",
   gap: 5,
 }
@@ -6216,8 +6317,8 @@ const compactResourceGridStyle: React.CSSProperties = {
 const compactResourceCardStyle: React.CSSProperties = {
   borderRadius: 16,
   padding: 12,
-  background: "rgba(124,58,237,0.16)",
-  border: "1px solid rgba(167,139,250,0.22)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
   display: "grid",
   gap: 4,
 }
@@ -6230,21 +6331,22 @@ const compactNotesGridStyle: React.CSSProperties = {
 const compactNoteStyle: React.CSSProperties = {
   borderRadius: 16,
   padding: 12,
-  background: "rgba(255,255,255,0.045)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
 }
 
 const importIcsBtnStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  padding: "6px 13px",
-  borderRadius: 9,
-  border: "1px solid rgba(8,145,178,0.35)",
-  background: "rgba(8,145,178,0.10)",
-  color: "#67e8f9",
-  fontSize: 12,
-  fontWeight: 600,
+  height: 34,
+  padding: "0 12px",
+  borderRadius: 7,
+  border: "1px solid #E2E2E2",
+  background: "#FFFFFF",
+  color: "#141414",
+  fontSize: 13.5,
+  fontWeight: 500,
   cursor: "pointer",
   whiteSpace: "nowrap",
 }

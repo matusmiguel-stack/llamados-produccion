@@ -88,7 +88,7 @@ export function EditarTomas(props: {
               display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10,
             }}
           >
-            <legend style={{ padding: "0 6px", color: C.violetaClaro, fontSize: 11, fontWeight: 700, letterSpacing: 0.9, textTransform: "uppercase" }}>
+            <legend style={{ padding: "0 6px", color: C.violetaClaro, fontSize: 11, fontWeight: 700,}}>
               Emplazamiento {i + 1}
             </legend>
             <label style={{ gridColumn: "1 / -1" }}>
@@ -137,7 +137,7 @@ export function EditarTomas(props: {
             {filas.length > 1 && (
               <button
                 type="button"
-                style={{ ...botonChico, gridColumn: "1 / -1", justifySelf: "start", color: "#fca5a5" }}
+                style={{ ...botonChico, gridColumn: "1 / -1", justifySelf: "start", color: "#B42318" }}
                 onClick={() => setFilas((prev) => prev.filter((_, k) => k !== i))}
               >
                 Quitar emplazamiento {i + 1}

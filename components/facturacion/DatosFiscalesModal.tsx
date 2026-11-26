@@ -65,14 +65,14 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
     <div style={fOverlay}>
       <div style={fModal(620)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>🧾 Datos fiscales</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Datos fiscales</h2>
           <button onClick={onClose} style={fClose}>✕</button>
         </div>
         <div style={{ display: "flex", gap: 6, padding: "12px 24px 0" }}>
           {(["clientes", "empresas"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               ...fBtnSmall,
-              ...(tab === t ? { background: "rgba(124,58,237,0.18)", borderColor: "rgba(167,139,250,0.45)", color: "#c4b5fd" } : {}),
+              ...(tab === t ? { background: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.2)", color: "#3F3F3F" } : {}),
             }}>
               {t === "clientes" ? `Clientes (${receptores.length})` : "Retro Studio / Films"}
             </button>
@@ -80,7 +80,7 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
         </div>
         <div style={fBody}>
           {loading ? (
-            <p style={fNote("#94a3b8")}>Cargando…</p>
+            <p style={fNote("#6B6B6B")}>Cargando…</p>
           ) : tab === "clientes" ? (
             <>
               {editando ? (
@@ -98,9 +98,9 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
                       {importando ? "Leyendo facturas…" : "⬇ Llenar desde facturas anteriores"}
                     </button>
                   </div>
-                  {importRes && <p style={fNote(importRes.startsWith("Error") ? "#f87171" : "#34d399")}>{importRes}</p>}
+                  {importRes && <p style={fNote(importRes.startsWith("Error") ? "#C2362B" : "#1F8A55")}>{importRes}</p>}
                   {visibles.length === 0 ? (
-                    <p style={fNote("#94a3b8")}>
+                    <p style={fNote("#6B6B6B")}>
                       {receptores.length === 0
                         ? "Aún no hay clientes con datos fiscales. Usa “Llenar desde facturas anteriores” para traerlos de las facturas que ya subiste."
                         : "Ningún cliente coincide con la búsqueda."}
@@ -110,10 +110,10 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
                       {visibles.map(r => (
                         <button key={r.id} onClick={() => setEditando(r)} style={{
                           textAlign: "left", padding: "10px 12px", borderRadius: 10, cursor: "pointer",
-                          background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)", color: "#e2e8f0",
+                          background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", color: "#262626",
                         }}>
                           <div style={{ fontSize: 13, fontWeight: 600, overflowWrap: "anywhere" }}>{r.razon_social}</div>
-                          <div style={{ fontSize: 11, color: "#7d8ca3", marginTop: 3, overflowWrap: "anywhere" }}>
+                          <div style={{ fontSize: 11, color: "#737373", marginTop: 3, overflowWrap: "anywhere" }}>
                             <span style={{ fontFamily: "var(--font-mono)" }}>{r.rfc}</span> · {r.regimen_fiscal} {regimenNombre(r.regimen_fiscal)} · C.P. {r.cp}
                             {r.email ? ` · ${r.email}` : ""}
                           </div>
@@ -126,7 +126,7 @@ export function DatosFiscalesModal({ onClose }: { onClose: () => void }) {
             </>
           ) : (
             <>
-              <p style={fNote("#94a3b8")}>
+              <p style={fNote("#6B6B6B")}>
                 Valores que se usan por omisión al timbrar. Se llenan solos con “Llenar desde facturas anteriores”; los puedes ajustar aquí.
               </p>
               {emisores.map(em => <EmisorCard key={em.empresa} emisor={em} onSaved={cargar} />)}
@@ -159,10 +159,10 @@ function EmisorCard({ emisor, onSaved }: { emisor: Emisor; onSaved: () => void }
   }
 
   return (
-    <div style={{ display: "grid", gap: 10, padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)" }}>
+    <div style={{ display: "grid", gap: 10, padding: "14px 16px", borderRadius: 12, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)" }}>
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#f8fafc" }}>{EMPRESA_LABEL[emisor.empresa] || emisor.empresa}</div>
-        <div style={{ fontSize: 11, color: "#7d8ca3", marginTop: 3 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#141414" }}>{EMPRESA_LABEL[emisor.empresa] || emisor.empresa}</div>
+        <div style={{ fontSize: 11, color: "#737373", marginTop: 3 }}>
           {emisor.rfc
             ? <>{emisor.razon_social} · <span style={{ fontFamily: "var(--font-mono)" }}>{emisor.rfc}</span> · Régimen {emisor.regimen_fiscal} · C.P. {emisor.cp}</>
             : "Sin datos todavía (se llenan al leer sus facturas anteriores)"}

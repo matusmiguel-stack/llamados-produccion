@@ -86,7 +86,7 @@ export function PushNotificationManager({ userId }: Props) {
   return (
     <div style={bannerStyle}>
       <span style={{ fontSize: 14 }}>🔔</span>
-      <span style={{ fontSize: 13, color: "#cbd5e1" }}>
+      <span style={{ fontSize: 13, color: "#3F3F3F" }}>
         Activa notificaciones para pagos vencidos y juntas próximas
       </span>
       <button onClick={requestPermission} disabled={loading} style={btnStyle}>
@@ -102,8 +102,8 @@ const bannerStyle: React.CSSProperties = {
   gap: 10,
   padding: "8px 14px",
   borderRadius: 10,
-  background: "rgba(124,58,237,0.10)",
-  border: "1px solid rgba(167,139,250,0.20)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
   marginBottom: 12,
   flexWrap: "wrap",
 }
@@ -113,8 +113,8 @@ const btnStyle: React.CSSProperties = {
   padding: "5px 14px",
   borderRadius: 8,
   border: "none",
-  background: "rgba(124,58,237,0.70)",
-  color: "#fff",
+  background: "#131313",
+  color: "#FFFFFF",
   fontSize: 12,
   fontWeight: 600,
   cursor: "pointer",

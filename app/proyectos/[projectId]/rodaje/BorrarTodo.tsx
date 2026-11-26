@@ -126,7 +126,7 @@ export function BorrarTodo(props: {
           </ul>
         )}
 
-        <p style={{ margin: 0, color: "#fca5a5", fontSize: 13.5, lineHeight: 1.5 }}>
+        <p style={{ margin: 0, color: "#B42318", fontSize: 13.5, lineHeight: 1.5 }}>
           No se puede deshacer.
           {nGuiones > 0 && (
             <span style={{ color: C.tenue }}> Si quieres conservar algo, cancela y descarga antes los PDF.</span>

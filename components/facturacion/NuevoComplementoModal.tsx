@@ -215,10 +215,10 @@ export function NuevoComplementoModal({
 
   const caja: React.CSSProperties = {
     display: "grid", gap: 6, padding: "10px 12px", borderRadius: 10,
-    background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)", fontSize: 12, color: "#94a3b8",
+    background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", fontSize: 12, color: "#6B6B6B",
   }
   const filaMonto = (label: string, valor: string, fuerte = false) => (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, ...(fuerte ? { color: "#f8fafc", fontWeight: 700, fontSize: 13 } : {}) }}>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, ...(fuerte ? { color: "#141414", fontWeight: 700, fontSize: 13 } : {}) }}>
       <span>{label}</span><span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{valor}</span>
     </div>
   )
@@ -227,14 +227,14 @@ export function NuevoComplementoModal({
     <div style={fOverlay}>
       <div style={fModal(620)} onClick={e => e.stopPropagation()}>
         <div style={fHeader}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>🧾 Nuevo complemento de pago</h2>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>🧾 Nuevo complemento de pago</h2>
           <button onClick={onClose} disabled={emitiendo} style={fClose}>✕</button>
         </div>
         <div style={fBody}>
           {!fija && (
             <FField label="Factura PPD *">
               {candidatas === null ? (
-                <p style={fNote("#94a3b8")}>Cargando facturas…</p>
+                <p style={fNote("#6B6B6B")}>Cargando facturas…</p>
               ) : (
                 <>
                   <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar por folio, cliente o proyecto" style={fInput} />
@@ -246,8 +246,8 @@ export function NuevoComplementoModal({
                       </option>
                     ))}
                   </select>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: "#94a3b8" }}>
-                    <input type="checkbox" checked={verPagadas} onChange={e => setVerPagadas(e.target.checked)} style={{ accentColor: "#7c3aed" }} />
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: "#6B6B6B" }}>
+                    <input type="checkbox" checked={verPagadas} onChange={e => setVerPagadas(e.target.checked)} style={{ accentColor: "#131313" }} />
                     Mostrar también las que ya están pagadas por completo
                   </label>
                 </>
@@ -255,9 +255,9 @@ export function NuevoComplementoModal({
             </FField>
           )}
 
-          {cargandoDetalle && <p style={fNote("#94a3b8")}>Leyendo la factura…</p>}
+          {cargandoDetalle && <p style={fNote("#6B6B6B")}>Leyendo la factura…</p>}
           {errorDetalle && (
-            <p style={{ ...fNote("#fca5a5"), padding: "8px 10px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(248,113,113,0.25)" }}>
+            <p style={{ ...fNote("#B42318"), padding: "8px 10px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(248,113,113,0.25)" }}>
               {errorDetalle}
             </p>
           )}
@@ -265,11 +265,11 @@ export function NuevoComplementoModal({
           {detalle && (
             <>
               <div style={caja}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", overflowWrap: "anywhere" }}>
-                  <span style={{ fontFamily: "var(--font-mono)", color: "#a78bfa" }}>{detalle.factura.numero}</span>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#262626", overflowWrap: "anywhere" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "#131313" }}>{detalle.factura.numero}</span>
                   {" · "}{EMPRESA_LABEL[detalle.factura.empresa] || detalle.factura.empresa} → {detalle.factura.receptor.razon_social}
                 </div>
-                <div style={{ fontSize: 11, color: "#7d8ca3" }}>
+                <div style={{ fontSize: 11, color: "#737373" }}>
                   RFC <span style={{ fontFamily: "var(--font-mono)" }}>{detalle.factura.receptor.rfc}</span>
                   {detalle.factura.fecha ? ` · emitida el ${fechaCorta(detalle.factura.fecha)}` : ""}
                   {detalle.factura.origen === "independiente" ? " · factura independiente" : " · de Ingresos"}
@@ -278,7 +278,7 @@ export function NuevoComplementoModal({
                 {filaMonto(`Ya pagado (${detalle.complementos.length} complemento${detalle.complementos.length === 1 ? "" : "s"})`, money(detalle.pagado))}
                 {filaMonto("Saldo pendiente", money(detalle.saldo), true)}
                 {detalle.complementos.length > 0 && (
-                  <div style={{ display: "grid", gap: 2, marginTop: 4, fontSize: 11, color: "#7d8ca3" }}>
+                  <div style={{ display: "grid", gap: 2, marginTop: 4, fontSize: 11, color: "#737373" }}>
                     {detalle.complementos.map(c => (
                       <span key={c.id}>
                         {c.parcialidad}. {c.numero || "Complemento"} · {fechaCorta(c.fecha_pago)} · {money(Number(c.monto))} · {nombreFormaPago(c.forma_pago)}
@@ -290,15 +290,15 @@ export function NuevoComplementoModal({
               </div>
 
               {pagada ? (
-                <p style={fNote("#4ade80")}>Esta factura ya está pagada por completo con sus complementos; no lleva otro.</p>
+                <p style={fNote("#1F8A55")}>Esta factura ya está pagada por completo con sus complementos; no lleva otro.</p>
               ) : (
                 <>
                   {amb === null ? (
-                    <p style={{ ...fNote("#fbbf24"), padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
+                    <p style={{ ...fNote("#A86B00"), padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
                       Facturapi todavía no está conectado para {EMPRESA_LABEL[detalle.factura.empresa]}; el timbrado fallará hasta que se configure la llave.
                     </p>
                   ) : amb === "pruebas" ? (
-                    <p style={{ ...fNote("#38bdf8"), padding: "8px 10px", borderRadius: 8, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.25)" }}>
+                    <p style={{ ...fNote("#1D6FB8"), padding: "8px 10px", borderRadius: 8, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.25)" }}>
                       Modo pruebas: el complemento se genera pero no es válido ante el SAT.
                     </p>
                   ) : null}
@@ -334,7 +334,7 @@ export function NuevoComplementoModal({
                   <div style={caja}>
                     {filaMonto(`Parcialidad ${detalle.parcialidad} · este pago`, money(montoNum))}
                     {filaMonto("Saldo pendiente después", money(Math.max(saldoDespues, 0)), true)}
-                    {montoNum > detalle.saldo + 0.05 && <span style={{ color: "#fca5a5" }}>El monto es mayor al saldo pendiente.</span>}
+                    {montoNum > detalle.saldo + 0.05 && <span style={{ color: "#B42318" }}>El monto es mayor al saldo pendiente.</span>}
                   </div>
                   <p style={fNote()}>
                     No toca el control de ingresos: si este cobro corresponde a una línea de Ingresos, márcala pagada sin volver a emitir su complemento.

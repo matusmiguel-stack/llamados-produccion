@@ -54,8 +54,11 @@ function accentInsensitivePattern(q: string): string {
 export function GlobalSearch({
   onNavigate,
   onResultHref,
+  tone = "light",
 }: {
   onNavigate?: () => void
+  /** "dark" para la barra lateral grafito; el desplegable de resultados sigue claro. */
+  tone?: "light" | "dark"
   /** Si se pasa, se usa en vez de router.push — ej. para navegar dentro de una pestaña del Escritorio. */
   onResultHref?: (href: string) => void
 }) {
@@ -257,7 +260,8 @@ export function GlobalSearch({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          style={inputStyle}
+          style={tone === "dark" ? { ...inputStyle, ...inputDarkStyle } : inputStyle}
+          className={tone === "dark" ? "search-dark" : undefined}
           aria-label="Buscar clientes y proyectos"
           autoComplete="off"
         />
@@ -455,7 +459,7 @@ const inputWrapStyle: React.CSSProperties = {
 const searchIconStyle: React.CSSProperties = {
   position: "absolute",
   left: 9,
-  color: "#6b7c93",
+  color: "#858585",
   display: "inline-flex",
   pointerEvents: "none",
   flexShrink: 0,
@@ -465,18 +469,27 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "7px 28px 7px 28px",
   borderRadius: 9,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 12,
   outline: "none",
   boxSizing: "border-box",
 }
 
+const inputDarkStyle: React.CSSProperties = {
+  height: 34,
+  borderRadius: 7,
+  border: "1px solid transparent",
+  background: "#242427",
+  color: "#F2F2F2",
+  fontSize: 13,
+}
+
 const spinnerStyle: React.CSSProperties = {
   position: "absolute",
   right: 9,
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 13,
   animation: "spin 1s linear infinite",
   pointerEvents: "none",
@@ -487,7 +500,7 @@ const clearBtnStyle: React.CSSProperties = {
   right: 7,
   background: "none",
   border: "none",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 16,
   cursor: "pointer",
   lineHeight: 1,
@@ -501,10 +514,10 @@ const dropdownStyle: React.CSSProperties = {
   right: 0,
   // Bleed to the right so it's wide enough when sidebar is narrow
   minWidth: 280,
-  background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))",
-  border: "1px solid rgba(148,163,184,0.16)",
+  background: "linear-gradient(160deg, #FFFFFF, #FFFFFF)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 12,
-  boxShadow: "0 20px 60px rgba(0,0,0,0.55)",
+  boxShadow: "0 20px 60px #FFFFFF",
   backdropFilter: "blur(20px)",
   zIndex: 99999,
   overflow: "hidden",
@@ -514,11 +527,9 @@ const dropdownStyle: React.CSSProperties = {
 const groupLabelStyle: React.CSSProperties = {
   margin: 0,
   padding: "4px 12px 4px",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 10,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.7,
 }
 
 const resultRowStyle: React.CSSProperties = {
@@ -536,15 +547,15 @@ const resultRowStyle: React.CSSProperties = {
 }
 
 const resultRowFocusStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.18)",
+  background: "rgba(0,0,0,0.05)",
 }
 
 function resultIconStyle(kind: "client" | "project" | "empleado" | "proveedor"): React.CSSProperties {
   const palette = {
-    client:   { color: "#fbbf24", bg: "rgba(245,158,11,0.12)",   border: "rgba(251,191,36,0.18)" },
-    project:  { color: "#93c5fd", bg: "rgba(59,130,246,0.12)",   border: "rgba(96,165,250,0.18)" },
-    empleado: { color: "#6ee7b7", bg: "rgba(16,185,129,0.12)",   border: "rgba(52,211,153,0.18)" },
-    proveedor:{ color: "#f9a8d4", bg: "rgba(236,72,153,0.10)",   border: "rgba(249,168,212,0.18)" },
+    client:   { color: "#A86B00", bg: "rgba(245,158,11,0.12)",   border: "rgba(251,191,36,0.18)" },
+    project:  { color: "#1D5FA8", bg: "rgba(59,130,246,0.12)",   border: "rgba(96,165,250,0.18)" },
+    empleado: { color: "#1F7A4D", bg: "rgba(16,185,129,0.12)",   border: "rgba(52,211,153,0.18)" },
+    proveedor:{ color: "#C93F5D", bg: "rgba(236,72,153,0.10)",   border: "rgba(249,168,212,0.18)" },
   }[kind]
   return {
     display: "inline-flex",
@@ -568,7 +579,7 @@ const resultBodyStyle: React.CSSProperties = {
 }
 
 const resultNameStyle: React.CSSProperties = {
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
   overflow: "hidden",
@@ -577,7 +588,7 @@ const resultNameStyle: React.CSSProperties = {
 }
 
 const resultMetaStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -585,7 +596,7 @@ const resultMetaStyle: React.CSSProperties = {
 }
 
 const resultArrowStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 13,
   flexShrink: 0,
 }
@@ -593,7 +604,7 @@ const resultArrowStyle: React.CSSProperties = {
 const emptyStyle: React.CSSProperties = {
   margin: 0,
   padding: "14px 12px",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 12,
   textAlign: "center",
 }

@@ -10,7 +10,7 @@ import { SECCIONES_MATRIZ, partirEnLigas } from "../../../lib/matriz-campos"
 // /api/matriz-publica/[token], que valida el token y devuelve solo esa matriz.
 
 function Valor({ texto }: { texto: string }) {
-  if (!texto || !texto.trim()) return <span style={{ color: "#64748b" }}>—</span>
+  if (!texto || !texto.trim()) return <span style={{ color: "#8A8A8A" }}>—</span>
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {texto.split("\n").map((linea, i) =>
@@ -21,7 +21,7 @@ function Valor({ texto }: { texto: string }) {
             {partirEnLigas(linea).map((t, j) =>
               t.esLiga ? (
                 <a key={j} href={t.texto} target="_blank" rel="noreferrer noopener"
-                   style={{ color: "#60a5fa", textDecoration: "underline", wordBreak: "break-all" }}>
+                   style={{ color: "#1D6FB8", textDecoration: "underline", wordBreak: "break-all" }}>
                   {t.texto}
                 </a>
               ) : (
@@ -67,8 +67,8 @@ export default function MatrizPublicaPage() {
     return (
       <div style={centradoStyle}>
         <div style={{ textAlign: "center", maxWidth: 380 }}>
-          <p style={{ margin: 0, fontSize: 17, color: "#f8fafc", fontWeight: 600 }}>{error}</p>
-          <p style={{ margin: "10px 0 0", fontSize: 13, color: "#7d8ca3", lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: 17, color: "#141414", fontWeight: 600 }}>{error}</p>
+          <p style={{ margin: "10px 0 0", fontSize: 13, color: "#737373", lineHeight: 1.6 }}>
             Pide una liga nueva a tu contacto en Retro.
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function MatrizPublicaPage() {
   }
 
   if (!data) {
-    return <div style={centradoStyle}><p style={{ color: "#7d8ca3", fontSize: 14 }}>Cargando matriz…</p></div>
+    return <div style={centradoStyle}><p style={{ color: "#737373", fontSize: 14 }}>Cargando matriz…</p></div>
   }
 
   const m = data.matriz as Record<string, string>
@@ -87,16 +87,16 @@ export default function MatrizPublicaPage() {
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
 
         <header style={{ marginBottom: 26 }}>
-          <Image src="/logo-retro.png" alt="Retro Casa Productora" width={104} height={37} style={{ height: "auto" }} priority />
-          <h1 style={{ margin: "18px 0 0", fontSize: isMobile ? 23 : 30, color: "#f8fafc", lineHeight: 1.15 }}>
+          <Image src="/logo-retro.png" alt="Retro Casa Productora" width={104} height={37} style={{ height: "auto", filter: "brightness(0)" }} priority />
+          <h1 style={{ margin: "18px 0 0", fontSize: isMobile ? 23 : 30, color: "#141414", lineHeight: 1.15 }}>
             {m.nombre || "Matriz de proyecto"}
           </h1>
           {(data.proyecto || data.cliente) && (
-            <p style={{ margin: "8px 0 0", color: "#94a3b8", fontSize: 14 }}>
+            <p style={{ margin: "8px 0 0", color: "#6B6B6B", fontSize: 14 }}>
               {[data.proyecto, data.cliente].filter(Boolean).join(" · ")}
             </p>
           )}
-          <p style={{ margin: "14px 0 0", color: "#7d8ca3", fontSize: 12 }}>
+          <p style={{ margin: "14px 0 0", color: "#737373", fontSize: 12 }}>
             Vista de solo lectura · se actualiza sola cuando el equipo edita la matriz
           </p>
         </header>
@@ -116,10 +116,10 @@ export default function MatrizPublicaPage() {
                 <div key={c.key} style={{
                   display: "grid",
                   gridTemplateColumns: isMobile ? "1fr" : "190px 1fr",
-                  borderBottom: "1px solid rgba(148,163,184,0.08)",
+                  borderBottom: "1px solid rgba(0,0,0,0.07)",
                 }}>
                   <div style={etiquetaStyle(isMobile)}>{c.label}</div>
-                  <div style={{ padding: "12px 16px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.5 }}>
+                  <div style={{ padding: "12px 16px", color: "#262626", fontSize: 13, lineHeight: 1.5 }}>
                     <Valor texto={m[c.key] || ""} />
                   </div>
                 </div>
@@ -128,7 +128,7 @@ export default function MatrizPublicaPage() {
           ))}
         </div>
 
-        <p style={{ margin: "22px 0 0", color: "#64748b", fontSize: 11, textAlign: "center" }}>
+        <p style={{ margin: "22px 0 0", color: "#8A8A8A", fontSize: 11, textAlign: "center" }}>
           Retro Casa Productora
         </p>
       </div>
@@ -141,12 +141,12 @@ const centradoStyle: React.CSSProperties = {
 }
 
 const docStyle: React.CSSProperties = {
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 14,
   overflow: "hidden",
-  background: "rgba(8,12,28,0.82)",
+  background: "#FFFFFF",
   backdropFilter: "blur(14px)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
 }
 
 const seccionStyle: React.CSSProperties = {
@@ -154,7 +154,7 @@ const seccionStyle: React.CSSProperties = {
   borderTop: "1px solid rgba(59,130,246,0.20)",
   borderBottom: "1px solid rgba(59,130,246,0.20)",
   padding: "8px 16px",
-  color: "#bfdbfe",
+  color: "#1D5FA8",
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: 1.4,
@@ -164,11 +164,11 @@ const seccionStyle: React.CSSProperties = {
 function etiquetaStyle(isMobile: boolean): React.CSSProperties {
   return {
     padding: isMobile ? "10px 12px 4px" : "12px 14px",
-    background: "rgba(255,255,255,0.022)",
-    color: "#7d8ca3",
+    background: "#FFFFFF",
+    color: "#737373",
     fontSize: 11,
     textAlign: isMobile ? "left" : "right",
-    borderRight: isMobile ? "none" : "1px solid rgba(148,163,184,0.10)",
+    borderRight: isMobile ? "none" : "1px solid rgba(0,0,0,0.08)",
     lineHeight: 1.4,
   }
 }

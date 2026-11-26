@@ -1,29 +1,14 @@
 import "./globals.css"
-import { IBM_Plex_Sans, IBM_Plex_Mono, Bodoni_Moda } from "next/font/google"
+import { Archivo } from "next/font/google"
 import { ToastOverride } from "../components/ToastOverride"
 
-// Autoalojadas por next/font: no dependen de Google en vivo y no parpadean.
-// Sans = interfaz · Mono = dinero, horas y códigos RS · Display = títulos,
-// que recogen la voz cursiva del wordmark de Retro.
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Autoalojada por next/font: no depende de Google en vivo y no parpadea.
+// Una sola familia variable con eje de ancho (wdth): ancha para títulos,
+// normal para la interfaz y angosta para horas y montos.
+const archivo = Archivo({
+  subsets: ["latin", "latin-ext"],
+  axes: ["wdth"],
   variable: "--font-sans",
-  display: "swap",
-})
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
-  display: "swap",
-})
-
-const bodoni = Bodoni_Moda({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["italic"],
-  variable: "--font-display",
   display: "swap",
 })
 
@@ -31,7 +16,7 @@ export const metadata = {
   title: "Llamados Retro",
   description: "Sistema de llamados de producción audiovisual",
   manifest: "/manifest.json",
-  themeColor: "#05070d",
+  themeColor: "#18181A",
 
   appleWebApp: {
     capable: true,
@@ -56,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${plexSans.variable} ${plexMono.variable} ${bodoni.variable}`}
+      className={archivo.variable}
     >
       <body>
         <ToastOverride />

@@ -44,13 +44,13 @@ export function DetallistaFields({ value, onChange }: { value: DetallistaForm; o
   }
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
-        <input type="checkbox" checked={value.activo} onChange={e => onChange({ ...value, activo: e.target.checked })} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />
+      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
+        <input type="checkbox" checked={value.activo} onChange={e => onChange({ ...value, activo: e.target.checked })} style={{ accentColor: "#131313", width: 15, height: 15 }} />
         Complemento Detallista
-        <span style={{ fontWeight: 400, color: "#64748b", fontSize: 12 }}>(Liverpool y tiendas departamentales)</span>
+        <span style={{ fontWeight: 400, color: "#8A8A8A", fontSize: 12 }}>(Liverpool y tiendas departamentales)</span>
       </label>
       {value.activo && (
-        <div style={{ display: "grid", gap: 10, padding: "12px 12px", borderRadius: 10, background: "rgba(124,58,237,0.05)", border: "1px solid rgba(167,139,250,0.18)" }}>
+        <div style={{ display: "grid", gap: 10, padding: "12px 12px", borderRadius: 10, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.12)" }}>
           <FRow>
             <div style={{ flex: "1 1 170px" }}>
               <FField label="No. de pedido (orden de compra) *">

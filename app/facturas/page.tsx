@@ -63,25 +63,25 @@ export default function FacturasPage() {
       <div style={cardStyle}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#7d8ca3" }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#737373" }}>
             Retro Casa Productora
           </p>
-          <h1 style={{ margin: "8px 0 0", fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>
+          <h1 style={{ margin: "8px 0 0", fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>
             Recepción de Facturas
           </h1>
         </div>
 
         {open === null ? (
-          <p style={{ color: "#7d8ca3", textAlign: "center", padding: "32px 0" }}>Cargando...</p>
+          <p style={{ color: "#737373", textAlign: "center", padding: "32px 0" }}>Cargando...</p>
         ) : !open ? (
           /* ── Cerrado ── */
           <div style={{ textAlign: "center", padding: "32px 0" }}>
             <p style={{ fontSize: 44, margin: 0 }}>🗓️</p>
-            <p style={{ color: "#e2e8f0", fontSize: 17, fontWeight: 600, margin: "16px 0 8px" }}>
+            <p style={{ color: "#262626", fontSize: 17, fontWeight: 600, margin: "16px 0 8px" }}>
               La recepción de facturas está cerrada
             </p>
-            <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-              Las facturas solo se reciben los <strong style={{ color: "#67e8f9" }}>jueves de 10:00 a 19:00 hrs</strong> (hora de la Ciudad de México).
+            <p style={{ color: "#6B6B6B", fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+              Las facturas solo se reciben los <strong style={{ color: "#0E7490" }}>jueves de 10:00 a 19:00 hrs</strong> (hora de la Ciudad de México).
               <br />
               Vuelve en ese horario para subir tu factura.
             </p>
@@ -90,19 +90,19 @@ export default function FacturasPage() {
           /* ── Aceptada ── */
           <div style={{ textAlign: "center", padding: "24px 0" }}>
             <p style={{ fontSize: 44, margin: 0 }}>✅</p>
-            <p style={{ color: "#34d399", fontSize: 18, fontWeight: 700, margin: "16px 0 8px" }}>
+            <p style={{ color: "#1F8A55", fontSize: 18, fontWeight: 700, margin: "16px 0 8px" }}>
               Factura recibida correctamente
             </p>
-            <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.7 }}>
-              Subtotal: <strong style={{ color: "#e2e8f0" }}>{result.subtotal}</strong>
+            <p style={{ color: "#6B6B6B", fontSize: 14, lineHeight: 1.7 }}>
+              Subtotal: <strong style={{ color: "#262626" }}>{result.subtotal}</strong>
             </p>
             <div style={{ marginTop: 16, padding: "16px 20px", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 12 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#34d399" }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#1F8A55" }}>
                 Fecha estimada de pago
               </p>
-              <p style={{ margin: "6px 0 0", fontSize: 16, fontWeight: 700, color: "#a7f3d0" }}>{result.fechaPago}</p>
+              <p style={{ margin: "6px 0 0", fontSize: 16, fontWeight: 700, color: "#1F7A4D" }}>{result.fechaPago}</p>
             </div>
-            <p style={{ color: "#7d8ca3", fontSize: 13, marginTop: 20 }}>
+            <p style={{ color: "#737373", fontSize: 13, marginTop: 20 }}>
               Te enviamos la confirmación por correo.
             </p>
           </div>
@@ -111,17 +111,17 @@ export default function FacturasPage() {
           <div style={{ padding: "8px 0" }}>
             <div style={{ textAlign: "center" }}>
               <p style={{ fontSize: 44, margin: 0 }}>❌</p>
-              <p style={{ color: "#f87171", fontSize: 18, fontWeight: 700, margin: "16px 0 16px" }}>
+              <p style={{ color: "#C2362B", fontSize: 18, fontWeight: 700, margin: "16px 0 16px" }}>
                 Factura rechazada
               </p>
             </div>
             <div style={{ padding: "16px 20px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 12 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#f87171" }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#C2362B" }}>
                 Motivo
               </p>
-              <p style={{ margin: "8px 0 0", fontSize: 14, color: "#fecaca", lineHeight: 1.7 }}>{result.motivo}</p>
+              <p style={{ margin: "8px 0 0", fontSize: 14, color: "#B42318", lineHeight: 1.7 }}>{result.motivo}</p>
             </div>
-            <p style={{ color: "#7d8ca3", fontSize: 13, marginTop: 20, textAlign: "center" }}>
+            <p style={{ color: "#737373", fontSize: 13, marginTop: 20, textAlign: "center" }}>
               También te enviamos el detalle por correo. Corrige tu factura y vuelve a intentarlo.
             </p>
             <button onClick={() => { setResult(null); setXmlFile(null); setPdfFile(null) }} style={secondaryBtnStyle}>
@@ -131,8 +131,8 @@ export default function FacturasPage() {
         ) : (
           /* ── Formulario ── */
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>
-              Hoy es día de recepción. Sube el <strong style={{ color: "#e2e8f0" }}>XML de tu CFDI</strong> y
+            <p style={{ margin: 0, fontSize: 13, color: "#6B6B6B", lineHeight: 1.7 }}>
+              Hoy es día de recepción. Sube el <strong style={{ color: "#262626" }}>XML de tu CFDI</strong> y
               el sistema validará tu factura automáticamente contra el proyecto.
             </p>
 
@@ -179,7 +179,7 @@ export default function FacturasPage() {
             </div>
 
             {errorMsg && (
-              <p style={{ margin: 0, padding: "10px 14px", background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 10, color: "#fca5a5", fontSize: 13, lineHeight: 1.6 }}>
+              <p style={{ margin: 0, padding: "10px 14px", background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 10, color: "#B42318", fontSize: 13, lineHeight: 1.6 }}>
                 {errorMsg}
               </p>
             )}
@@ -206,7 +206,7 @@ export default function FacturasPage() {
 
 const pageStyle: React.CSSProperties = {
   minHeight: "100vh",
-  background: "linear-gradient(160deg, #0b1322, #0f172a)",
+  background: "#FFFFFF",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -216,30 +216,28 @@ const pageStyle: React.CSSProperties = {
 const cardStyle: React.CSSProperties = {
   width: "100%",
   maxWidth: 460,
-  background: "rgba(15,23,42,0.85)",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 18,
   padding: "32px 28px",
-  boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+  boxShadow: "0 24px 64px rgba(0,0,0,0.11)",
 }
 
 const labelStyle: React.CSSProperties = {
   display: "block",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
-  color: "#7d8ca3",
+  color: "#737373",
   marginBottom: 6,
 }
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "11px 13px",
-  background: "rgba(2,6,23,0.55)",
-  border: "1px solid rgba(148,163,184,0.20)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 10,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 14,
   boxSizing: "border-box",
   outline: "none",
@@ -248,10 +246,10 @@ const inputStyle: React.CSSProperties = {
 const fileStyle: React.CSSProperties = {
   width: "100%",
   padding: "9px 12px",
-  background: "rgba(2,6,23,0.55)",
-  border: "1px dashed rgba(148,163,184,0.30)",
+  background: "#FFFFFF",
+  border: "1px dashed rgba(0,0,0,0.2)",
   borderRadius: 10,
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 13,
   boxSizing: "border-box",
 }
@@ -261,7 +259,7 @@ const primaryBtnStyle: React.CSSProperties = {
   borderRadius: 10,
   border: "1px solid rgba(6,182,212,0.40)",
   background: "rgba(6,182,212,0.16)",
-  color: "#67e8f9",
+  color: "#0E7490",
   fontSize: 14,
   fontWeight: 700,
 }
@@ -272,9 +270,9 @@ const secondaryBtnStyle: React.CSSProperties = {
   marginTop: 18,
   padding: "11px 16px",
   borderRadius: 10,
-  border: "1px solid rgba(148,163,184,0.25)",
+  border: "1px solid rgba(0,0,0,0.17)",
   background: "transparent",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",

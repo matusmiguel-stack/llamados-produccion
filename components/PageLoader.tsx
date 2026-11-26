@@ -37,7 +37,7 @@ export function PageLoader() {
 const wrapStyle: CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "#0d1117",
+  background: "#F3F3F3",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -56,6 +56,7 @@ const logoStyle: CSSProperties = {
   height: 72,
   objectFit: "contain",
   borderRadius: 16,
+  filter: "brightness(0)", // el PNG es blanco; sobre el fondo claro va en negro
   animation: "rc-logo-breathe 1.6s ease-in-out infinite",
 }
 
@@ -70,7 +71,7 @@ function dotStyle(i: number): CSSProperties {
     width: 8,
     height: 8,
     borderRadius: "50%",
-    background: "#a78bfa",
+    background: "#131313",
     animation: `rc-pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
   }
 }

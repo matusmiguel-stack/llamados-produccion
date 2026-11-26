@@ -16,9 +16,9 @@ function tone(msg: string): "error" | "ok" | "info" {
 }
 
 const COLORS = {
-  error: { accent: "#f87171", bg: "rgba(248,113,113,0.10)", icon: "✕" },
-  ok:    { accent: "#34d399", bg: "rgba(52,211,153,0.10)",  icon: "✓" },
-  info:  { accent: "#a78bfa", bg: "rgba(167,139,250,0.10)", icon: "ℹ" },
+  error: { accent: "#C2362B", bg: "rgba(248,113,113,0.10)", icon: "✕" },
+  ok:    { accent: "#1F8A55", bg: "rgba(52,211,153,0.10)",  icon: "✓" },
+  info:  { accent: "#131313", bg: "rgba(0,0,0,0.05)", icon: "ℹ" },
 }
 
 function showToast(message: string) {
@@ -41,10 +41,10 @@ function showToast(message: string) {
   Object.assign(toast.style, {
     display: "flex", alignItems: "flex-start", gap: "10px",
     padding: "13px 16px", borderRadius: "12px",
-    background: "#0d1120", border: `1px solid ${c.accent}55`,
+    background: "#FFFFFF", border: `1px solid ${c.accent}55`,
     borderLeft: `3px solid ${c.accent}`,
-    boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
-    color: "#e2e8f0", fontSize: "13px", lineHeight: "1.5",
+    boxShadow: "0 12px 32px rgba(0,0,0,0.11)",
+    color: "#262626", fontSize: "13px", lineHeight: "1.5",
     fontFamily: "var(--font-sans)",
     whiteSpace: "pre-line", wordBreak: "break-word",
     pointerEvents: "auto", cursor: "pointer",

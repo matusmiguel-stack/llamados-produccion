@@ -4,8 +4,8 @@
   "description": "Sistema de llamados de producción audiovisual",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#05070d",
-  "theme_color": "#05070d",
+  "background_color": "#F3F3F3",
+  "theme_color": "#18181A",
   "orientation": "portrait",
   "icons": [
     {

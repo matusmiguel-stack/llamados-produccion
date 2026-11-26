@@ -245,7 +245,7 @@ export function DatePickerField({
           onClick={toggleOpen}
           style={{
             ...triggerStyle,
-            color: value ? "#f8fafc" : "#64748b",
+            color: value ? "#141414" : "#8A8A8A",
           }}
         >
           <span style={triggerTextStyle}>{displayValue}</span>
@@ -341,7 +341,7 @@ const fieldWrapStyle: React.CSSProperties = {
 }
 
 const defaultLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -357,10 +357,10 @@ const triggerStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 10,
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 13,
   lineHeight: 1.35,
   cursor: "pointer",
@@ -380,9 +380,9 @@ const popoverStyle: React.CSSProperties = {
   width: 280,
   padding: 12,
   borderRadius: 12,
-  background: "rgba(15, 23, 42, 0.98)",
-  border: "1px solid rgba(148,163,184,0.18)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
   backdropFilter: "blur(16px)",
 }
 
@@ -405,10 +405,10 @@ const selectorStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
   padding: "6px 8px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.75)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 12,
   fontWeight: 600,
   outline: "none",
@@ -422,9 +422,9 @@ const navButtonStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#e2e8f0",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#262626",
   cursor: "pointer",
   fontSize: 18,
   lineHeight: 1,
@@ -439,10 +439,9 @@ const weekdayRowStyle: React.CSSProperties = {
 
 const weekdayLabelStyle: React.CSSProperties = {
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 10,
   fontWeight: 600,
-  textTransform: "uppercase",
 }
 
 const daysGridStyle: React.CSSProperties = {
@@ -462,22 +461,22 @@ const dayButtonStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid transparent",
   background: "transparent",
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 12,
   fontWeight: 500,
   cursor: "pointer",
 }
 
 const daySelectedStyle: React.CSSProperties = {
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  border: "1px solid rgba(167,139,250,0.35)",
-  color: "#ffffff",
+  background: "#131313",
+  border: "1px solid rgba(0,0,0,0.2)",
+  color: "#FFFFFF",
   fontWeight: 700,
 }
 
 const dayTodayStyle: React.CSSProperties = {
-  border: "1px solid rgba(167,139,250,0.35)",
-  color: "#ddd6fe",
+  border: "1px solid rgba(0,0,0,0.2)",
+  color: "#262626",
 }
 
 const dayDisabledStyle: React.CSSProperties = {

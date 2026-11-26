@@ -188,7 +188,7 @@ export function VacacionesPicker({ ocupados, disponibles, saving, onCancel, onSu
           </div>
 
           <div style={leyendaStyle}>
-            <Leyenda color="#7c3aed" texto="Seleccionado" />
+            <Leyenda color="#131313" texto="Seleccionado" />
             <Leyenda color="rgba(52,211,153,0.45)" texto="Ya aprobado" />
             <Leyenda color="rgba(234,179,8,0.45)" texto="En espera" />
           </div>
@@ -198,7 +198,7 @@ export function VacacionesPicker({ ocupados, disponibles, saving, onCancel, onSu
               <span style={resumenNumStyle}>{totalDias}</span>
               <span style={resumenLabelStyle}> día{totalDias !== 1 ? "s" : ""} seleccionado{totalDias !== 1 ? "s" : ""}</span>
             </div>
-            <span style={{ ...resumenSaldoStyle, color: excedido ? "#f87171" : "#7d8ca3" }}>
+            <span style={{ ...resumenSaldoStyle, color: excedido ? "#C2362B" : "#737373" }}>
               {excedido
                 ? `Te pasas por ${totalDias - disponibles} día${totalDias - disponibles !== 1 ? "s" : ""}`
                 : `Te quedarían ${disponibles - totalDias}`}
@@ -262,7 +262,7 @@ function Leyenda({ color, texto }: { color: string; texto: string }) {
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(2,6,23,0.72)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(4px)",
   zIndex: 10001,
   display: "flex",
@@ -278,11 +278,11 @@ const modalStyle: React.CSSProperties = {
   maxHeight: "92vh",
   display: "flex",
   flexDirection: "column",
-  background: "linear-gradient(180deg, rgba(15,23,42,0.98), rgba(8,12,24,0.98))",
-  border: "1px solid rgba(148,163,184,0.16)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 18,
-  boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
-  color: "#f8fafc",
+  boxShadow: "0 30px 80px rgba(0,0,0,0.11)",
+  color: "#141414",
 }
 
 const headerStyle: React.CSSProperties = {
@@ -291,22 +291,21 @@ const headerStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   padding: "18px 20px 14px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const eyebrowStyle: React.CSSProperties = {
-  margin: 0, color: "#a78bfa", fontSize: 10, textTransform: "uppercase",
-  letterSpacing: 1.2, fontWeight: 700,
+  margin: 0, color: "#131313", fontSize: 10, fontWeight: 700,
 }
 
 const titleStyle: React.CSSProperties = {
-  margin: "5px 0 0", fontSize: 19, letterSpacing: -0.4, color: "#f8fafc",
+  margin: "5px 0 0", fontSize: 19, letterSpacing: -0.4, color: "#141414",
 }
 
 const closeButtonStyle: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-  border: "1px solid rgba(148,163,184,0.14)", background: "transparent",
-  color: "#94a3b8", cursor: "pointer", fontSize: 13,
+  border: "1px solid rgba(0,0,0,0.1)", background: "transparent",
+  color: "#6B6B6B", cursor: "pointer", fontSize: 13,
 }
 
 const bodyStyle: React.CSSProperties = {
@@ -319,16 +318,16 @@ const modoRowStyle: React.CSSProperties = {
 
 const modoButtonStyle: React.CSSProperties = {
   padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-  border: "1px solid rgba(148,163,184,0.16)", background: "transparent",
-  color: "#94a3b8", cursor: "pointer",
+  border: "1px solid rgba(0,0,0,0.12)", background: "transparent",
+  color: "#6B6B6B", cursor: "pointer",
 }
 
 const modoActivoStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.18)", border: "1px solid rgba(167,139,250,0.32)", color: "#ddd6fe",
+  background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.2)", color: "#262626",
 }
 
 const modoHintStyle: React.CSSProperties = {
-  color: "#64748b", fontSize: 11, flex: 1, minWidth: 120,
+  color: "#8A8A8A", fontSize: 11, flex: 1, minWidth: 120,
 }
 
 const mesNavStyle: React.CSSProperties = {
@@ -337,12 +336,12 @@ const mesNavStyle: React.CSSProperties = {
 
 const navButtonStyle: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.14)", background: "rgba(255,255,255,0.03)",
-  color: "#cbd5e1", cursor: "pointer", fontSize: 16, lineHeight: 1,
+  border: "1px solid rgba(0,0,0,0.1)", background: "#FFFFFF",
+  color: "#3F3F3F", cursor: "pointer", fontSize: 16, lineHeight: 1,
 }
 
 const mesLabelStyle: React.CSSProperties = {
-  fontSize: 14, fontWeight: 600, color: "#f8fafc",
+  fontSize: 14, fontWeight: 600, color: "#141414",
 }
 
 const gridStyle: React.CSSProperties = {
@@ -350,40 +349,39 @@ const gridStyle: React.CSSProperties = {
 }
 
 const dowStyle: React.CSSProperties = {
-  textAlign: "center", fontSize: 10, fontWeight: 700, color: "#64748b",
-  textTransform: "uppercase", paddingBottom: 2,
+  textAlign: "center", fontSize: 10, fontWeight: 700, color: "#8A8A8A", paddingBottom: 2,
 }
 
 const diaStyle: React.CSSProperties = {
-  aspectRatio: "1", borderRadius: 9, border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(255,255,255,0.03)", color: "#e2e8f0",
+  aspectRatio: "1", borderRadius: 9, border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF", color: "#262626",
   fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0,
   fontVariantNumeric: "tabular-nums",
 }
 
 const diaInactivoStyle: React.CSSProperties = {
-  background: "transparent", color: "#3f4a5f", cursor: "not-allowed",
+  background: "transparent", color: "#BDBDBD", cursor: "not-allowed",
   border: "1px solid transparent",
 }
 
 const diaAprobadoStyle: React.CSSProperties = {
-  background: "rgba(52,211,153,0.16)", color: "#6ee7b7", cursor: "not-allowed",
+  background: "rgba(52,211,153,0.16)", color: "#1F7A4D", cursor: "not-allowed",
   border: "1px solid rgba(52,211,153,0.28)",
 }
 
 const diaPendienteStyle: React.CSSProperties = {
-  background: "rgba(234,179,8,0.14)", color: "#fcd34d", cursor: "not-allowed",
+  background: "rgba(234,179,8,0.14)", color: "#A86B00", cursor: "not-allowed",
   border: "1px solid rgba(234,179,8,0.26)",
 }
 
 const diaActivoStyle: React.CSSProperties = {
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)", color: "#ffffff",
-  border: "1px solid rgba(167,139,250,0.5)",
-  boxShadow: "0 4px 14px rgba(124,58,237,0.35)",
+  background: "#131313", color: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.2)",
+  boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
 }
 
 const diaAnclaStyle: React.CSSProperties = {
-  border: "1px solid #a78bfa", boxShadow: "0 0 0 2px rgba(167,139,250,0.35)",
+  border: "1px solid #131313", boxShadow: "0 0 0 2px rgba(0,0,0,0.06)",
 }
 
 const leyendaStyle: React.CSSProperties = {
@@ -392,21 +390,21 @@ const leyendaStyle: React.CSSProperties = {
 
 const leyendaItemStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 5,
-  fontSize: 10, color: "#7d8ca3",
+  fontSize: 10, color: "#737373",
 }
 
 const resumenStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
   padding: "10px 12px", borderRadius: 12,
-  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const resumenNumStyle: React.CSSProperties = {
-  fontSize: 20, fontWeight: 700, color: "#f8fafc", fontVariantNumeric: "tabular-nums",
+  fontSize: 20, fontWeight: 700, color: "#141414", fontVariantNumeric: "tabular-nums",
 }
 
 const resumenLabelStyle: React.CSSProperties = {
-  fontSize: 12, color: "#94a3b8",
+  fontSize: 12, color: "#6B6B6B",
 }
 
 const resumenSaldoStyle: React.CSSProperties = {
@@ -415,8 +413,8 @@ const resumenSaldoStyle: React.CSSProperties = {
 
 const limpiarButtonStyle: React.CSSProperties = {
   padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
-  border: "1px solid rgba(148,163,184,0.14)", background: "transparent",
-  color: "#94a3b8", cursor: "pointer",
+  border: "1px solid rgba(0,0,0,0.1)", background: "transparent",
+  color: "#6B6B6B", cursor: "pointer",
 }
 
 const chipsStyle: React.CSSProperties = {
@@ -425,36 +423,36 @@ const chipsStyle: React.CSSProperties = {
 
 const chipStyle: React.CSSProperties = {
   padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600,
-  background: "rgba(124,58,237,0.14)", border: "1px solid rgba(167,139,250,0.20)",
-  color: "#ddd6fe",
+  background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.12)",
+  color: "#262626",
 }
 
 const fieldStyle: React.CSSProperties = { display: "grid", gap: 5 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8", fontSize: 11, fontWeight: 500,
+  color: "#6B6B6B", fontSize: 11, fontWeight: 500,
 }
 
 const textareaStyle: React.CSSProperties = {
   width: "100%", padding: "8px 10px", borderRadius: 8, resize: "vertical",
-  border: "1px solid rgba(148,163,184,0.16)", background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc", outline: "none", fontSize: 13, lineHeight: 1.4,
+  border: "1px solid rgba(0,0,0,0.12)", background: "#FFFFFF",
+  color: "#141414", outline: "none", fontSize: 13, lineHeight: 1.4,
   fontFamily: "inherit",
 }
 
 const footerStyle: React.CSSProperties = {
   display: "flex", justifyContent: "flex-end", gap: 8,
-  padding: "14px 20px", borderTop: "1px solid rgba(148,163,184,0.10)",
+  padding: "14px 20px", borderTop: "1px solid rgba(0,0,0,0.08)",
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-  border: "1px solid rgba(148,163,184,0.16)", background: "transparent",
-  color: "#94a3b8", cursor: "pointer",
+  border: "1px solid rgba(0,0,0,0.12)", background: "transparent",
+  color: "#6B6B6B", cursor: "pointer",
 }
 
 const primaryButtonStyle: React.CSSProperties = {
   padding: "10px 16px", border: "none", borderRadius: 8,
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)", color: "white",
-  fontWeight: 600, fontSize: 13, boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  background: "#131313", color: "#FFFFFF",
+  fontWeight: 600, fontSize: 13, boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
 }

@@ -59,7 +59,7 @@ export function NuevaListaFotos(props: {
       onCerrar={props.onCerrar}
       pie={
         <>
-          <span style={{ marginRight: "auto", alignSelf: "center", color: sobran ? "#fca5a5" : C.apagado, fontSize: 12, fontFamily: MONO }}>
+          <span style={{ marginRight: "auto", alignSelf: "center", color: sobran ? "#B42318" : C.apagado, fontSize: 12, fontFamily: MONO }}>
             {sobran
               ? `Máximo ${MAX_FOTOS} fotos por lista`
               : fotos.length === 1 ? "1 foto" : `${fotos.length} fotos`}

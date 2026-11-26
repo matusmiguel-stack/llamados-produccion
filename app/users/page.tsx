@@ -454,34 +454,34 @@ function Field({
 function roleBadgeStyle(role?: string): React.CSSProperties {
   const colors: Record<string, { bg: string; border: string; text: string }> = {
     admin: {
-      bg: "rgba(124,58,237,0.18)",
-      border: "rgba(167,139,250,0.28)",
-      text: "#ddd6fe",
+      bg: "rgba(0,0,0,0.05)",
+      border: "rgba(0,0,0,0.12)",
+      text: "#262626",
     },
     editor: {
       bg: "rgba(14,165,233,0.14)",
       border: "rgba(56,189,248,0.24)",
-      text: "#bae6fd",
+      text: "#1D5FA8",
     },
     editor_premium: {
       bg: "rgba(236,72,153,0.14)",
       border: "rgba(236,72,153,0.28)",
-      text: "#fbcfe8",
+      text: "#C93F5D",
     },
     finanzas: {
       bg: "rgba(245,158,11,0.14)",
       border: "rgba(245,158,11,0.28)",
-      text: "#fde68a",
+      text: "#8A5B00",
     },
     productor: {
       bg: "rgba(52,211,153,0.12)",
       border: "rgba(52,211,153,0.22)",
-      text: "#6ee7b7",
+      text: "#1F7A4D",
     },
     viewer: {
-      bg: "rgba(148,163,184,0.12)",
-      border: "rgba(148,163,184,0.22)",
-      text: "#cbd5e1",
+      bg: "rgba(0,0,0,0.05)",
+      border: "rgba(0,0,0,0.15)",
+      text: "#3F3F3F",
     },
   }
 
@@ -511,9 +511,9 @@ function avatarStyle(name: string): React.CSSProperties {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    background: "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(14,165,233,0.25))",
-    border: "1px solid rgba(167,139,250,0.22)",
-    color: "#f8fafc",
+    background: "rgba(0,0,0,0.05)",
+    border: "1px solid rgba(0,0,0,0.12)",
+    color: "#FFFFFF",
     fontSize: 13,
     fontWeight: 700,
   }
@@ -540,16 +540,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -557,14 +555,14 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -574,19 +572,19 @@ const panelStyle: React.CSSProperties = {
 const panelHeaderStyle: React.CSSProperties = {
   marginBottom: 14,
   paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const panelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -609,7 +607,7 @@ const fieldStyle: React.CSSProperties = {
 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -617,10 +615,10 @@ const fieldLabelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -631,11 +629,9 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(220px, 1.4fr) 140px 220px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const tableBodyStyle: React.CSSProperties = {
@@ -649,8 +645,8 @@ const rowStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "10px 12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const userCellStyle: React.CSSProperties = {
@@ -668,14 +664,14 @@ const userNameRowStyle: React.CSSProperties = {
 
 const userNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const userEmailStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
   wordBreak: "break-word",
 }
@@ -693,22 +689,22 @@ const rowActionsStyle: React.CSSProperties = {
 
 const primaryButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
   whiteSpace: "nowrap",
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -719,7 +715,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 const dangerButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#f87171",
+  color: "#C2362B",
   border: "1px solid rgba(248,113,113,0.24)",
   borderRadius: 8,
   cursor: "pointer",

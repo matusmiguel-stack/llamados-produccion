@@ -168,11 +168,11 @@ export function TimbrarPanel({
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {ambiente === null ? (
-        <p style={{ ...fNote("#fbbf24"), padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
+        <p style={{ ...fNote("#A86B00"), padding: "8px 10px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
           Facturapi todavía no está conectado para esta empresa. Puedes llenar los datos, pero el timbrado fallará hasta que se configure la llave.
         </p>
       ) : ambiente === "pruebas" ? (
-        <p style={{ ...fNote("#38bdf8"), padding: "8px 10px", borderRadius: 8, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.25)" }}>
+        <p style={{ ...fNote("#1D6FB8"), padding: "8px 10px", borderRadius: 8, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.25)" }}>
           Modo pruebas: la factura se genera pero no es válida ante el SAT.
         </p>
       ) : null}
@@ -263,24 +263,24 @@ export function TimbrarPanel({
 
       <SustitucionField value={sustituye} onChange={setSustituye} bloqueado={refacturar ? (refacturar.numero || refacturar.uuid) : null} />
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
-        <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#7c3aed", width: 15, height: 15 }} />
+      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
+        <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} style={{ accentColor: "#131313", width: 15, height: 15 }} />
         Enviar la factura por correo al cliente
       </label>
       {enviar && (
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="facturas@cliente.com" style={fInput} />
       )}
 
-      <div style={{ display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(148,163,184,0.10)", fontSize: 12, color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>
+      <div style={{ display: "grid", gap: 4, padding: "10px 12px", borderRadius: 10, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", fontSize: 12, color: "#6B6B6B", fontVariantNumeric: "tabular-nums" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(monto)}</span></div>
         <div style={{ display: "flex", justifyContent: "space-between" }}><span>IVA {iva * 100}%</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(ivaMonto)}</span></div>
-        <div style={{ display: "flex", justifyContent: "space-between", color: "#f8fafc", fontWeight: 700, fontSize: 13 }}><span>Total</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(total)}</span></div>
-        {emisor?.serie && <div style={{ fontSize: 11, color: "#64748b" }}>Serie {emisor.serie} · el folio lo asigna Facturapi</div>}
+        <div style={{ display: "flex", justifyContent: "space-between", color: "#141414", fontWeight: 700, fontSize: 13 }}><span>Total</span><span style={{ fontFamily: "var(--font-mono)" }}>{money(total)}</span></div>
+        {emisor?.serie && <div style={{ fontSize: 11, color: "#8A8A8A" }}>Serie {emisor.serie} · el folio lo asigna Facturapi</div>}
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
         <button onClick={onCancel} disabled={timbrando} style={fBtnGhost}>Cancelar</button>
-        <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#cbd5e1", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
+        <button onClick={verPrevia} disabled={timbrando || nuevo || vista.cargando} style={{ ...fBtnGhost, color: "#3F3F3F", opacity: timbrando || nuevo || vista.cargando ? 0.6 : 1 }} title="Ver el PDF sin timbrar">
           {vista.cargando ? "Generando…" : "👁 Vista previa"}
         </button>
         <button onClick={timbrar} disabled={timbrando || nuevo} style={fBtnPrimary(timbrando || nuevo)}>

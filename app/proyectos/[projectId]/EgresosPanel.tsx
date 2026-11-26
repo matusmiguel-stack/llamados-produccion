@@ -166,7 +166,7 @@ export function EgresosPanel({
 
   // Estatus de pago de un egreso: { label, color, fecha? }
   function egresoStatus(item: EgresoItem): { label: string; color: string; fecha?: string } {
-    const GRIS = "#94a3b8", NARANJA = "#fb923c", VERDE = "#34d399", ROJO = "#f87171"
+    const GRIS = "#6B6B6B", NARANJA = "#C2410C", VERDE = "#1F8A55", ROJO = "#C2362B"
     if (item.pago_estado === "pagado") return { label: "Pagado", color: VERDE }
     const monto = montoEgreso(item)
     // Factura del proveedor vinculada (o por proveedor+monto)
@@ -812,7 +812,7 @@ export function EgresosPanel({
   const containerVisible = containerQuoteId ? visibleItems.filter((i) => i.quote_id === containerQuoteId) : []
 
 
-  if (loading) return <p style={{ color: "#7d8ca3", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
+  if (loading) return <p style={{ color: "#737373", textAlign: "center", padding: "40px 0" }}>Cargando egresos…</p>
 
   // Navegación entre sub-listas: pestañas (se ve una a la vez, no todas juntas)
   const subListsUI = directEnabled ? (
@@ -832,7 +832,7 @@ export function EgresosPanel({
         </button>
       )}
       {!readOnly && subLists.length === 0 && (
-        <span style={{ fontSize: 11, color: "#7d8ca3" }}>
+        <span style={{ fontSize: 11, color: "#737373" }}>
           Crea una sub-lista (ej. Recetas Julio, Salmón, Trends) para empezar a capturar gastos.
         </span>
       )}
@@ -847,22 +847,22 @@ export function EgresosPanel({
           onClick={() => { if (subLists.length === 0) { openCreateSubList(); return } if (activeSubListId) setAddSectionId(activeSubListId); setAddOpen(true) }}
           style={{ width: "100%", padding: "12px 16px", borderRadius: 12, cursor: "pointer",
             background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.30)",
-            color: "#6ee7b7", fontSize: 14, fontWeight: 700 }}
+            color: "#1F7A4D", fontSize: 14, fontWeight: 700 }}
         >
           ➕ Agregar gasto
         </button>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#6ee7b7" }}>Nuevo gasto</p>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1F7A4D" }}>Nuevo gasto</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Sub-lista:</span>
+            <span style={{ fontSize: 12, color: "#6B6B6B", fontWeight: 600 }}>Sub-lista:</span>
             <select value={addSectionId} onChange={e => setAddSectionId(e.target.value)}
               style={{ ...addInputStyle, width: "auto", minWidth: 180, flex: "0 1 auto", padding: "8px 10px" }}>
               {subLists.length === 0 && <option value="">(crea una sub-lista)</option>}
               {subLists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <button type="button" onClick={openCreateSubList} disabled={subBusy}
-              style={{ padding: "7px 12px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px dashed rgba(167,139,250,0.4)", color: "#c4b5fd", fontSize: 12, fontWeight: 600 }}>
+              style={{ padding: "7px 12px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px dashed rgba(0,0,0,0.2)", color: "#3F3F3F", fontSize: 12, fontWeight: 600 }}>
               + Nueva
             </button>
           </div>
@@ -890,7 +890,7 @@ export function EgresosPanel({
             />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Tipo de pago:</span>
+            <span style={{ fontSize: 12, color: "#6B6B6B", fontWeight: 600 }}>Tipo de pago:</span>
             <select value={addPagoModo} onChange={e => setAddPagoModo(e.target.value)}
               style={{ ...addInputStyle, width: "auto", minWidth: 200, flex: "0 1 auto", padding: "8px 10px" }}>
               <option value="">Pago a programación</option>
@@ -901,15 +901,15 @@ export function EgresosPanel({
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={addGastoInterno} disabled={adding}
               style={{ padding: "9px 18px", borderRadius: 8, cursor: adding ? "not-allowed" : "pointer",
-                background: "rgba(52,211,153,0.18)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399", fontSize: 13, fontWeight: 700, opacity: adding ? 0.6 : 1 }}>
+                background: "rgba(52,211,153,0.18)", border: "1px solid rgba(52,211,153,0.4)", color: "#1F8A55", fontSize: 13, fontWeight: 700, opacity: adding ? 0.6 : 1 }}>
               {adding ? "Guardando…" : "✓ Agregar"}
             </button>
             <button onClick={() => { setAddOpen(false); setAddDesc(""); setAddContact(""); setAddMonto(""); setAddPagoModo("") }}
-              style={{ padding: "9px 16px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px solid rgba(148,163,184,0.2)", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>
+              style={{ padding: "9px 16px", borderRadius: 8, cursor: "pointer", background: "transparent", border: "1px solid rgba(0,0,0,0.14)", color: "#6B6B6B", fontSize: 13, fontWeight: 600 }}>
               Cancelar
             </button>
           </div>
-          <p style={{ margin: 0, fontSize: 11, color: "#7d8ca3" }}>
+          <p style={{ margin: 0, fontSize: 11, color: "#737373" }}>
             Asigna un proveedor si quieres poder mandarle a facturar este gasto. El monto es el gasto real (sin IVA).
           </p>
         </div>
@@ -924,10 +924,10 @@ export function EgresosPanel({
   const subListModalUI = subListModal && (
     <div style={payOverlayStyle} onClick={() => !subBusy && setSubListModal(null)}>
       <div style={{ ...payPanelStyle, maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#c4b5fd" }}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#3F3F3F" }}>
           {subListModal.mode === "create" ? "Nueva sub-lista" : "Renombrar sub-lista"}
         </p>
-        <p style={{ margin: "6px 0 16px", fontSize: 12, color: "#94a3b8" }}>
+        <p style={{ margin: "6px 0 16px", fontSize: 12, color: "#6B6B6B" }}>
           Ej. Recetas Julio, Salmón, Trends
         </p>
         <label style={payLabelStyle}>Nombre</label>
@@ -942,7 +942,7 @@ export function EgresosPanel({
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
           <button onClick={() => setSubListModal(null)} disabled={subBusy} style={payCancelStyle}>Cancelar</button>
           <button onClick={submitSubListModal} disabled={subBusy}
-            style={{ ...payConfirmStyle, borderColor: "rgba(167,139,250,0.4)", background: "rgba(167,139,250,0.16)", color: "#c4b5fd", opacity: subBusy ? 0.6 : 1 }}>
+            style={{ ...payConfirmStyle, borderColor: "rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)", color: "#3F3F3F", opacity: subBusy ? 0.6 : 1 }}>
             {subBusy ? "Guardando…" : subListModal.mode === "create" ? "✓ Crear" : "✓ Guardar"}
           </button>
         </div>
@@ -955,7 +955,7 @@ export function EgresosPanel({
     const { item, detalle, error } = editPago
     const tipo = detalle?.tipo || item.pago_tipo || "pago"
     const titulo = tipo === "anticipo" ? "Editar anticipo" : tipo === "comprobacion" ? "Editar comprobación" : "Editar pago"
-    const color = tipo === "anticipo" ? "#34d399" : tipo === "comprobacion" ? "#fbbf24" : "#67e8f9"
+    const color = tipo === "anticipo" ? "#1F8A55" : tipo === "comprobacion" ? "#A86B00" : "#0E7490"
 
     const archivoUI = (clave: ClaveArchivo, etiqueta: string, requerido: boolean, accept: string) => {
       const actual = detalle?.archivos[clave] || null
@@ -966,23 +966,23 @@ export function EgresosPanel({
           <label style={payLabelStyle}>{etiqueta} {requerido ? "*" : "(opcional)"}</label>
           {nuevo ? (
             <div style={epArchivoRowStyle}>
-              <span style={{ ...epArchivoNombreStyle, color: "#6ee7b7" }} title={nuevo.name}>⬆ {nuevo.name}</span>
+              <span style={{ ...epArchivoNombreStyle, color: "#1F7A4D" }} title={nuevo.name}>⬆ {nuevo.name}</span>
               <button type="button" onClick={() => setEpFiles(f => ({ ...f, [clave]: null }))} style={epLinkBtnStyle}>Cancelar</button>
             </div>
           ) : actual && !quitado ? (
             <div style={epArchivoRowStyle}>
               {actual.url ? (
                 <a href={actual.url} target="_blank" rel="noreferrer" title="Abrir el archivo actual"
-                  style={{ ...epArchivoNombreStyle, color: "#93c5fd" }}>📎 {actual.nombre}</a>
+                  style={{ ...epArchivoNombreStyle, color: "#1D5FA8" }}>📎 {actual.nombre}</a>
               ) : (
-                <span style={{ ...epArchivoNombreStyle, color: "#94a3b8" }}>📎 {actual.nombre}</span>
+                <span style={{ ...epArchivoNombreStyle, color: "#6B6B6B" }}>📎 {actual.nombre}</span>
               )}
               {!requerido && (
-                <button type="button" onClick={() => setEpQuitar(q => ({ ...q, [clave]: true }))} style={{ ...epLinkBtnStyle, color: "#f87171" }}>Quitar</button>
+                <button type="button" onClick={() => setEpQuitar(q => ({ ...q, [clave]: true }))} style={{ ...epLinkBtnStyle, color: "#C2362B" }}>Quitar</button>
               )}
             </div>
           ) : (
-            <div style={{ ...epArchivoRowStyle, color: "#7d8ca3", fontStyle: "italic" }}>
+            <div style={{ ...epArchivoRowStyle, color: "#737373", fontStyle: "italic" }}>
               <span>{quitado ? "Se quitará al guardar" : "Sin archivo"}</span>
               {quitado && (
                 <button type="button" onClick={() => setEpQuitar(q => ({ ...q, [clave]: false }))} style={epLinkBtnStyle}>Deshacer</button>
@@ -1002,14 +1002,14 @@ export function EgresosPanel({
     return (
       <div style={payOverlayStyle}>
         <div style={{ ...payPanelStyle, maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color }}>{titulo}</p>
-          <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{item.description}</p>
-          <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>{item.supplierLabel}</p>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color }}>{titulo}</p>
+          <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#141414" }}>{item.description}</p>
+          <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#6B6B6B" }}>{item.supplierLabel}</p>
 
           {error ? (
-            <p style={{ margin: 0, color: "#fca5a5", fontSize: 13 }}>{error}</p>
+            <p style={{ margin: 0, color: "#B42318", fontSize: 13 }}>{error}</p>
           ) : !detalle ? (
-            <p style={{ margin: 0, color: "#7d8ca3", fontSize: 13 }}>Cargando el pago…</p>
+            <p style={{ margin: 0, color: "#737373", fontSize: 13 }}>Cargando el pago…</p>
           ) : (
             <>
               <label style={payLabelStyle}>{tipo === "comprobacion" ? "Monto pagado" : "Monto del pago"}</label>
@@ -1022,7 +1022,7 @@ export function EgresosPanel({
                     <label style={{ ...payLabelStyle, marginTop: 14 }}>Monto real comprobado</label>
                     <input type="number" value={epForm.montoReal} onChange={(e) => setEpForm(f => ({ ...f, montoReal: e.target.value }))} style={payInputStyle} />
                     {real > pagado + 0.009 && (
-                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#fbbf24" }}>
+                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#A86B00" }}>
                         Diferencia de {fmt(real - pagado)}. Al editar no se genera ni se ajusta la línea de reembolso; si cambió, corrígela a mano en el control de egresos.
                       </p>
                     )}
@@ -1050,7 +1050,7 @@ export function EgresosPanel({
                 </>
               )}
               {archivoUI("comprobante", "Comprobante de pago del banco", comprobanteRequerido(epForm.forma), ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png")}
-              <p style={{ margin: "10px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+              <p style={{ margin: "10px 0 0", fontSize: 11, color: "#737373" }}>
                 Abre el archivo actual para revisarlo; si está mal, elige otro y se reemplaza al guardar. Los cambios quedan en el historial.
               </p>
             </>
@@ -1073,10 +1073,10 @@ export function EgresosPanel({
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {subListsUI}
       {addGastoUI}
-      <div style={{ textAlign: "center", padding: "36px 0", color: "#6b7c93" }}>
+      <div style={{ textAlign: "center", padding: "36px 0", color: "#858585" }}>
         <p style={{ fontSize: 15, marginBottom: 8 }}>No hay {directEnabled ? "gastos" : "egresos"} registrados en este proyecto.</p>
         {!readOnly && (
-          <p style={{ fontSize: 12, color: "#6b7c93" }}>
+          <p style={{ fontSize: 12, color: "#858585" }}>
             {directEnabled ? "Crea una sub-lista y usa “Agregar gasto” para capturar el primero." : "Captura costos reales en la página de liberación."}
           </p>
         )}
@@ -1110,7 +1110,7 @@ export function EgresosPanel({
                     textAlign: align,
                     cursor: key ? "pointer" : "default",
                     userSelect: "none",
-                    color: key && sortKey === key ? "#a78bfa" : thStyle.color,
+                    color: key && sortKey === key ? "#131313" : thStyle.color,
                     whiteSpace: "nowrap",
                     ...(maxW ? { maxWidth: maxW } : {}),
                   }}
@@ -1135,7 +1135,7 @@ export function EgresosPanel({
                 const previewMonto = (!isNaN(pq) && !isNaN(pd) && !isNaN(pp)) ? pq * pd * pp : 0
 
                 return (
-                  <tr key={item.id} style={{ background: "rgba(167,139,250,0.06)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
+                  <tr key={item.id} style={{ background: "rgba(0,0,0,0.05)", borderBottom: "1px solid rgba(0,0,0,0.12)" }}>
                     <td style={{ ...tdStyle, fontSize: 12 }}>
                       {directEnabled && containerQuoteId && item.quote_id === containerQuoteId ? (
                         <select
@@ -1147,10 +1147,10 @@ export function EgresosPanel({
                           {subLists.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       ) : (
-                        <span style={{ color: "#7d8ca3" }}>{item.section_name}</span>
+                        <span style={{ color: "#737373" }}>{item.section_name}</span>
                       )}
                     </td>
-                    <td style={{ ...tdStyle, color: "#e2e8f0", wordBreak: "break-word" }}>
+                    <td style={{ ...tdStyle, color: "#262626", wordBreak: "break-word" }}>
                       {containerQuoteId && item.quote_id === containerQuoteId ? (
                         <input
                           type="text"
@@ -1177,17 +1177,17 @@ export function EgresosPanel({
                         <input type="number" value={editState.qty}
                           onChange={e => setEditState(s => ({ ...s, qty: e.target.value }))}
                           placeholder={String(qty)} title="Cantidad" style={{ ...editInputStyle, width: 38 }} />
-                        <span style={{ color: "#6b7c93", fontSize: 11 }}>×</span>
+                        <span style={{ color: "#858585", fontSize: 11 }}>×</span>
                         <input type="number" value={editState.days}
                           onChange={e => setEditState(s => ({ ...s, days: e.target.value }))}
                           placeholder={String(days)} title="Días" style={{ ...editInputStyle, width: 38 }} />
-                        <span style={{ color: "#6b7c93", fontSize: 11 }}>×</span>
+                        <span style={{ color: "#858585", fontSize: 11 }}>×</span>
                         <input type="number" value={editState.unit_price}
                           onChange={e => setEditState(s => ({ ...s, unit_price: e.target.value }))}
                           placeholder={String(price)} title="Precio unitario" style={{ ...editInputStyle, width: 70 }} />
                       </div>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#C2362B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                       {fmt(previewMonto)}
                     </td>
                     <td style={tdStyle}>
@@ -1225,26 +1225,26 @@ export function EgresosPanel({
 
               return (
                 <tr key={item.id} style={{
-                  background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)",
-                  borderBottom: "1px solid rgba(148,163,184,0.07)",
+                  background: idx % 2 === 0 ? "transparent" : "#FFFFFF",
+                  borderBottom: "1px solid rgba(0,0,0,0.06)",
                 }}>
-                  <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12 }}>{item.section_name}</td>
-                  <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 170, wordBreak: "break-word", whiteSpace: "normal" }}>
+                  <td style={{ ...tdStyle, color: "#737373", fontSize: 12 }}>{item.section_name}</td>
+                  <td style={{ ...tdStyle, color: "#262626", maxWidth: 170, wordBreak: "break-word", whiteSpace: "normal" }}>
                     {item.description}
                   </td>
                   <td style={{ ...tdStyle, maxWidth: 190, whiteSpace: "normal" }}>
                     {item.supplierType === "none" ? (
-                      <span style={{ color: "#6b7c93", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
+                      <span style={{ color: "#858585", fontSize: 12, fontStyle: "italic" }}>Sin asignar</span>
                     ) : (
                       <ContactChip
                         label={item.supplierLabel}
                         icon={item.supplierType === "empleado" ? "👤" : "🏢"}
-                        color={item.supplierType === "empleado" ? "#34d399" : "#a78bfa"}
+                        color={item.supplierType === "empleado" ? "#1F8A55" : "#131313"}
                       />
                     )}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{fmt(price)}</td>
-                  <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 600, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(monto)}</td>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#6B6B6B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{fmt(price)}</td>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#C2362B", fontWeight: 600, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(monto)}</td>
                   <td style={tdStyle}>
                     {(() => {
                       const st = egresoStatus(item)
@@ -1259,7 +1259,7 @@ export function EgresosPanel({
                             {st.label}
                           </span>
                           {st.fecha && (
-                            <span style={{ fontSize: 10, color: "#7d8ca3", whiteSpace: "nowrap" }}>📅 {fechaCorta(st.fecha)}</span>
+                            <span style={{ fontSize: 10, color: "#737373", whiteSpace: "nowrap" }}>📅 {fechaCorta(st.fecha)}</span>
                           )}
                         </span>
                       )
@@ -1275,7 +1275,7 @@ export function EgresosPanel({
                               ✓ Pagado{item.pago_tipo === "anticipo" ? " (Ant.)" : item.pago_tipo === "comprobacion" ? " (Comp.)" : ""}
                             </span>
                             {item.pago_fecha && (
-                              <span style={{ fontSize: 10, color: "#7d8ca3", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
+                              <span style={{ fontSize: 10, color: "#737373", whiteSpace: "nowrap" }}>📅 {fechaCorta(item.pago_fecha)}</span>
                             )}
                           </span>
                           {/* Solo pagos registrados desde la app (anticipo, comprobación o pago
@@ -1307,7 +1307,7 @@ export function EgresosPanel({
                               ...editBtnStyle,
                               background: sendingBilling === item.id ? "rgba(6,182,212,0.08)" : "rgba(6,182,212,0.10)",
                               border: "1px solid rgba(6,182,212,0.25)",
-                              color: "#67e8f9",
+                              color: "#0E7490",
                               opacity: sendingBilling === item.id ? 0.6 : 1,
                             }}
                           >
@@ -1316,7 +1316,7 @@ export function EgresosPanel({
                         )}
                         <button onClick={() => startEdit(item)} style={editBtnStyle}>✎ Editar</button>
                         {directEnabled && item.pago_estado !== "pagado" && (
-                          <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#f87171", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
+                          <button onClick={() => deleteGasto(item)} style={{ ...editBtnStyle, border: "1px solid rgba(248,113,113,0.25)", color: "#C2362B", background: "rgba(248,113,113,0.08)" }} title="Borrar gasto">🗑 Borrar</button>
                         )}
                       </div>}
                     </div>
@@ -1326,11 +1326,11 @@ export function EgresosPanel({
             })}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-              <td colSpan={4} style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12, paddingTop: 10 }}>
+            <tr style={{ borderTop: "1px solid rgba(0,0,0,0.1)" }}>
+              <td colSpan={4} style={{ ...tdStyle, color: "#737373", fontSize: 12, paddingTop: 10 }}>
                 {qItems.length} rubro{qItems.length !== 1 ? "s" : ""}
               </td>
-              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", paddingTop: 10 }}>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#C2362B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", paddingTop: 10 }}>
                 {fmt(quoteTotal)}
               </td>
               <td colSpan={2} />
@@ -1350,11 +1350,11 @@ export function EgresosPanel({
       {/* Summary cards + Facturar todos */}
       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12, flex: 1 }}>
-          <SummaryCard label="Total egresos"  value={fmt(totalGlobal)}     color="#f87171" />
-          <SummaryCard label="Ítems"          value={String(items.length)} color="#94a3b8" />
+          <SummaryCard label="Total egresos"  value={fmt(totalGlobal)}     color="#C2362B" />
+          <SummaryCard label="Ítems"          value={String(items.length)} color="#6B6B6B" />
           {directEnabled
-            ? <SummaryCard label="Sub-listas"    value={String(subLists.length)} color="#94a3b8" />
-            : <SummaryCard label="Cotizaciones"  value={String(quoteCount)}      color="#94a3b8" />}
+            ? <SummaryCard label="Sub-listas"    value={String(subLists.length)} color="#6B6B6B" />
+            : <SummaryCard label="Cotizaciones"  value={String(quoteCount)}      color="#6B6B6B" />}
         </div>
         {!readOnly && <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexShrink: 0 }}>
           <button
@@ -1364,7 +1364,7 @@ export function EgresosPanel({
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               padding: "10px 18px", borderRadius: 10, cursor: sendingAll ? "not-allowed" : "pointer",
               background: sendingAll ? "rgba(6,182,212,0.06)" : "rgba(6,182,212,0.12)",
-              border: "1px solid rgba(6,182,212,0.30)", color: "#67e8f9",
+              border: "1px solid rgba(6,182,212,0.30)", color: "#0E7490",
               fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
               opacity: sendingAll ? 0.6 : 1,
             }}
@@ -1388,9 +1388,9 @@ export function EgresosPanel({
             style={{
               padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600,
               cursor: "pointer",
-              border: statusFilter === key ? "1px solid rgba(167,139,250,0.45)" : "1px solid rgba(148,163,184,0.18)",
-              background: statusFilter === key ? "rgba(167,139,250,0.14)" : "transparent",
-              color: statusFilter === key ? "#c4b5fd" : "#94a3b8",
+              border: statusFilter === key ? "1px solid rgba(0,0,0,0.2)" : "1px solid rgba(0,0,0,0.13)",
+              background: statusFilter === key ? "rgba(0,0,0,0.05)" : "transparent",
+              color: statusFilter === key ? "#3F3F3F" : "#6B6B6B",
             }}
           >
             {label}
@@ -1411,16 +1411,16 @@ export function EgresosPanel({
                 {!readOnly && (
                   <>
                     <button onClick={() => openRenameSubList(active.id, active.name)} title="Renombrar sub-lista"
-                      style={{ background: "none", border: "none", color: "#7d8ca3", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>✎</button>
+                      style={{ background: "none", border: "none", color: "#737373", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>✎</button>
                     <button onClick={() => deleteSubList(active.id, active.name)} title="Eliminar sub-lista"
-                      style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>🗑</button>
+                      style={{ background: "none", border: "none", color: "#C2362B", cursor: "pointer", fontSize: 13, padding: "0 2px" }}>🗑</button>
                   </>
                 )}
               </span>
               <span style={quoteTotalStyle}>{fmt(sTotal)}</span>
             </div>
             {sItems.length > 0 ? renderEgresoTable(sItems) : (
-              <div style={{ padding: 16, textAlign: "center", color: "#6b7c93", fontSize: 12, border: "1px solid rgba(148,163,184,0.10)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+              <div style={{ padding: 16, textAlign: "center", color: "#858585", fontSize: 12, border: "1px solid rgba(0,0,0,0.08)", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
                 Sin gastos en esta sub-lista todavía.
               </div>
             )}
@@ -1449,11 +1449,11 @@ export function EgresosPanel({
       {payModal && (
         <div style={payOverlayStyle}>
           <div style={payPanelStyle} onClick={(e) => e.stopPropagation()}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: payModal.tipo === "anticipo" ? "#34d399" : "#fbbf24" }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: payModal.tipo === "anticipo" ? "#1F8A55" : "#A86B00" }}>
               {payModal.tipo === "anticipo" ? "Pagar anticipo" : "Pagar comprobación"}
             </p>
-            <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f8fafc" }}>{payModal.item.description}</p>
-            <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#94a3b8" }}>{payModal.item.supplierLabel}</p>
+            <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#141414" }}>{payModal.item.description}</p>
+            <p style={{ margin: "2px 0 16px", fontSize: 12, color: "#6B6B6B" }}>{payModal.item.supplierLabel}</p>
 
             <label style={payLabelStyle}>
               {payModal.tipo === "comprobacion" ? "Monto real comprobado" : "Monto del pago"}
@@ -1465,14 +1465,14 @@ export function EgresosPanel({
               const reembolso = real - original
               return (
                 <>
-                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#737373" }}>
                     Monto registrado originalmente: {fmt(original)}
                   </p>
                   {reembolso > 0 && (
                     <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8, background: "rgba(96,165,250,0.10)", border: "1px solid rgba(96,165,250,0.3)" }}>
-                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#93c5fd", textTransform: "uppercase", letterSpacing: 0.4 }}>Monto a reembolsar</p>
-                      <p style={{ margin: "3px 0 0", fontSize: 16, fontWeight: 700, color: "#bfdbfe", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(reembolso)}</p>
-                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#1D5FA8",}}>Monto a reembolsar</p>
+                      <p style={{ margin: "3px 0 0", fontSize: 16, fontWeight: 700, color: "#1D5FA8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(reembolso)}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>
                         El pago original de {fmt(original)} queda registrado. Se generará una línea de reembolso por la diferencia con {payModal.item.supplierLabel}.
                       </p>
                     </div>
@@ -1489,7 +1489,7 @@ export function EgresosPanel({
               onChange={(e) => setPayFecha(e.target.value)}
               style={payInputStyle}
             />
-            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>
               El día real del pago (puede ser antes de hoy), no la fecha en que lo registras.
             </p>
 
@@ -1514,7 +1514,7 @@ export function EgresosPanel({
                 </label>
                 <input type="file" accept=".pdf,application/pdf" onChange={(e) => setPayPdf(e.target.files?.[0] || null)} style={payFileStyle} />
                 {!facturaRequerida(payForma) && (
-                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#737373" }}>
                     {payForma
                       ? `Pagado por ${payForma}: la factura no es obligatoria, pero puedes adjuntarla.`
                       : "Solo es obligatoria si el pago sale de Retro Studio o Retro Films."}
@@ -1533,11 +1533,11 @@ export function EgresosPanel({
               style={payFileStyle}
             />
             {!comprobanteRequerido(payForma) && (
-              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+              <p style={{ margin: "6px 0 0", fontSize: 11, color: "#737373" }}>
                 Pagado en efectivo: el comprobante no es obligatorio, pero puedes adjuntarlo si lo tienes.
               </p>
             )}
-            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>
               PDF o JPG. Queda guardado y vinculado a esta transacción.
             </p>
 
@@ -1561,8 +1561,8 @@ export function EgresosPanel({
 
 function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", boxShadow: `0 0 0 1px ${color}22` }}>
-      <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
+    <div style={{ padding: "14px 18px", borderRadius: 12, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", boxShadow: `0 0 0 1px ${color}22` }}>
+      <p style={{ margin: 0, color: "#737373", fontSize: 11, fontWeight: 600,}}>{label}</p>
       <p style={{ margin: "6px 0 0", color, fontSize: 20, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{value}</p>
     </div>
   )
@@ -1573,73 +1573,73 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
 const quoteHeaderStyle: React.CSSProperties = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
   padding: "10px 14px", borderRadius: "10px 10px 0 0",
-  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.12)", borderBottom: "none",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.09)", borderBottom: "none",
 }
-const quoteLabelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#e2e8f0" }
+const quoteLabelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#262626" }
 
 // Pestañas de sub-listas
 const subTabStyle: React.CSSProperties = {
   padding: "7px 14px", borderRadius: 999, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.03)",
-  color: "#94a3b8", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
+  border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF",
+  color: "#6B6B6B", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
   maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis",
 }
 const subTabActiveStyle: React.CSSProperties = {
   ...subTabStyle,
-  border: "1px solid rgba(167,139,250,0.55)", background: "rgba(167,139,250,0.16)", color: "#c4b5fd", cursor: "default",
+  border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)", color: "#3F3F3F", cursor: "default",
 }
 const subTabAddStyle: React.CSSProperties = {
   ...subTabStyle,
-  border: "1px dashed rgba(52,211,153,0.40)", background: "rgba(52,211,153,0.06)", color: "#34d399",
+  border: "1px dashed rgba(52,211,153,0.40)", background: "rgba(52,211,153,0.06)", color: "#1F8A55",
 }
-const quoteTotalStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }
-const tableWrapStyle: React.CSSProperties  = { overflowX: "auto", borderRadius: "0 0 10px 10px", border: "1px solid rgba(148,163,184,0.10)" }
-const tableStyle: React.CSSProperties      = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#cbd5e1" }
+const quoteTotalStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: "#C2362B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }
+const tableWrapStyle: React.CSSProperties  = { overflowX: "auto", borderRadius: "0 0 10px 10px", border: "1px solid rgba(0,0,0,0.08)" }
+const tableStyle: React.CSSProperties      = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#3F3F3F" }
 
 const thStyle: React.CSSProperties = {
   padding: "9px 12px", textAlign: "left", fontSize: 11, fontWeight: 700,
-  color: "#6b7c93", textTransform: "uppercase", letterSpacing: 0.6,
-  borderBottom: "1px solid rgba(148,163,184,0.12)", background: "rgba(255,255,255,0.025)",
+  color: "#858585",
+  borderBottom: "1px solid rgba(0,0,0,0.09)", background: "#FFFFFF",
 }
-const tdStyle: React.CSSProperties = { padding: "9px 12px", fontSize: 13, color: "#cbd5e1", verticalAlign: "middle" }
+const tdStyle: React.CSSProperties = { padding: "9px 12px", fontSize: 13, color: "#3F3F3F", verticalAlign: "middle" }
 
 const editInputStyle: React.CSSProperties = {
   width: "100%", maxWidth: 90, boxSizing: "border-box", padding: "4px 6px", borderRadius: 6,
-  border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
-  color: "#f8fafc", fontSize: 12, outline: "none", textAlign: "right",
+  border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)",
+  color: "#141414", fontSize: 12, outline: "none", textAlign: "right",
 }
 const saveBtnStyle: React.CSSProperties = {
   padding: "4px 10px", borderRadius: 6, border: "none",
-  background: "rgba(52,211,153,0.18)", color: "#34d399",
+  background: "rgba(52,211,153,0.18)", color: "#1F8A55",
   cursor: "pointer", fontSize: 13, fontWeight: 700, marginRight: 4,
 }
 const cancelBtnStyle: React.CSSProperties = {
   padding: "4px 8px", borderRadius: 6,
-  border: "1px solid rgba(148,163,184,0.18)", background: "transparent",
-  color: "#7d8ca3", cursor: "pointer", fontSize: 12,
+  border: "1px solid rgba(0,0,0,0.13)", background: "transparent",
+  color: "#737373", cursor: "pointer", fontSize: 12,
 }
 const editBtnStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", textAlign: "center",
   padding: "4px 10px", borderRadius: 6,
-  border: "1px solid rgba(148,163,184,0.18)", background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+  border: "1px solid rgba(0,0,0,0.13)", background: "#FFFFFF",
+  color: "#6B6B6B", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
 }
 
 const editPagoBtnStyle: React.CSSProperties = {
   ...editBtnStyle,
-  border: "1px solid rgba(52,211,153,0.22)", background: "rgba(52,211,153,0.06)", color: "#6ee7b7",
+  border: "1px solid rgba(52,211,153,0.22)", background: "rgba(52,211,153,0.06)", color: "#1F7A4D",
 }
 // Renglón de archivo en el modal de corrección de pago
 const epArchivoRowStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0,
-  padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(148,163,184,0.14)", fontSize: 12,
+  padding: "6px 10px", borderRadius: 8, background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)", fontSize: 12,
 }
 const epArchivoNombreStyle: React.CSSProperties = {
   flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "none",
 }
 const epLinkBtnStyle: React.CSSProperties = {
-  background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
+  background: "none", border: "none", color: "#6B6B6B", cursor: "pointer",
   fontSize: 11, fontWeight: 600, padding: 0, flexShrink: 0,
 }
 
@@ -1650,8 +1650,8 @@ const actionStackStyle: React.CSSProperties = {
 
 const addInputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.25)", background: "rgba(255,255,255,0.05)",
-  color: "#f1f5f9", fontSize: 14, outline: "none",
+  border: "1px solid rgba(0,0,0,0.17)", background: "#FFFFFF",
+  color: "#1A1A1A", fontSize: 14, outline: "none",
 }
 const actionGridStyle: React.CSSProperties = {
   display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, alignItems: "start",
@@ -1665,7 +1665,7 @@ const sentBadgeStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", textAlign: "center",
   padding: "4px 10px", borderRadius: 6,
   border: "1px solid rgba(52,211,153,0.24)", background: "rgba(52,211,153,0.10)",
-  color: "#34d399", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+  color: "#1F8A55", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
   cursor: "default",
 }
 
@@ -1676,55 +1676,54 @@ const payBtnBase: React.CSSProperties = {
 }
 const payAnticipoBtnStyle: React.CSSProperties = {
   ...payBtnBase,
-  border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.12)", color: "#34d399",
+  border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.12)", color: "#1F8A55",
 }
 const payCompBtnStyle: React.CSSProperties = {
   ...payBtnBase,
-  border: "1px solid rgba(251,191,36,0.3)", background: "rgba(251,191,36,0.12)", color: "#fbbf24",
+  border: "1px solid rgba(251,191,36,0.3)", background: "rgba(251,191,36,0.12)", color: "#A86B00",
 }
 const pendienteBadgeStyle: React.CSSProperties = {
   ...payBtnBase,
   cursor: "default",
-  border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.12)", color: "#fca5a5",
+  border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.12)", color: "#B42318",
 }
 const paidBadgeStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", textAlign: "center",
   padding: "4px 10px", borderRadius: 6,
   border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.16)",
-  color: "#34d399", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", cursor: "default",
+  color: "#1F8A55", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", cursor: "default",
 }
 
 const payOverlayStyle: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 1000010,
-  background: "rgba(2,6,23,0.78)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+  background: "rgba(17,17,17,0.32)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
 }
 const payPanelStyle: React.CSSProperties = {
   width: "100%", maxWidth: 400,
-  background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-  border: "1px solid rgba(148,163,184,0.16)", borderRadius: 16,
-  padding: "22px 22px 18px", boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)", borderRadius: 16,
+  padding: "22px 22px 18px", boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
 }
 const payLabelStyle: React.CSSProperties = {
-  display: "block", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
-  letterSpacing: 0.5, color: "#7d8ca3", marginBottom: 6,
+  display: "block", fontSize: 11, fontWeight: 600, color: "#737373", marginBottom: 6,
 }
 const payInputStyle: React.CSSProperties = {
-  width: "100%", padding: "10px 12px", background: "rgba(2,6,23,0.55)",
-  border: "1px solid rgba(148,163,184,0.22)", borderRadius: 10, color: "#e2e8f0",
+  width: "100%", padding: "10px 12px", background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.15)", borderRadius: 10, color: "#262626",
   fontSize: 14, boxSizing: "border-box", outline: "none",
 }
 const payFileStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", background: "rgba(2,6,23,0.55)",
-  border: "1px dashed rgba(148,163,184,0.3)", borderRadius: 10, color: "#94a3b8",
+  width: "100%", padding: "8px 10px", background: "#FFFFFF",
+  border: "1px dashed rgba(0,0,0,0.2)", borderRadius: 10, color: "#6B6B6B",
   fontSize: 12, boxSizing: "border-box",
 }
 const payCancelStyle: React.CSSProperties = {
-  padding: "9px 16px", borderRadius: 10, border: "1px solid rgba(148,163,184,0.22)",
-  background: "transparent", color: "#94a3b8", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  padding: "9px 16px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)",
+  background: "transparent", color: "#6B6B6B", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 const payConfirmStyle: React.CSSProperties = {
   padding: "9px 16px", borderRadius: 10, border: "1px solid rgba(52,211,153,0.4)",
-  background: "rgba(52,211,153,0.16)", color: "#34d399", fontSize: 13, fontWeight: 700, cursor: "pointer",
+  background: "rgba(52,211,153,0.16)", color: "#1F8A55", fontSize: 13, fontWeight: 700, cursor: "pointer",
 }
 
 // ─── SupplierCombobox ─────────────────────────────────────────────────────────
@@ -1795,42 +1794,42 @@ function SupplierCombobox({
           }}
           style={{
             width: "100%", padding: "4px 24px 4px 8px", borderRadius: 6,
-            border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
-            color: open ? "#f8fafc" : (value ? "#e2e8f0" : "#475569"),
+            border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)",
+            color: open ? "#141414" : (value ? "#262626" : "#A3A3A3"),
             fontSize: 12, outline: "none", boxSizing: "border-box" as const,
           }}
         />
         {value && !open && (
           <button type="button"
             onMouseDown={e => { e.preventDefault(); onChange(""); setQuery("") }}
-            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#6b7c93", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
+            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#858585", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
           >✕</button>
         )}
         {!value && !open && (
-          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#6b7c93", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
+          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#858585", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
         )}
       </div>
 
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 9999,
-          background: "rgba(8,12,24,0.97)", border: "1px solid rgba(148,163,184,0.20)",
-          borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+          background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+          borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.12)",
           maxHeight: 260, overflowY: "auto" as const, padding: "4px 0",
         }}>
           {!hasResults && q && (
-            <div style={{ padding: 12, color: "#6b7c93", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
+            <div style={{ padding: 12, color: "#858585", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
           )}
           {filteredEmps.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase" as const, letterSpacing: 0.7 }}>👤 Empleados RETRO</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>👤 Empleados RETRO</div>
               {filteredEmps.map(e => {
                 return (
                   <div key={e.id}
                     onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
-                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{empNick(e)}</div>
-                    <div style={{ color: "#7d8ca3", fontSize: 11 }}>{e.puesto}</div>
+                    <div style={{ color: "#262626", fontSize: 12, fontWeight: 500 }}>{empNick(e)}</div>
+                    <div style={{ color: "#737373", fontSize: 11 }}>{e.puesto}</div>
                   </div>
                 )
               })}
@@ -1838,7 +1837,7 @@ function SupplierCombobox({
           )}
           {filteredProvs.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase" as const, letterSpacing: 0.7, borderTop: "1px solid rgba(148,163,184,0.08)", marginTop: 2 }}>🏢 Proveedores</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 2 }}>🏢 Proveedores</div>
               {filteredProvs.map(p => {
                 const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
                 const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad
@@ -1846,8 +1845,8 @@ function SupplierCombobox({
                   <div key={p.id}
                     onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
-                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                    <div style={{ color: "#7d8ca3", fontSize: 11 }}>{sub}</div>
+                    <div style={{ color: "#262626", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                    <div style={{ color: "#737373", fontSize: 11 }}>{sub}</div>
                   </div>
                 )
               })}
@@ -1881,7 +1880,7 @@ export function EgresosPorCodigo(props: Omit<EgresosPanelProps, "quoteIds" | "so
   }, [projectId, projectCode, projectName, empresa, projectResponsable])
 
   if (grupos === null) {
-    return <p style={{ color: "#7d8ca3", fontSize: 13, padding: "24px 0", textAlign: "center" }}>Cargando…</p>
+    return <p style={{ color: "#737373", fontSize: 13, padding: "24px 0", textAlign: "center" }}>Cargando…</p>
   }
 
   // Un solo código (lo normal): el panel de siempre, sin pestañas.
@@ -1899,9 +1898,9 @@ export function EgresosPorCodigo(props: Omit<EgresosPanelProps, "quoteIds" | "so
               onClick={() => setActivo(i)}
               style={{
                 padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 600,
-                border: on ? "1px solid rgba(167,139,250,0.55)" : "1px solid rgba(148,163,184,0.18)",
-                background: on ? "rgba(167,139,250,0.16)" : "rgba(255,255,255,0.03)",
-                color: on ? "#ddd6fe" : "#94a3b8",
+                border: on ? "1px solid rgba(0,0,0,0.2)" : "1px solid rgba(0,0,0,0.13)",
+                background: on ? "rgba(0,0,0,0.05)" : "#FFFFFF",
+                color: on ? "#262626" : "#6B6B6B",
               }}
             >
               <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{gr.codigo || "Sin código"}</span>

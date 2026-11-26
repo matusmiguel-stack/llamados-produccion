@@ -204,7 +204,7 @@ export function VistaPlan(props: {
           // En teléfono, al quedar fija deja libre el botón del menú.
           padding: fija && esMovil ? "10px 14px 10px 62px" : "10px 14px",
           borderRadius: fija ? "0 0 14px 14px" : 14,
-          background: "rgba(10,14,26,0.96)",
+          background: "#FFFFFF",
           ...(fija ? { position: "fixed", top: 0, left: fija.left, width: fija.width, zIndex: 50 } : {}),
         }}
       >
@@ -304,7 +304,7 @@ export function VistaPlan(props: {
                       key={"s" + b.s.id}
                       style={{
                         display: "flex", alignItems: "center", gap: 10, margin: "4px 0 2px",
-                        color: C.ambar, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase",
+                        color: C.ambar, fontSize: 12, fontWeight: 700,
                       }}
                     >
                       <span style={{ flex: "0 0 14px", height: 1, background: C.ambarBorde }} />
@@ -344,7 +344,7 @@ export function VistaPlan(props: {
                       }}
                     >
                       <span style={{ color: C.apagado, fontSize: 11, width: 10 }}>{cerrada ? "▸" : "▾"}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violetaClaro, whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.violetaClaro, whiteSpace: "nowrap" }}>
                         {nombrePieza(etq, g)}
                       </span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: C.texto, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

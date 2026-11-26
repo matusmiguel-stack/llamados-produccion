@@ -57,9 +57,9 @@ export function CalendarSearch({
           width: "100%",
           padding: "6px 10px",
           borderRadius: 8,
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(148,163,184,0.2)",
-          color: "#f8fafc",
+          background: "#FFFFFF",
+          border: "1px solid rgba(0,0,0,0.14)",
+          color: "#141414",
           fontSize: 12,
         }}
       />
@@ -73,14 +73,14 @@ export function CalendarSearch({
             zIndex: 40,
             maxHeight: 320,
             overflowY: "auto",
-            background: "#0b1220",
-            border: "1px solid rgba(148,163,184,0.2)",
+            background: "#FFFFFF",
+            border: "1px solid rgba(0,0,0,0.14)",
             borderRadius: 10,
-            boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.09)",
           }}
         >
           {results.length === 0 ? (
-            <div style={{ padding: "10px 12px", color: "#64748b", fontSize: 12 }}>Sin resultados</div>
+            <div style={{ padding: "10px 12px", color: "#8A8A8A", fontSize: 12 }}>Sin resultados</div>
           ) : (
             results.map((it) => (
               <button
@@ -96,12 +96,12 @@ export function CalendarSearch({
                   padding: "8px 12px",
                   background: "transparent",
                   border: "none",
-                  borderBottom: "1px solid rgba(148,163,184,0.08)",
+                  borderBottom: "1px solid rgba(0,0,0,0.07)",
                   cursor: "pointer",
                 }}
               >
-                <div style={{ color: "#f8fafc", fontSize: 13, fontWeight: 600 }}>{it.title}</div>
-                <div style={{ color: "#7d8ca3", fontSize: 11, marginTop: 2 }}>
+                <div style={{ color: "#141414", fontSize: 13, fontWeight: 600 }}>{it.title}</div>
+                <div style={{ color: "#737373", fontSize: 11, marginTop: 2 }}>
                   {formatearFecha(it.date)}
                   {it.subtitle ? ` · ${it.subtitle}` : ""}
                 </div>

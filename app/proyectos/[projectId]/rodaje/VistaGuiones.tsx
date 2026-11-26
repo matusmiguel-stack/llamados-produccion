@@ -137,7 +137,7 @@ export function VistaGuiones(props: {
           )}
           {aplicados.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 6 }}>
-              <span style={{ color: C.apagado, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>
+              <span style={{ color: C.apagado, fontSize: 11, fontWeight: 600,}}>
                 Archivos originales
               </span>
               {aplicados.map((a) => (
@@ -177,7 +177,7 @@ export function VistaGuiones(props: {
                 }}
               >
                 <span style={{ color: C.apagado, fontSize: 11, width: 10 }}>{cerrado ? "▸" : "▾"}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violetaClaro, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.violetaClaro, whiteSpace: "nowrap" }}>
                   {pieza}
                 </span>
                 <span style={{ fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

@@ -196,7 +196,7 @@ export function EditarEscena(props: {
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 9, cursor: "pointer",
                       border: `1px solid ${marcada ? C.violetaBorde : C.linea}`,
-                      background: marcada ? C.violetaFondo : "rgba(255,255,255,0.04)",
+                      background: marcada ? C.violetaFondo : "#FFFFFF",
                       color: marcada ? C.violetaClaro : C.texto2, fontSize: 13, fontWeight: 600,
                     }}
                   >

@@ -146,10 +146,10 @@ export default function ReferenciasPage() {
 
       <main style={{ flex: 1, minWidth: 0, padding: isMobile ? "76px 14px 24px" : "28px 32px" }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1A1A1A", marginBottom: 4 }}>
             Referencias
           </h1>
-          <p style={{ fontSize: 13, color: "#7d8ca3", marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: "#737373", marginBottom: 28 }}>
             Tableros de referencias por proyecto — todos pueden ver y aportar
           </p>
 
@@ -179,7 +179,7 @@ export default function ReferenciasPage() {
 
           {/* Grid de proyectos */}
           {proyectos.length === 0 ? (
-            <p style={{ color: "#6b7c93", fontSize: 14, marginTop: 32, textAlign: "center" }}>
+            <p style={{ color: "#858585", fontSize: 14, marginTop: 32, textAlign: "center" }}>
               Aún no hay proyectos de referencias. Crea el primero arriba. ✨
             </p>
           ) : (
@@ -190,7 +190,7 @@ export default function ReferenciasPage() {
               {proyectos.map(p => {
                 if (editingId === p.id) {
                   return (
-                    <div key={p.id} style={{ ...cardStyle, flexDirection: "column", alignItems: "stretch", border: "1px solid rgba(167,139,250,0.35)" }}>
+                    <div key={p.id} style={{ ...cardStyle, flexDirection: "column", alignItems: "stretch", border: "1px solid rgba(0,0,0,0.2)" }}>
                       <input
                         value={editNombre}
                         onChange={e => setEditNombre(e.target.value)}
@@ -218,11 +218,11 @@ export default function ReferenciasPage() {
                 return (
                   <div key={p.id} style={cardStyle}>
                     <Link href={`/referencias/${p.id}`} style={{ textDecoration: "none", flex: 1, display: "block" }}>
-                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#f1f5f9", wordBreak: "break-word" }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1A1A1A", wordBreak: "break-word" }}>
                         {p.nombre}
                       </p>
                       {p.descripcion && (
-                        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#94a3b8", lineHeight: 1.5, wordBreak: "break-word" }}>
+                        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B6B6B", lineHeight: 1.5, wordBreak: "break-word" }}>
                           {p.descripcion}
                         </p>
                       )}
@@ -230,7 +230,7 @@ export default function ReferenciasPage() {
                         <span style={countBadgeStyle}>
                           🔗 {p.total} referencia{p.total === 1 ? "" : "s"}
                         </span>
-                        <span style={{ fontSize: 11, color: "#6b7c93" }}>
+                        <span style={{ fontSize: 11, color: "#858585" }}>
                           por {p.creador}
                         </span>
                       </div>
@@ -266,35 +266,34 @@ export default function ReferenciasPage() {
 
 const appShellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh",
-  background: "#05070d", fontFamily: "var(--font-sans)",
+  background: "#F3F3F3", fontFamily: "var(--font-sans)",
 }
 const panelStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.1)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 12, padding: 16,
 }
 const panelTitleStyle: React.CSSProperties = {
-  fontSize: 12, fontWeight: 700, color: "#94a3b8",
-  textTransform: "uppercase", letterSpacing: "0.05em",
+  fontSize: 12, fontWeight: 700, color: "#6B6B6B",
   marginBottom: 12,
 }
 const inputStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(148,163,184,0.2)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 8, padding: "8px 12px",
-  color: "#f1f5f9", fontSize: 14, boxSizing: "border-box",
+  color: "#1A1A1A", fontSize: 14, boxSizing: "border-box",
 }
 const primaryButtonStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.25)",
-  border: "1px solid rgba(124,58,237,0.4)",
+  background: "rgba(0,0,0,0.08)",
+  border: "1px solid rgba(0,0,0,0.2)",
   borderRadius: 8, padding: "8px 16px",
-  color: "#a78bfa", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  color: "#131313", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 const cardStyle: React.CSSProperties = {
   position: "relative",
   display: "flex", alignItems: "flex-start", gap: 8,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.1)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 12, padding: 16,
   transition: "border-color 0.15s ease",
 }
@@ -302,16 +301,16 @@ const countBadgeStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 4,
   padding: "3px 9px", borderRadius: 999,
   fontSize: 11, fontWeight: 600,
-  color: "#a78bfa", background: "rgba(124,58,237,0.12)",
-  border: "1px solid rgba(167,139,250,0.25)",
+  color: "#131313", background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 const deleteBtnStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer",
-  color: "#7d8ca3", fontSize: 14, padding: 4, flexShrink: 0,
+  color: "#737373", fontSize: 14, padding: 4, flexShrink: 0,
 }
 const cancelBtnStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid rgba(148,163,184,0.2)",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 8, padding: "8px 16px",
-  color: "#94a3b8", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  color: "#6B6B6B", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }

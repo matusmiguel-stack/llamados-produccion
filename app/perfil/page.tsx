@@ -303,19 +303,19 @@ export default function ProfilePage() {
                     <VacStat
                       valor={resumenVac!.restantes}
                       label="Días restantes"
-                      color={resumenVac!.restantes <= 0 ? "#f87171" : resumenVac!.restantes <= 3 ? "#fb923c" : "#34d399"}
+                      color={resumenVac!.restantes <= 0 ? "#C2362B" : resumenVac!.restantes <= 3 ? "#C2410C" : "#1F8A55"}
                     />
                     <VacStat valor={resumenVac!.corresponden} label="Te corresponden" />
                     <VacStat valor={resumenVac!.tomados} label="Ya tomados" />
                     <VacStat
                       valor={diasEnEspera}
                       label="En espera"
-                      color={diasEnEspera > 0 ? "#fbbf24" : undefined}
+                      color={diasEnEspera > 0 ? "#A86B00" : undefined}
                     />
                   </div>
 
                   <p style={vacResetStyle}>
-                    Se reinician el <strong style={{ color: "#e2e8f0" }}>{diaMesLargo(reseteoISO!)}
+                    Se reinician el <strong style={{ color: "#262626" }}>{diaMesLargo(reseteoISO!)}
                     {" "}de {reseteoISO!.slice(0, 4)}</strong>
                     {diasEnEspera > 0 && ` · puedes solicitar ${disponibles} día${disponibles !== 1 ? "s" : ""} más`}
                   </p>
@@ -432,7 +432,7 @@ export default function ProfilePage() {
 function VacStat({ valor, label, color }: { valor: number; label: string; color?: string }) {
   return (
     <div style={vacStatStyle}>
-      <span style={{ ...vacStatValueStyle, color: color || "#f8fafc" }}>{valor}</span>
+      <span style={{ ...vacStatValueStyle, color: color || "#141414" }}>{valor}</span>
       <span style={vacStatLabelStyle}>{label}</span>
     </div>
   )
@@ -483,16 +483,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -500,7 +498,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
@@ -514,22 +512,22 @@ const alertPanelStyle: React.CSSProperties = {
 
 const alertTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#fde68a",
+  color: "#8A5B00",
   fontSize: 14,
   fontWeight: 700,
 }
 
 const alertTextStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#fcd34d",
+  color: "#A86B00",
   fontSize: 13,
   lineHeight: 1.45,
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -539,19 +537,19 @@ const panelStyle: React.CSSProperties = {
 const panelHeaderStyle: React.CSSProperties = {
   marginBottom: 14,
   paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const panelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -565,12 +563,12 @@ const infoFieldStyle: React.CSSProperties = {
   gap: 4,
   padding: "10px 12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const infoValueStyle: React.CSSProperties = {
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
   textTransform: "capitalize",
@@ -598,7 +596,7 @@ const fieldStyle: React.CSSProperties = {
 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -606,10 +604,10 @@ const fieldLabelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -617,19 +615,19 @@ const inputStyle: React.CSSProperties = {
 
 const primaryButtonStyle: React.CSSProperties = {
   padding: "10px 16px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
 }
 
 const vacEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
   lineHeight: 1.5,
 }
@@ -644,8 +642,8 @@ const vacStatStyle: React.CSSProperties = {
   gap: 2,
   padding: "12px 14px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const vacStatValueStyle: React.CSSProperties = {
@@ -656,30 +654,28 @@ const vacStatValueStyle: React.CSSProperties = {
 }
 
 const vacStatLabelStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 500,
 }
 
 const vacResetStyle: React.CSSProperties = {
   margin: "12px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
 const vacSubtitleStyle: React.CSSProperties = {
   margin: "0 0 8px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const solicitudesListStyle: React.CSSProperties = {
   marginTop: 16,
   paddingTop: 14,
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
   display: "grid",
   gap: 8,
 }
@@ -691,8 +687,8 @@ const solicitudRowStyle: React.CSSProperties = {
   flexWrap: "wrap",
   padding: "10px 12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const statusBadgeStyle: React.CSSProperties = {
@@ -707,26 +703,26 @@ const statusBadgeStyle: React.CSSProperties = {
 
 const solicitudFechasStyle: React.CSSProperties = {
   margin: 0,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 13,
   fontWeight: 600,
 }
 
 const solicitudMotivoStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#fca5a5",
+  color: "#B42318",
   fontSize: 12,
   lineHeight: 1.4,
 }
 
 const solicitudMetaStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
 }
 
 const solicitudDiasStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   fontWeight: 600,
   marginLeft: "auto",

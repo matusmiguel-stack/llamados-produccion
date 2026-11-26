@@ -219,10 +219,10 @@ export default function TasksPage() {
 
       <main style={{ flex: 1, minWidth: 0, padding: isMobile ? "76px 14px 24px" : "28px 32px" }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1A1A1A", marginBottom: 4 }}>
             Mis Tareas
           </h1>
-          <p style={{ fontSize: 13, color: "#7d8ca3", marginBottom: 28 }}>
+          <p style={{ fontSize: 13, color: "#737373", marginBottom: 28 }}>
             Tus tareas privadas y las que te comparten 👥
           </p>
 
@@ -270,7 +270,7 @@ export default function TasksPage() {
           {/* Vencidas */}
           {overdue.length > 0 && (
             <section style={{ ...panelStyle, borderColor: "rgba(239,68,68,0.35)", marginTop: 20 }}>
-              <p style={{ ...panelTitleStyle, color: "#f87171" }}>
+              <p style={{ ...panelTitleStyle, color: "#C2362B" }}>
                 ⚠ Vencidas ({overdue.length})
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -410,12 +410,12 @@ function SharePicker({ users, selfId, selected, onToggle }: {
               <span key={id} style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
                 padding: "3px 10px", borderRadius: 999,
-                background: "rgba(124,58,237,0.18)", border: "1px solid rgba(167,139,250,0.4)",
-                color: "#c4b5fd", fontSize: 12, fontWeight: 600,
+                background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.2)",
+                color: "#3F3F3F", fontSize: 12, fontWeight: 600,
               }}>
                 {displayName(u)}
                 <button type="button" onClick={() => onToggle(id)}
-                  style={{ background: "none", border: "none", color: "#c4b5fd", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, marginLeft: 2 }}>×</button>
+                  style={{ background: "none", border: "none", color: "#3F3F3F", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, marginLeft: 2 }}>×</button>
               </span>
             )
           })}
@@ -444,9 +444,9 @@ function SharePicker({ users, selfId, selected, onToggle }: {
         {open && filtered.length > 0 && (
           <div style={{
             position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
-            background: "#0f172a", border: "1px solid rgba(148,163,184,0.2)",
+            background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
             borderRadius: 10, marginTop: 4, maxHeight: 200, overflowY: "auto",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.09)",
           }}>
             {filtered.map(u => (
               <button
@@ -456,14 +456,14 @@ function SharePicker({ users, selfId, selected, onToggle }: {
                 style={{
                   display: "block", width: "100%", textAlign: "left",
                   padding: "8px 12px", background: "none", border: "none",
-                  color: "#e2e8f0", fontSize: 13, cursor: "pointer",
-                  borderBottom: "1px solid rgba(148,163,184,0.08)",
+                  color: "#262626", fontSize: 13, cursor: "pointer",
+                  borderBottom: "1px solid rgba(0,0,0,0.07)",
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(148,163,184,0.08)")}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,0,0,0.07)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "none")}
               >
                 <span style={{ fontWeight: 500 }}>{displayName(u)}</span>
-                <span style={{ color: "#7d8ca3", marginLeft: 6, fontSize: 11 }}>· {u.email}</span>
+                <span style={{ color: "#737373", marginLeft: 6, fontSize: 11 }}>· {u.email}</span>
               </button>
             ))}
           </div>
@@ -503,7 +503,7 @@ function TaskRow({
             </div>
             <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
           </div>
-          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>👥 Compartir con:</p>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>👥 Compartir con:</p>
           <SharePicker
             users={users}
             selfId={selfId}
@@ -525,21 +525,21 @@ function TaskRow({
         {task.completed ? "✓" : ""}
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: task.completed ? "#64748b" : "#e2e8f0", textDecoration: task.completed ? "line-through" : "none", margin: 0 }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: task.completed ? "#8A8A8A" : "#262626", textDecoration: task.completed ? "line-through" : "none", margin: 0 }}>
           {task.title}
         </p>
-        <p style={{ fontSize: 12, color: overdue ? "#f87171" : "#64748b", margin: "2px 0 0" }}>
+        <p style={{ fontSize: 12, color: overdue ? "#C2362B" : "#8A8A8A", margin: "2px 0 0" }}>
           {overdue ? "⚠ " : ""}{formatDueLabel(task)}
           {!esMia && (
-            <span style={{ color: "#38bdf8" }}> · 👥 de {ownerName}</span>
+            <span style={{ color: "#1D6FB8" }}> · 👥 de {ownerName}</span>
           )}
           {esMia && sharedNames.length > 0 && (
-            <span style={{ color: "#a78bfa" }} title={sharedNames.join(", ")}>
+            <span style={{ color: "#131313" }} title={sharedNames.join(", ")}>
               {" "}· 👥 con {sharedNames.length === 1 ? sharedNames[0] : `${sharedNames.length} personas`}
             </span>
           )}
           {task.completed && task.completed_by && (
-            <span style={{ color: "#34d399" }}> · ✓ por {completedByName}</span>
+            <span style={{ color: "#1F8A55" }}> · ✓ por {completedByName}</span>
           )}
         </p>
       </div>
@@ -547,7 +547,7 @@ function TaskRow({
         <button onClick={onEdit} style={iconButtonStyle} title="Editar">✏</button>
       )}
       {esMia && (
-        <button onClick={onDelete} style={{ ...iconButtonStyle, color: "#f87171" }} title="Borrar">×</button>
+        <button onClick={onDelete} style={{ ...iconButtonStyle, color: "#C2362B" }} title="Borrar">×</button>
       )}
     </div>
   )
@@ -557,60 +557,59 @@ function TaskRow({
 
 const appShellStyle: React.CSSProperties = {
   display: "flex", minHeight: "100vh",
-  background: "#05070d", fontFamily: "var(--font-sans)",
+  background: "#F3F3F3", fontFamily: "var(--font-sans)",
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.1)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 12, padding: 16,
 }
 
 const panelTitleStyle: React.CSSProperties = {
-  fontSize: 12, fontWeight: 700, color: "#94a3b8",
-  textTransform: "uppercase", letterSpacing: "0.05em",
+  fontSize: 12, fontWeight: 700, color: "#6B6B6B",
   marginBottom: 12,
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(148,163,184,0.2)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 8, padding: "8px 12px",
-  color: "#f1f5f9", fontSize: 14, width: "100%", boxSizing: "border-box",
+  color: "#1A1A1A", fontSize: 14, width: "100%", boxSizing: "border-box",
 }
 
 const primaryButtonStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.25)",
-  border: "1px solid rgba(124,58,237,0.4)",
+  background: "rgba(0,0,0,0.08)",
+  border: "1px solid rgba(0,0,0,0.2)",
   borderRadius: 8, padding: "8px 16px",
-  color: "#a78bfa", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  color: "#131313", fontSize: 13, fontWeight: 600, cursor: "pointer",
 }
 
 const ghostButtonStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid rgba(148,163,184,0.2)",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 8, padding: "6px 12px",
-  color: "#94a3b8", fontSize: 13, cursor: "pointer",
+  color: "#6B6B6B", fontSize: 13, cursor: "pointer",
 }
 
 const iconButtonStyle: React.CSSProperties = {
   background: "transparent", border: "none",
-  color: "#94a3b8", cursor: "pointer", fontSize: 16, padding: "2px 6px",
+  color: "#6B6B6B", cursor: "pointer", fontSize: 16, padding: "2px 6px",
 }
 
 const taskRowStyle: React.CSSProperties = {
   display: "flex", alignItems: "flex-start", gap: 10,
-  padding: "10px 0", borderBottom: "1px solid rgba(148,163,184,0.07)",
+  padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,0.06)",
 }
 
 const emptyStyle: React.CSSProperties = {
-  fontSize: 13, color: "#6b7c93", textAlign: "center", padding: "12px 0",
+  fontSize: 13, color: "#858585", textAlign: "center", padding: "12px 0",
 }
 
 const checkboxStyle = (checked: boolean): React.CSSProperties => ({
   width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-  border: checked ? "2px solid #4ade80" : "2px solid rgba(148,163,184,0.3)",
+  border: checked ? "2px solid #1F8A55" : "2px solid rgba(0,0,0,0.2)",
   background: checked ? "rgba(74,222,128,0.15)" : "transparent",
-  cursor: "pointer", fontSize: 13, color: "#4ade80",
+  cursor: "pointer", fontSize: 13, color: "#1F8A55",
   display: "flex", alignItems: "center", justifyContent: "center",
 })

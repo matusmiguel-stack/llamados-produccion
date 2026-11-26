@@ -51,7 +51,7 @@ export function ReceptorForm({
   }
 
   return (
-    <div style={{ display: "grid", gap: 12, padding: "14px 16px", borderRadius: 12, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
+    <div style={{ display: "grid", gap: 12, padding: "14px 16px", borderRadius: 12, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.12)" }}>
       <FRow>
         <div style={{ flex: "1 1 140px" }}>
           <FField label="RFC *">

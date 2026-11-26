@@ -140,39 +140,39 @@ export default function WorkspacePage() {
     window.location.href = "/login"
   }
 
-  if (!ready) return <div style={{ minHeight: "100vh", background: "#05070d" }} />
+  if (!ready) return <div style={{ minHeight: "100vh", background: "#F3F3F3" }} />
 
   const role = profile?.role || "viewer"
   const wsNav = navItems.filter((it) => it.href !== "/workspace" && (!it.roles || it.roles.includes(role)))
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#05070d" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#F3F3F3" }}>
       {/* ── Sidebar (compartido) ── */}
       <aside style={sidebarStyle}>
         <div style={{ padding: "4px 8px 14px" }}>
-          <Image src="/logo-retro.png" alt="Retro" width={116} height={42} style={{ objectFit: "contain", height: "auto" }} priority />
+          <Image src="/logo-retro.png" alt="Retro" width={96} height={35} style={{ objectFit: "contain", height: "auto" }} priority />
         </div>
 
         <div style={{ padding: "0 2px 10px" }}>
-          <GlobalSearch onResultHref={navigateActiveTab} />
+          <GlobalSearch tone="dark" onResultHref={navigateActiveTab} />
         </div>
 
         <nav style={{ display: "grid", gap: 2, overflowY: "auto", flex: 1, alignContent: "start" }}>
           {wsNav.map((it) => (
             <button key={it.href} onClick={() => navigateActiveTab(it.href)} style={navBtnStyle} title={`Ir a ${it.label} en la pestaña actual`}>
-              <span style={{ display: "inline-flex", color: "#94a3b8" }}><NavIcon type={it.icon} /></span>
+              <span style={{ display: "inline-flex", color: "#8E8E93" }}><NavIcon type={it.icon} /></span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.label}</span>
             </button>
           ))}
         </nav>
 
-        <div style={{ borderTop: "1px solid rgba(148,163,184,0.10)", paddingTop: 10, marginTop: 8, display: "grid", gap: 4 }}>
+        <div style={{ borderTop: "1px solid #2E2E31", paddingTop: 10, marginTop: 8, display: "grid", gap: 4 }}>
           <button onClick={() => navigateActiveTab("/perfil")} style={navBtnStyle}>
-            <span style={{ display: "inline-flex", color: "#94a3b8" }}><NavIcon type="tasks" /></span>
+            <span style={{ display: "inline-flex", color: "#8E8E93" }}><NavIcon type="tasks" /></span>
             <span>Mi perfil</span>
           </button>
-          <button onClick={logout} style={{ ...navBtnStyle, color: "#f87171" }}>Salir</button>
-          <Link href="/" style={{ padding: "7px 10px", borderRadius: 8, color: "#7d8ca3", fontSize: 11, textDecoration: "none" }}>
+          <button onClick={logout} style={{ ...navBtnStyle, color: "#F0806F" }}>Salir</button>
+          <Link href="/" style={{ padding: "7px 10px", borderRadius: 8, color: "#8E8E93", fontSize: 12, textDecoration: "none" }}>
             ← Vista normal (sin pestañas)
           </Link>
         </div>
@@ -191,19 +191,19 @@ export default function WorkspacePage() {
                   display: "flex", alignItems: "center", gap: 8, padding: "8px 10px 8px 13px",
                   borderRadius: "9px 9px 0 0", cursor: "pointer", whiteSpace: "nowrap",
                   maxWidth: 220, flexShrink: 0,
-                  background: active ? "#05070d" : "transparent",
-                  borderTop: active ? "2px solid #7c3aed" : "2px solid transparent",
-                  borderLeft: active ? "1px solid rgba(148,163,184,0.12)" : "1px solid transparent",
-                  borderRight: active ? "1px solid rgba(148,163,184,0.12)" : "1px solid transparent",
+                  background: active ? "#F3F3F3" : "transparent",
+                  borderTop: active ? "2px solid #131313" : "2px solid transparent",
+                  borderLeft: active ? "1px solid rgba(0,0,0,0.09)" : "1px solid transparent",
+                  borderRight: active ? "1px solid rgba(0,0,0,0.09)" : "1px solid transparent",
                 }}
               >
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", color: active ? "#f1f5f9" : "#94a3b8", fontSize: 13, fontWeight: active ? 600 : 400 }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", color: active ? "#1A1A1A" : "#6B6B6B", fontSize: 13, fontWeight: active ? 600 : 400 }}>
                   {t.title}
                 </span>
                 <span
                   onClick={(e) => { e.stopPropagation(); closeTab(t.id) }}
                   title="Cerrar pestaña"
-                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 5, color: "#7d8ca3", fontSize: 14, lineHeight: 1 }}
+                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: 5, color: "#737373", fontSize: 14, lineHeight: 1 }}
                 >×</span>
               </div>
             )
@@ -219,7 +219,7 @@ export default function WorkspacePage() {
               src={t.src}
               onLoad={() => onIframeLoad(t.id)}
               title={t.title}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "#05070d", display: t.id === activeId ? "block" : "none" }}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "#F3F3F3", display: t.id === activeId ? "block" : "none" }}
             />
           ))}
         </div>
@@ -229,25 +229,24 @@ export default function WorkspacePage() {
 }
 
 const sidebarStyle: React.CSSProperties = {
-  width: 208, flexShrink: 0, background: "#080a16",
-  borderRight: "1px solid rgba(148,163,184,0.10)",
-  display: "flex", flexDirection: "column", padding: "14px 10px",
+  width: 208, flexShrink: 0, background: "#18181A",
+  display: "flex", flexDirection: "column", padding: "18px 10px 12px",
 }
 
 const navBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-  borderRadius: 8, border: "none", background: "transparent",
-  color: "#cbd5e1", fontSize: 13, fontWeight: 500, cursor: "pointer", textAlign: "left", width: "100%",
+  borderRadius: 7, border: "none", background: "transparent",
+  color: "#D6D6D6", fontSize: 13.5, fontWeight: 450, cursor: "pointer", textAlign: "left", width: "100%",
 }
 
 const tabBarStyle: React.CSSProperties = {
   display: "flex", alignItems: "stretch", gap: 4, padding: "7px 8px 0",
-  background: "#0b0e1c", borderBottom: "1px solid rgba(148,163,184,0.12)",
+  background: "#FFFFFF", borderBottom: "1px solid rgba(0,0,0,0.09)",
   overflowX: "auto", flexShrink: 0,
 }
 
 const newTabBtnStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", justifyContent: "center",
   width: 30, flexShrink: 0, margin: "2px 2px 4px", borderRadius: 7,
-  border: "none", background: "transparent", color: "#94a3b8", fontSize: 18, cursor: "pointer",
+  border: "none", background: "transparent", color: "#6B6B6B", fontSize: 18, cursor: "pointer",
 }

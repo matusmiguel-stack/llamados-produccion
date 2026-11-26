@@ -103,11 +103,11 @@ const emptyForm: IngresoForm = {
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const ESTATUS: Record<Estatus, { label: string; color: string; bg: string; border: string }> = {
-  en_produccion:    { label: "En Producción",       color: "#fbbf24", bg: "rgba(245,158,11,0.15)", border: "rgba(251,191,36,0.25)" },
-  facturado:        { label: "Facturado",            color: "#a78bfa", bg: "rgba(124,58,237,0.15)", border: "rgba(167,139,250,0.25)" },
-  por_cobrar:       { label: "Por Cobrar",           color: "#fb923c", bg: "rgba(249,115,22,0.15)", border: "rgba(251,146,60,0.25)" },
-  factorado:        { label: "Factorado",            color: "#f472b6", bg: "rgba(236,72,153,0.12)", border: "rgba(244,114,182,0.25)" },
-  pagado:           { label: "Pagado",               color: "#4ade80", bg: "rgba(16,185,129,0.15)", border: "rgba(74,222,128,0.25)" },
+  en_produccion:    { label: "En Producción",       color: "#A86B00", bg: "rgba(245,158,11,0.15)", border: "rgba(251,191,36,0.25)" },
+  facturado:        { label: "Facturado",            color: "#131313", bg: "rgba(0,0,0,0.05)", border: "rgba(0,0,0,0.12)" },
+  por_cobrar:       { label: "Por Cobrar",           color: "#C2410C", bg: "rgba(249,115,22,0.15)", border: "rgba(251,146,60,0.25)" },
+  factorado:        { label: "Factorado",            color: "#C93F5D", bg: "rgba(236,72,153,0.12)", border: "rgba(244,114,182,0.25)" },
+  pagado:           { label: "Pagado",               color: "#1F8A55", bg: "rgba(16,185,129,0.15)", border: "rgba(74,222,128,0.25)" },
 }
 
 // Día desde el que la app emite complementos de pago (antes se hacían en Orderly)
@@ -1027,11 +1027,11 @@ export default function IngresosPage() {
 
         {/* ── Global summary ── */}
         <div style={summaryRowStyle}>
-          <SummaryCard label="Total vendido"  value={globalVendido}   color="#a78bfa" valueWithIva={globalVendidoConIva} />
-          <SummaryCard label="Cobrado"         value={globalCobrado}   color="#4ade80" valueWithIva={globalCobradoConIva} />
-          <SummaryCard label="Por cobrar"      value={globalPendiente} color="#fb923c" valueWithIva={globalPendienteConIva} />
+          <SummaryCard label="Total vendido"  value={globalVendido}   color="#131313" valueWithIva={globalVendidoConIva} />
+          <SummaryCard label="Cobrado"         value={globalCobrado}   color="#1F8A55" valueWithIva={globalCobradoConIva} />
+          <SummaryCard label="Por cobrar"      value={globalPendiente} color="#C2410C" valueWithIva={globalPendienteConIva} />
           {globalOverdue > 0 && (
-            <SummaryCard label="⚠ Pagos vencidos" value={globalOverdue} color="#f87171" />
+            <SummaryCard label="⚠ Pagos vencidos" value={globalOverdue} color="#C2362B" />
           )}
         </div>
 
@@ -1051,19 +1051,19 @@ export default function IngresosPage() {
         {/* ── Empresa summary ── */}
         <div style={empresaSummaryStyle}>
           <span style={empresaSumItemStyle}>
-            <span style={{ color: "#7d8ca3" }}>Vendido:</span>{" "}
-            <span style={{ color: "#f8fafc", fontWeight: 600 }}>{fmt(totalVendido)}</span>
-            <span style={{ color: "#7d8ca3", fontSize: 11 }}>{" "}· c/IVA {fmt(totalVendidoConIva)}</span>
+            <span style={{ color: "#737373" }}>Vendido:</span>{" "}
+            <span style={{ color: "#141414", fontWeight: 600 }}>{fmt(totalVendido)}</span>
+            <span style={{ color: "#737373", fontSize: 11 }}>{" "}· c/IVA {fmt(totalVendidoConIva)}</span>
           </span>
           <span style={empresaSumItemStyle}>
-            <span style={{ color: "#7d8ca3" }}>Cobrado:</span>{" "}
-            <span style={{ color: "#4ade80", fontWeight: 600 }}>{fmt(totalCobrado)}</span>
-            <span style={{ color: "#7d8ca3", fontSize: 11 }}>{" "}· c/IVA {fmt(totalCobradoConIva)}</span>
+            <span style={{ color: "#737373" }}>Cobrado:</span>{" "}
+            <span style={{ color: "#1F8A55", fontWeight: 600 }}>{fmt(totalCobrado)}</span>
+            <span style={{ color: "#737373", fontSize: 11 }}>{" "}· c/IVA {fmt(totalCobradoConIva)}</span>
           </span>
           <span style={empresaSumItemStyle}>
-            <span style={{ color: "#7d8ca3" }}>Pendiente:</span>{" "}
-            <span style={{ color: "#fb923c", fontWeight: 600 }}>{fmt(totalPendiente)}</span>
-            <span style={{ color: "#7d8ca3", fontSize: 11 }}>{" "}· c/IVA {fmt(totalPendienteConIva)}</span>
+            <span style={{ color: "#737373" }}>Pendiente:</span>{" "}
+            <span style={{ color: "#C2410C", fontWeight: 600 }}>{fmt(totalPendiente)}</span>
+            <span style={{ color: "#737373", fontSize: 11 }}>{" "}· c/IVA {fmt(totalPendienteConIva)}</span>
           </span>
         </div>
 
@@ -1095,10 +1095,10 @@ export default function IngresosPage() {
 
         {/* ── Table ── */}
         {loading ? (
-          <p style={{ color: "#7d8ca3", padding: "32px 0", textAlign: "center" }}>Cargando…</p>
+          <p style={{ color: "#737373", padding: "32px 0", textAlign: "center" }}>Cargando…</p>
         ) : rows.length === 0 ? (
           <div style={emptyStyle}>
-            <p style={{ color: "#6b7c93", fontSize: 14 }}>
+            <p style={{ color: "#858585", fontSize: 14 }}>
               No hay ingresos registrados{filtroEstatus !== "todos" ? " con este estatus" : ""}.
             </p>
             <button onClick={openCreate} style={{ ...newBtnStyle, marginTop: 12 }}>+ Agregar primero</button>
@@ -1108,7 +1108,7 @@ export default function IngresosPage() {
           // llegar a los botones: cada ingreso se muestra como tarjeta.
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ color: "#7d8ca3", fontSize: 12, flexShrink: 0 }}>Ordenar por</span>
+              <span style={{ color: "#737373", fontSize: 12, flexShrink: 0 }}>Ordenar por</span>
               <select
                 value={sortKey || "cliente"}
                 onChange={(e) => { setSortKey(e.target.value); setSortDir("asc") }}
@@ -1141,7 +1141,7 @@ export default function IngresosPage() {
                   key={r.id}
                   style={{
                     ...mobileCardStyle,
-                    background: isPaid ? "#0f211d" : isOverdue ? "#1d151a" : "#0d1117",
+                    background: isPaid ? "#FFFFFF" : isOverdue ? "#FFFFFF" : "#FFFFFF",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -1153,10 +1153,10 @@ export default function IngresosPage() {
                   </div>
 
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ margin: 0, color: "#e2e8f0", fontWeight: 600, fontSize: 14, overflowWrap: "anywhere" }}>{clienteLabel(r)}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, color: "#94a3b8", overflowWrap: "anywhere" }}>
+                    <p style={{ margin: 0, color: "#262626", fontWeight: 600, fontSize: 14, overflowWrap: "anywhere" }}>{clienteLabel(r)}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 13, color: "#6B6B6B", overflowWrap: "anywhere" }}>
                       {(r.project_id || r.liquidacion_project_id) ? (
-                        <Link href={`/proyectos/${r.project_id || r.liquidacion_project_id}`} style={{ color: "#a78bfa", textDecoration: "none" }}>
+                        <Link href={`/proyectos/${r.project_id || r.liquidacion_project_id}`} style={{ color: "#131313", textDecoration: "none" }}>
                           {proyectoLabel(r)}
                         </Link>
                       ) : (
@@ -1166,12 +1166,12 @@ export default function IngresosPage() {
                   </div>
 
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ color: "#f8fafc", fontSize: 18, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(r.subtotal)}</span>
-                    <span style={{ color: "#a78bfa", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>c/IVA {fmt(r.subtotal + r.iva)}</span>
+                    <span style={{ color: "#141414", fontSize: 18, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(r.subtotal)}</span>
+                    <span style={{ color: "#131313", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>c/IVA {fmt(r.subtotal + r.iva)}</span>
                   </div>
 
                   <div style={mobileMetaGridStyle}>
-                    <MobileMeta label="Fecha pago" value={fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)} color={r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : undefined} />
+                    <MobileMeta label="Fecha pago" value={fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)} color={r.fecha_pago ? "#1F8A55" : isOverdue ? "#C2362B" : undefined} />
                     <MobileMeta label="Mes cierre" value={r.mes_cierre || "—"} />
                     <MobileMeta label="Factura" value={facturaLinks(r)} />
                     <MobileMeta label="ODC" value={r.odc || "—"} />
@@ -1187,7 +1187,7 @@ export default function IngresosPage() {
                       <button onClick={() => openPayModal(r)} style={{ ...marcarPagoBtnStyle, ...mobileActionStyle }}>✓ Marcar Pago</button>
                     )}
                     {r.estatus === "facturado" && r.factura_uuid && facAmbiente[r.empresa] && (
-                      <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#c4b5fd", borderColor: "rgba(167,139,250,0.35)", background: "rgba(124,58,237,0.10)", ...mobileActionStyle }}>🔁 Refacturar</button>
+                      <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#3F3F3F", borderColor: "rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)", ...mobileActionStyle }}>🔁 Refacturar</button>
                     )}
                     {r.facturapi_id && r.estatus !== "pagado" && (
                       <button onClick={() => setCancelModal({ row: r, label: proyectoLabel(r), motivo: "02", sustituidaPor: "" })} style={{ ...cancelarCfdiBtnStyle, ...mobileActionStyle }}>⊘ Cancelar factura</button>
@@ -1197,18 +1197,18 @@ export default function IngresosPage() {
                     )}
                     <button onClick={() => openEdit(r)} style={{ ...actionBtnStyle, ...mobileActionStyle, marginLeft: "auto", minWidth: 36 }} aria-label="Editar">✎</button>
                     {(isAdmin || !r.project_id) && (
-                      <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, ...mobileActionStyle, color: "#f87171", minWidth: 36 }} aria-label="Borrar">✕</button>
+                      <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, ...mobileActionStyle, color: "#C2362B", minWidth: 36 }} aria-label="Borrar">✕</button>
                     )}
                   </div>
                 </div>
               )
             })}
 
-            <div style={{ ...mobileCardStyle, background: "#11151b" }}>
-              <span style={{ color: "#7d8ca3", fontSize: 12 }}>{rows.length} registro{rows.length !== 1 ? "s" : ""}</span>
+            <div style={{ ...mobileCardStyle, background: "#FFFFFF" }}>
+              <span style={{ color: "#737373", fontSize: 12 }}>{rows.length} registro{rows.length !== 1 ? "s" : ""}</span>
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ color: "#f8fafc", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(rows.reduce((s, r) => s + r.subtotal, 0))}</span>
-                <span style={{ color: "#a78bfa", fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>c/IVA {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}</span>
+                <span style={{ color: "#141414", fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(rows.reduce((s, r) => s + r.subtotal, 0))}</span>
+                <span style={{ color: "#131313", fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>c/IVA {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}</span>
               </div>
             </div>
           </div>
@@ -1229,7 +1229,7 @@ export default function IngresosPage() {
                         ...thStyle,
                         cursor: key ? "pointer" : "default",
                         userSelect: "none",
-                        color: key && sortKey === key ? "#a78bfa" : thStyle.color,
+                        color: key && sortKey === key ? "#131313" : thStyle.color,
                         ...(idx <= 2 ? stickyStyle(idx, STICKY_HEADER_BG, true, isMobile) : {}),
                       }}
                       onClick={key ? () => toggleSort(key) : undefined}
@@ -1249,7 +1249,7 @@ export default function IngresosPage() {
                   const fechaRef = r.fecha_pago || r.fecha_aprox_pago
                   const isPaid = r.estatus === "pagado"
                   const isOverdue = !isPaid && !!fechaRef && fechaRef < today
-                  const rowBg = isPaid ? "#0f211d" : isOverdue ? "#1d151a" : i % 2 === 0 ? "#0d1117" : "#11151b"
+                  const rowBg = isPaid ? "#FFFFFF" : isOverdue ? "#FFFFFF" : i % 2 === 0 ? "#FFFFFF" : "#FFFFFF"
                   return (
                     <tr key={r.id} style={{ ...trStyle, background: rowBg }}>
                       <td style={{ ...tdStyle, ...stickyStyle(0, rowBg, false, isMobile) }}>
@@ -1263,12 +1263,12 @@ export default function IngresosPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg, false, isMobile), fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={clienteLabel(r)}>{clienteLabel(r)}</td>
+                      <td style={{ ...tdStyle, ...stickyStyle(1, rowBg, false, isMobile), fontWeight: 600, color: "#262626", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={clienteLabel(r)}>{clienteLabel(r)}</td>
                       <td style={{ ...tdStyle, ...stickyStyle(2, rowBg, false, isMobile), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {(r.project_id || r.liquidacion_project_id) ? (
                           <Link
                             href={`/proyectos/${r.project_id || r.liquidacion_project_id}`}
-                            style={{ color: "#a78bfa", textDecoration: "none" }}
+                            style={{ color: "#131313", textDecoration: "none" }}
                             title={proyectoLabel(r)}
                           >
                             {proyectoLabel(r)}
@@ -1277,22 +1277,22 @@ export default function IngresosPage() {
                           proyectoLabel(r)
                         )}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#f8fafc", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#141414", whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal)}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#7d8ca3", whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#737373", whiteSpace: "nowrap" }}>
                         {fmt(r.iva)}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#a78bfa", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      <td style={{ ...tdStyle, textAlign: "right", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#131313", fontWeight: 600, whiteSpace: "nowrap" }}>
                         {fmt(r.subtotal + r.iva)}
                       </td>
-                      <td style={{ ...tdStyle, color: r.fecha_pago ? "#4ade80" : isOverdue ? "#f87171" : "#64748b", whiteSpace: "nowrap", fontWeight: isOverdue ? 600 : undefined }}>
+                      <td style={{ ...tdStyle, color: r.fecha_pago ? "#1F8A55" : isOverdue ? "#C2362B" : "#8A8A8A", whiteSpace: "nowrap", fontWeight: isOverdue ? 600 : undefined }}>
                         {fmtDateField(r.fecha_pago || r.fecha_aprox_pago || null)}
                       </td>
-                      <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{facturaLinks(r)}</td>
-                      <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 11 }}>{r.odc || "—"}</td>
-                      <td style={{ ...tdStyle, color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
-                      <td style={{ ...tdStyle, color: "#7d8ca3", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#737373", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{facturaLinks(r)}</td>
+                      <td style={{ ...tdStyle, color: "#737373", fontSize: 11 }}>{r.odc || "—"}</td>
+                      <td style={{ ...tdStyle, color: "#6B6B6B", fontSize: 12, whiteSpace: "nowrap" }}>{responsableLabel(r.responsable)}</td>
+                      <td style={{ ...tdStyle, color: "#737373", whiteSpace: "nowrap" }}>{r.mes_cierre || "—"}</td>
                       <td style={{ ...tdStyle, whiteSpace: "nowrap", textAlign: "right" }}>
                         {/* Facturar pide el XML y el PDF, y saca el número del CFDI */}
                         {r.estatus !== "facturado" && r.estatus !== "pagado" && (
@@ -1306,7 +1306,7 @@ export default function IngresosPage() {
                           </button>
                         )}
                         {r.estatus === "facturado" && r.factura_uuid && facAmbiente[r.empresa] && (
-                          <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#c4b5fd", borderColor: "rgba(167,139,250,0.35)", background: "rgba(124,58,237,0.10)" }} title="Refacturar: timbrar una factura nueva que sustituye a esta (relación 04) y cancelar esta con motivo 01">
+                          <button onClick={() => openRefacturar(r)} style={{ ...cancelarCfdiBtnStyle, color: "#3F3F3F", borderColor: "rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)" }} title="Refacturar: timbrar una factura nueva que sustituye a esta (relación 04) y cancelar esta con motivo 01">
                             🔁
                           </button>
                         )}
@@ -1323,7 +1323,7 @@ export default function IngresosPage() {
                         <button onClick={() => openEdit(r)} style={actionBtnStyle}>✎</button>
                         {/* Borrar: admin cualquiera; finanzas solo ingresos manuales (sin proyecto) */}
                         {(isAdmin || !r.project_id) && (
-                          <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, color: "#f87171" }}>✕</button>
+                          <button onClick={() => handleDelete(r.id)} style={{ ...actionBtnStyle, color: "#C2362B" }}>✕</button>
                         )}
                       </td>
                     </tr>
@@ -1331,17 +1331,17 @@ export default function IngresosPage() {
                 })}
               </tbody>
               <tfoot>
-                <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                  <td colSpan={3} style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12, paddingTop: 10 }}>
+                <tr style={{ borderTop: "1px solid rgba(0,0,0,0.1)" }}>
+                  <td colSpan={3} style={{ ...tdStyle, color: "#737373", fontSize: 12, paddingTop: 10 }}>
                     {rows.length} registro{rows.length !== 1 ? "s" : ""}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f8fafc", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#141414", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                     {fmt(rows.reduce((s, r) => s + r.subtotal, 0))}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", color: "#7d8ca3", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#737373", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                     {fmt(rows.reduce((s, r) => s + r.iva, 0))}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#a78bfa", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#131313", paddingTop: 10, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                     {fmt(rows.reduce((s, r) => s + r.subtotal + r.iva, 0))}
                   </td>
                   <td colSpan={6} />
@@ -1375,11 +1375,11 @@ export default function IngresosPage() {
         <div style={overlayStyle}>
           <div style={{ ...modalStyle(isMobile), maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Complemento de pago</h2>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Complemento de pago</h2>
               <button onClick={() => setComplementoModal(null)} style={closeBtnStyle}>✕</button>
             </div>
             <div style={modalBodyStyle}>
-              <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: 13, color: "#6B6B6B", lineHeight: 1.5 }}>
                 {complementoModal.label} · factura {complementoModal.row.numero_factura} (PPD)<br />
                 Pagado el {fmtDateField(complementoModal.row.fecha_pago)} por {fmt(complementoModal.row.subtotal + complementoModal.row.iva)} con IVA
               </p>
@@ -1389,10 +1389,10 @@ export default function IngresosPage() {
                 </select>
               </FormField>
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setComplementoModal(null)} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                <button onClick={() => setComplementoModal(null)} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}>
                   Cancelar
                 </button>
-                <button onClick={confirmarComplemento} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.12)", color: "#38bdf8", fontSize: 13, fontWeight: 700, cursor: emitiendo ? "not-allowed" : "pointer", opacity: emitiendo ? 0.6 : 1 }}>
+                <button onClick={confirmarComplemento} disabled={emitiendo} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(56,189,248,0.4)", background: "rgba(56,189,248,0.12)", color: "#1D6FB8", fontSize: 13, fontWeight: 700, cursor: emitiendo ? "not-allowed" : "pointer", opacity: emitiendo ? 0.6 : 1 }}>
                   {emitiendo ? "Emitiendo…" : "🧾 Emitir complemento"}
                 </button>
               </div>
@@ -1406,11 +1406,11 @@ export default function IngresosPage() {
         <div style={overlayStyle}>
           <div style={{ ...modalStyle(isMobile), maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Cancelar factura {cancelModal.row.numero_factura}</h2>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Cancelar factura {cancelModal.row.numero_factura}</h2>
               <button onClick={() => setCancelModal(null)} style={closeBtnStyle}>✕</button>
             </div>
             <div style={modalBodyStyle}>
-              <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>{cancelModal.label}</p>
+              <p style={{ margin: 0, fontSize: 13, color: "#6B6B6B", lineHeight: 1.5 }}>{cancelModal.label}</p>
               <FormField label="Motivo">
                 <MotivoCancelacionFields
                   motivo={cancelModal.motivo}
@@ -1419,15 +1419,15 @@ export default function IngresosPage() {
                   selectStyle={inputStyle}
                 />
               </FormField>
-              <p style={{ margin: 0, fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: 11, color: "#8A8A8A", lineHeight: 1.5 }}>
                 Se cancela ante el SAT y el ingreso regresa a “En Producción” para volver a facturarlo. Si fue una factura parcial, la línea de Liquidación se queda como está.
                 {" "}Para cambiar la factura por otra nueva usa mejor 🔁 Refacturar: timbra la nueva y cancela esta con motivo 01 en un solo paso.
               </p>
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setCancelModal(null)} disabled={cancelando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                <button onClick={() => setCancelModal(null)} disabled={cancelando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}>
                   No cancelar
                 </button>
-                <button onClick={confirmarCancelacion} disabled={cancelando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(248,113,113,0.4)", background: "rgba(248,113,113,0.12)", color: "#f87171", fontSize: 13, fontWeight: 700, cursor: cancelando ? "not-allowed" : "pointer", opacity: cancelando ? 0.6 : 1 }}>
+                <button onClick={confirmarCancelacion} disabled={cancelando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(248,113,113,0.4)", background: "rgba(248,113,113,0.12)", color: "#C2362B", fontSize: 13, fontWeight: 700, cursor: cancelando ? "not-allowed" : "pointer", opacity: cancelando ? 0.6 : 1 }}>
                   {cancelando ? "Cancelando…" : "⊘ Cancelar factura"}
                 </button>
               </div>
@@ -1441,11 +1441,11 @@ export default function IngresosPage() {
         <div style={overlayStyle}>
           <div style={{ ...modalStyle(isMobile), maxWidth: facModo === "timbrar" ? 540 : 420 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>{facturarModal.refacturar ? `Refacturar ${facturarModal.refacturar.numero || ""}`.trim() : "Facturar"}</h2>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>{facturarModal.refacturar ? `Refacturar ${facturarModal.refacturar.numero || ""}`.trim() : "Facturar"}</h2>
               <button onClick={() => setFacturarModal(null)} style={closeBtnStyle}>✕</button>
             </div>
             <div style={modalBodyStyle}>
-              <p style={{ margin: "0 0 14px", fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: "#6B6B6B", lineHeight: 1.5 }}>
                 {facturarModal.label}
               </p>
               {/* Timbrar en la app (Facturapi) o subir el XML/PDF hechos fuera */}
@@ -1453,7 +1453,7 @@ export default function IngresosPage() {
                 {([["timbrar", "🧾 Timbrar en la app"], ["subir", "⬆ Subir XML y PDF"]] as const).map(([k, t]) => (
                   <button key={k} onClick={() => setFacModo(k)} style={{
                     ...secondaryBtnStyle, flex: 1, padding: "8px 10px", fontSize: 12,
-                    ...(facModo === k ? { background: "rgba(124,58,237,0.18)", borderColor: "rgba(167,139,250,0.45)", color: "#c4b5fd" } : {}),
+                    ...(facModo === k ? { background: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.2)", color: "#3F3F3F" } : {}),
                   }}>{t}</button>
                 ))}
               </div>
@@ -1477,19 +1477,19 @@ export default function IngresosPage() {
                   parcialSlot={facturarModal.refacturar ? null : 
                   <>
                   {/* ── Facturación parcial ── */}
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
                     <input
                       type="checkbox"
                       checked={facParcial}
                       onChange={e => setFacParcial(e.target.checked)}
-                      style={{ accentColor: "#7c3aed", width: 15, height: 15 }}
+                      style={{ accentColor: "#131313", width: 15, height: 15 }}
                     />
                     Facturar parcialmente
                   </label>
                   {facParcial && (
-                    <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
-                      <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
-                        Subtotal original (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
+                    <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.12)" }}>
+                      <p style={{ margin: "0 0 10px", fontSize: 11, color: "#6B6B6B" }}>
+                        Subtotal original (sin IVA): <span style={{ color: "#262626", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
                       </p>
                       <div style={{ display: "flex", gap: 10 }}>
                         <div style={{ flex: 1 }}>
@@ -1508,9 +1508,9 @@ export default function IngresosPage() {
                         if (!Number.isFinite(m) || m <= 0 || m >= facturarModal.subtotal) return null
                         const rem = Math.round((facturarModal.subtotal - m) * 100) / 100
                         return (
-                          <p style={{ margin: "10px 0 0", fontSize: 11, color: "#a78bfa", lineHeight: 1.6 }}>
+                          <p style={{ margin: "10px 0 0", fontSize: 11, color: "#131313", lineHeight: 1.6 }}>
                             Se factura {fmt(m)} y se creará{" "}
-                            <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{nombreLiquidacion(facturarModal.label)}</span>{" "}
+                            <span style={{ color: "#262626", fontWeight: 600 }}>{nombreLiquidacion(facturarModal.label)}</span>{" "}
                             por {fmt(rem)} (sin IVA), justo abajo en la lista.
                           </p>
                         )
@@ -1554,7 +1554,7 @@ export default function IngresosPage() {
                     />
                   </FormField>
                 </div>
-                <p style={{ margin: "8px 0 0", fontSize: 11, color: facNumeroAuto ? "#34d399" : "#64748b", lineHeight: 1.5 }}>
+                <p style={{ margin: "8px 0 0", fontSize: 11, color: facNumeroAuto ? "#1F8A55" : "#8A8A8A", lineHeight: 1.5 }}>
                   {facNumeroAuto
                     ? "✓ Leído del XML — se guarda en la lista de ingresos."
                     : facXml
@@ -1562,19 +1562,19 @@ export default function IngresosPage() {
                       : "Al elegir el XML se llena solo con el número de la factura."}
                 </p>
                 {/* ── Facturación parcial ── */}
-                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
                   <input
                     type="checkbox"
                     checked={facParcial}
                     onChange={e => setFacParcial(e.target.checked)}
-                    style={{ accentColor: "#7c3aed", width: 15, height: 15 }}
+                    style={{ accentColor: "#131313", width: 15, height: 15 }}
                   />
                   Facturar parcialmente
                 </label>
                 {facParcial && (
-                  <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
-                    <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
-                      Subtotal original (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
+                  <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.12)" }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 11, color: "#6B6B6B" }}>
+                      Subtotal original (sin IVA): <span style={{ color: "#262626", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(facturarModal.subtotal)}</span>
                     </p>
                     <div style={{ display: "flex", gap: 10 }}>
                       <div style={{ flex: 1 }}>
@@ -1593,9 +1593,9 @@ export default function IngresosPage() {
                       if (!Number.isFinite(m) || m <= 0 || m >= facturarModal.subtotal) return null
                       const rem = Math.round((facturarModal.subtotal - m) * 100) / 100
                       return (
-                        <p style={{ margin: "10px 0 0", fontSize: 11, color: "#a78bfa", lineHeight: 1.6 }}>
+                        <p style={{ margin: "10px 0 0", fontSize: 11, color: "#131313", lineHeight: 1.6 }}>
                           Se factura {fmt(m)} y se creará{" "}
-                          <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{nombreLiquidacion(facturarModal.label)}</span>{" "}
+                          <span style={{ color: "#262626", fontWeight: 600 }}>{nombreLiquidacion(facturarModal.label)}</span>{" "}
                           por {fmt(rem)} (sin IVA), justo abajo en la lista.
                         </p>
                       )
@@ -1603,10 +1603,10 @@ export default function IngresosPage() {
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-                  <button onClick={() => setFacturarModal(null)} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                  <button onClick={() => setFacturarModal(null)} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}>
                     Cancelar
                   </button>
-                  <button onClick={confirmarFacturado} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(167,139,250,0.4)", background: "rgba(124,58,237,0.15)", color: "#a78bfa", fontSize: 13, fontWeight: 700, cursor: facturando ? "not-allowed" : "pointer", opacity: facturando ? 0.6 : 1 }}>
+                  <button onClick={confirmarFacturado} disabled={facturando} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)", color: "#131313", fontSize: 13, fontWeight: 700, cursor: facturando ? "not-allowed" : "pointer", opacity: facturando ? 0.6 : 1 }}>
                     {facturando ? "Guardando…" : "✓ Facturar"}
                   </button>
                 </div>
@@ -1622,11 +1622,11 @@ export default function IngresosPage() {
         <div style={overlayStyle}>
           <div style={{ ...modalStyle(isMobile), maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>Marcar como pagado</h2>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>Marcar como pagado</h2>
               <button onClick={() => setPayModal(null)} style={closeBtnStyle}>✕</button>
             </div>
             <div style={modalBodyStyle}>
-              <p style={{ margin: "0 0 14px", fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: "#6B6B6B", lineHeight: 1.5 }}>
                 {payModal.label}
               </p>
               <FormField label="Fecha de pago">
@@ -1640,35 +1640,35 @@ export default function IngresosPage() {
               </FormField>
 
               {/* ── Pago sin IVA (efectivo, sin factura) ── */}
-              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
                 <input
                   type="checkbox"
                   checked={paySinIva}
                   onChange={e => setPaySinIva(e.target.checked)}
-                  style={{ accentColor: "#34d399", width: 15, height: 15 }}
+                  style={{ accentColor: "#1F8A55", width: 15, height: 15 }}
                 />
                 Pago sin IVA (efectivo, sin factura)
               </label>
               {paySinIva && (
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#34d399", lineHeight: 1.6 }}>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#1F8A55", lineHeight: 1.6 }}>
                   Lo pagado se registra con IVA $0. Si es parcial, el remanente conserva su IVA proporcional.
                 </p>
               )}
 
               {/* ── Pago parcial ── */}
-              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
                 <input
                   type="checkbox"
                   checked={payParcial}
                   onChange={e => setPayParcial(e.target.checked)}
-                  style={{ accentColor: "#7c3aed", width: 15, height: 15 }}
+                  style={{ accentColor: "#131313", width: 15, height: 15 }}
                 />
                 Pagar parcialmente
               </label>
               {payParcial && (
-                <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.20)" }}>
-                  <p style={{ margin: "0 0 10px", fontSize: 11, color: "#94a3b8" }}>
-                    Subtotal pendiente (sin IVA): <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(payModal.row.subtotal)}</span>
+                <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 10, background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.12)" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 11, color: "#6B6B6B" }}>
+                    Subtotal pendiente (sin IVA): <span style={{ color: "#262626", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{fmt(payModal.row.subtotal)}</span>
                   </p>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div style={{ flex: 1 }}>
@@ -1687,9 +1687,9 @@ export default function IngresosPage() {
                     if (!Number.isFinite(m) || m <= 0 || m >= payModal.row.subtotal) return null
                     const rem = Math.round((payModal.row.subtotal - m) * 100) / 100
                     return (
-                      <p style={{ margin: "10px 0 0", fontSize: 11, color: "#a78bfa", lineHeight: 1.6 }}>
+                      <p style={{ margin: "10px 0 0", fontSize: 11, color: "#131313", lineHeight: 1.6 }}>
                         Se registra el pago de {fmt(m)} y se creará{" "}
-                        <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{nombreLiquidacion(payModal.label)}</span>{" "}
+                        <span style={{ color: "#262626", fontWeight: 600 }}>{nombreLiquidacion(payModal.label)}</span>{" "}
                         por {fmt(rem)} (sin IVA), justo abajo en la lista.
                       </p>
                     )
@@ -1700,17 +1700,17 @@ export default function IngresosPage() {
               {/* ── Complemento de pago (factura PPD) ── */}
               {esPPD(payModal.row) && !paySinIva && (
                 <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 10, background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.22)", display: "grid", gap: 10 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#262626", fontWeight: 600 }}>
                     <input
                       type="checkbox"
                       checked={payComplemento}
                       onChange={e => setPayComplemento(e.target.checked)}
-                      style={{ accentColor: "#38bdf8", width: 15, height: 15 }}
+                      style={{ accentColor: "#1D6FB8", width: 15, height: 15 }}
                     />
                     Emitir complemento de pago (factura {payModal.row.numero_factura} es PPD)
                   </label>
                   {manualesDeFactura(payModal.row).length > 0 && (
-                    <p style={{ margin: 0, fontSize: 12, color: "#fbbf24", lineHeight: 1.5 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#A86B00", lineHeight: 1.5 }}>
                       Esta factura ya tiene complemento hecho a mano ({manualesDeFactura(payModal.row).map(c => `${c.numero || "sin folio"} por ${fmt(c.monto)}`).join(", ")}).
                       Saldo pendiente de la factura: {fmt(Math.max(saldoFactura(payModal.row), 0))}. Si ese complemento ya ampara este cobro, deja la casilla sin marcar.
                     </p>
@@ -1726,10 +1726,10 @@ export default function IngresosPage() {
               )}
 
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-                <button onClick={() => setPayModal(null)} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+                <button onClick={() => setPayModal(null)} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}>
                   Cancelar
                 </button>
-                <button onClick={confirmarPago} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.4)", background: "rgba(16,185,129,0.15)", color: "#34d399", fontSize: 13, fontWeight: 700, cursor: paying ? "not-allowed" : "pointer", opacity: paying ? 0.6 : 1 }}>
+                <button onClick={confirmarPago} disabled={paying} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.4)", background: "rgba(16,185,129,0.15)", color: "#1F8A55", fontSize: 13, fontWeight: 700, cursor: paying ? "not-allowed" : "pointer", opacity: paying ? 0.6 : 1 }}>
                   {paying ? "Guardando…" : "✓ Confirmar pago"}
                 </button>
               </div>
@@ -1744,7 +1744,7 @@ export default function IngresosPage() {
           <div style={modalStyle(isMobile)} onClick={e => e.stopPropagation()}>
             {/* header */}
             <div style={modalHeaderStyle}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#141414" }}>
                 {editingId ? "Editar ingreso" : "Nuevo ingreso"}
               </h2>
               <button onClick={() => setShowModal(false)} style={closeBtnStyle}>✕</button>
@@ -1787,7 +1787,7 @@ export default function IngresosPage() {
                     title={editingLinked ? "Vinculado a la carpeta del cliente en Proyectos" : undefined}
                   />
                   {editingLinked && (
-                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#737373" }}>
                       🔗 Vinculado a la carpeta del cliente — se renombra desde Proyectos.
                     </p>
                   )}
@@ -1815,7 +1815,7 @@ export default function IngresosPage() {
                   />
                   {editingLinked && (
                     <>
-                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
+                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "#737373", lineHeight: 1.5 }}>
                         El nombre, monto (subtotal/IVA) y responsable los dicta la cotización aprobada.
                         Para editarlos a fondo, ve a la página del proyecto.
                       </p>
@@ -1824,8 +1824,8 @@ export default function IngresosPage() {
                           href={`/proyectos/${editingIngreso.project_id}`}
                           style={{
                             display: "inline-block", marginTop: 10, padding: "8px 14px", borderRadius: 9,
-                            border: "1px solid rgba(167,139,250,0.35)", background: "rgba(124,58,237,0.15)",
-                            color: "#c4b5fd", fontSize: 12, fontWeight: 600, textDecoration: "none",
+                            border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)",
+                            color: "#3F3F3F", fontSize: 12, fontWeight: 600, textDecoration: "none",
                           }}
                         >
                           Ir al proyecto →
@@ -1943,8 +1943,8 @@ export default function IngresosPage() {
               {/* Preview total */}
               {(parseFloat(form.subtotal) > 0) && (
                 <div style={totalPreviewStyle}>
-                  <span style={{ color: "#7d8ca3", fontSize: 12 }}>Total con IVA:</span>
-                  <span style={{ color: "#f8fafc", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }}>
+                  <span style={{ color: "#737373", fontSize: 12 }}>Total con IVA:</span>
+                  <span style={{ color: "#141414", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 15 }}>
                     {fmt((parseFloat(form.subtotal) || 0) + (parseFloat(form.iva) || 0))}
                   </span>
                 </div>
@@ -1970,12 +1970,12 @@ export default function IngresosPage() {
 function SummaryCard({ label, value, color, valueWithIva }: { label: string; value: number; color: string; valueWithIva?: number }) {
   return (
     <div style={summaryCardStyle(color)}>
-      <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
+      <p style={{ margin: 0, color: "#737373", fontSize: 11, fontWeight: 600,}}>{label}</p>
       <p style={{ margin: "6px 0 2px", color, fontSize: 20, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
         {value.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 })}
       </p>
       {valueWithIva !== undefined && (
-        <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+        <p style={{ margin: 0, color: "#737373", fontSize: 11, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
           c/IVA {valueWithIva.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 })}
         </p>
       )}
@@ -1997,8 +1997,8 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 const layoutStyle: React.CSSProperties = {
   display: "flex",
   minHeight: "100vh",
-  background: "linear-gradient(135deg, #07090f 0%, #0d1117 100%)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
 }
 
 const mainStyle = (isMobile: boolean): React.CSSProperties => ({
@@ -2022,21 +2022,21 @@ const pageTitleStyle: React.CSSProperties = {
   margin: 0,
   fontSize: 22,
   fontWeight: 700,
-  color: "#f8fafc",
+  color: "#141414",
 }
 
 const pageSubStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 13,
 }
 
 const newBtnStyle: React.CSSProperties = {
   padding: "9px 18px",
   borderRadius: 10,
-  background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))",
-  border: "1px solid rgba(167,139,250,0.3)",
-  color: "#f8fafc",
+  background: "#131313",
+  border: "1px solid rgba(0,0,0,0.2)",
+  color: "#FFFFFF",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
@@ -2046,9 +2046,9 @@ const newBtnStyle: React.CSSProperties = {
 const secondaryBtnStyle: React.CSSProperties = {
   padding: "9px 14px",
   borderRadius: 10,
-  background: "rgba(148,163,184,0.08)",
-  border: "1px solid rgba(148,163,184,0.22)",
-  color: "#cbd5e1",
+  background: "rgba(0,0,0,0.03)",
+  border: "1px solid rgba(0,0,0,0.15)",
+  color: "#3F3F3F",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
@@ -2065,8 +2065,8 @@ const summaryRowStyle: React.CSSProperties = {
 const summaryCardStyle = (color: string): React.CSSProperties => ({
   padding: "16px 20px",
   borderRadius: 14,
-  background: "rgba(255,255,255,0.04)",
-  border: `1px solid rgba(148,163,184,0.10)`,
+  background: "#FFFFFF",
+  border: `1px solid rgba(0,0,0,0.08)`,
   boxShadow: `0 0 0 1px ${color}22`,
 })
 
@@ -2079,18 +2079,18 @@ const tabBarStyle: React.CSSProperties = {
 const tabStyle: React.CSSProperties = {
   padding: "7px 18px",
   borderRadius: 9,
-  border: "1px solid rgba(148,163,184,0.12)",
+  border: "1px solid rgba(0,0,0,0.09)",
   background: "transparent",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
   fontWeight: 500,
   cursor: "pointer",
 }
 
 const tabActiveStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.18)",
-  border: "1px solid rgba(167,139,250,0.25)",
-  color: "#ddd6fe",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#262626",
 }
 
 const empresaSummaryStyle: React.CSSProperties = {
@@ -2099,8 +2099,8 @@ const empresaSummaryStyle: React.CSSProperties = {
   marginBottom: 14,
   padding: "10px 16px",
   borderRadius: 10,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.08)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.07)",
   flexWrap: "wrap",
 }
 
@@ -2120,24 +2120,24 @@ const statusFilterStyle: React.CSSProperties = {
 const statusPillStyle: React.CSSProperties = {
   padding: "4px 12px",
   borderRadius: 999,
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "1px solid rgba(0,0,0,0.1)",
   background: "transparent",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
   cursor: "pointer",
 }
 
 const statusPillActiveStyle: React.CSSProperties = {
-  background: "rgba(148,163,184,0.12)",
-  color: "#f8fafc",
-  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#141414",
+  border: "1px solid rgba(0,0,0,0.15)",
 }
 
 function MobileMeta({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <p style={{ margin: 0, color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</p>
-      <p style={{ margin: "1px 0 0", color: color || "#cbd5e1", fontSize: 12, overflowWrap: "anywhere" }}>{value}</p>
+      <p style={{ margin: 0, color: "#858585", fontSize: 10, fontWeight: 700,}}>{label}</p>
+      <p style={{ margin: "1px 0 0", color: color || "#3F3F3F", fontSize: 12, overflowWrap: "anywhere" }}>{value}</p>
     </div>
   )
 }
@@ -2146,7 +2146,7 @@ const archivoLinkStyle: React.CSSProperties = {
   background: "none",
   border: "none",
   padding: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
   fontFamily: "var(--font-mono)",
   textDecoration: "underline",
@@ -2159,7 +2159,7 @@ const mobileCardStyle: React.CSSProperties = {
   gap: 10,
   padding: "12px 14px",
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.12)",
+  border: "1px solid rgba(0,0,0,0.09)",
   minWidth: 0,
 }
 
@@ -2168,7 +2168,7 @@ const mobileMetaGridStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
   gap: "8px 12px",
   paddingTop: 8,
-  borderTop: "1px solid rgba(148,163,184,0.08)",
+  borderTop: "1px solid rgba(0,0,0,0.07)",
 }
 
 // Botones con alto cómodo para el dedo (≥ 36px).
@@ -2183,9 +2183,9 @@ const mobileSortSelectStyle: React.CSSProperties = {
   minWidth: 0,
   padding: "8px 10px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 13,
 }
 
@@ -2193,9 +2193,9 @@ const mobileSortDirStyle: React.CSSProperties = {
   width: 38,
   height: 36,
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   background: "transparent",
-  color: "#a78bfa",
+  color: "#131313",
   cursor: "pointer",
   flexShrink: 0,
 }
@@ -2203,13 +2203,13 @@ const mobileSortDirStyle: React.CSSProperties = {
 const tableWrapStyle: React.CSSProperties = {
   overflowX: "auto",
   borderRadius: 14,
-  border: "1px solid rgba(148,163,184,0.10)",
+  border: "1px solid rgba(0,0,0,0.08)",
 }
 
 // Columnas fijas (Estatus, Cliente, Proyecto) al hacer scroll horizontal.
 const STICKY_W = [150, 160, 220]
 const STICKY_LEFT = [0, 150, 310]
-const STICKY_HEADER_BG = "#14181e"
+const STICKY_HEADER_BG = "#FFFFFF"
 function stickyStyle(idx: number, bg: string, header = false, isMobile = false): React.CSSProperties {
   // En móvil NO anclamos las primeras columnas: dejarlas fijas impide navegar
   // bien la tabla horizontalmente. Se conservan los anchos, pero sin sticky.
@@ -2228,7 +2228,7 @@ function stickyStyle(idx: number, bg: string, header = false, isMobile = false):
     maxWidth: STICKY_W[idx],
     background: bg,
     zIndex: header ? 5 : 2,
-    ...(idx === 2 ? { boxShadow: "1px 0 0 rgba(148,163,184,0.22)" } : {}),
+    ...(idx === 2 ? { boxShadow: "1px 0 0 rgba(0,0,0,0.06)" } : {}),
   }
 }
 
@@ -2238,7 +2238,7 @@ const tableStyle: React.CSSProperties = {
   borderCollapse: "separate",
   borderSpacing: 0,
   fontSize: 13,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
 }
 
 const thStyle: React.CSSProperties = {
@@ -2246,22 +2246,20 @@ const thStyle: React.CSSProperties = {
   textAlign: "left",
   fontSize: 11,
   fontWeight: 700,
-  color: "#6b7c93",
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
-  borderBottom: "1px solid rgba(148,163,184,0.12)",
-  background: "rgba(255,255,255,0.03)",
+  color: "#858585",
+  borderBottom: "1px solid rgba(0,0,0,0.09)",
+  background: "#FFFFFF",
   whiteSpace: "nowrap",
 }
 
 const trStyle: React.CSSProperties = {
-  borderBottom: "1px solid rgba(148,163,184,0.07)",
+  borderBottom: "1px solid rgba(0,0,0,0.06)",
 }
 
 const tdStyle: React.CSSProperties = {
   padding: "9px 12px",
   fontSize: 13,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   verticalAlign: "middle",
 }
 
@@ -2282,7 +2280,7 @@ const actionBtnStyle: React.CSSProperties = {
   padding: "3px 4px",
   border: "none",
   background: "none",
-  color: "#6b7c93",
+  color: "#858585",
   cursor: "pointer",
   fontSize: 13,
 }
@@ -2293,7 +2291,7 @@ const complementoBtnStyle: React.CSSProperties = {
   borderRadius: 7,
   border: "1px solid rgba(56,189,248,0.35)",
   background: "rgba(56,189,248,0.10)",
-  color: "#38bdf8",
+  color: "#1D6FB8",
   fontSize: 11,
   fontWeight: 700,
   cursor: "pointer",
@@ -2306,7 +2304,7 @@ const cancelarCfdiBtnStyle: React.CSSProperties = {
   borderRadius: 7,
   border: "1px solid rgba(248,113,113,0.30)",
   background: "rgba(248,113,113,0.08)",
-  color: "#f87171",
+  color: "#C2362B",
   fontSize: 11,
   fontWeight: 700,
   cursor: "pointer",
@@ -2317,9 +2315,9 @@ const facturarBtnStyle: React.CSSProperties = {
   padding: "4px 10px",
   marginRight: 8,
   borderRadius: 7,
-  border: "1px solid rgba(167,139,250,0.35)",
-  background: "rgba(124,58,237,0.12)",
-  color: "#a78bfa",
+  border: "1px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#131313",
   fontSize: 11,
   fontWeight: 700,
   cursor: "pointer",
@@ -2332,7 +2330,7 @@ const marcarPagoBtnStyle: React.CSSProperties = {
   borderRadius: 7,
   border: "1px solid rgba(52,211,153,0.35)",
   background: "rgba(16,185,129,0.12)",
-  color: "#34d399",
+  color: "#1F8A55",
   fontSize: 11,
   fontWeight: 700,
   cursor: "pointer",
@@ -2343,7 +2341,7 @@ const emptyStyle: React.CSSProperties = {
   textAlign: "center",
   padding: "60px 20px",
   borderRadius: 14,
-  border: "1px dashed rgba(148,163,184,0.14)",
+  border: "1px dashed rgba(0,0,0,0.1)",
 }
 
 // ── Modal styles ──
@@ -2351,7 +2349,7 @@ const emptyStyle: React.CSSProperties = {
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.65)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(6px)",
   zIndex: 99999,
   display: "flex",
@@ -2361,10 +2359,10 @@ const overlayStyle: React.CSSProperties = {
 }
 
 const modalStyle = (isMobile: boolean): React.CSSProperties => ({
-  background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))",
-  border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 18,
-  boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+  boxShadow: "0 32px 80px rgba(0,0,0,0.13)",
   width: "100%",
   maxWidth: isMobile ? "100%" : 640,
   maxHeight: "90vh",
@@ -2378,7 +2376,7 @@ const modalHeaderStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "18px 24px 14px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const modalBodyStyle: React.CSSProperties = {
@@ -2394,7 +2392,7 @@ const modalFooterStyle: React.CSSProperties = {
   justifyContent: "flex-end",
   gap: 10,
   padding: "14px 24px 20px",
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
 }
 
 const rowStyle: React.CSSProperties = {
@@ -2405,15 +2403,15 @@ const rowStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: "#7d8ca3",
+  color: "#737373",
 }
 
 const inputStyle: React.CSSProperties = {
   padding: "8px 11px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 13,
   outline: "none",
   width: "100%",
@@ -2432,16 +2430,16 @@ const totalPreviewStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "10px 14px",
   borderRadius: 10,
-  background: "rgba(124,58,237,0.10)",
-  border: "1px solid rgba(167,139,250,0.18)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const saveBtnStyle: React.CSSProperties = {
   padding: "9px 22px",
   borderRadius: 9,
-  background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))",
-  border: "1px solid rgba(167,139,250,0.25)",
-  color: "#f8fafc",
+  background: "#131313",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#FFFFFF",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
@@ -2451,8 +2449,8 @@ const cancelBtnStyle: React.CSSProperties = {
   padding: "9px 18px",
   borderRadius: 9,
   background: "transparent",
-  border: "1px solid rgba(148,163,184,0.14)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.1)",
+  color: "#6B6B6B",
   fontSize: 13,
   cursor: "pointer",
 }
@@ -2460,7 +2458,7 @@ const cancelBtnStyle: React.CSSProperties = {
 const closeBtnStyle: React.CSSProperties = {
   background: "none",
   border: "none",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 16,
   cursor: "pointer",
   padding: "2px 6px",
@@ -2473,7 +2471,7 @@ const overdueBadgeStyle: React.CSSProperties = {
   borderRadius: 999,
   fontSize: 10,
   fontWeight: 700,
-  color: "#fca5a5",
+  color: "#B42318",
   background: "rgba(239,68,68,0.20)",
   border: "1px solid rgba(239,68,68,0.38)",
   whiteSpace: "nowrap",

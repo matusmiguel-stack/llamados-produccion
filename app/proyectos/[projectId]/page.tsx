@@ -521,8 +521,8 @@ export default function ProjectDetailPage() {
                     title="Cada aprobación lleva su propio reporte de egresos"
                     style={{
                       padding: "10px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600,
-                      border: "1px solid rgba(148,163,184,0.25)", background: "rgba(255,255,255,0.04)",
-                      color: "#e2e8f0", outline: "none",
+                      border: "1px solid rgba(0,0,0,0.17)", background: "#FFFFFF",
+                      color: "#262626", outline: "none",
                     }}
                   >
                     {gruposReporte.map((g, i) => (
@@ -537,8 +537,8 @@ export default function ProjectDetailPage() {
                     display: "inline-flex", alignItems: "center", gap: 8,
                     padding: "10px 18px", borderRadius: 10,
                     cursor: generatingReport ? "not-allowed" : "pointer",
-                    background: generatingReport ? "rgba(167,139,250,0.06)" : "rgba(167,139,250,0.12)",
-                    border: "1px solid rgba(167,139,250,0.3)", color: "#c4b5fd",
+                    background: generatingReport ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.05)",
+                    border: "1px solid rgba(0,0,0,0.2)", color: "#3F3F3F",
                     fontSize: 13, fontWeight: 600,
                     opacity: generatingReport ? 0.6 : 1,
                   }}
@@ -553,7 +553,7 @@ export default function ProjectDetailPage() {
                     padding: "10px 18px", borderRadius: 10,
                     cursor: generatingXlsx ? "not-allowed" : "pointer",
                     background: generatingXlsx ? "rgba(52,211,153,0.06)" : "rgba(52,211,153,0.10)",
-                    border: "1px solid rgba(52,211,153,0.3)", color: "#6ee7b7",
+                    border: "1px solid rgba(52,211,153,0.3)", color: "#1F7A4D",
                     fontSize: 13, fontWeight: 600,
                     opacity: generatingXlsx ? 0.6 : 1,
                   }}
@@ -806,12 +806,12 @@ export default function ProjectDetailPage() {
                       display: "inline-flex", alignItems: "center", gap: 7,
                       padding: isMobile ? "7px 10px" : "7px 14px", borderRadius: 999, cursor: "pointer",
                       fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
-                      border: esEgresosDirectos ? "1px solid rgba(52,211,153,0.45)" : "1px solid rgba(148,163,184,0.25)",
+                      border: esEgresosDirectos ? "1px solid rgba(52,211,153,0.45)" : "1px solid rgba(0,0,0,0.17)",
                       background: esEgresosDirectos ? "rgba(52,211,153,0.14)" : "transparent",
-                      color: esEgresosDirectos ? "#34d399" : "#94a3b8",
+                      color: esEgresosDirectos ? "#1F8A55" : "#6B6B6B",
                     }}
                   >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: esEgresosDirectos ? "#34d399" : "#475569" }} />
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: esEgresosDirectos ? "#1F8A55" : "#D4D4D4" }} />
                     {isMobile ? "Iguala" : "Egresos directos (iguala)"}
                   </button>
                 )}
@@ -999,10 +999,10 @@ function PresupuestoPanel({
 
   // ── Con cotización liberada ────────────────────────────────────────────────
   const t = totals
-  const realColor = !t ? "#94a3b8"
-    : t.realUtilidad >= t.libUtilidad ? "#34d399"
-    : t.realUtilidad > 0 ? "#fbbf24"
-    : "#f87171"
+  const realColor = !t ? "#6B6B6B"
+    : t.realUtilidad >= t.libUtilidad ? "#1F8A55"
+    : t.realUtilidad > 0 ? "#A86B00"
+    : "#C2362B"
 
   const hasAnyReal = sections.some((s) =>
     s.items.some((i) => i.actual_qty != null || i.actual_days != null || i.actual_unit_price != null)
@@ -1017,9 +1017,9 @@ function PresupuestoPanel({
             <p style={modulePanelTitleStyle}>Presupuesto</p>
             <p style={modulePanelHintStyle}>
               Basado en cotización liberada:{" "}
-              <strong style={{ color: "#e2e8f0" }}>{releasedQuote.name}</strong>
+              <strong style={{ color: "#262626" }}>{releasedQuote.name}</strong>
               {!hasAnyReal && (
-                <span style={{ color: "#fbbf24", marginLeft: 10 }}>
+                <span style={{ color: "#A86B00", marginLeft: 10 }}>
                   · Sin costos reales registrados aún
                 </span>
               )}
@@ -1045,8 +1045,8 @@ function PresupuestoPanel({
           marginBottom: 20,
         }}>
           {/* Proyectado */}
-          <div style={budgetCardStyle("rgba(167,139,250,0.06)", "rgba(167,139,250,0.20)")}>
-            <p style={{ ...budgetCardTitleStyle, color: "#a78bfa" }}>Proyectado — Liberado</p>
+          <div style={budgetCardStyle("rgba(0,0,0,0.05)", "rgba(0,0,0,0.08)")}>
+            <p style={{ ...budgetCardTitleStyle, color: "#131313" }}>Proyectado — Liberado</p>
             <div style={budgetRowStyle}>
               <span style={budgetLabelStyle}>Gasto liberado</span>
               <span style={budgetValueStyle}>{fmt(t.libGasto)}</span>
@@ -1055,13 +1055,13 @@ function PresupuestoPanel({
               <span style={budgetLabelStyle}>Venta al cliente</span>
               <span style={budgetValueStyle}>{fmt(t.libVenta)}</span>
             </div>
-            <div style={{ ...budgetRowStyle, borderTop: "1px solid rgba(148,163,184,0.12)", paddingTop: 10, marginTop: 4 }}>
-              <span style={{ ...budgetLabelStyle, color: "#e2e8f0", fontWeight: 600 }}>Utilidad proyectada</span>
-              <span style={{ ...budgetValueStyle, color: "#a78bfa", fontSize: 20, fontWeight: 700 }}>{fmt(t.libUtilidad)}</span>
+            <div style={{ ...budgetRowStyle, borderTop: "1px solid rgba(0,0,0,0.09)", paddingTop: 10, marginTop: 4 }}>
+              <span style={{ ...budgetLabelStyle, color: "#262626", fontWeight: 600 }}>Utilidad proyectada</span>
+              <span style={{ ...budgetValueStyle, color: "#131313", fontSize: 20, fontWeight: 700 }}>{fmt(t.libUtilidad)}</span>
             </div>
             <div style={budgetRowStyle}>
               <span style={budgetLabelStyle}>% sobre venta</span>
-              <span style={{ ...budgetValueStyle, color: "#a78bfa", fontWeight: 600 }}>{t.libPct.toFixed(1)}%</span>
+              <span style={{ ...budgetValueStyle, color: "#131313", fontWeight: 600 }}>{t.libPct.toFixed(1)}%</span>
             </div>
           </div>
 
@@ -1075,22 +1075,22 @@ function PresupuestoPanel({
             </p>
             <div style={budgetRowStyle}>
               <span style={budgetLabelStyle}>Gasto real (ítems)</span>
-              <span style={{ ...budgetValueStyle, color: t.realGasto > t.libGasto ? "#f87171" : t.realGasto < t.libGasto ? "#34d399" : "#94a3b8" }}>
+              <span style={{ ...budgetValueStyle, color: t.realGasto > t.libGasto ? "#C2362B" : t.realGasto < t.libGasto ? "#1F8A55" : "#6B6B6B" }}>
                 {fmt(t.realGasto - t.extraAmt)}
               </span>
             </div>
             {t.extraAmt > 0 && (
               <div style={budgetRowStyle}>
                 <span style={budgetLabelStyle}>Gastos adicionales</span>
-                <span style={{ ...budgetValueStyle, color: "#f87171" }}>{fmt(t.extraAmt)}</span>
+                <span style={{ ...budgetValueStyle, color: "#C2362B" }}>{fmt(t.extraAmt)}</span>
               </div>
             )}
             <div style={budgetRowStyle}>
               <span style={budgetLabelStyle}>Venta al cliente</span>
               <span style={budgetValueStyle}>{fmt(t.libVenta)}</span>
             </div>
-            <div style={{ ...budgetRowStyle, borderTop: "1px solid rgba(148,163,184,0.12)", paddingTop: 10, marginTop: 4 }}>
-              <span style={{ ...budgetLabelStyle, color: "#e2e8f0", fontWeight: 600 }}>Utilidad real</span>
+            <div style={{ ...budgetRowStyle, borderTop: "1px solid rgba(0,0,0,0.09)", paddingTop: 10, marginTop: 4 }}>
+              <span style={{ ...budgetLabelStyle, color: "#262626", fontWeight: 600 }}>Utilidad real</span>
               <span style={{ ...budgetValueStyle, color: realColor, fontSize: 20, fontWeight: 700 }}>{fmt(t.realUtilidad)}</span>
             </div>
             <div style={budgetRowStyle}>
@@ -1102,26 +1102,26 @@ function PresupuestoPanel({
       )}
 
       {/* Desglose por sección */}
-      <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(148,163,184,0.10)" }}>
+      <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)" }}>
         {/* Table header */}
         <div style={{
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr 100px 100px" : "1fr 130px 130px 110px",
-          background: "rgba(15,23,42,0.6)",
+          background: "#FFFFFF",
           padding: "8px 14px",
           gap: 8,
         }}>
-          <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Rubro</span>
-          <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Proyectado</span>
-          <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Real</span>
-          {!isMobile && <span style={{ color: "#6b7c93", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "right" }}>Diferencia</span>}
+          <span style={{ color: "#858585", fontSize: 10, fontWeight: 700,}}>Rubro</span>
+          <span style={{ color: "#858585", fontSize: 10, fontWeight: 700, textAlign: "right" }}>Proyectado</span>
+          <span style={{ color: "#858585", fontSize: 10, fontWeight: 700, textAlign: "right" }}>Real</span>
+          {!isMobile && <span style={{ color: "#858585", fontSize: 10, fontWeight: 700, textAlign: "right" }}>Diferencia</span>}
         </div>
 
         {sections.filter((s) => s.items.some((i) => libItemFin(i).venta > 0)).map((sec, idx) => {
           const libSecVenta = sec.items.reduce((sum, i) => sum + libItemFin(i).venta, 0)
           const realSecGasto = sec.items.reduce((sum, i) => sum + realItemGastoForBudget(i), 0)
           const diff = libSecVenta - realSecGasto
-          const diffColor = diff > 0 ? "#34d399" : diff < 0 ? "#f87171" : "#94a3b8"
+          const diffColor = diff > 0 ? "#1F8A55" : diff < 0 ? "#C2362B" : "#6B6B6B"
           const isOdd = idx % 2 === 1
           return (
             <div
@@ -1131,14 +1131,14 @@ function PresupuestoPanel({
                 gridTemplateColumns: isMobile ? "1fr 100px 100px" : "1fr 130px 130px 110px",
                 padding: "10px 14px",
                 gap: 8,
-                background: isOdd ? "rgba(148,163,184,0.04)" : "transparent",
-                borderTop: "1px solid rgba(148,163,184,0.07)",
+                background: isOdd ? "rgba(0,0,0,0.02)" : "transparent",
+                borderTop: "1px solid rgba(0,0,0,0.06)",
                 alignItems: "center",
               }}
             >
-              <span style={{ color: "#cbd5e1", fontSize: 13 }}>{sec.name}</span>
-              <span style={{ color: "#94a3b8", fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(libSecVenta)}</span>
-              <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(realSecGasto)}</span>
+              <span style={{ color: "#3F3F3F", fontSize: 13 }}>{sec.name}</span>
+              <span style={{ color: "#6B6B6B", fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(libSecVenta)}</span>
+              <span style={{ color: "#262626", fontSize: 13, fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(realSecGasto)}</span>
               {!isMobile && (
                 <span style={{ color: diffColor, fontSize: 13, fontWeight: 600, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                   {diff >= 0 ? "+" : ""}{fmt(diff)}
@@ -1155,15 +1155,15 @@ function PresupuestoPanel({
             gridTemplateColumns: isMobile ? "1fr 100px 100px" : "1fr 130px 130px 110px",
             padding: "12px 14px",
             gap: 8,
-            background: "rgba(15,23,42,0.5)",
-            borderTop: "1px solid rgba(148,163,184,0.15)",
+            background: "#FFFFFF",
+            borderTop: "1px solid rgba(0,0,0,0.11)",
             alignItems: "center",
           }}>
-            <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>TOTAL</span>
-            <span style={{ color: "#a78bfa", fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(t.libVenta)}</span>
+            <span style={{ color: "#262626", fontSize: 13, fontWeight: 700 }}>TOTAL</span>
+            <span style={{ color: "#131313", fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(t.libVenta)}</span>
             <span style={{ color: realColor, fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(t.realGasto)}</span>
             {!isMobile && (
-              <span style={{ color: t.libVenta - t.realGasto >= 0 ? "#34d399" : "#f87171", fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ color: t.libVenta - t.realGasto >= 0 ? "#1F8A55" : "#C2362B", fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                 {t.libVenta - t.realGasto >= 0 ? "+" : ""}{fmt(t.libVenta - t.realGasto)}
               </span>
             )}
@@ -1186,16 +1186,16 @@ function budgetCardStyle(bg: string, border: string): React.CSSProperties {
   }
 }
 const budgetCardTitleStyle: React.CSSProperties = {
-  fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4,
+  fontSize: 12, fontWeight: 700, marginBottom: 4,
 }
 const budgetRowStyle: React.CSSProperties = {
   display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8,
 }
 const budgetLabelStyle: React.CSSProperties = {
-  color: "#7d8ca3", fontSize: 12,
+  color: "#737373", fontSize: 12,
 }
 const budgetValueStyle: React.CSSProperties = {
-  color: "#94a3b8", fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums",
+  color: "#6B6B6B", fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums",
 }
 
 function TrashIcon() {
@@ -1265,7 +1265,7 @@ function QuotesPanel({
       ) : quotes.length === 0 ? (
         <div style={emptyStyle}>
           No hay cotizaciones en este proyecto.{" "}
-          <Link href={newQuoteHref} style={{ color: "#a78bfa" }}>
+          <Link href={newQuoteHref} style={{ color: "#131313" }}>
             Crea la primera.
           </Link>
         </div>
@@ -1569,7 +1569,7 @@ function QuoteModal({
               <span style={statusBadgeStyle(quote.status)}>
                 {quote.status === "approved" ? "APROBADO" : "DRAFT"}
               </span>
-              <span style={{ color: "#7d8ca3", fontSize: 12 }}>
+              <span style={{ color: "#737373", fontSize: 12 }}>
                 Markup {quote.markup_percentage}%
                 {(quote.financiamiento_percentage || 0) > 0 ? ` · Financiamiento ${quote.financiamiento_percentage}%` : ""}
               </span>
@@ -1619,13 +1619,13 @@ function QuoteModal({
         {/* Panel de mover cotización */}
         {showMove && (
           <div style={movePanelStyle}>
-            <p style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700, margin: "0 0 12px", letterSpacing: 0.5 }}>
+            <p style={{ color: "#131313", fontSize: 11, fontWeight: 700, margin: "0 0 12px", letterSpacing: 0.5 }}>
               MOVER COTIZACIÓN A OTRO PROYECTO
             </p>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
               {/* Paso 1: Cliente */}
               <div>
-                <p style={{ color: "#7d8ca3", fontSize: 11, margin: "0 0 4px" }}>1. Cliente</p>
+                <p style={{ color: "#737373", fontSize: 11, margin: "0 0 4px" }}>1. Cliente</p>
                 <select
                   value={moveClientId}
                   onChange={(e) => { setMoveClientId(e.target.value); setMoveSubfolderId(""); setMoveProjectId("") }}
@@ -1637,7 +1637,7 @@ function QuoteModal({
               </div>
               {/* Paso 2: Subcarpeta */}
               <div>
-                <p style={{ color: "#7d8ca3", fontSize: 11, margin: "0 0 4px" }}>2. Subcarpeta</p>
+                <p style={{ color: "#737373", fontSize: 11, margin: "0 0 4px" }}>2. Subcarpeta</p>
                 <select
                   value={moveSubfolderId}
                   onChange={(e) => { setMoveSubfolderId(e.target.value); setMoveProjectId("") }}
@@ -1652,7 +1652,7 @@ function QuoteModal({
               </div>
               {/* Paso 3: Proyecto */}
               <div>
-                <p style={{ color: "#7d8ca3", fontSize: 11, margin: "0 0 4px" }}>3. Proyecto</p>
+                <p style={{ color: "#737373", fontSize: 11, margin: "0 0 4px" }}>3. Proyecto</p>
                 <select
                   value={moveProjectId}
                   onChange={(e) => setMoveProjectId(e.target.value)}
@@ -1687,7 +1687,7 @@ function QuoteModal({
         {/* Sections */}
         <div style={modalBodyStyle}>
           {sections.length === 0 ? (
-            <p style={{ color: "#7d8ca3", fontSize: 13 }}>
+            <p style={{ color: "#737373", fontSize: 13 }}>
               Esta cotización no tiene secciones.
             </p>
           ) : (
@@ -1708,11 +1708,9 @@ function QuoteModal({
                         gridTemplateColumns: COL,
                         gap: 8,
                         padding: "0 4px 6px",
-                        color: "#7d8ca3",
+                        color: "#737373",
                         fontSize: 10,
                         fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.6,
                       }}
                     >
                       <span>Descripción</span>
@@ -1739,7 +1737,7 @@ function QuoteModal({
                             alignItems: "center",
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.025)",
+                            background: "#FFFFFF",
                           }}
                         >
                           {isMobile ? (
@@ -1747,7 +1745,7 @@ function QuoteModal({
                               <p
                                 style={{
                                   margin: 0,
-                                  color: "#f8fafc",
+                                  color: "#141414",
                                   fontSize: 13,
                                   fontWeight: 500,
                                 }}
@@ -1757,7 +1755,7 @@ function QuoteModal({
                               <p
                                 style={{
                                   margin: 0,
-                                  color: "#7d8ca3",
+                                  color: "#737373",
                                   fontSize: 11,
                                 }}
                               >
@@ -1767,7 +1765,7 @@ function QuoteModal({
                               <p
                                 style={{
                                   margin: 0,
-                                  color: "#a78bfa",
+                                  color: "#131313",
                                   fontSize: 13,
                                   fontWeight: 600,
                                 }}
@@ -1779,7 +1777,7 @@ function QuoteModal({
                             <>
                               <span
                                 style={{
-                                  color: "#e2e8f0",
+                                  color: "#262626",
                                   fontSize: 13,
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
@@ -1794,10 +1792,10 @@ function QuoteModal({
                               <span style={readCellStyle}>
                                 {fmt(libItemFin(item).gasto)}
                               </span>
-                              <span style={{ ...readCellStyle, color: "#34d399" }}>{fmt(libItemFin(item).utilidad)}</span>
+                              <span style={{ ...readCellStyle, color: "#1F8A55" }}>{fmt(libItemFin(item).utilidad)}</span>
                               <span
                                 style={{
-                                  color: "#94a3b8",
+                                  color: "#6B6B6B",
                                   fontSize: 12,
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
@@ -1809,7 +1807,7 @@ function QuoteModal({
                               <span
                                 style={{
                                   ...readCellStyle,
-                                  color: "#a78bfa",
+                                  color: "#131313",
                                   fontWeight: 600,
                                 }}
                               >
@@ -1829,25 +1827,25 @@ function QuoteModal({
           {/* Totals */}
           <div style={modalTotalsStyle}>
             <div style={modalTotalRowStyle}>
-              <span style={{ color: "#7d8ca3", fontSize: 13 }}>Subtotal</span>
-              <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
+              <span style={{ color: "#737373", fontSize: 13 }}>Subtotal</span>
+              <span style={{ color: "#262626", fontSize: 13, fontWeight: 600 }}>
                 {fmt(subtotal)}
               </span>
             </div>
             <div style={modalTotalRowStyle}>
-              <span style={{ color: "#7d8ca3", fontSize: 13 }}>
+              <span style={{ color: "#737373", fontSize: 13 }}>
                 Markup ({quote.markup_percentage}%)
               </span>
-              <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
+              <span style={{ color: "#262626", fontSize: 13, fontWeight: 600 }}>
                 {fmt(markupAmt)}
               </span>
             </div>
             {(quote.financiamiento_percentage || 0) > 0 && (
               <div style={modalTotalRowStyle}>
-                <span style={{ color: "#7d8ca3", fontSize: 13 }}>
+                <span style={{ color: "#737373", fontSize: 13 }}>
                   Financiamiento ({quote.financiamiento_percentage}%)
                 </span>
-                <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>
+                <span style={{ color: "#262626", fontSize: 13, fontWeight: 600 }}>
                   {fmt(financiamientoAmt)}
                 </span>
               </div>
@@ -1855,18 +1853,18 @@ function QuoteModal({
             <div
               style={{
                 ...modalTotalRowStyle,
-                borderTop: "1px solid rgba(148,163,184,0.16)",
+                borderTop: "1px solid rgba(0,0,0,0.12)",
                 paddingTop: 12,
                 marginTop: 4,
               }}
             >
               <span
-                style={{ color: "#f8fafc", fontSize: 15, fontWeight: 700 }}
+                style={{ color: "#141414", fontSize: 15, fontWeight: 700 }}
               >
                 Total
               </span>
               <span
-                style={{ color: "#a78bfa", fontSize: 20, fontWeight: 700 }}
+                style={{ color: "#131313", fontSize: 20, fontWeight: 700 }}
               >
                 {fmt(total)}
               </span>
@@ -1878,20 +1876,20 @@ function QuoteModal({
       {/* ── Aprobar proyecto mini-modal ── */}
       {showAprobar && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.32)", backdropFilter: "blur(6px)", zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
         >
           <div
-            style={{ background: "linear-gradient(160deg, rgba(13,20,38,0.99), rgba(8,12,24,0.99))", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 20, boxShadow: "0 32px 80px rgba(0,0,0,0.6)", padding: "28px 28px 24px", width: "100%", maxWidth: 400 }}
+            style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 20, boxShadow: "0 32px 80px rgba(0,0,0,0.13)", padding: "28px 28px 24px", width: "100%", maxWidth: 400 }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>🎬</div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>{aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}</h2>
-            <p style={{ margin: "0 0 18px", color: "#94a3b8", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
-              Esto creará una entrada en <strong style={{ color: "#e2e8f0" }}>Ingresos</strong> con los totales de esta cotización.
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#141414", textAlign: "center" }}>{aprobarCodigo?.adicional ? "Aprobar cotización adicional" : "Aprobar proyecto"}</h2>
+            <p style={{ margin: "0 0 18px", color: "#6B6B6B", fontSize: 13, textAlign: "center", lineHeight: 1.6 }}>
+              Esto creará una entrada en <strong style={{ color: "#262626" }}>Ingresos</strong> con los totales de esta cotización.
             </p>
 
             {/* Resumen */}
-            <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", display: "grid", gap: 6 }}>
+            <div style={{ padding: "12px 16px", borderRadius: 12, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", display: "grid", gap: 6 }}>
               {[
                 { label: "Cliente",   value: clientName },
                 { label: "Código",    value: aprobarCodigo?.codigo || "Se genera al aprobar", bold: true },
@@ -1900,18 +1898,18 @@ function QuoteModal({
                 { label: "IVA (16%)", value: fmt(Math.round(total * 0.16 * 100) / 100) },
                 { label: "Total",     value: fmt(total * 1.16), bold: true },
               ].map(r => (
-                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
-                  <span style={{ color: "#7d8ca3", fontSize: 13 }}>{r.label}</span>
-                  <span style={{ color: r.bold ? "#f8fafc" : "#cbd5e1", fontWeight: r.bold ? 700 : 500, fontSize: 13, fontFamily: r.bold ? "monospace" : undefined }}>{r.value}</span>
+                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                  <span style={{ color: "#737373", fontSize: 13 }}>{r.label}</span>
+                  <span style={{ color: r.bold ? "#141414" : "#3F3F3F", fontWeight: r.bold ? 700 : 500, fontSize: 13, fontFamily: r.bold ? "monospace" : undefined }}>{r.value}</span>
                 </div>
               ))}
             </div>
 
             {aprobarCodigo?.adicional && (
               <div style={{ marginTop: 16 }}>
-                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Nombre en Ingresos</p>
-                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#6b7c93", lineHeight: 1.5 }}>
-                  El proyecto ya tiene una línea aprobada, esta se agrega aparte como <strong style={{ color: "#cbd5e1" }}>{aprobarCodigo.codigo}</strong>.
+                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#737373" }}>Nombre en Ingresos</p>
+                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#858585", lineHeight: 1.5 }}>
+                  El proyecto ya tiene una línea aprobada, esta se agrega aparte como <strong style={{ color: "#3F3F3F" }}>{aprobarCodigo.codigo}</strong>.
                 </p>
                 <input
                   value={aprobarNombre}
@@ -1919,25 +1917,25 @@ function QuoteModal({
                   placeholder="Ej. Resizing"
                   style={{
                     width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 9, fontSize: 13,
-                    border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
-                    color: "#e2e8f0", outline: "none",
+                    border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF",
+                    color: "#262626", outline: "none",
                   }}
                 />
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#7d8ca3" }}>
-                  Quedará como: <strong style={{ color: "#e2e8f0" }}>{aprobarCodigo.codigo} {aprobarNombre.trim() || quote.name}</strong>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#737373" }}>
+                  Quedará como: <strong style={{ color: "#262626" }}>{aprobarCodigo.codigo} {aprobarNombre.trim() || quote.name}</strong>
                 </p>
               </div>
             )}
 
             {/* Empresa */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Empresa</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#737373" }}>Empresa</p>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["retro_studio", "retro_films"] as const).map(e => (
                   <button
                     key={e}
                     onClick={() => setAprobarEmpresa(e)}
-                    style={{ flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: aprobarEmpresa === e ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(148,163,184,0.14)", background: aprobarEmpresa === e ? "rgba(16,185,129,0.15)" : "transparent", color: aprobarEmpresa === e ? "#34d399" : "#64748b" }}
+                    style={{ flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: aprobarEmpresa === e ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(0,0,0,0.1)", background: aprobarEmpresa === e ? "rgba(16,185,129,0.15)" : "transparent", color: aprobarEmpresa === e ? "#1F8A55" : "#8A8A8A" }}
                   >
                     {e === "retro_studio" ? "Retro Studio" : "Retro Films"}
                   </button>
@@ -1947,14 +1945,14 @@ function QuoteModal({
 
             {/* Responsable */}
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#7d8ca3" }}>Responsable</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#737373" }}>Responsable</p>
               <select
                 value={aprobarResponsable}
                 onChange={(e) => setAprobarResponsable(e.target.value)}
                 style={{
                   width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
-                  border: "1px solid rgba(148,163,184,0.20)", background: "rgba(255,255,255,0.04)",
-                  color: aprobarResponsable ? "#e2e8f0" : "#64748b", outline: "none",
+                  border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF",
+                  color: aprobarResponsable ? "#262626" : "#8A8A8A", outline: "none",
                 }}
               >
                 <option value="">Sin asignar</option>
@@ -1966,10 +1964,10 @@ function QuoteModal({
 
             {/* Actions */}
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={() => setShowAprobar(false)} disabled={aproving} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(148,163,184,0.14)", background: "transparent", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>
+              <button onClick={() => setShowAprobar(false)} disabled={aproving} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "transparent", color: "#6B6B6B", fontSize: 13, cursor: "pointer" }}>
                 Cancelar
               </button>
-              <button onClick={confirmarAprobacion} disabled={aproving} style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "linear-gradient(135deg, rgba(16,185,129,0.8), rgba(5,150,105,0.8))", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}>
+              <button onClick={confirmarAprobacion} disabled={aproving} style={{ flex: 2, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "#1F8A55", color: "#FFFFFF", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}>
                 {aproving ? "Aprobando…" : "✓ Confirmar aprobación"}
               </button>
             </div>
@@ -2193,17 +2191,17 @@ function statusBadgeStyle(
     draft: {
       bg: "rgba(249,115,22,0.12)",
       border: "rgba(251,146,60,0.30)",
-      text: "#fdba74",
+      text: "#C2410C",
     },
     sent: {
       bg: "rgba(249,115,22,0.12)",
       border: "rgba(251,146,60,0.30)",
-      text: "#fdba74",
+      text: "#C2410C",
     },
     approved: {
       bg: "rgba(34,197,94,0.12)",
       border: "rgba(74,222,128,0.22)",
-      text: "#86efac",
+      text: "#1F7A4D",
     },
   }
   const c = map[status]
@@ -2242,16 +2240,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -2259,14 +2255,14 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
 const drivePanelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -2287,9 +2283,9 @@ const backButtonStyle: React.CSSProperties = {
   width: "fit-content",
   padding: "8px 12px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#cbd5e1",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#3F3F3F",
   textDecoration: "none",
   fontSize: 13,
   fontWeight: 500,
@@ -2303,31 +2299,31 @@ const breadcrumbStyle: React.CSSProperties = {
 }
 
 const breadcrumbLinkStyle: React.CSSProperties = {
-  color: "#a78bfa",
+  color: "#131313",
   textDecoration: "none",
   fontSize: 12,
   fontWeight: 600,
 }
 
 const breadcrumbDividerStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 12,
 }
 
 const breadcrumbMutedStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
 const breadcrumbCurrentStyle: React.CSSProperties = {
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 12,
   fontWeight: 600,
 }
 
 const projectDescriptionStyle: React.CSSProperties = {
   margin: "0 0 14px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 13,
   lineHeight: 1.5,
 }
@@ -2345,16 +2341,16 @@ const moduleCardStyle: React.CSSProperties = {
   textAlign: "left",
   padding: "14px",
   borderRadius: 14,
-  border: "1px solid rgba(148,163,184,0.12)",
-  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(0,0,0,0.09)",
+  background: "#FFFFFF",
   cursor: "pointer",
   color: "inherit",
 }
 
 const moduleCardActiveStyle: React.CSSProperties = {
-  background: "rgba(124,58,237,0.10)",
-  border: "1px solid rgba(167,139,250,0.24)",
-  boxShadow: "0 10px 30px rgba(124,58,237,0.12)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
 }
 
 function moduleIconWrapStyle(
@@ -2369,28 +2365,28 @@ function moduleIconWrapStyle(
     width: 40,
     height: 40,
     borderRadius: 11,
-    color: active ? "#ddd6fe" : isQuotes ? "#c4b5fd" : "#93c5fd",
+    color: active ? "#262626" : isQuotes ? "#3F3F3F" : "#1D5FA8",
     background: active
-      ? "rgba(124,58,237,0.18)"
+      ? "rgba(0,0,0,0.05)"
       : isQuotes
-        ? "rgba(124,58,237,0.10)"
+        ? "rgba(0,0,0,0.05)"
         : "rgba(59,130,246,0.12)",
     border: active
-      ? "1px solid rgba(167,139,250,0.24)"
+      ? "1px solid rgba(0,0,0,0.12)"
       : isQuotes
-        ? "1px solid rgba(167,139,250,0.16)"
+        ? "1px solid rgba(0,0,0,0.12)"
         : "1px solid rgba(96,165,250,0.18)",
   }
 }
 
 const moduleLabelStyle: React.CSSProperties = {
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const moduleDescriptionStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
   lineHeight: 1.45,
 }
@@ -2400,72 +2396,70 @@ const comingSoonBadgeStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "3px 8px",
   borderRadius: 999,
-  background: "rgba(148,163,184,0.10)",
-  border: "1px solid rgba(148,163,184,0.16)",
-  color: "#94a3b8",
+  background: "rgba(0,0,0,0.04)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#6B6B6B",
   fontSize: 10,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const modulePanelStyle: React.CSSProperties = {
   padding: "14px 16px",
   borderRadius: 14,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(2,6,23,0.28)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
 }
 
 const modulePanelHeaderStyle: React.CSSProperties = {
   marginBottom: 14,
   paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const modulePanelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 15,
   fontWeight: 600,
 }
 
 const modulePanelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
 const placeholderBoxStyle: React.CSSProperties = {
   padding: "28px 20px",
   borderRadius: 12,
-  border: "1px dashed rgba(148,163,184,0.18)",
-  background: "rgba(255,255,255,0.02)",
+  border: "1px dashed rgba(0,0,0,0.13)",
+  background: "#FFFFFF",
   textAlign: "center",
 }
 
 const placeholderTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const placeholderTextStyle: React.CSSProperties = {
   margin: "8px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
   lineHeight: 1.5,
 }
 
 const placeholderStrongStyle: React.CSSProperties = {
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontWeight: 600,
 }
 
 const emptyStyle: React.CSSProperties = {
   padding: "28px 16px",
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
@@ -2474,12 +2468,12 @@ const newQuoteButtonStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "7px 14px",
   borderRadius: 8,
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   textDecoration: "none",
   fontSize: 13,
   fontWeight: 600,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
   whiteSpace: "nowrap",
   flexShrink: 0,
 }
@@ -2491,8 +2485,8 @@ const quoteRowStyle: React.CSSProperties = {
   gap: 12,
   padding: "12px 14px",
   borderRadius: 12,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(255,255,255,0.025)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
   cursor: "pointer",
   color: "inherit",
   textAlign: "left",
@@ -2506,27 +2500,27 @@ const quoteRowIconStyle: React.CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: 10,
-  background: "rgba(124,58,237,0.14)",
-  border: "1px solid rgba(167,139,250,0.18)",
-  color: "#c4b5fd",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
+  color: "#3F3F3F",
   flexShrink: 0,
 }
 
 const quoteRowNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const quoteRowMetaStyle: React.CSSProperties = {
   margin: "3px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
 const quoteRowArrowStyle: React.CSSProperties = {
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 16,
   flexShrink: 0,
 }
@@ -2556,7 +2550,7 @@ const deleteQuoteBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(248,113,113,0.25)",
   background: "rgba(248,113,113,0.08)",
-  color: "#f87171",
+  color: "#C2362B",
   cursor: "pointer",
   flexShrink: 0,
 }
@@ -2564,7 +2558,7 @@ const deleteQuoteBtnStyle: React.CSSProperties = {
 const modalOverlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.60)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(4px)",
   zIndex: 10000,
   display: "flex",
@@ -2577,10 +2571,10 @@ const modalOverlayStyle: React.CSSProperties = {
 const modalPanelStyle: React.CSSProperties = {
   width: "100%",
   background:
-    "linear-gradient(180deg, rgba(10,14,26,0.99) 0%, rgba(6,9,18,0.99) 100%)",
-  border: "1px solid rgba(148,163,184,0.16)",
+    "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 20,
-  boxShadow: "0 40px 120px rgba(0,0,0,0.60)",
+  boxShadow: "0 40px 120px rgba(0,0,0,0.13)",
   overflow: "hidden",
 }
 
@@ -2590,21 +2584,19 @@ const modalHeaderStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 16,
   padding: "20px 24px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const modalEyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 10,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const modalTitleStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 20,
   fontWeight: 700,
   letterSpacing: -0.4,
@@ -2614,9 +2606,9 @@ const modalCloseStyle: React.CSSProperties = {
   width: 34,
   height: 34,
   borderRadius: 9,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   cursor: "pointer",
   fontSize: 14,
   flexShrink: 0,
@@ -2641,25 +2633,25 @@ const modalSectionHeaderStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   paddingBottom: 8,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const modalSectionTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const modalSectionTotalStyle: React.CSSProperties = {
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 13,
   fontWeight: 600,
   whiteSpace: "nowrap",
 }
 
 const readCellStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   textAlign: "right",
 }
@@ -2669,8 +2661,8 @@ const modalTotalsStyle: React.CSSProperties = {
   gap: 10,
   padding: "16px 20px",
   borderRadius: 14,
-  background: "rgba(124,58,237,0.06)",
-  border: "1px solid rgba(167,139,250,0.12)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const modalTotalRowStyle: React.CSSProperties = {
@@ -2686,9 +2678,9 @@ const pdfExportButtonStyle: React.CSSProperties = {
   gap: 5,
   padding: "7px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.22)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -2703,7 +2695,7 @@ const editQuoteBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(52,211,153,0.3)",
   background: "rgba(52,211,153,0.08)",
-  color: "#34d399",
+  color: "#1F8A55",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -2719,7 +2711,7 @@ const liberarBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(251,191,36,0.3)",
   background: "rgba(251,191,36,0.08)",
-  color: "#fbbf24",
+  color: "#A86B00",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -2733,9 +2725,9 @@ const moveQuoteBtnStyle: React.CSSProperties = {
   gap: 5,
   padding: "7px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(167,139,250,0.3)",
-  background: "rgba(99,102,241,0.1)",
-  color: "#a78bfa",
+  border: "1px solid rgba(0,0,0,0.2)",
+  background: "rgba(0,0,0,0.05)",
+  color: "#131313",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -2750,7 +2742,7 @@ const aprobarQuoteBtnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid rgba(52,211,153,0.35)",
   background: "rgba(16,185,129,0.12)",
-  color: "#34d399",
+  color: "#1F8A55",
   cursor: "pointer",
   fontSize: 12,
   fontWeight: 600,
@@ -2758,8 +2750,8 @@ const aprobarQuoteBtnStyle: React.CSSProperties = {
 }
 
 const movePanelStyle: React.CSSProperties = {
-  background: "rgba(99,102,241,0.07)",
-  border: "1px solid rgba(99,102,241,0.22)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 12,
   padding: "16px 20px",
   margin: "0 20px 0",
@@ -2768,10 +2760,10 @@ const movePanelStyle: React.CSSProperties = {
 const moveSelectStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   boxSizing: "border-box",
@@ -2781,8 +2773,8 @@ const moveConfirmBtnStyle: React.CSSProperties = {
   padding: "8px 18px",
   borderRadius: 8,
   border: "none",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "#fff",
+  background: "#131313",
+  color: "#FFFFFF",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
@@ -2791,9 +2783,9 @@ const moveConfirmBtnStyle: React.CSSProperties = {
 const moveCancelBtnStyle: React.CSSProperties = {
   padding: "8px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.2)",
+  border: "1px solid rgba(0,0,0,0.14)",
   background: "transparent",
-  color: "#7d8ca3",
+  color: "#737373",
   cursor: "pointer",
   fontSize: 13,
 }

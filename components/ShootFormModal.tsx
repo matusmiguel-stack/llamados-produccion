@@ -66,9 +66,9 @@ function datesOverlapInclusive(sA: string, eA: string, sB: string, eB: string) {
 
 function getStatusColor(status: string) {
   if (status === "confirmed") return "#16a34a"
-  if (status === "cancelled") return "#dc2626"
-  if (status === "wrap") return "#64748b"
-  return "#eab308"
+  if (status === "cancelled") return "#C2362B"
+  if (status === "wrap") return "#8A8A8A"
+  return "#A86B00"
 }
 
 function empLabel(e: Employee) {
@@ -119,7 +119,7 @@ export function ShootFormModal({
   const [privateNotes, setPrivateNotes] = useState("")
   const [productionNotes, setProductionNotes] = useState("")
   const [status, setStatus] = useState("tentative")
-  const [color, setColor] = useState("#7c3aed")
+  const [color, setColor] = useState("#131313")
   const [useCustomColor, setUseCustomColor] = useState(false)
   const [allDay, setAllDay] = useState(false)
   const [selectedDate, setSelectedDate] = useState("")
@@ -350,35 +350,35 @@ export function ShootFormModal({
   const selectStyles = {
     control: (base: any) => ({
       ...base,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      borderColor: "rgba(148, 163, 184, 0.28)",
+      backgroundColor: "#FFFFFF",
+      borderColor: "rgba(0,0,0,0.19)",
       borderRadius: 12,
       minHeight: 40,
       boxShadow: "none",
     }),
     menu: (base: any) => ({
       ...base,
-      backgroundColor: "#0f172a",
-      border: "1px solid rgba(148, 163, 184, 0.22)",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid rgba(0,0,0,0.15)",
       overflow: "hidden",
       zIndex: 1000000,
     }),
     option: (base: any, state: any) => ({
       ...base,
-      backgroundColor: state.isFocused ? "rgba(124, 58, 237, 0.35)" : "#0f172a",
-      color: state.isDisabled ? "#64748b" : "#f8fafc",
+      backgroundColor: state.isFocused ? "rgba(0,0,0,0.08)" : "#FFFFFF",
+      color: state.isDisabled ? "#8A8A8A" : "#141414",
       cursor: state.isDisabled ? "not-allowed" : "pointer",
     }),
     multiValue: (base: any) => ({
       ...base,
-      backgroundColor: "rgba(124, 58, 237, 0.28)",
+      backgroundColor: "rgba(0,0,0,0.08)",
       borderRadius: 999,
     }),
-    multiValueLabel: (base: any) => ({ ...base, color: "#f8fafc" }),
-    multiValueRemove: (base: any) => ({ ...base, color: "#f8fafc" }),
-    input: (base: any) => ({ ...base, color: "#f8fafc", margin: 0, padding: 0 }),
-    placeholder: (base: any) => ({ ...base, color: "#94a3b8" }),
-    singleValue: (base: any) => ({ ...base, color: "#f8fafc" }),
+    multiValueLabel: (base: any) => ({ ...base, color: "#141414" }),
+    multiValueRemove: (base: any) => ({ ...base, color: "#141414" }),
+    input: (base: any) => ({ ...base, color: "#141414", margin: 0, padding: 0 }),
+    placeholder: (base: any) => ({ ...base, color: "#6B6B6B" }),
+    singleValue: (base: any) => ({ ...base, color: "#141414" }),
     valueContainer: (base: any) => ({ ...base, padding: "0 8px" }),
     indicatorsContainer: (base: any) => ({ ...base, height: 38 }),
   }
@@ -403,7 +403,7 @@ export function ShootFormModal({
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 16px", textAlign: "center", color: "#7d8ca3", fontSize: 13 }}>
+          <div style={{ padding: "40px 16px", textAlign: "center", color: "#737373", fontSize: 13 }}>
             Cargando datos...
           </div>
         ) : (
@@ -730,22 +730,22 @@ export function ShootFormModal({
           >
             <div style={addClientHeaderStyle}>
               <div>
-                <p style={{ color: "#a78bfa", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, margin: 0 }}>
+                <p style={{ color: "#131313", fontSize: 10, fontWeight: 700, margin: 0 }}>
                   Nuevo cliente
                 </p>
-                <p style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
+                <p style={{ color: "#262626", fontSize: 14, fontWeight: 600, margin: "3px 0 0" }}>
                   Agregar al catálogo
                 </p>
               </div>
               <button
                 onClick={() => setShowAddClient(false)}
-                style={{ background: "none", border: "none", color: "#7d8ca3", fontSize: 20, cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "#737373", fontSize: 20, cursor: "pointer" }}
               >
                 ×
               </button>
             </div>
             <div style={{ padding: "20px 18px 16px" }}>
-              <p style={{ color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              <p style={{ color: "#737373", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
                 Nombre del cliente
               </p>
               <input
@@ -757,12 +757,12 @@ export function ShootFormModal({
                 autoFocus
                 style={{
                   width: "100%", padding: "10px 12px",
-                  background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.20)",
-                  borderRadius: 10, color: "#e2e8f0", fontSize: 14, boxSizing: "border-box" as const, outline: "none",
+                  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+                  borderRadius: 10, color: "#262626", fontSize: 14, boxSizing: "border-box" as const, outline: "none",
                 }}
               />
             </div>
-            <div style={{ padding: "12px 18px", borderTop: "1px solid rgba(148,163,184,0.10)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <div style={{ padding: "12px 18px", borderTop: "1px solid rgba(0,0,0,0.08)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setShowAddClient(false)} style={secondaryBtnStyle}>Cancelar</button>
               <button
                 onClick={handleSaveNewClient}
@@ -784,7 +784,7 @@ export function ShootFormModal({
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.72)",
+  background: "rgba(17,17,17,0.32)",
   zIndex: 999999,
   display: "flex",
   alignItems: "center",
@@ -797,10 +797,10 @@ const modalStyle: React.CSSProperties = {
   flexDirection: "column",
   maxWidth: "calc(100vw - 28px)",
   overflow: "hidden",
-  background: "rgba(15, 23, 42, 0.96)",
-  color: "#f8fafc",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+  background: "#FFFFFF",
+  color: "#141414",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 24px 80px rgba(0,0,0,0.12)",
   backdropFilter: "blur(20px)",
 }
 
@@ -810,7 +810,7 @@ const headerStyle: React.CSSProperties = {
   alignItems: "flex-start",
   gap: 12,
   padding: "14px 16px 12px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
   flexShrink: 0,
 }
 
@@ -826,9 +826,9 @@ const closeStyle: React.CSSProperties = {
   width: 28,
   height: 28,
   borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.14)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   fontSize: 18,
   lineHeight: 1,
   cursor: "pointer",
@@ -856,11 +856,9 @@ const colStyle: React.CSSProperties = {
 
 const sectionLabelStyle: React.CSSProperties = {
   margin: "0 0 2px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -871,7 +869,7 @@ const fieldStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   margin: 0,
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -885,10 +883,10 @@ const rowStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "7px 10px",
-  border: "1px solid rgba(148,163,184,0.14)",
+  border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -900,7 +898,7 @@ const selectStyle: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
   backgroundImage:
-    "linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%)",
+    "linear-gradient(45deg, transparent 50%, #6B6B6B 50%), linear-gradient(135deg, #6B6B6B 50%, transparent 50%)",
   backgroundPosition: "calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px)",
   backgroundSize: "5px 5px, 5px 5px",
   backgroundRepeat: "no-repeat",
@@ -919,7 +917,7 @@ const inlineCheckStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 12,
   cursor: "pointer",
   minHeight: 32,
@@ -930,8 +928,8 @@ const colorInputStyle: React.CSSProperties = {
   height: 32,
   padding: 2,
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(2,6,23,0.55)",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
   cursor: "pointer",
 }
 
@@ -944,7 +942,7 @@ const textareaStyle: React.CSSProperties = {
 
 const notesBlockStyle: React.CSSProperties = {
   paddingTop: 12,
-  borderTop: "1px solid rgba(148,163,184,0.08)",
+  borderTop: "1px solid rgba(0,0,0,0.07)",
 }
 
 const notesGridStyle: React.CSSProperties = {
@@ -958,28 +956,28 @@ const footerStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 8,
   padding: "12px 16px",
-  borderTop: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(2,6,23,0.72)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
   flexShrink: 0,
 }
 
 const primaryBtnStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
 }
 
 const secondaryBtnStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -990,24 +988,24 @@ const addClientOverlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
   zIndex: 1000001,
-  background: "rgba(2,6,23,0.80)",
+  background: "rgba(17,17,17,0.32)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
 }
 
 const addClientPanelStyle: React.CSSProperties = {
-  background: "linear-gradient(160deg,#0d1b2e,#0f172a)",
-  border: "1px solid rgba(148,163,184,0.15)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.11)",
   borderRadius: 16,
-  boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+  boxShadow: "0 24px 64px rgba(0,0,0,0.13)",
   width: 340,
   overflow: "hidden",
 }
 
 const addClientHeaderStyle: React.CSSProperties = {
   padding: "16px 18px 12px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",

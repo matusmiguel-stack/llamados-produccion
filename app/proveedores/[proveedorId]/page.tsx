@@ -87,9 +87,9 @@ function fmtDate(iso: string | null): string {
 
 // Estatus de factura (mismos nombres/colores que la página de Finanzas)
 const FAC_STATUS: Record<string, { label: string; bg: string; border: string; text: string }> = {
-  aceptada:  { label: "Por pagar", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#fbbf24" },
-  pagada:    { label: "Pagada",    bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#34d399" },
-  rechazada: { label: "Rechazada", bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#f87171" },
+  aceptada:  { label: "Por pagar", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#A86B00" },
+  pagada:    { label: "Pagada",    bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#1F8A55" },
+  rechazada: { label: "Rechazada", bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#C2362B" },
 }
 
 const ORIGEN_LABEL: Record<string, string> = {
@@ -538,20 +538,20 @@ export default function ProveedorDetailPage() {
           {/* Resumen único — lo urgente primero */}
           {canSeeFacturas ? (
             <div style={summaryRowStyle}>
-              <SummaryCard label="Por pagar" value={fmt(totalPorPagar)} color="#fbbf24"
+              <SummaryCard label="Por pagar" value={fmt(totalPorPagar)} color="#A86B00"
                 hint={`${facCounts.aceptada} factura${facCounts.aceptada === 1 ? "" : "s"}`} />
-              <SummaryCard label="Vencido" value={fmt(totalVencido)} color="#f87171"
+              <SummaryCard label="Vencido" value={fmt(totalVencido)} color="#C2362B"
                 hint={vencidas.length === 0 ? "nada vencido" : `${vencidas.length} factura${vencidas.length === 1 ? "" : "s"}`} />
-              <SummaryCard label="Pagado" value={fmt(totalPagado)} color="#34d399"
+              <SummaryCard label="Pagado" value={fmt(totalPagado)} color="#1F8A55"
                 hint={`${facCounts.pagada} pago${facCounts.pagada === 1 ? "" : "s"}`} />
-              <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#94a3b8"
+              <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#6B6B6B"
                 hint={`${egresos.length} rubro${egresos.length === 1 ? "" : "s"} · ${Object.keys(byProject).length} proyecto${Object.keys(byProject).length === 1 ? "" : "s"}`} />
             </div>
           ) : (
             <div style={summaryRowStyle}>
-              <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#f87171" big />
-              <SummaryCard label="Proyectos"      value={String(Object.keys(byProject).length)} color="#94a3b8" />
-              <SummaryCard label="Ítems"          value={String(egresos.length)} color="#94a3b8" />
+              <SummaryCard label="Total egresado" value={fmt(totalEgresos)} color="#C2362B" big />
+              <SummaryCard label="Proyectos"      value={String(Object.keys(byProject).length)} color="#6B6B6B" />
+              <SummaryCard label="Ítems"          value={String(egresos.length)} color="#6B6B6B" />
             </div>
           )}
 
@@ -577,8 +577,8 @@ export default function ProveedorDetailPage() {
 
             {egresos.length === 0 ? (
               <div style={emptyStateStyle}>
-                <p style={{ margin: 0, fontSize: 15, color: "#6b7c93" }}>Sin egresos asignados</p>
-                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7c93" }}>Este proveedor aún no tiene rubros capturados en ninguna liberación.</p>
+                <p style={{ margin: 0, fontSize: 15, color: "#858585" }}>Sin egresos asignados</p>
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#858585" }}>Este proveedor aún no tiene rubros capturados en ninguna liberación.</p>
               </div>
             ) : (
               Object.entries(byProject).map(([grupo, { project_name, client_name, project_id: pid, rows }]) => {
@@ -591,10 +591,10 @@ export default function ProveedorDetailPage() {
                       title={colProj[grupo] ? "Mostrar rubros" : "Ocultar rubros"}
                     >
                       <div>
-                        <span style={{ color: "#7d8ca3", fontSize: 12, marginRight: 8 }}>{colProj[grupo] ? "▸" : "▾"}</span>
+                        <span style={{ color: "#737373", fontSize: 12, marginRight: 8 }}>{colProj[grupo] ? "▸" : "▾"}</span>
                         <Link href={`/proyectos/${pid}`} style={projectNameLinkStyle} onClick={e => e.stopPropagation()}>{project_name}</Link>
                         <span style={clientNameStyle}> · {client_name}</span>
-                        <span style={{ color: "#6b7c93", fontSize: 11, marginLeft: 8 }}>({rows.length} rubro{rows.length === 1 ? "" : "s"})</span>
+                        <span style={{ color: "#858585", fontSize: 11, marginLeft: 8 }}>({rows.length} rubro{rows.length === 1 ? "" : "s"})</span>
                       </div>
                       <span style={projectTotalStyle}>{fmt(projectTotal)}</span>
                     </div>
@@ -616,15 +616,15 @@ export default function ProveedorDetailPage() {
                             if (isEditing) {
                               const previewMonto = calcMonto(row, editState)
                               return (
-                                <tr key={row.id} style={{ background: "rgba(167,139,250,0.06)", borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
+                                <tr key={row.id} style={{ background: "rgba(0,0,0,0.05)", borderBottom: "1px solid rgba(0,0,0,0.12)" }}>
                                   {/* Cotización */}
                                   <td style={tdStyle}>
                                     <Link href={`/proyectos/${row.project_id}/liberar/${row.quote_id}`} style={quoteLinkStyle}>{row.quote_name}</Link>
                                   </td>
                                   {/* Sección */}
-                                  <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12 }}>{row.section_name}</td>
+                                  <td style={{ ...tdStyle, color: "#737373", fontSize: 12 }}>{row.section_name}</td>
                                   {/* Descripción */}
-                                  <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
+                                  <td style={{ ...tdStyle, color: "#262626", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
                                   {/* Combobox proveedor */}
                                   <td style={{ ...tdStyle, minWidth: 200 }}>
                                     <SupplierCombobox
@@ -656,7 +656,7 @@ export default function ProveedorDetailPage() {
                                       style={{ ...editInputStyle, width: 90 }} />
                                   </td>
                                   {/* Preview monto */}
-                                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
+                                  <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#C2362B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                                     {fmt(previewMonto)}
                                   </td>
                                   {/* Acciones */}
@@ -679,22 +679,22 @@ export default function ProveedorDetailPage() {
                             const isThisProv = row.actual_supplier_id === proveedorId
 
                             return (
-                              <tr key={row.id} style={{ background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.018)", borderBottom: "1px solid rgba(148,163,184,0.07)" }}>
+                              <tr key={row.id} style={{ background: idx % 2 === 0 ? "transparent" : "#FFFFFF", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                                 <td style={tdStyle}>
                                   <Link href={`/proyectos/${row.project_id}/liberar/${row.quote_id}`} style={quoteLinkStyle}>{row.quote_name}</Link>
                                 </td>
-                                <td style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12 }}>{row.section_name}</td>
-                                <td style={{ ...tdStyle, color: "#e2e8f0", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
+                                <td style={{ ...tdStyle, color: "#737373", fontSize: 12 }}>{row.section_name}</td>
+                                <td style={{ ...tdStyle, color: "#262626", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description}</td>
                                 <td style={tdStyle}>
-                                  <ContactChip label={contactLabel} icon={isThisProv ? "🏢" : "👤"} color={isThisProv ? "#fbbf24" : "#34d399"} style={{ maxWidth: 220 }} />
+                                  <ContactChip label={contactLabel} icon={isThisProv ? "🏢" : "👤"} color={isThisProv ? "#A86B00" : "#1F8A55"} style={{ maxWidth: 220 }} />
                                 </td>
-                                <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{qty}</td>
-                                <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12 }}>{days}</td>
-                                <td style={{ ...tdStyle, textAlign: "right", color: "#94a3b8", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{price != null ? fmt(price) : "—"}</td>
-                                <td style={{ ...tdStyle, textAlign: "right", color: "#f87171", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(row.monto)}</td>
+                                <td style={{ ...tdStyle, textAlign: "right", color: "#6B6B6B", fontSize: 12 }}>{qty}</td>
+                                <td style={{ ...tdStyle, textAlign: "right", color: "#6B6B6B", fontSize: 12 }}>{days}</td>
+                                <td style={{ ...tdStyle, textAlign: "right", color: "#6B6B6B", fontSize: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{price != null ? fmt(price) : "—"}</td>
+                                <td style={{ ...tdStyle, textAlign: "right", color: "#C2362B", fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{fmt(row.monto)}</td>
                                 <td style={{ ...tdStyle, textAlign: "right", whiteSpace: "nowrap" }}>
                                   {row.pago_estado === "pagado" ? (
-                                    <span style={{ ...facPillStyle("#34d399"), marginRight: 8 }} title="Pago registrado">
+                                    <span style={{ ...facPillStyle("#1F8A55"), marginRight: 8 }} title="Pago registrado">
                                       ✓ Pagado{row.pago_fecha ? ` ${fmtDate(row.pago_fecha)}` : ""}
                                     </span>
                                   ) : isThisProv && (
@@ -707,11 +707,11 @@ export default function ProveedorDetailPage() {
                           })}
                         </tbody>
                         <tfoot>
-                          <tr style={{ borderTop: "1px solid rgba(148,163,184,0.14)" }}>
-                            <td colSpan={7} style={{ ...tdStyle, color: "#7d8ca3", fontSize: 12, paddingTop: 10 }}>
+                          <tr style={{ borderTop: "1px solid rgba(0,0,0,0.1)" }}>
+                            <td colSpan={7} style={{ ...tdStyle, color: "#737373", fontSize: 12, paddingTop: 10 }}>
                               {rows.length} rubro{rows.length !== 1 ? "s" : ""}
                             </td>
-                            <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", paddingTop: 10 }}>
+                            <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#C2362B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", paddingTop: 10 }}>
                               {fmt(projectTotal)}
                             </td>
                             <td />
@@ -745,9 +745,9 @@ export default function ProveedorDetailPage() {
                       onClick={() => setFacFilter(key)}
                       style={{
                         padding: "6px 13px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                        border: `1px solid ${active ? cfg.border : "rgba(148,163,184,0.18)"}`,
+                        border: `1px solid ${active ? cfg.border : "rgba(0,0,0,0.13)"}`,
                         background: active ? cfg.bg : "transparent",
-                        color: active ? cfg.text : "#94a3b8",
+                        color: active ? cfg.text : "#6B6B6B",
                       }}
                     >
                       {label} ({facCounts[key]})
@@ -758,10 +758,10 @@ export default function ProveedorDetailPage() {
 
               {facturasFiltradas.length === 0 ? (
                 <div style={emptyStateStyle}>
-                  <p style={{ margin: 0, fontSize: 15, color: "#6b7c93" }}>
+                  <p style={{ margin: 0, fontSize: 15, color: "#858585" }}>
                     {facFilter === "aceptada" ? "Sin facturas por pagar" : facFilter === "pagada" ? "Sin facturas pagadas" : "Sin facturas rechazadas"}
                   </p>
-                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7c93" }}>
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#858585" }}>
                     {facturas.length === 0 ? "Este proveedor aún no ha subido facturas al sistema." : "Prueba con otro filtro."}
                   </p>
                 </div>
@@ -780,34 +780,34 @@ export default function ProveedorDetailPage() {
                       <div key={f.id} style={{
                         display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
                         padding: "13px 16px", borderRadius: 12,
-                        background: "rgba(255,255,255,0.03)",
-                        border: vencida ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(148,163,184,0.10)",
+                        background: "#FFFFFF",
+                        border: vencida ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(0,0,0,0.08)",
                         opacity: f.status === "pagada" ? 0.78 : 1,
                       }}>
                         <div style={{ flex: 1, minWidth: 220 }}>
-                          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#e2e8f0", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#262626", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             {f.concepto || "Factura"}
-                            {vencida && <span style={facPillStyle("#f87171")}>Vencida</span>}
-                            {f.status === "pagada" && <span style={facPillStyle("#34d399")}>✓ Pagada{f.paid_at ? ` ${fmtDate(f.paid_at)}` : ""}</span>}
-                            {f.status === "rechazada" && <span style={facPillStyle("#f87171")}>Rechazada</span>}
-                            {f.es_historico && <span style={facPillStyle("#fb923c")}>PASADO</span>}
-                            {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 400 }}>{ORIGEN_LABEL[f.origen] || f.origen}</span>}
+                            {vencida && <span style={facPillStyle("#C2362B")}>Vencida</span>}
+                            {f.status === "pagada" && <span style={facPillStyle("#1F8A55")}>✓ Pagada{f.paid_at ? ` ${fmtDate(f.paid_at)}` : ""}</span>}
+                            {f.status === "rechazada" && <span style={facPillStyle("#C2362B")}>Rechazada</span>}
+                            {f.es_historico && <span style={facPillStyle("#C2410C")}>PASADO</span>}
+                            {f.origen && f.origen !== "proveedor" && <span style={{ fontSize: 11, color: "#1D5FA8", fontWeight: 400 }}>{ORIGEN_LABEL[f.origen] || f.origen}</span>}
                           </p>
-                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7d8ca3" }}>
+                          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#737373" }}>
                             {proyecto}
                             {f.status === "aceptada" && f.fecha_pago && (
                               <> · {vencida ? "venció el" : "pago programado"}{" "}
-                              <span style={{ color: vencida ? "#f87171" : "#fbbf24", fontWeight: 600 }}>{fmtDate(f.fecha_pago)}</span></>
+                              <span style={{ color: vencida ? "#C2362B" : "#A86B00", fontWeight: 600 }}>{fmtDate(f.fecha_pago)}</span></>
                             )}
                             {f.status === "rechazada" && f.motivo_rechazo && <> · {f.motivo_rechazo}</>}
                           </p>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: vencida ? "#f87171" : "#f8fafc" }}>
+                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: vencida ? "#C2362B" : "#141414" }}>
                             {pagar > 0 ? fmt(pagar) : "—"}
                           </p>
                           {pagar > 0 && sub > 0 && Math.abs(pagar - sub) > 0.01 && (
-                            <p style={{ margin: 0, fontSize: 11, color: "#7d8ca3" }}>{fmt(sub)} + imp.</p>
+                            <p style={{ margin: 0, fontSize: 11, color: "#737373" }}>{fmt(sub)} + imp.</p>
                           )}
                         </div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -818,7 +818,7 @@ export default function ProveedorDetailPage() {
                               style={{
                                 padding: "6px 13px", borderRadius: 8, fontSize: 11, fontWeight: 700,
                                 cursor: payingId === f.id ? "not-allowed" : "pointer", opacity: payingId === f.id ? 0.6 : 1,
-                                border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#fdba74",
+                                border: "1px solid rgba(249,115,22,0.4)", background: "rgba(249,115,22,0.14)", color: "#C2410C",
                               }}
                             >
                               {payingId === f.id ? "…" : "✓ Marcar Pago"}
@@ -828,7 +828,7 @@ export default function ProveedorDetailPage() {
                             <button
                               onClick={() => downloadFile(f.pdf_path!)}
                               title="Descargar PDF de la factura"
-                              style={facFileBtnStyle("#f87171")}
+                              style={facFileBtnStyle("#C2362B")}
                             >
                               ⬇ PDF
                             </button>
@@ -837,7 +837,7 @@ export default function ProveedorDetailPage() {
                             <button
                               onClick={() => downloadFile(f.xml_path!)}
                               title="Descargar XML de la factura"
-                              style={facFileBtnStyle("#38bdf8")}
+                              style={facFileBtnStyle("#1D6FB8")}
                             >
                               ⬇ XML
                             </button>
@@ -848,7 +848,7 @@ export default function ProveedorDetailPage() {
                               title="Descargar comprobante de pago"
                               style={{
                                 padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                                border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.10)", color: "#6ee7b7",
+                                border: "1px solid rgba(52,211,153,0.35)", background: "rgba(52,211,153,0.10)", color: "#1F7A4D",
                               }}
                             >
                               📎
@@ -870,34 +870,34 @@ export default function ProveedorDetailPage() {
           <div
             style={{
               position: "fixed", inset: 0, zIndex: 10000,
-              background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
+              background: "rgba(17,17,17,0.32)", backdropFilter: "blur(3px)",
               display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
             }}
           >
             <div
               style={{
                 width: "100%", maxWidth: 440,
-                background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
-                borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+                background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.13)",
+                borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.11)",
               }}
               onClick={e => e.stopPropagation()}
             >
-              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>
                 Marcar pago{payModalFac.concepto ? ` — ${payModalFac.concepto}` : ""}
               </p>
-              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94a3b8" }}>
-                Monto: <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#e2e8f0", fontWeight: 700 }}>{fmt(Number(payModalFac.subtotal || 0))}</span>
+              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#6B6B6B" }}>
+                Monto: <span style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "#262626", fontWeight: 700 }}>{fmt(Number(payModalFac.subtotal || 0))}</span>
               </p>
-              <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>
-                Comprobante de pago del banco <span style={{ color: "#f87171" }}>*</span>
+              <p style={{ margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#3F3F3F" }}>
+                Comprobante de pago del banco <span style={{ color: "#C2362B" }}>*</span>
               </p>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                 onChange={e => setPayFile(e.target.files?.[0] || null)}
-                style={{ fontSize: 12, color: "#94a3b8", width: "100%" }}
+                style={{ fontSize: 12, color: "#6B6B6B", width: "100%" }}
               />
-              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#737373", lineHeight: 1.5 }}>
                 PDF o JPG. Queda guardado y vinculado a esta transacción. Al confirmar se
                 le envía el correo de pago al proveedor.
               </p>
@@ -907,8 +907,8 @@ export default function ProveedorDetailPage() {
                   disabled={payingId === payModalFac.id}
                   style={{
                     padding: "8px 16px", borderRadius: 8, cursor: "pointer",
-                    border: "1px solid rgba(148,163,184,0.2)", background: "transparent",
-                    color: "#94a3b8", fontSize: 13, fontWeight: 600,
+                    border: "1px solid rgba(0,0,0,0.14)", background: "transparent",
+                    color: "#6B6B6B", fontSize: 13, fontWeight: 600,
                   }}
                 >
                   Cancelar
@@ -920,7 +920,7 @@ export default function ProveedorDetailPage() {
                     padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
                     cursor: payingId === payModalFac.id || !payFile ? "not-allowed" : "pointer",
                     opacity: !payFile ? 0.5 : 1,
-                    border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.14)", color: "#34d399",
+                    border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.14)", color: "#1F8A55",
                   }}
                 >
                   {payingId === payModalFac.id ? "Guardando…" : "✓ Confirmar pago"}
@@ -933,20 +933,20 @@ export default function ProveedorDetailPage() {
         {/* ── Pagar egreso (factura opcional) ── */}
         {payEgreso && (
           <div
-            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(17,17,17,0.32)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
             onClick={() => !ePaying && setPayEgreso(null)}
           >
             <div
               style={{
                 width: "100%", maxWidth: 460, maxHeight: "calc(100vh - 32px)", overflowY: "auto",
-                background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
-                borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.5)", boxSizing: "border-box",
+                background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.13)",
+                borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.11)", boxSizing: "border-box",
               }}
               onClick={e => e.stopPropagation()}
             >
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#34d399" }}>Pagar egreso</p>
-              <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{payEgreso.description}</p>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>{payEgreso.project_name} · {payEgreso.quote_name}</p>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#1F8A55" }}>Pagar egreso</p>
+              <p style={{ margin: "6px 0 0", fontSize: 15, fontWeight: 700, color: "#1A1A1A" }}>{payEgreso.description}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B6B6B" }}>{payEgreso.project_name} · {payEgreso.quote_name}</p>
 
               <p style={payEgresoLabelStyle}>Monto pagado *</p>
               <input type="number" min="0" step="0.01" value={eMonto} onChange={e => setEMonto(e.target.value)} style={payEgresoInputStyle} />
@@ -966,14 +966,14 @@ export default function ProveedorDetailPage() {
               </select>
 
               <p style={payEgresoLabelStyle}>
-                Comprobante de pago del banco {eForma === "Efectivo" ? "(opcional)" : <span style={{ color: "#f87171" }}>*</span>}
+                Comprobante de pago del banco {eForma === "Efectivo" ? "(opcional)" : <span style={{ color: "#C2362B" }}>*</span>}
               </p>
               <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                 onChange={e => setEComp(e.target.files?.[0] || null)} style={payEgresoFileStyle} />
 
-              <div style={{ marginTop: 16, padding: "12px 12px 10px", borderRadius: 10, border: "1px dashed rgba(148,163,184,0.22)" }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#cbd5e1" }}>Factura del proveedor (opcional)</p>
-                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "#7d8ca3", lineHeight: 1.5 }}>
+              <div style={{ marginTop: 16, padding: "12px 12px 10px", borderRadius: 10, border: "1px dashed rgba(0,0,0,0.15)" }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#3F3F3F" }}>Factura del proveedor (opcional)</p>
+                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "#737373", lineHeight: 1.5 }}>
                   Súbela si el proveedor te la dio. Si se le pagó sin factura (p. ej. en efectivo), déjalo vacío.
                 </p>
                 <p style={{ ...payEgresoLabelStyle, marginTop: 0 }}>XML (CFDI)</p>
@@ -986,7 +986,7 @@ export default function ProveedorDetailPage() {
                 <button
                   onClick={() => setPayEgreso(null)}
                   disabled={ePaying}
-                  style={{ padding: "8px 16px", borderRadius: 8, cursor: "pointer", border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#94a3b8", fontSize: 13, fontWeight: 600 }}
+                  style={{ padding: "8px 16px", borderRadius: 8, cursor: "pointer", border: "1px solid rgba(0,0,0,0.14)", background: "transparent", color: "#6B6B6B", fontSize: 13, fontWeight: 600 }}
                 >
                   Cancelar
                 </button>
@@ -996,7 +996,7 @@ export default function ProveedorDetailPage() {
                   style={{
                     padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
                     cursor: ePaying ? "not-allowed" : "pointer", opacity: ePaying ? 0.6 : 1,
-                    border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.14)", color: "#34d399",
+                    border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.14)", color: "#1F8A55",
                   }}
                 >
                   {ePaying ? "Guardando…" : "✓ Registrar pago"}
@@ -1010,15 +1010,15 @@ export default function ProveedorDetailPage() {
   )
 }
 
-const payEgresoLabelStyle: React.CSSProperties = { margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#cbd5e1" }
+const payEgresoLabelStyle: React.CSSProperties = { margin: "14px 0 6px", fontSize: 12, fontWeight: 600, color: "#3F3F3F" }
 const payEgresoInputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.2)", background: "rgba(2,6,23,0.55)", color: "#f8fafc", fontSize: 13, outline: "none",
+  border: "1px solid rgba(0,0,0,0.14)", background: "#FFFFFF", color: "#141414", fontSize: 13, outline: "none",
 }
-const payEgresoFileStyle: React.CSSProperties = { fontSize: 12, color: "#94a3b8", width: "100%" }
+const payEgresoFileStyle: React.CSSProperties = { fontSize: 12, color: "#6B6B6B", width: "100%" }
 const payEgresoBtnStyle: React.CSSProperties = {
   padding: "5px 12px", borderRadius: 7, marginRight: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
-  border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", color: "#34d399",
+  border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.12)", color: "#1F8A55",
 }
 
 // ─── SupplierCombobox ─────────────────────────────────────────────────────────
@@ -1085,42 +1085,42 @@ function SupplierCombobox({
           }}
           style={{
             width: "100%", padding: "4px 24px 4px 8px", borderRadius: 6,
-            border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
-            color: open ? "#f8fafc" : (value ? "#e2e8f0" : "#475569"),
+            border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)",
+            color: open ? "#141414" : (value ? "#262626" : "#A3A3A3"),
             fontSize: 12, outline: "none", boxSizing: "border-box" as const,
           }}
         />
         {value && !open && (
           <button type="button"
             onMouseDown={e => { e.preventDefault(); onChange(""); setQuery("") }}
-            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#6b7c93", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
+            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#858585", cursor: "pointer", fontSize: 11, padding: "0 2px", lineHeight: 1 }}
           >✕</button>
         )}
         {!value && !open && (
-          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#6b7c93", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
+          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#858585", fontSize: 10, pointerEvents: "none" as const }}>▾</span>
         )}
       </div>
 
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 9999,
-          background: "rgba(8,12,24,0.97)", border: "1px solid rgba(148,163,184,0.20)",
-          borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+          background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+          borderRadius: 10, boxShadow: "0 16px 48px rgba(0,0,0,0.12)",
           maxHeight: 260, overflowY: "auto" as const, padding: "4px 0",
         }}>
           {!hasResults && q && (
-            <div style={{ padding: 12, color: "#6b7c93", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
+            <div style={{ padding: 12, color: "#858585", fontSize: 12, textAlign: "center" as const }}>Sin resultados para "{query}"</div>
           )}
           {filteredEmps.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase" as const, letterSpacing: 0.7 }}>👤 Empleados RETRO</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585",}}>👤 Empleados RETRO</div>
               {filteredEmps.map(e => {
                 const ap = e.apellido_materno ? `${e.apellido_paterno} ${e.apellido_materno}` : e.apellido_paterno
                 return (
                   <div key={e.id} onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
-                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{e.nombre} {ap}</div>
-                    <div style={{ color: "#7d8ca3", fontSize: 11 }}>{e.puesto}</div>
+                    <div style={{ color: "#262626", fontSize: 12, fontWeight: 500 }}>{e.nombre} {ap}</div>
+                    <div style={{ color: "#737373", fontSize: 11 }}>{e.puesto}</div>
                   </div>
                 )
               })}
@@ -1128,15 +1128,15 @@ function SupplierCombobox({
           )}
           {filteredProvs.length > 0 && (
             <>
-              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase" as const, letterSpacing: 0.7, borderTop: "1px solid rgba(148,163,184,0.08)", marginTop: 2 }}>🏢 Proveedores</div>
+              <div style={{ padding: "8px 12px 4px", fontSize: 10, fontWeight: 700, color: "#858585", borderTop: "1px solid rgba(0,0,0,0.07)", marginTop: 2 }}>🏢 Proveedores</div>
               {filteredProvs.map(p => {
                 const lbl = p.empresa ? `${p.empresa} — ${p.nombre} ${p.apellido}` : `${p.nombre} ${p.apellido}`
                 const sub = p.empresa ? `${p.nombre} ${p.apellido} · ${p.actividad}` : p.actividad
                 return (
                   <div key={p.id} onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}
                     style={{ padding: "7px 12px", cursor: "pointer" }}>
-                    <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                    <div style={{ color: "#7d8ca3", fontSize: 11 }}>{sub}</div>
+                    <div style={{ color: "#262626", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                    <div style={{ color: "#737373", fontSize: 11 }}>{sub}</div>
                   </div>
                 )
               })}
@@ -1155,8 +1155,8 @@ function InfoCard({ icon, label, value }: { icon: string; label: string; value: 
     <div style={infoCardStyle}>
       <span style={{ fontSize: 16 }}>{icon}</span>
       <div>
-        <p style={{ margin: 0, color: "#7d8ca3", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
-        <p style={{ margin: "3px 0 0", color: "#e2e8f0", fontSize: 13, wordBreak: "break-word" }}>{value}</p>
+        <p style={{ margin: 0, color: "#737373", fontSize: 10, fontWeight: 600,}}>{label}</p>
+        <p style={{ margin: "3px 0 0", color: "#262626", fontSize: 13, wordBreak: "break-word" }}>{value}</p>
       </div>
     </div>
   )
@@ -1164,10 +1164,10 @@ function InfoCard({ icon, label, value }: { icon: string; label: string; value: 
 
 function SummaryCard({ label, value, color, big, hint }: { label: string; value: string; color: string; big?: boolean; hint?: string }) {
   return (
-    <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.10)", flex: big ? "1.5 1 0" : "1 1 0", minWidth: 0, boxShadow: `0 0 0 1px ${color}22` }}>
-      <p style={{ margin: 0, color: "#7d8ca3", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</p>
+    <div style={{ padding: "14px 18px", borderRadius: 12, background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)", flex: big ? "1.5 1 0" : "1 1 0", minWidth: 0, boxShadow: `0 0 0 1px ${color}22` }}>
+      <p style={{ margin: 0, color: "#737373", fontSize: 11, fontWeight: 600,}}>{label}</p>
       <p style={{ margin: "6px 0 0", color, fontSize: big ? 22 : 20, fontWeight: 700, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>{value}</p>
-      {hint && <p style={{ margin: "4px 0 0", color: "#6b7c93", fontSize: 11 }}>{hint}</p>}
+      {hint && <p style={{ margin: "4px 0 0", color: "#858585", fontSize: 11 }}>{hint}</p>}
     </div>
   )
 }
@@ -1181,18 +1181,18 @@ const pageContainerStyle: React.CSSProperties = { maxWidth: 1200, margin: "0 aut
 // ── Pestañas y elementos del rediseño ─────────────────────────────────────────
 const tabBarStyle: React.CSSProperties = {
   display: "flex", gap: 2,
-  borderBottom: "1px solid rgba(148,163,184,0.15)",
+  borderBottom: "1px solid rgba(0,0,0,0.11)",
 }
 const tabBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer",
   background: "transparent", border: "none",
-  color: active ? "#f1f5f9" : "#64748b",
-  borderBottom: active ? "2px solid #7c3aed" : "2px solid transparent",
+  color: active ? "#1A1A1A" : "#8A8A8A",
+  borderBottom: active ? "2px solid #131313" : "2px solid transparent",
   marginBottom: -1,
 })
 const contactToggleStyle: React.CSSProperties = {
   background: "transparent", border: "none", cursor: "pointer", padding: 0,
-  color: "#7d8ca3", fontSize: 12, fontWeight: 600,
+  color: "#737373", fontSize: 12, fontWeight: 600,
 }
 const facPillStyle = (color: string): React.CSSProperties => ({
   padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
@@ -1208,14 +1208,14 @@ const facFileBtnStyle = (color: string): React.CSSProperties => ({
 
 const backBtnStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", width: "fit-content",
-  padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)", color: "#cbd5e1", textDecoration: "none", fontSize: 13, fontWeight: 500,
+  padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF", color: "#3F3F3F", textDecoration: "none", fontSize: 13, fontWeight: 500,
 }
 
 const profileCardStyle: React.CSSProperties = {
   display: "flex", alignItems: "flex-start", gap: 18, flexWrap: "wrap",
   padding: "20px 22px", borderRadius: 16,
-  background: "rgba(15,23,42,0.72)", border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)",
   backdropFilter: "blur(16px)",
 }
 
@@ -1223,22 +1223,22 @@ const avatarBigStyle: React.CSSProperties = {
   width: 64, height: 64, borderRadius: 16, flexShrink: 0,
   display: "flex", alignItems: "center", justifyContent: "center",
   background: "linear-gradient(135deg, rgba(245,158,11,0.40), rgba(234,88,12,0.28))",
-  border: "1px solid rgba(251,191,36,0.28)", color: "#f8fafc", fontSize: 22, fontWeight: 700,
+  border: "1px solid rgba(251,191,36,0.28)", color: "#141414", fontSize: 22, fontWeight: 700,
 }
 
-const eyebrowStyle: React.CSSProperties = { margin: 0, color: "#fbbf24", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700 }
-const nameTitleStyle: React.CSSProperties = { margin: "4px 0 2px", color: "#f8fafc", fontSize: 24, fontWeight: 700, letterSpacing: -0.4 }
-const empresaStyle: React.CSSProperties = { margin: "0 0 6px", color: "#94a3b8", fontSize: 14 }
+const eyebrowStyle: React.CSSProperties = { margin: 0, color: "#A86B00", fontSize: 10, fontWeight: 700 }
+const nameTitleStyle: React.CSSProperties = { margin: "4px 0 2px", color: "#141414", fontSize: 24, fontWeight: 700, letterSpacing: -0.4 }
+const empresaStyle: React.CSSProperties = { margin: "0 0 6px", color: "#6B6B6B", fontSize: 14 }
 
 const activityBadgeStyle: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 999,
-  fontSize: 11, fontWeight: 600, background: "rgba(245,158,11,0.14)", border: "1px solid rgba(251,191,36,0.24)", color: "#fde68a",
+  fontSize: 11, fontWeight: 600, background: "rgba(245,158,11,0.14)", border: "1px solid rgba(251,191,36,0.24)", color: "#8A5B00",
 }
 
 const editLinkStyle: React.CSSProperties = {
   marginLeft: "auto", alignSelf: "flex-start", padding: "6px 12px", borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)", background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8", textDecoration: "none", fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
+  border: "1px solid rgba(0,0,0,0.12)", background: "#FFFFFF",
+  color: "#6B6B6B", textDecoration: "none", fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
 }
 
 const infoGridStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }
@@ -1246,67 +1246,66 @@ const infoGridStyle: React.CSSProperties = { display: "grid", gridTemplateColumn
 const infoCardStyle: React.CSSProperties = {
   display: "flex", alignItems: "flex-start", gap: 10,
   padding: "12px 16px", borderRadius: 12,
-  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(148,163,184,0.10)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)",
 }
 
 const summaryRowStyle: React.CSSProperties = { display: "flex", gap: 12, flexWrap: "wrap" }
 
 const sectionStyle: React.CSSProperties = {
-  background: "rgba(15,23,42,0.72)", border: "1px solid rgba(148,163,184,0.14)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)",
   borderRadius: 16, padding: "16px 18px", backdropFilter: "blur(16px)",
 }
 
-const sectionHeaderStyle: React.CSSProperties = { marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid rgba(148,163,184,0.10)" }
-const sectionTitleStyle: React.CSSProperties  = { margin: 0, color: "#f8fafc", fontSize: 14, fontWeight: 700 }
-const sectionHintStyle: React.CSSProperties   = { margin: "4px 0 0", color: "#7d8ca3", fontSize: 12 }
+const sectionHeaderStyle: React.CSSProperties = { marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid rgba(0,0,0,0.08)" }
+const sectionTitleStyle: React.CSSProperties  = { margin: 0, color: "#141414", fontSize: 14, fontWeight: 700 }
+const sectionHintStyle: React.CSSProperties   = { margin: "4px 0 0", color: "#737373", fontSize: 12 }
 
 const projectHeaderStyle: React.CSSProperties = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
   padding: "10px 14px", borderRadius: "10px 10px 0 0",
-  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(148,163,184,0.12)", borderBottom: "none",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.09)", borderBottom: "none",
   flexWrap: "wrap", gap: 8,
 }
 
-const projectNameLinkStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#e2e8f0", textDecoration: "none" }
-const clientNameStyle: React.CSSProperties       = { fontSize: 12, color: "#7d8ca3" }
-const projectTotalStyle: React.CSSProperties     = { fontSize: 14, fontWeight: 700, color: "#f87171", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }
+const projectNameLinkStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#262626", textDecoration: "none" }
+const clientNameStyle: React.CSSProperties       = { fontSize: 12, color: "#737373" }
+const projectTotalStyle: React.CSSProperties     = { fontSize: 14, fontWeight: 700, color: "#C2362B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }
 
-const tableWrapStyle: React.CSSProperties = { overflowX: "auto", borderRadius: "0 0 10px 10px", border: "1px solid rgba(148,163,184,0.10)" }
-const tableStyle: React.CSSProperties     = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#cbd5e1" }
+const tableWrapStyle: React.CSSProperties = { overflowX: "auto", borderRadius: "0 0 10px 10px", border: "1px solid rgba(0,0,0,0.08)" }
+const tableStyle: React.CSSProperties     = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#3F3F3F" }
 
 const thStyle: React.CSSProperties = {
-  padding: "9px 12px", fontSize: 11, fontWeight: 700, color: "#6b7c93",
-  textTransform: "uppercase", letterSpacing: 0.6,
-  borderBottom: "1px solid rgba(148,163,184,0.12)", background: "rgba(255,255,255,0.025)", whiteSpace: "nowrap",
+  padding: "9px 12px", fontSize: 11, fontWeight: 700, color: "#858585",
+  borderBottom: "1px solid rgba(0,0,0,0.09)", background: "#FFFFFF", whiteSpace: "nowrap",
 }
 
-const tdStyle: React.CSSProperties = { padding: "9px 12px", fontSize: 13, color: "#cbd5e1", verticalAlign: "middle" }
-const quoteLinkStyle: React.CSSProperties = { color: "#a78bfa", textDecoration: "none", fontSize: 12, fontWeight: 600 }
+const tdStyle: React.CSSProperties = { padding: "9px 12px", fontSize: 13, color: "#3F3F3F", verticalAlign: "middle" }
+const quoteLinkStyle: React.CSSProperties = { color: "#131313", textDecoration: "none", fontSize: 12, fontWeight: 600 }
 
 const emptyStateStyle: React.CSSProperties = {
   padding: "36px 24px", textAlign: "center", borderRadius: 12,
-  background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(148,163,184,0.14)",
+  background: "#FFFFFF", border: "1px dashed rgba(0,0,0,0.1)",
 }
 
 const editInputStyle: React.CSSProperties = {
   width: 64, padding: "4px 6px", borderRadius: 6,
-  border: "1px solid rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.08)",
-  color: "#f8fafc", fontSize: 12, outline: "none", textAlign: "right" as const,
+  border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)",
+  color: "#141414", fontSize: 12, outline: "none", textAlign: "right" as const,
 }
 
 const saveBtnStyle: React.CSSProperties = {
   padding: "4px 10px", borderRadius: 6, border: "none",
-  background: "rgba(52,211,153,0.18)", color: "#34d399",
+  background: "rgba(52,211,153,0.18)", color: "#1F8A55",
   cursor: "pointer", fontSize: 13, fontWeight: 700, marginRight: 4,
 }
 
 const cancelBtnStyle: React.CSSProperties = {
-  padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(148,163,184,0.18)",
-  background: "transparent", color: "#7d8ca3", cursor: "pointer", fontSize: 12,
+  padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.13)",
+  background: "transparent", color: "#737373", cursor: "pointer", fontSize: 12,
 }
 
 const editBtnStyle: React.CSSProperties = {
-  padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(148,163,184,0.18)",
-  background: "rgba(255,255,255,0.04)", color: "#94a3b8", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+  padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.13)",
+  background: "#FFFFFF", color: "#6B6B6B", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
 }
 

@@ -51,9 +51,9 @@ const TABLE_META: Record<string, { label: string; emoji: string; href?: (id: str
 const tableMeta = (t: string) => TABLE_META[t] || { label: t, emoji: "•" }
 
 const ACTION_META: Record<string, { verb: string; badge: string; bg: string; border: string; text: string }> = {
-  INSERT: { verb: "creó",    badge: "Alta",   bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#34d399" },
-  UPDATE: { verb: "editó",   badge: "Cambio", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#fbbf24" },
-  DELETE: { verb: "eliminó", badge: "Baja",   bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#f87171" },
+  INSERT: { verb: "creó",    badge: "Alta",   bg: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.30)", text: "#1F8A55" },
+  UPDATE: { verb: "editó",   badge: "Cambio", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", text: "#A86B00" },
+  DELETE: { verb: "eliminó", badge: "Baja",   bg: "rgba(248,113,113,0.12)", border: "rgba(248,113,113,0.30)", text: "#C2362B" },
 }
 
 // Columnas de ruido que no aportan al ver un detalle
@@ -209,7 +209,7 @@ export default function ActividadPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0b1322" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#FFFFFF" }}>
       <AppSidebar
         profile={profile}
         user={null}
@@ -223,8 +223,8 @@ export default function ActividadPage() {
 
       <main style={{ flex: 1, padding: isMobile ? "76px 14px 32px" : "32px 36px", maxWidth: 1100, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ marginBottom: 22 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f1f5f9" }}>🕓 Historial de movimientos</h1>
-          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#7d8ca3" }}>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#1A1A1A" }}>🕓 Historial de movimientos</h1>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#737373" }}>
             Registro de todo lo que se crea, edita y elimina en la app. Solo visible para administradores.
           </p>
         </div>
@@ -255,8 +255,8 @@ export default function ActividadPage() {
             )}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "rgba(2,6,23,0.35)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#7d8ca3", textTransform: "uppercase", letterSpacing: 0.5 }}>Periodo</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "4px 10px 4px 12px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#737373",}}>Periodo</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <span style={dateLabelStyle}>del</span>
                 <input type="date" value={fFrom} onChange={e => setFFrom(e.target.value)} max={fTo || undefined} style={dateInputStyle} />
@@ -270,25 +270,25 @@ export default function ActividadPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por nombre, usuario, ID..."
-              style={{ marginLeft: isMobile ? 0 : "auto", padding: "8px 12px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 8, color: "#e2e8f0", fontSize: 13, outline: "none", width: isMobile ? "100%" : 260 }}
+              style={{ marginLeft: isMobile ? 0 : "auto", padding: "8px 12px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)", borderRadius: 8, color: "#262626", fontSize: 13, outline: "none", width: isMobile ? "100%" : 260 }}
             />
           </div>
         </div>
 
-        <p style={{ margin: "0 0 14px", fontSize: 12, color: "#6b7c93" }}>
+        <p style={{ margin: "0 0 14px", fontSize: 12, color: "#858585" }}>
           {total.toLocaleString("es-MX")} movimiento{total !== 1 ? "s" : ""}{anyFilter ? " (filtrados)" : ""}
         </p>
 
         {/* Timeline */}
         {rows.length === 0 && !fetching ? (
-          <p style={{ color: "#6b7c93", textAlign: "center", padding: "48px 0" }}>
+          <p style={{ color: "#858585", textAlign: "center", padding: "48px 0" }}>
             No hay movimientos {anyFilter ? "con esos filtros" : "registrados todavía"}.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {grouped.map(([dia, items]) => (
               <div key={dia}>
-                <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#94a3b8", textTransform: "capitalize" }}>
+                <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#6B6B6B", textTransform: "capitalize" }}>
                   {diaLargo(dia)}
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -301,19 +301,19 @@ export default function ActividadPage() {
                         <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }} aria-hidden>{meta.emoji}</span>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 14, color: "#e2e8f0" }}>
+                            <span style={{ fontSize: 14, color: "#262626" }}>
                               <b style={{ fontWeight: 700 }}>{actorName(r)}</b>{" "}
-                              <span style={{ color: "#94a3b8" }}>{act.verb}</span>{" "}
-                              <span style={{ color: "#cbd5e1" }}>{meta.label.toLowerCase()}</span>
+                              <span style={{ color: "#6B6B6B" }}>{act.verb}</span>{" "}
+                              <span style={{ color: "#3F3F3F" }}>{meta.label.toLowerCase()}</span>
                             </span>
                             <span style={actionBadgeStyle(act)}>{act.badge}</span>
                           </div>
                           {r.summary && (
-                            <p style={{ margin: "3px 0 0", fontSize: 13, color: "#f1f5f9", fontWeight: 500 }}>
-                              {href ? <Link href={href} style={{ color: "#7dd3fc", textDecoration: "none" }}>{r.summary}</Link> : r.summary}
+                            <p style={{ margin: "3px 0 0", fontSize: 13, color: "#1A1A1A", fontWeight: 500 }}>
+                              {href ? <Link href={href} style={{ color: "#1D6FB8", textDecoration: "none" }}>{r.summary}</Link> : r.summary}
                             </p>
                           )}
-                          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#7d8ca3" }}>
+                          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#737373" }}>
                             {fechaHora(r.occurred_at)}
                             {r.actor_email && <> · {r.actor_email}</>}
                           </p>
@@ -355,7 +355,7 @@ export default function ActividadPage() {
 
 function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolean }) {
   if (loading || !detail.action) {
-    return <p style={{ color: "#94a3b8", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Cargando detalle…</p>
+    return <p style={{ color: "#6B6B6B", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Cargando detalle…</p>
   }
   const meta = tableMeta(detail.table_name)
   const act = ACTION_META[detail.action]
@@ -382,26 +382,26 @@ function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolea
     <>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ fontSize: 20 }} aria-hidden>{meta.emoji}</span>
-        <span style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>{meta.label}</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: "#1A1A1A" }}>{meta.label}</span>
         <span style={actionBadgeStyle(act)}>{act.badge}</span>
       </div>
-      <p style={{ margin: "8px 0 0", fontSize: 13, color: "#94a3b8" }}>
-        <b style={{ color: "#e2e8f0" }}>{actorName(detail)}</b> {act.verb} este registro · {fechaHora(detail.occurred_at)}
+      <p style={{ margin: "8px 0 0", fontSize: 13, color: "#6B6B6B" }}>
+        <b style={{ color: "#262626" }}>{actorName(detail)}</b> {act.verb} este registro · {fechaHora(detail.occurred_at)}
       </p>
-      {detail.summary && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#cbd5e1" }}>{detail.summary}</p>}
+      {detail.summary && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#3F3F3F" }}>{detail.summary}</p>}
 
       <div style={{ marginTop: 16, maxHeight: "52vh", overflowY: "auto" }}>
         {fields.length === 0 ? (
-          <p style={{ fontSize: 12, color: "#7d8ca3" }}>Sin cambios de datos que mostrar.</p>
+          <p style={{ fontSize: 12, color: "#737373" }}>Sin cambios de datos que mostrar.</p>
         ) : detail.action === "UPDATE" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {fields.map(f => (
               <div key={f.key} style={fieldRowStyle}>
                 <span style={fieldKeyStyle}>{f.key}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
-                  <span style={{ ...valPillStyle, color: "#fca5a5", textDecoration: "line-through", background: "rgba(248,113,113,0.08)" }}>{fmtVal(f.before)}</span>
-                  <span style={{ color: "#7d8ca3" }}>→</span>
-                  <span style={{ ...valPillStyle, color: "#86efac", background: "rgba(52,211,153,0.08)" }}>{fmtVal(f.after)}</span>
+                  <span style={{ ...valPillStyle, color: "#B42318", textDecoration: "line-through", background: "rgba(248,113,113,0.08)" }}>{fmtVal(f.before)}</span>
+                  <span style={{ color: "#737373" }}>→</span>
+                  <span style={{ ...valPillStyle, color: "#1F7A4D", background: "rgba(52,211,153,0.08)" }}>{fmtVal(f.after)}</span>
                 </div>
               </div>
             ))}
@@ -411,7 +411,7 @@ function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolea
             {fields.map(f => (
               <div key={f.key} style={fieldRowStyle}>
                 <span style={fieldKeyStyle}>{f.key}</span>
-                <span style={{ ...valPillStyle, color: "#cbd5e1" }}>{fmtVal(f.after)}</span>
+                <span style={{ ...valPillStyle, color: "#3F3F3F" }}>{fmtVal(f.after)}</span>
               </div>
             ))}
           </div>
@@ -424,26 +424,26 @@ function DetailContent({ detail, loading }: { detail: LogDetail; loading: boolea
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const selectStyle: React.CSSProperties = {
-  padding: "7px 10px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)",
-  borderRadius: 8, color: "#e2e8f0", fontSize: 12, outline: "none", cursor: "pointer",
+  padding: "7px 10px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+  borderRadius: 8, color: "#262626", fontSize: 12, outline: "none", cursor: "pointer",
 }
 
 const clearBtnStyle: React.CSSProperties = {
   padding: "7px 12px", borderRadius: 8, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.18)", background: "transparent", color: "#94a3b8", fontSize: 12, fontWeight: 600,
+  border: "1px solid rgba(0,0,0,0.13)", background: "transparent", color: "#6B6B6B", fontSize: 12, fontWeight: 600,
 }
 
-const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#7d8ca3" }
+const dateLabelStyle: React.CSSProperties = { fontSize: 11, color: "#737373" }
 
 const dateInputStyle: React.CSSProperties = {
-  padding: "6px 8px", background: "rgba(2,6,23,0.55)", border: "1px solid rgba(148,163,184,0.2)",
-  borderRadius: 8, color: "#e2e8f0", fontSize: 12, outline: "none", colorScheme: "dark",
+  padding: "6px 8px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.14)",
+  borderRadius: 8, color: "#262626", fontSize: 12, outline: "none", colorScheme: "dark",
 }
 
 const rowStyle: React.CSSProperties = {
   display: "flex", alignItems: "flex-start", gap: 12,
-  padding: "12px 14px", background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12,
+  padding: "12px 14px", background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12,
 }
 
 function actionBadgeStyle(a: { bg: string; border: string; text: string }): React.CSSProperties {
@@ -455,38 +455,38 @@ function actionBadgeStyle(a: { bg: string; border: string; text: string }): Reac
 
 const detailBtnStyle: React.CSSProperties = {
   padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
-  border: "1px solid rgba(148,163,184,0.22)", background: "rgba(148,163,184,0.08)", color: "#cbd5e1",
+  border: "1px solid rgba(0,0,0,0.15)", background: "rgba(0,0,0,0.03)", color: "#3F3F3F",
 }
 
 const loadMoreStyle: React.CSSProperties = {
   padding: "9px 18px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer",
-  border: "1px solid rgba(6,182,212,0.35)", background: "rgba(6,182,212,0.10)", color: "#67e8f9",
+  border: "1px solid rgba(6,182,212,0.35)", background: "rgba(6,182,212,0.10)", color: "#0E7490",
 }
 
 const modalBackdropStyle: React.CSSProperties = {
   position: "fixed", inset: 0, zIndex: 10000,
-  background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)",
+  background: "rgba(17,17,17,0.32)", backdropFilter: "blur(3px)",
   display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
 }
 
 const modalPanelStyle: React.CSSProperties = {
   width: "100%", maxWidth: 560,
-  background: "#0b0e1c", border: "1px solid rgba(148,163,184,0.18)",
-  borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.13)",
+  borderRadius: 14, padding: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.11)",
 }
 
 const modalCancelBtnStyle: React.CSSProperties = {
   padding: "8px 16px", borderRadius: 8, cursor: "pointer",
-  border: "1px solid rgba(148,163,184,0.2)", background: "transparent", color: "#94a3b8", fontSize: 13, fontWeight: 600,
+  border: "1px solid rgba(0,0,0,0.14)", background: "transparent", color: "#6B6B6B", fontSize: 13, fontWeight: 600,
 }
 
 const fieldRowStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
-  padding: "8px 10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(148,163,184,0.08)", borderRadius: 8,
+  padding: "8px 10px", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 8,
 }
 
 const fieldKeyStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, color: "#94a3b8", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums",
+  fontSize: 11, fontWeight: 600, color: "#6B6B6B", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums",
 }
 
 const valPillStyle: React.CSSProperties = {

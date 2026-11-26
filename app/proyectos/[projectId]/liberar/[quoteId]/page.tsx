@@ -751,7 +751,7 @@ export default function LiberarPage() {
             padding: isMobile ? "76px 14px 24px" : "28px 32px",
           }}
         >
-          <p style={{ color: "#7d8ca3", fontSize: 14 }}>Cargando...</p>
+          <p style={{ color: "#737373", fontSize: 14 }}>Cargando...</p>
         </main>
       </div>
     )
@@ -822,10 +822,10 @@ export default function LiberarPage() {
           {borradorPendiente && (
             <div style={borradorBannerStyle}>
               <div style={{ flex: 1, minWidth: 240 }}>
-                <p style={{ margin: 0, color: "#fbbf24", fontWeight: 700, fontSize: 13 }}>
+                <p style={{ margin: 0, color: "#A86B00", fontWeight: 700, fontSize: 13 }}>
                   Hay un borrador sin guardar de esta liberación
                 </p>
-                <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: 12, lineHeight: 1.5 }}>
+                <p style={{ margin: "4px 0 0", color: "#3F3F3F", fontSize: 12, lineHeight: 1.5 }}>
                   Se guardó en este navegador{fechaBorrador(borradorPendiente.savedAt) ? ` el ${fechaBorrador(borradorPendiente.savedAt)}` : ""}.
                   Lo que ves ahora es lo que está en la base de datos; al recuperarlo se reemplaza con lo del borrador
                   y después hay que oprimir “Guardar” para que quede registrado.
@@ -840,13 +840,13 @@ export default function LiberarPage() {
 
           {/* Legend */}
           <div style={legendStyle}>
-            <span style={legendItemStyle("#a78bfa", "rgba(167,139,250,0.12)")}>
+            <span style={legendItemStyle("#131313", "rgba(0,0,0,0.05)")}>
               ■ Liberado
             </span>
-            <span style={legendItemStyle("#34d399", "rgba(52,211,153,0.10)")}>
+            <span style={legendItemStyle("#1F8A55", "rgba(52,211,153,0.10)")}>
               ■ Real
             </span>
-            <p style={{ margin: 0, color: "#6b7c93", fontSize: 11 }}>
+            <p style={{ margin: 0, color: "#858585", fontSize: 11 }}>
               Deja vacío un campo Real para usar el valor liberado
             </p>
           </div>
@@ -857,8 +857,8 @@ export default function LiberarPage() {
               onClick={() => setShowEmptyRubros((v) => !v)}
               style={{
                 alignSelf: "flex-start", padding: "7px 12px", borderRadius: 8, cursor: "pointer",
-                border: "1px solid rgba(148,163,184,0.18)", background: "rgba(255,255,255,0.04)",
-                color: "#94a3b8", fontSize: 12, fontWeight: 500,
+                border: "1px solid rgba(0,0,0,0.13)", background: "#FFFFFF",
+                color: "#6B6B6B", fontSize: 12, fontWeight: 500,
               }}
             >
               {showEmptyRubros ? "Ocultar rubros vacíos" : "Mostrar rubros vacíos (para agregar gastos no contemplados)"}
@@ -903,17 +903,17 @@ export default function LiberarPage() {
                       flexWrap: "wrap",
                     }}
                   >
-                    <span style={{ color: "#a78bfa", fontSize: 12, fontWeight: 600 }}>
+                    <span style={{ color: "#131313", fontSize: 12, fontWeight: 600 }}>
                       Lib: {fmt(secLib)}
                     </span>
                     <span
                       style={{
                         color:
                           secDiff > 0
-                            ? "#f87171"
+                            ? "#C2362B"
                             : secDiff < 0
-                              ? "#34d399"
-                              : "#94a3b8",
+                              ? "#1F8A55"
+                              : "#6B6B6B",
                         fontSize: 12,
                         fontWeight: 600,
                       }}
@@ -942,12 +942,10 @@ export default function LiberarPage() {
                     <span
                       style={{
                         gridColumn: "2 / 6",
-                        color: "#a78bfa",
+                        color: "#131313",
                         fontSize: 10,
                         fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.8,
-                        borderBottom: "2px solid rgba(167,139,250,0.3)",
+                        borderBottom: "2px solid rgba(0,0,0,0.2)",
                         paddingBottom: 4,
                       }}
                     >
@@ -956,11 +954,9 @@ export default function LiberarPage() {
                     <span
                       style={{
                         gridColumn: "6 / 10",
-                        color: "#34d399",
+                        color: "#1F8A55",
                         fontSize: 10,
                         fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.8,
                         borderBottom: "2px solid rgba(52,211,153,0.3)",
                         paddingBottom: 4,
                       }}
@@ -979,11 +975,9 @@ export default function LiberarPage() {
                       gridTemplateColumns: GRID,
                       gap: 6,
                       padding: "0 4px 6px",
-                      color: "#6b7c93",
+                      color: "#858585",
                       fontSize: 10,
                       fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.6,
                     }}
                   >
                     <span>Descripción</span>
@@ -1071,7 +1065,7 @@ export default function LiberarPage() {
                             onClick={() => removeExtraExpense(item.id, sec.id)}
                             title="Eliminar gasto"
                             style={{
-                              background: "none", border: "none", color: "#f87171",
+                              background: "none", border: "none", color: "#C2362B",
                               cursor: "pointer", fontSize: 16, padding: "4px 8px", justifySelf: "end",
                             }}
                           >✕</button>
@@ -1085,7 +1079,7 @@ export default function LiberarPage() {
                           <p
                             style={{
                               margin: "0 0 10px",
-                              color: "#f8fafc",
+                              color: "#141414",
                               fontSize: 13,
                               fontWeight: 600,
                               display: "flex",
@@ -1121,11 +1115,11 @@ export default function LiberarPage() {
                             <div
                               style={{
                                 ...mobileGroupStyle,
-                                borderColor: "rgba(167,139,250,0.2)",
-                                background: "rgba(167,139,250,0.04)",
+                                borderColor: "rgba(0,0,0,0.12)",
+                                background: "rgba(0,0,0,0.05)",
                               }}
                             >
-                              <p style={{ ...mobileGroupTitle, color: "#a78bfa" }}>
+                              <p style={{ ...mobileGroupTitle, color: "#131313" }}>
                                 Liberado
                               </p>
                               <p style={mobileDetailStyle}>
@@ -1135,7 +1129,7 @@ export default function LiberarPage() {
                               <p
                                 style={{
                                   margin: "4px 0 0",
-                                  color: "#a78bfa",
+                                  color: "#131313",
                                   fontSize: 14,
                                   fontWeight: 700,
                                 }}
@@ -1152,7 +1146,7 @@ export default function LiberarPage() {
                                 background: "rgba(52,211,153,0.04)",
                               }}
                             >
-                              <p style={{ ...mobileGroupTitle, color: "#34d399" }}>
+                              <p style={{ ...mobileGroupTitle, color: "#1F8A55" }}>
                                 Real
                               </p>
                               <div
@@ -1209,10 +1203,10 @@ export default function LiberarPage() {
                                   fontWeight: 700,
                                   color:
                                     itemDiff > 0
-                                      ? "#f87171"
+                                      ? "#C2362B"
                                       : itemDiff < 0
-                                        ? "#34d399"
-                                        : "#94a3b8",
+                                        ? "#1F8A55"
+                                        : "#6B6B6B",
                                 }}
                               >
                                 {fmt(realTot)}
@@ -1254,7 +1248,7 @@ export default function LiberarPage() {
                         {/* Description */}
                         <span
                           style={{
-                            color: "#e2e8f0",
+                            color: "#262626",
                             fontSize: 13,
                             display: "flex",
                             flexDirection: "column",
@@ -1289,7 +1283,7 @@ export default function LiberarPage() {
                         <span
                           style={{
                             ...libCellStyle,
-                            color: "#a78bfa",
+                            color: "#131313",
                             fontWeight: 600,
                           }}
                         >
@@ -1329,10 +1323,10 @@ export default function LiberarPage() {
                             ...libCellStyle,
                             color:
                               itemDiff > 0
-                                ? "#f87171"
+                                ? "#C2362B"
                                 : itemDiff < 0
-                                  ? "#34d399"
-                                  : "#94a3b8",
+                                  ? "#1F8A55"
+                                  : "#6B6B6B",
                             fontWeight: 600,
                           }}
                         >
@@ -1377,8 +1371,8 @@ export default function LiberarPage() {
               }}
             >
               {/* Proyectado */}
-              <div style={comparisonColStyle("rgba(167,139,250,0.06)", "rgba(167,139,250,0.18)")}>
-                <p style={{ ...comparisonColTitleStyle, color: "#a78bfa" }}>
+              <div style={comparisonColStyle("rgba(0,0,0,0.05)", "rgba(0,0,0,0.05)")}>
+                <p style={{ ...comparisonColTitleStyle, color: "#131313" }}>
                   Proyectado — Liberado
                 </p>
                 <div style={comparisonRowStyle}>
@@ -1398,18 +1392,18 @@ export default function LiberarPage() {
                 <div
                   style={{
                     ...comparisonRowStyle,
-                    borderTop: "1px solid rgba(148,163,184,0.12)",
+                    borderTop: "1px solid rgba(0,0,0,0.09)",
                     paddingTop: 10,
                     marginTop: 4,
                   }}
                 >
-                  <span style={{ ...comparisonLabelStyle, color: "#e2e8f0", fontWeight: 600 }}>
+                  <span style={{ ...comparisonLabelStyle, color: "#262626", fontWeight: 600 }}>
                     Utilidad
                   </span>
                   <span
                     style={{
                       ...comparisonValueStyle,
-                      color: "#a78bfa",
+                      color: "#131313",
                       fontSize: 18,
                       fontWeight: 700,
                     }}
@@ -1419,7 +1413,7 @@ export default function LiberarPage() {
                 </div>
                 <div style={comparisonRowStyle}>
                   <span style={comparisonLabelStyle}>% sobre venta</span>
-                  <span style={{ ...comparisonValueStyle, color: "#a78bfa", fontWeight: 600 }}>
+                  <span style={{ ...comparisonValueStyle, color: "#131313", fontWeight: 600 }}>
                     {totals.libPct.toFixed(1)}%
                   </span>
                 </div>
@@ -1445,10 +1439,10 @@ export default function LiberarPage() {
                     ...comparisonColTitleStyle,
                     color:
                       totals.realUtilidad >= totals.libUtilidad
-                        ? "#34d399"
+                        ? "#1F8A55"
                         : totals.realUtilidad > 0
-                          ? "#fbbf24"
-                          : "#f87171",
+                          ? "#A86B00"
+                          : "#C2362B",
                   }}
                 >
                   Real — Gasto actual
@@ -1460,10 +1454,10 @@ export default function LiberarPage() {
                       ...comparisonValueStyle,
                       color:
                         totals.realGasto > totals.libGasto
-                          ? "#f87171"
+                          ? "#C2362B"
                           : totals.realGasto < totals.libGasto
-                            ? "#34d399"
-                            : "#94a3b8",
+                            ? "#1F8A55"
+                            : "#6B6B6B",
                     }}
                   >
                     {fmt(totals.realGasto - totals.extraAmt)}
@@ -1473,7 +1467,7 @@ export default function LiberarPage() {
                 <div style={{ ...comparisonRowStyle, alignItems: "center", gap: 8 }}>
                   <span style={{ ...comparisonLabelStyle, flex: 1 }}>Gastos adicionales</span>
                   <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#7d8ca3", fontSize: 11, pointerEvents: "none" }}>$</span>
+                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#737373", fontSize: 11, pointerEvents: "none" }}>$</span>
                     <input
                       type="number"
                       min="0"
@@ -1485,7 +1479,7 @@ export default function LiberarPage() {
                         background: "rgba(248,113,113,0.08)",
                         border: "1px solid rgba(248,113,113,0.25)",
                         borderRadius: 6,
-                        color: "#fca5a5",
+                        color: "#B42318",
                         fontSize: 12,
                         fontWeight: 600,
                         padding: "4px 8px 4px 20px",
@@ -1498,8 +1492,8 @@ export default function LiberarPage() {
                 </div>
                 {totals.extraAmt > 0 && (
                   <div style={comparisonRowStyle}>
-                    <span style={{ ...comparisonLabelStyle, color: "#f87171" }}>Gasto real total</span>
-                    <span style={{ ...comparisonValueStyle, color: "#f87171" }}>{fmt(totals.realGasto)}</span>
+                    <span style={{ ...comparisonLabelStyle, color: "#C2362B" }}>Gasto real total</span>
+                    <span style={{ ...comparisonValueStyle, color: "#C2362B" }}>{fmt(totals.realGasto)}</span>
                   </div>
                 )}
                 <div style={comparisonRowStyle}>
@@ -1509,12 +1503,12 @@ export default function LiberarPage() {
                 <div
                   style={{
                     ...comparisonRowStyle,
-                    borderTop: "1px solid rgba(148,163,184,0.12)",
+                    borderTop: "1px solid rgba(0,0,0,0.09)",
                     paddingTop: 10,
                     marginTop: 4,
                   }}
                 >
-                  <span style={{ ...comparisonLabelStyle, color: "#e2e8f0", fontWeight: 600 }}>
+                  <span style={{ ...comparisonLabelStyle, color: "#262626", fontWeight: 600 }}>
                     Utilidad real
                   </span>
                   <span
@@ -1524,10 +1518,10 @@ export default function LiberarPage() {
                       fontWeight: 700,
                       color:
                         totals.realUtilidad >= totals.libUtilidad
-                          ? "#34d399"
+                          ? "#1F8A55"
                           : totals.realUtilidad > 0
-                            ? "#fbbf24"
-                            : "#f87171",
+                            ? "#A86B00"
+                            : "#C2362B",
                     }}
                   >
                     {fmt(totals.realUtilidad)}
@@ -1541,10 +1535,10 @@ export default function LiberarPage() {
                       fontWeight: 600,
                       color:
                         totals.realPct >= totals.libPct
-                          ? "#34d399"
+                          ? "#1F8A55"
                           : totals.realPct > 0
-                            ? "#fbbf24"
-                            : "#f87171",
+                            ? "#A86B00"
+                            : "#C2362B",
                     }}
                   >
                     {totals.realPct.toFixed(1)}%
@@ -1594,10 +1588,10 @@ export default function LiberarPage() {
             {/* Header */}
             <div style={addProvHeaderStyle}>
               <div>
-                <p style={{ margin: 0, color: "#a78bfa", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700 }}>
+                <p style={{ margin: 0, color: "#131313", fontSize: 10, fontWeight: 700 }}>
                   Proveedores
                 </p>
-                <h2 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>
+                <h2 style={{ margin: "4px 0 0", color: "#141414", fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>
                   Nuevo proveedor
                 </h2>
               </div>
@@ -1797,7 +1791,7 @@ function SupplierCombobox({
           style={{
             ...comboboxInputStyle,
             paddingRight: value ? 28 : 12,
-            color: open ? "#f8fafc" : (value ? "#e2e8f0" : "#475569"),
+            color: open ? "#141414" : (value ? "#262626" : "#A3A3A3"),
           }}
         />
         {value && !open && (
@@ -1829,8 +1823,8 @@ function SupplierCombobox({
                   <div key={e.id} style={comboboxOptionStyle}
                     onMouseDown={() => { onChange(`emp:${e.id}`); setOpen(false); setQuery("") }}>
                     <div>
-                      <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                      <div style={{ color: "#7d8ca3", fontSize: 11 }}>{e.puesto}</div>
+                      <div style={{ color: "#262626", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                      <div style={{ color: "#737373", fontSize: 11 }}>{e.puesto}</div>
                     </div>
                   </div>
                 )
@@ -1848,8 +1842,8 @@ function SupplierCombobox({
                   <div key={p.id} style={comboboxOptionStyle}
                     onMouseDown={() => { onChange(`prov:${p.id}`); setOpen(false); setQuery("") }}>
                     <div>
-                      <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
-                      <div style={{ color: "#7d8ca3", fontSize: 11 }}>{sub}</div>
+                      <div style={{ color: "#262626", fontSize: 12, fontWeight: 500 }}>{lbl}</div>
+                      <div style={{ color: "#737373", fontSize: 11 }}>{sub}</div>
                     </div>
                   </div>
                 )
@@ -1875,9 +1869,9 @@ const comboboxInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "5px 12px 5px 8px",
   borderRadius: 6,
-  border: "1px solid rgba(148,163,184,0.22)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#e2e8f0",
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#FFFFFF",
+  color: "#262626",
   fontSize: 12,
   outline: "none",
   boxSizing: "border-box",
@@ -1891,7 +1885,7 @@ const comboboxClearStyle: React.CSSProperties = {
   transform: "translateY(-50%)",
   background: "none",
   border: "none",
-  color: "#6b7c93",
+  color: "#858585",
   cursor: "pointer",
   fontSize: 11,
   padding: "0 2px",
@@ -1903,7 +1897,7 @@ const comboboxChevronStyle: React.CSSProperties = {
   right: 8,
   top: "50%",
   transform: "translateY(-50%)",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 10,
   pointerEvents: "none",
 }
@@ -1911,10 +1905,10 @@ const comboboxChevronStyle: React.CSSProperties = {
 const comboboxDropdownStyle: React.CSSProperties = {
   position: "fixed",
   zIndex: 9999,
-  background: "rgba(8,12,24,0.97)",
-  border: "1px solid rgba(148,163,184,0.20)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.14)",
   borderRadius: 10,
-  boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+  boxShadow: "0 16px 48px rgba(0,0,0,0.12)",
   maxHeight: 280,
   overflowY: "auto",
   padding: "4px 0",
@@ -1924,10 +1918,8 @@ const comboboxGroupHeaderStyle: React.CSSProperties = {
   padding: "8px 12px 4px",
   fontSize: 10,
   fontWeight: 700,
-  color: "#6b7c93",
-  textTransform: "uppercase",
-  letterSpacing: 0.7,
-  borderTop: "1px solid rgba(148,163,184,0.08)",
+  color: "#858585",
+  borderTop: "1px solid rgba(0,0,0,0.07)",
   marginTop: 2,
 }
 
@@ -1943,7 +1935,7 @@ const comboboxOptionStyle: React.CSSProperties = {
 
 const comboboxNoResultsStyle: React.CSSProperties = {
   padding: "12px",
-  color: "#6b7c93",
+  color: "#858585",
   fontSize: 12,
   textAlign: "center",
 }
@@ -1952,9 +1944,9 @@ const comboboxAddNewStyle: React.CSSProperties = {
   padding: "8px 12px",
   fontSize: 12,
   fontWeight: 600,
-  color: "#a78bfa",
+  color: "#131313",
   cursor: "pointer",
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
   marginTop: 4,
 }
 
@@ -1983,9 +1975,9 @@ const backBtnStyle: React.CSSProperties = {
   width: "fit-content",
   padding: "7px 12px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#cbd5e1",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#3F3F3F",
   textDecoration: "none",
   fontSize: 13,
   fontWeight: 500,
@@ -2001,16 +1993,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#fbbf24",
+  color: "#A86B00",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 26,
   fontWeight: 700,
   letterSpacing: -0.5,
@@ -2019,7 +2009,7 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
   display: "flex",
   alignItems: "center",
@@ -2033,11 +2023,9 @@ const releasedBadgeStyle: React.CSSProperties = {
   borderRadius: 999,
   background: "rgba(251,191,36,0.12)",
   border: "1px solid rgba(251,191,36,0.25)",
-  color: "#fbbf24",
+  color: "#A86B00",
   fontSize: 10,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const saveBtnStyle: React.CSSProperties = {
@@ -2047,18 +2035,18 @@ const saveBtnStyle: React.CSSProperties = {
   padding: "9px 20px",
   borderRadius: 9,
   border: "none",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "#fff",
+  background: "#131313",
+  color: "#FFFFFF",
   cursor: "pointer",
   fontSize: 14,
   fontWeight: 600,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.25)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
   flexShrink: 0,
 }
 
 const saveBtnSavedStyle: React.CSSProperties = {
   ...saveBtnStyle,
-  background: "linear-gradient(135deg, #059669, #34d399)",
+  background: "#1F8A55",
   boxShadow: "0 8px 24px rgba(52,211,153,0.20)",
 }
 
@@ -2070,7 +2058,7 @@ const saveAreaStyle: React.CSSProperties = {
 }
 
 const sinGuardarStyle: React.CSSProperties = {
-  color: "#fbbf24",
+  color: "#A86B00",
   fontSize: 12,
   fontWeight: 600,
   whiteSpace: "nowrap",
@@ -2092,8 +2080,8 @@ const borradorBtnPrimaryStyle: React.CSSProperties = {
   padding: "8px 14px",
   borderRadius: 8,
   border: "none",
-  background: "linear-gradient(135deg, #d97706, #fbbf24)",
-  color: "#1c1917",
+  background: "#1F8A55",
+  color: "#FFFFFF",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 700,
@@ -2102,9 +2090,9 @@ const borradorBtnPrimaryStyle: React.CSSProperties = {
 const borradorBtnSecondaryStyle: React.CSSProperties = {
   padding: "8px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.25)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#cbd5e1",
+  border: "1px solid rgba(0,0,0,0.17)",
+  background: "#FFFFFF",
+  color: "#3F3F3F",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 500,
@@ -2117,8 +2105,8 @@ const legendStyle: React.CSSProperties = {
   flexWrap: "wrap",
   padding: "8px 14px",
   borderRadius: 10,
-  border: "1px solid rgba(148,163,184,0.10)",
-  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#FFFFFF",
 }
 
 function legendItemStyle(color: string, bg: string): React.CSSProperties {
@@ -2136,8 +2124,8 @@ function legendItemStyle(color: string, bg: string): React.CSSProperties {
 }
 
 const sectionCardStyle: React.CSSProperties = {
-  background: "rgba(15,23,42,0.72)",
-  border: "1px solid rgba(148,163,184,0.12)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.09)",
   borderRadius: 14,
   padding: "14px 16px",
   backdropFilter: "blur(12px)",
@@ -2151,13 +2139,13 @@ const sectionHeaderStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   paddingBottom: 10,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
   flexWrap: "wrap",
 }
 
 const sectionTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 700,
 }
@@ -2166,11 +2154,11 @@ const sectionTitleStyle: React.CSSProperties = {
 const itemRowStyle: React.CSSProperties = {
   padding: "8px 10px",
   borderRadius: 9,
-  background: "rgba(255,255,255,0.025)",
+  background: "#FFFFFF",
 }
 
 const libCellStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   textAlign: "right",
   whiteSpace: "nowrap",
@@ -2182,7 +2170,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 6,
   border: "1px solid rgba(52,211,153,0.25)",
   background: "rgba(52,211,153,0.06)",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 12,
   outline: "none",
   textAlign: "right",
@@ -2193,9 +2181,9 @@ const selectStyle: React.CSSProperties = {
   width: "100%",
   padding: "5px 7px",
   borderRadius: 6,
-  border: "1px solid rgba(148,163,184,0.18)",
-  background: "rgba(2,6,23,0.55)",
-  color: "#e2e8f0",
+  border: "1px solid rgba(0,0,0,0.13)",
+  background: "#FFFFFF",
+  color: "#262626",
   fontSize: 12,
   outline: "none",
   boxSizing: "border-box",
@@ -2203,11 +2191,9 @@ const selectStyle: React.CSSProperties = {
 
 const inputLabelStyle: React.CSSProperties = {
   margin: "0 0 3px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 10,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
 }
 
 const mobileGroupStyle: React.CSSProperties = {
@@ -2220,13 +2206,11 @@ const mobileGroupTitle: React.CSSProperties = {
   margin: "0 0 6px",
   fontSize: 10,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
 }
 
 const mobileDetailStyle: React.CSSProperties = {
   margin: 0,
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 12,
   lineHeight: 1.5,
 }
@@ -2234,14 +2218,14 @@ const mobileDetailStyle: React.CSSProperties = {
 const comparisonPanelStyle: React.CSSProperties = {
   padding: "18px 20px",
   borderRadius: 14,
-  border: "1px solid rgba(148,163,184,0.14)",
-  background: "rgba(15,23,42,0.72)",
+  border: "1px solid rgba(0,0,0,0.1)",
+  background: "#FFFFFF",
   backdropFilter: "blur(12px)",
 }
 
 const comparisonTitleStyle: React.CSSProperties = {
   margin: "0 0 14px",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 700,
   letterSpacing: -0.2,
@@ -2262,8 +2246,6 @@ const comparisonColTitleStyle: React.CSSProperties = {
   margin: "0 0 6px",
   fontSize: 11,
   fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: 0.8,
 }
 
 const comparisonRowStyle: React.CSSProperties = {
@@ -2274,12 +2256,12 @@ const comparisonRowStyle: React.CSSProperties = {
 }
 
 const comparisonLabelStyle: React.CSSProperties = {
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
 const comparisonValueStyle: React.CSSProperties = {
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 13,
   fontWeight: 600,
 }
@@ -2289,7 +2271,7 @@ const comparisonValueStyle: React.CSSProperties = {
 const addProvOverlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.65)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(4px)",
   zIndex: 20000,
   display: "flex",
@@ -2301,10 +2283,10 @@ const addProvOverlayStyle: React.CSSProperties = {
 const addProvPanelStyle: React.CSSProperties = {
   width: "100%",
   maxWidth: 520,
-  background: "linear-gradient(180deg, rgba(10,14,26,0.99) 0%, rgba(6,9,18,0.99) 100%)",
-  border: "1px solid rgba(148,163,184,0.18)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
   borderRadius: 18,
-  boxShadow: "0 40px 120px rgba(0,0,0,0.65)",
+  boxShadow: "0 40px 120px rgba(0,0,0,0.14)",
   overflow: "hidden",
 }
 
@@ -2314,16 +2296,16 @@ const addProvHeaderStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 16,
   padding: "20px 24px",
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const addProvCloseStyle: React.CSSProperties = {
   width: 32,
   height: 32,
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.16)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#94a3b8",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "#FFFFFF",
+  color: "#6B6B6B",
   cursor: "pointer",
   fontSize: 13,
   flexShrink: 0,
@@ -2336,20 +2318,18 @@ const addProvBodyStyle: React.CSSProperties = {
 const addProvLabelStyle: React.CSSProperties = {
   display: "block",
   marginBottom: 5,
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const addProvInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "9px 12px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.20)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#f8fafc",
+  border: "1px solid rgba(0,0,0,0.14)",
+  background: "#FFFFFF",
+  color: "#141414",
   fontSize: 14,
   outline: "none",
   boxSizing: "border-box",
@@ -2360,15 +2340,15 @@ const addProvFooterStyle: React.CSSProperties = {
   justifyContent: "flex-end",
   gap: 10,
   padding: "16px 24px",
-  borderTop: "1px solid rgba(148,163,184,0.10)",
+  borderTop: "1px solid rgba(0,0,0,0.08)",
 }
 
 const addProvCancelStyle: React.CSSProperties = {
   padding: "9px 16px",
   borderRadius: 8,
-  border: "1px solid rgba(148,163,184,0.20)",
+  border: "1px solid rgba(0,0,0,0.14)",
   background: "transparent",
-  color: "#7d8ca3",
+  color: "#737373",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 500,
@@ -2378,12 +2358,12 @@ const addProvSaveStyle: React.CSSProperties = {
   padding: "9px 20px",
   borderRadius: 8,
   border: "none",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "#fff",
+  background: "#131313",
+  color: "#FFFFFF",
   cursor: "pointer",
   fontSize: 13,
   fontWeight: 600,
-  boxShadow: "0 6px 20px rgba(124,58,237,0.25)",
+  boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
 }
 
 const internoBadgeStyle: React.CSSProperties = {
@@ -2393,19 +2373,17 @@ const internoBadgeStyle: React.CSSProperties = {
   borderRadius: 999,
   fontSize: 10,
   fontWeight: 700,
-  color: "#34d399",
+  color: "#1F8A55",
   background: "rgba(52,211,153,0.10)",
   border: "1px solid rgba(52,211,153,0.22)",
   flexShrink: 0,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
 }
 
 function pagoModoSelectStyle(modo: string | null): React.CSSProperties {
   const active = !!modo
-  const color = modo === "anticipo" ? "#34d399" : modo === "comprobacion" ? "#fbbf24" : "#64748b"
-  const bg = modo === "anticipo" ? "rgba(52,211,153,0.12)" : modo === "comprobacion" ? "rgba(251,191,36,0.12)" : "rgba(148,163,184,0.08)"
-  const border = modo === "anticipo" ? "rgba(52,211,153,0.4)" : modo === "comprobacion" ? "rgba(251,191,36,0.4)" : "rgba(148,163,184,0.22)"
+  const color = modo === "anticipo" ? "#1F8A55" : modo === "comprobacion" ? "#A86B00" : "#8A8A8A"
+  const bg = modo === "anticipo" ? "rgba(52,211,153,0.12)" : modo === "comprobacion" ? "rgba(251,191,36,0.12)" : "rgba(0,0,0,0.07)"
+  const border = modo === "anticipo" ? "rgba(52,211,153,0.4)" : modo === "comprobacion" ? "rgba(251,191,36,0.4)" : "rgba(0,0,0,0.15)"
   return {
     padding: "3px 8px",
     borderRadius: 8,
@@ -2413,8 +2391,6 @@ function pagoModoSelectStyle(modo: string | null): React.CSSProperties {
     fontWeight: 700,
     cursor: "pointer",
     flexShrink: 0,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
     color,
     background: bg,
     border: `1px solid ${border}`,
@@ -2426,10 +2402,10 @@ function pagoModoSelectStyle(modo: string | null): React.CSSProperties {
 const extraInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  background: "rgba(2,6,23,0.5)",
-  border: "1px solid rgba(148,163,184,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.15)",
   borderRadius: 8,
-  color: "#e2e8f0",
+  color: "#262626",
   fontSize: 13,
   boxSizing: "border-box",
   outline: "none",
@@ -2442,7 +2418,7 @@ const addExtraBtnStyle: React.CSSProperties = {
   background: "rgba(248,113,113,0.08)",
   border: "1px dashed rgba(248,113,113,0.35)",
   borderRadius: 10,
-  color: "#fca5a5",
+  color: "#B42318",
   fontSize: 12,
   fontWeight: 600,
   cursor: "pointer",

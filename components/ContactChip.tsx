@@ -11,7 +11,7 @@ export function ContactChip({
 }: {
   label: string
   icon: string
-  color: string        // hex, p. ej. "#a78bfa"
+  color: string        // hex, p. ej. "#131313"
   style?: React.CSSProperties
 }) {
   const [principal, secundario] = splitLabel(label)

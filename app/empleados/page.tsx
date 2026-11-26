@@ -580,7 +580,7 @@ export default function EmpleadosPage() {
                         if (employee.vac_mes_reseteo == null || employee.vac_anios == null) {
                           return (
                             <div style={vacBarStyle}>
-                              <span style={{ color: "#7d8ca3", fontSize: 12 }}>
+                              <span style={{ color: "#737373", fontSize: 12 }}>
                                 🏖️ Vacaciones sin configurar · usa “Editar” para asignar años y mes de reseteo
                               </span>
                             </div>
@@ -588,18 +588,18 @@ export default function EmpleadosPage() {
                         }
                         const r = resumenVacaciones(employee, vacRangesByEmp[employee.id] || [])
                         const pct = r.corresponden > 0 ? Math.max(0, Math.min(100, (r.restantes / r.corresponden) * 100)) : 0
-                        const barColor = r.restantes <= 0 ? "#f87171" : r.restantes <= 3 ? "#fb923c" : "#34d399"
+                        const barColor = r.restantes <= 0 ? "#C2362B" : r.restantes <= 3 ? "#C2410C" : "#1F8A55"
                         return (
                           <div style={vacBarStyle}>
                             <span style={{ fontSize: 14 }}>🏖️</span>
-                            <span style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 700 }}>
-                              {r.restantes} <span style={{ color: "#7d8ca3", fontWeight: 400 }}>de {r.corresponden} días restantes</span>
+                            <span style={{ color: "#262626", fontSize: 12, fontWeight: 700 }}>
+                              {r.restantes} <span style={{ color: "#737373", fontWeight: 400 }}>de {r.corresponden} días restantes</span>
                             </span>
-                            <span style={{ color: "#7d8ca3", fontSize: 11 }}>· {r.tomados} tomados</span>
-                            <div style={{ flex: 1, minWidth: 60, maxWidth: 160, height: 6, borderRadius: 999, background: "rgba(148,163,184,0.15)", overflow: "hidden" }}>
+                            <span style={{ color: "#737373", fontSize: 11 }}>· {r.tomados} tomados</span>
+                            <div style={{ flex: 1, minWidth: 60, maxWidth: 160, height: 6, borderRadius: 999, background: "rgba(0,0,0,0.06)", overflow: "hidden" }}>
                               <div style={{ width: `${pct}%`, height: "100%", background: barColor }} />
                             </div>
-                            <span style={{ color: "#7d8ca3", fontSize: 11, marginLeft: "auto" }}>
+                            <span style={{ color: "#737373", fontSize: 11, marginLeft: "auto" }}>
                               {r.anios} año{r.anios !== 1 ? "s" : ""} · resetea el {diaMesLargo(r.reseteoISO)}
                             </span>
                           </div>
@@ -673,7 +673,7 @@ export default function EmpleadosPage() {
                                       {change.sueldo_anterior != null
                                         ? `${formatSalary(change.sueldo_anterior)} → `
                                         : ""}
-                                      <strong style={{ color: "#86efac" }}>
+                                      <strong style={{ color: "#1F7A4D" }}>
                                         {formatSalary(change.sueldo_nuevo)}
                                       </strong>
                                     </span>
@@ -725,8 +725,8 @@ function EmployeeFormFields({
   if (vacOnly) {
     return (
       <div style={formSectionsStyle}>
-        <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
-          Vacaciones de <strong style={{ color: "#e2e8f0" }}>{values.nombre} {values.apellido_paterno}</strong>
+        <p style={{ margin: 0, fontSize: 13, color: "#6B6B6B" }}>
+          Vacaciones de <strong style={{ color: "#262626" }}>{values.nombre} {values.apellido_paterno}</strong>
         </p>
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr" }}>
           <Field label="Antigüedad (automática)">
@@ -855,7 +855,7 @@ function EmployeeFormFields({
       </div>
 
       {/* Vacaciones */}
-      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#6b7c93", textTransform: "uppercase", letterSpacing: 0.6 }}>🏖️ Vacaciones</p>
+      <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: "#858585",}}>🏖️ Vacaciones</p>
       <div
         style={{
           display: "grid",
@@ -884,7 +884,7 @@ function EmployeeFormFields({
 // ingreso — ya no se capturan a mano (ver lib/vacaciones.ts: antiguedadDesdeIngreso).
 function AntiguedadAuto({ fechaIngreso }: { fechaIngreso: string }) {
   if (!fechaIngreso) {
-    return <div style={{ ...inputStyle, color: "#6b7c93", cursor: "default" }}>Captura la fecha de ingreso primero</div>
+    return <div style={{ ...inputStyle, color: "#858585", cursor: "default" }}>Captura la fecha de ingreso primero</div>
   }
   const { anios } = antiguedadDesdeIngreso(fechaIngreso)
   const { endISO } = periodoPorIngreso(fechaIngreso)
@@ -893,10 +893,10 @@ function AntiguedadAuto({ fechaIngreso }: { fechaIngreso: string }) {
   const reseteoISO = sig.toLocaleDateString("sv")
   return (
     <div style={{ ...inputStyle, display: "grid", gap: 2, cursor: "default" }}>
-      <span style={{ color: "#e2e8f0", fontWeight: 600 }}>
+      <span style={{ color: "#262626", fontWeight: 600 }}>
         {anios} año{anios === 1 ? "" : "s"} · resetea el {diaMesLargo(reseteoISO)}
       </span>
-      <span style={{ fontSize: 11, color: "#34d399" }}>Le corresponden {diasPorAnios(anios)} días</span>
+      <span style={{ fontSize: 11, color: "#1F8A55" }}>Le corresponden {diasPorAnios(anios)} días</span>
     </div>
   )
 }
@@ -925,9 +925,9 @@ function avatarStyle(name: string): React.CSSProperties {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    background: "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(14,165,233,0.25))",
-    border: "1px solid rgba(167,139,250,0.22)",
-    color: "#f8fafc",
+    background: "rgba(0,0,0,0.05)",
+    border: "1px solid rgba(0,0,0,0.12)",
+    color: "#FFFFFF",
     fontSize: 13,
     fontWeight: 700,
   }
@@ -943,7 +943,7 @@ const positionBadgeStyle: React.CSSProperties = {
   fontWeight: 600,
   background: "rgba(14,165,233,0.14)",
   border: "1px solid rgba(56,189,248,0.24)",
-  color: "#bae6fd",
+  color: "#1D5FA8",
 }
 
 const appShellStyle: React.CSSProperties = {
@@ -967,16 +967,14 @@ const pageHeaderStyle: React.CSSProperties = {
 
 const eyebrowStyle: React.CSSProperties = {
   margin: 0,
-  color: "#a78bfa",
+  color: "#131313",
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }
 
 const pageTitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 28,
   letterSpacing: -0.6,
   lineHeight: 1.1,
@@ -984,14 +982,14 @@ const pageTitleStyle: React.CSSProperties = {
 
 const pageSubtitleStyle: React.CSSProperties = {
   margin: "6px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
 }
 
 const panelStyle: React.CSSProperties = {
-  background: "rgba(15, 23, 42, 0.72)",
-  border: "1px solid rgba(148,163,184,0.14)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.1)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -1000,19 +998,19 @@ const panelStyle: React.CSSProperties = {
 const panelHeaderStyle: React.CSSProperties = {
   marginBottom: 14,
   paddingBottom: 12,
-  borderBottom: "1px solid rgba(148,163,184,0.10)",
+  borderBottom: "1px solid rgba(0,0,0,0.08)",
 }
 
 const panelTitleStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
 }
 
 const panelHintStyle: React.CSSProperties = {
   margin: "4px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1040,7 +1038,7 @@ const fieldStyle: React.CSSProperties = {
 }
 
 const fieldLabelStyle: React.CSSProperties = {
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 500,
 }
@@ -1048,10 +1046,10 @@ const fieldLabelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
-  border: "1px solid rgba(148,163,184,0.16)",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
-  background: "rgba(2,6,23,0.55)",
-  color: "#f8fafc",
+  background: "#FFFFFF",
+  color: "#141414",
   outline: "none",
   fontSize: 13,
   lineHeight: 1.35,
@@ -1062,11 +1060,9 @@ const tableHeaderStyle: React.CSSProperties = {
   gridTemplateColumns: "minmax(180px, 1.2fr) 120px 110px 90px 90px 210px",
   gap: 12,
   padding: "0 4px 10px",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const tableBodyStyle: React.CSSProperties = {
@@ -1092,15 +1088,15 @@ const rowStyle: React.CSSProperties = {
   alignItems: "center",
   padding: "10px 12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.06)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.13)",
 }
 
 const editPanelStyle: React.CSSProperties = {
   padding: "12px",
   borderRadius: 12,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(167,139,250,0.18)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const employeeCellStyle: React.CSSProperties = {
@@ -1112,7 +1108,7 @@ const employeeCellStyle: React.CSSProperties = {
 
 const employeeNameStyle: React.CSSProperties = {
   margin: 0,
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 600,
   wordBreak: "break-word",
@@ -1120,7 +1116,7 @@ const employeeNameStyle: React.CSSProperties = {
 
 const employeeMetaStyle: React.CSSProperties = {
   margin: "2px 0 0",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1130,13 +1126,13 @@ const metaCellStyle: React.CSSProperties = {
 }
 
 const salaryStyle: React.CSSProperties = {
-  color: "#86efac",
+  color: "#1F7A4D",
   fontSize: 13,
   fontWeight: 600,
 }
 
 const dateStyle: React.CSSProperties = {
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 13,
 }
 
@@ -1147,7 +1143,7 @@ const rowActionsStyle: React.CSSProperties = {
 }
 
 const pendingRaiseStyle: React.CSSProperties = {
-  color: "#fbbf24",
+  color: "#A86B00",
   fontSize: 11,
   fontWeight: 600,
 }
@@ -1155,13 +1151,13 @@ const pendingRaiseStyle: React.CSSProperties = {
 const adjustPanelStyle: React.CSSProperties = {
   padding: "14px 16px",
   borderRadius: 12,
-  background: "rgba(124,58,237,0.06)",
-  border: "1px solid rgba(167,139,250,0.22)",
+  background: "rgba(0,0,0,0.05)",
+  border: "1px solid rgba(0,0,0,0.12)",
 }
 
 const adjustTitleStyle: React.CSSProperties = {
   margin: "0 0 12px",
-  color: "#f8fafc",
+  color: "#141414",
   fontSize: 13,
   fontWeight: 600,
 }
@@ -1169,21 +1165,19 @@ const adjustTitleStyle: React.CSSProperties = {
 const historyBlockStyle: React.CSSProperties = {
   marginTop: 14,
   paddingTop: 12,
-  borderTop: "1px solid rgba(148,163,184,0.12)",
+  borderTop: "1px solid rgba(0,0,0,0.09)",
 }
 
 const historyTitleStyle: React.CSSProperties = {
   margin: "0 0 8px",
-  color: "#94a3b8",
+  color: "#6B6B6B",
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 const historyEmptyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 12,
 }
 
@@ -1193,13 +1187,13 @@ const historyRowStyle: React.CSSProperties = {
   gap: 12,
   padding: "7px 10px",
   borderRadius: 8,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.05)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)",
   flexWrap: "wrap",
 }
 
 const historyAmountStyle: React.CSSProperties = {
-  color: "#cbd5e1",
+  color: "#3F3F3F",
   fontSize: 13,
   flex: 1,
 }
@@ -1211,7 +1205,7 @@ const historyBadgeAppliedStyle: React.CSSProperties = {
   fontWeight: 600,
   background: "rgba(52,211,153,0.12)",
   border: "1px solid rgba(52,211,153,0.24)",
-  color: "#6ee7b7",
+  color: "#1F7A4D",
 }
 
 const historyBadgePendingStyle: React.CSSProperties = {
@@ -1221,37 +1215,37 @@ const historyBadgePendingStyle: React.CSSProperties = {
   fontWeight: 600,
   background: "rgba(251,191,36,0.12)",
   border: "1px solid rgba(251,191,36,0.26)",
-  color: "#fbbf24",
+  color: "#A86B00",
 }
 
 const emptyStateStyle: React.CSSProperties = {
   padding: "18px 12px",
   borderRadius: 12,
   textAlign: "center",
-  color: "#7d8ca3",
+  color: "#737373",
   fontSize: 13,
-  background: "rgba(255,255,255,0.02)",
-  border: "1px dashed rgba(148,163,184,0.14)",
+  background: "#FFFFFF",
+  border: "1px dashed rgba(0,0,0,0.1)",
 }
 
 const primaryButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
-  background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-  color: "white",
+  background: "#131313",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
   fontSize: 13,
-  boxShadow: "0 8px 24px rgba(124,58,237,0.22)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
   whiteSpace: "nowrap",
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid rgba(148,163,184,0.16)",
+  color: "#6B6B6B",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 500,
@@ -1262,7 +1256,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 const dangerButtonStyle: React.CSSProperties = {
   padding: "8px 12px",
   background: "transparent",
-  color: "#f87171",
+  color: "#C2362B",
   border: "1px solid rgba(248,113,113,0.24)",
   borderRadius: 8,
   cursor: "pointer",
