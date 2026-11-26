@@ -730,14 +730,20 @@ export default function Home() {
     const filteredEnsayos =
       filtrandoPorDatosDeLlamado || filterHumanResource ? [] : allEnsayos
 
-    const juntaEvents = filteredJuntas.map((j) => stripEvent({
+    // Juntas: tira sólida azul, con el mismo peso visual que los llamados negros
+    const juntaEvents = filteredJuntas.map((j) => ({
       id: `${JUNTA_EVENT_PREFIX}${j.id}`,
       title: j.titulo || j.tipo,
       start: j.hora_inicio ? `${j.fecha}T${j.hora_inicio}` : j.fecha,
       end:   j.hora_fin    ? `${j.fecha}T${j.hora_fin}`    : undefined,
       allDay: !j.hora_inicio,
       editable: false,
-    }, JUNTA_COLOR))
+      backgroundColor: JUNTA_COLOR,
+      borderColor: JUNTA_COLOR,
+      textColor: "#FFFFFF",
+      classNames: ["ev-junta"],
+      stripColor: JUNTA_COLOR,
+    }))
 
     const ensayoEvents = filteredEnsayos.map((e) => stripEvent({
       id: `${ENSAYO_EVENT_PREFIX}${e.id}`,
@@ -2450,7 +2456,7 @@ function openEditVacation() {
               ...filtersToolbarStyle,
               gridTemplateColumns: isMobile
                 ? "1fr 1fr"
-                : "repeat(5, minmax(0, 1fr)) auto",
+                : "minmax(180px, 2fr) repeat(3, minmax(120px, 1fr)) auto",
             }}
           >
             <CalendarSearch items={searchItems} onSelect={(it) => irAFecha(it.date)} placeholder="Buscar llamado o junta…" />
@@ -3999,185 +4005,38 @@ function openEditVacation() {
           )
         })()}
 
-        {juntaDetailsOpen && selectedJunta && (
-          <SideDrawer onClose={() => { setJuntaDetailsOpen(false); setSelectedJunta(null) }} label="Junta" width={520}>
-              <div style={formModalHeaderStyle}>
-                <div>
-                  <h2 style={formModalTitleStyle}>
-                    {selectedJunta.titulo || selectedJunta.tipo}
-                  </h2>
-                  <p style={formModalMetaStyle}>
-                    {formatVacationDate(selectedJunta.fecha)}
-                    {selectedJunta.hora_inicio ? ` · ${selectedJunta.hora_inicio}` : ""}
-                    {selectedJunta.hora_fin ? ` – ${selectedJunta.hora_fin}` : ""}
-                  </p>
-                </div>
+        {juntaDetailsOpen && selectedJunta && (() => {
+          // ── Detalle de la junta: mismo diseño que el llamado, en azul ──
+          const cerrar = () => { setJuntaDetailsOpen(false); setSelectedJunta(null) }
+          const inicio = selectedJunta.hora_inicio ? String(selectedJunta.hora_inicio).slice(0, 5) : ""
+          const fin = selectedJunta.hora_fin ? String(selectedJunta.hora_fin).slice(0, 5) : ""
+          const asistentes = (juntaAttendeeMap[selectedJunta.id] || [])
+            .map((empId) => employees.find((e: any) => e.id === empId))
+            .filter(Boolean) as any[]
+          const externos: string[] = selectedJunta.external_emails || []
+          const direccion = selectedJunta.direccion?.trim()
+          const mapsHref = selectedJunta.maps_link
+            || (direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}` : "")
+          const avatarFondos = ["#E3E8F0", "#F3E3C7", "#D8ECE1", "#F6DCE6"]
+          const copiar = (texto: string, ok: string) => {
+            navigator.clipboard?.writeText(texto).then(() => alert(ok), () => alert("No se pudo copiar"))
+          }
 
-                <button
-                  onClick={() => { setJuntaDetailsOpen(false); setSelectedJunta(null) }}
-                  style={formModalCloseStyle}
-                  aria-label="Cerrar"
-                >
-                  ×
+          return (
+            <SideDrawer onClose={cerrar} label={`Junta: ${selectedJunta.titulo || selectedJunta.tipo || ""}`}>
+              <div style={isMobile ? { ...drawerBarStyle, padding: "12px", gap: 6 } : drawerBarStyle}>
+                <button type="button" onClick={cerrar} style={drawerIconButtonStyle} aria-label="Cerrar">
+                  <CloseIcon />
                 </button>
-              </div>
-
-              <div style={formModalBodyStyle}>
-                <div style={formModalColumnStyle}>
-                  {selectedJunta.titulo && (
-                    <FormModalPreviewField label="Título" value={selectedJunta.titulo} />
-                  )}
-                  <div style={formModalRowStyle}>
-                    <FormModalPreviewField label="Tipo" value={selectedJunta.tipo} />
-                    <FormModalPreviewField label="Fecha" value={formatVacationDate(selectedJunta.fecha)} />
-                  </div>
-
-                  <div style={formModalRowStyle}>
-                    <FormModalPreviewField label="Hora inicio" value={selectedJunta.hora_inicio || "—"} />
-                    <FormModalPreviewField label="Hora fin" value={selectedJunta.hora_fin || "—"} />
-                  </div>
-
-                  {selectedJunta.link && (
-                    <div>
-                      <p style={formModalLabelStyle}>Liga de reunión</p>
-                      <a
-                        href={selectedJunta.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "7px 14px",
-                          borderRadius: 8,
-                          background: "rgba(8,145,178,0.12)",
-                          border: "1px solid rgba(8,145,178,0.30)",
-                          color: "#0E7490",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          textDecoration: "none",
-                          marginTop: 4,
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        Unirse a la reunión
-                      </a>
-                    </div>
-                  )}
-
-                  {selectedJunta.direccion && (
-                    <FormModalPreviewField label="Dirección" value={selectedJunta.direccion} multiline />
-                  )}
-
-                  {selectedJunta.maps_link && (
-                    <div>
-                      <p style={formModalLabelStyle}>Ubicación</p>
-                      <a
-                        href={selectedJunta.maps_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "7px 14px",
-                          borderRadius: 8,
-                          background: "rgba(16,185,129,0.12)",
-                          border: "1px solid rgba(16,185,129,0.30)",
-                          color: "#1F7A4D",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          textDecoration: "none",
-                          marginTop: 4,
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        Ver en Google Maps
-                      </a>
-                    </div>
-                  )}
-
-                  {selectedJunta.notas && (
-                    <FormModalPreviewField label="Notas" value={selectedJunta.notas} multiline />
-                  )}
-
-                  <div>
-                    <span style={formModalLabelStyle}>
-                      Asistentes ({(juntaAttendeeMap[selectedJunta.id] || []).length})
-                    </span>
-                    {(juntaAttendeeMap[selectedJunta.id] || []).length > 0 ? (
-                      <div style={{ ...formModalPillGridStyle, marginTop: 6 }}>
-                        {(juntaAttendeeMap[selectedJunta.id] || []).map((empId) => {
-                          const emp = employees.find((e: any) => e.id === empId)
-                          if (!emp) return null
-                          return (
-                            <span
-                              key={empId}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4px 8px",
-                                borderRadius: 6,
-                                background: "rgba(8,145,178,0.14)",
-                                border: "1px solid rgba(8,145,178,0.28)",
-                                color: "#141414",
-                                fontSize: 12,
-                                fontWeight: 600,
-                              }}
-                            >
-                              {employeeDisplayName(emp)}
-                              <span style={{ color: "#0E7490", fontWeight: 500 }}>{emp.puesto}</span>
-                            </span>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div style={formModalValueStyle}>—</div>
-                    )}
-                  </div>
-
-                  {selectedJunta.external_emails && selectedJunta.external_emails.length > 0 && (
-                    <div>
-                      <span style={formModalLabelStyle}>
-                        Invitados externos ({selectedJunta.external_emails.length})
-                      </span>
-                      <div style={{ ...formModalPillGridStyle, marginTop: 6 }}>
-                        {selectedJunta.external_emails.map((email: string) => (
-                          <span
-                            key={email}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              padding: "4px 8px",
-                              borderRadius: 6,
-                              background: "rgba(0,0,0,0.06)",
-                              border: "1px solid rgba(0,0,0,0.19)",
-                              color: "#141414",
-                              fontSize: 12,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {email}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={formModalFooterStyle}>
-                <button
-                  onClick={() => { setJuntaDetailsOpen(false); setSelectedJunta(null) }}
-                  style={formModalSecondaryButtonStyle}
-                >
-                  Cerrar
-                </button>
-
+                <div style={{ flex: 1 }} />
+                {selectedJunta.link && (
+                  <a href={selectedJunta.link} target="_blank" rel="noopener noreferrer" style={{ ...drawerQuietButtonStyle, textDecoration: "none" }}>
+                    Unirse a la reunión
+                  </a>
+                )}
                 {canManageJuntas && (
                   <button
+                    type="button"
                     onClick={() => {
                       // Pre-fill form for editing
                       setJuntaTipo(selectedJunta.tipo as "Brief" | "PPM" | "Junta Cliente" | "Junta Interna")
@@ -4195,23 +4054,207 @@ function openEditVacation() {
                       setJuntaDetailsOpen(false)
                       setModalOpen(true)
                     }}
-                    style={formModalPrimaryButtonStyle}
+                    style={drawerInkButtonStyle}
                   >
-                    Editar
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M4 20l4-1 11-11-3-3L5 16z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                    </svg>
+                    {isMobile ? "Editar" : "Editar junta"}
                   </button>
                 )}
-
                 {canManageJuntas && (
                   <button
+                    type="button"
                     onClick={() => deleteJunta(selectedJunta.id)}
-                    style={formModalDangerButtonStyle}
+                    style={{ ...drawerIconButtonStyle, color: "#C2362B" }}
+                    aria-label="Borrar junta"
+                    title="Borrar junta"
                   >
-                    Borrar
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 )}
               </div>
+
+              <div style={{ ...drawerBodyStyle, padding: isMobile ? "20px 18px 28px" : drawerBodyStyle.padding }}>
+                <div style={drMetaStyle}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontWeight: 600, color: JUNTA_COLOR }}>
+                    <span aria-hidden style={{ width: 9, height: 13, borderRadius: 2, background: JUNTA_COLOR }} />
+                    Junta
+                  </span>
+                  {selectedJunta.tipo && (
+                    <span style={{ ...drPillStyle, color: "#1D5FA8", background: "#E5EEF8" }}>{selectedJunta.tipo}</span>
+                  )}
+                </div>
+
+                <h2 style={{ ...drTituloStyle, marginTop: 18, fontSize: isMobile ? 23 : 27 }}>
+                  {selectedJunta.titulo || selectedJunta.tipo}
+                </h2>
+                <p style={drFechaStyle}>{formatVacationDate(selectedJunta.fecha)}</p>
+
+                {/* Horario: la hora de inicio manda, en grande */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile || !fin ? "1fr" : "1.3fr 1fr",
+                    marginTop: 22,
+                    border: "1px solid #E2E2E2",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ background: JUNTA_COLOR, padding: "14px 16px 15px" }}>
+                    <div style={{ fontSize: 12.5, color: "#D6E4F3" }}>Inicio</div>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: inicio ? (isMobile ? 44 : 52) : 28,
+                        lineHeight: 0.95,
+                        fontStretch: "64%",
+                        fontWeight: 760,
+                        color: "#FFFFFF",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {inicio || "Todo el día"}
+                    </div>
+                  </div>
+                  {fin && (
+                    <div
+                      style={{
+                        padding: "14px 16px 15px",
+                        borderLeft: isMobile ? "none" : "1px solid #E2E2E2",
+                        borderTop: isMobile ? "1px solid #E2E2E2" : "none",
+                      }}
+                    >
+                      <div style={{ fontSize: 12.5, color: "#595959" }}>Fin</div>
+                      <div
+                        style={{
+                          marginTop: 10,
+                          fontSize: 30,
+                          lineHeight: 1,
+                          fontStretch: "68%",
+                          fontWeight: 650,
+                          color: "#141414",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {fin}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dónde: liga de reunión y/o dirección */}
+                <section style={drSeccionStyle}>
+                  <h3 style={drSeccionTituloStyle}>Dónde</h3>
+                  {selectedJunta.link || direccion || selectedJunta.maps_link ? (
+                    <div style={{ display: "grid", gap: 14 }}>
+                      {selectedJunta.link && (
+                        <div>
+                          <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Reunión en línea</p>
+                          <p style={{ margin: "1px 0 0", color: "#595959", fontSize: 13.5, wordBreak: "break-all" }}>{selectedJunta.link}</p>
+                          <div style={drLigasStyle}>
+                            <a href={selectedJunta.link} target="_blank" rel="noopener noreferrer" style={drLigaStyle}>
+                              Unirse a la reunión
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copiar(selectedJunta.link, "Liga copiada")}
+                              style={{ ...drLigaStyle, background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", fontSize: 13, fontWeight: 600 }}
+                            >
+                              Copiar liga
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {(direccion || selectedJunta.maps_link) && (
+                        <div>
+                          {direccion && <p style={{ margin: 0, fontSize: 15, fontWeight: 600, whiteSpace: "pre-wrap" }}>{direccion}</p>}
+                          <div style={drLigasStyle}>
+                            {mapsHref && (
+                              <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={drLigaStyle}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                  <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z" stroke="currentColor" strokeWidth="1.6" />
+                                  <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.6" />
+                                </svg>
+                                Abrir en Maps
+                              </a>
+                            )}
+                            {direccion && (
+                              <button
+                                type="button"
+                                onClick={() => copiar(direccion, "Dirección copiada")}
+                                style={{ ...drLigaStyle, background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", fontSize: 13, fontWeight: 600 }}
+                              >
+                                Copiar dirección
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={drVacioStyle}>Sin liga ni dirección.</p>
+                  )}
+                </section>
+
+                {/* Asistentes */}
+                <section style={drSeccionStyle}>
+                  <h3 style={drSeccionTituloStyle}>
+                    Asistentes <span style={{ color: "#8A8A8A", fontWeight: 500 }}>{asistentes.length + externos.length}</span>
+                  </h3>
+                  {asistentes.length + externos.length > 0 ? (
+                    <ul style={drListaStyle}>
+                      {asistentes.map((emp, i) => {
+                        const nombre = employeeDisplayName(emp)
+                        const iniciales = `${(emp.nombre || "").charAt(0)}${(emp.apellido_paterno || "").charAt(0)}`.toUpperCase()
+                        return (
+                          <li key={emp.id} style={drFilaStyle}>
+                            <span style={{ ...drAvatarStyle, background: avatarFondos[i % avatarFondos.length] }}>{iniciales || nombre.charAt(0)}</span>
+                            <span style={{ minWidth: 0 }}>
+                              <span style={{ display: "block", fontWeight: 550, lineHeight: 1.2 }}>{nombre}</span>
+                              {emp.puesto && <span style={{ display: "block", color: "#595959", fontSize: 12.5 }}>{emp.puesto}</span>}
+                            </span>
+                          </li>
+                        )
+                      })}
+                      {externos.map((email) => (
+                        <li key={email} style={drFilaStyle}>
+                          <span style={{ ...drAvatarStyle, background: "#EDEDED", color: "#595959" }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <rect x="3.5" y="5.5" width="17" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                              <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                          <span style={{ minWidth: 0 }}>
+                            <span style={{ display: "block", fontWeight: 550, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis" }}>{email}</span>
+                            <span style={{ display: "block", color: "#595959", fontSize: 12.5 }}>Invitado externo</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={drVacioStyle}>Sin asistentes.</p>
+                  )}
+                </section>
+
+                {/* Notas */}
+                <section style={drSeccionStyle}>
+                  <h3 style={drSeccionTituloStyle}>Notas</h3>
+                  {selectedJunta.notas?.trim() ? (
+                    <div style={drNotaStyle}>
+                      <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{selectedJunta.notas}</p>
+                    </div>
+                  ) : (
+                    <p style={drVacioStyle}>Sin notas.</p>
+                  )}
+                </section>
+              </div>
             </SideDrawer>
-        )}
+          )
+        })()}
 
         {personalDetailsOpen && selectedPersonal && canPersonal && (
           <SideDrawer onClose={() => { setPersonalDetailsOpen(false); setSelectedPersonal(null) }} label="Evento personal" width={520}>
