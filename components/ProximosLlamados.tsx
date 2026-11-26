@@ -90,7 +90,7 @@ export function ProximosLlamados({
   }
 
   return (
-    <aside style={columnaStyle} aria-label="Próximos llamados">
+    <aside style={columnaStyle} className="proximos-llamados" aria-label="Próximos llamados">
       <h2 style={tituloStyle}>Próximos llamados</h2>
 
       {porDia.length === 0 && (
@@ -129,8 +129,14 @@ export function ProximosLlamados({
                     }}
                   />
                   <span style={horaColStyle}>
-                    <span style={horaStyle}>{inicio || "Día"}</span>
-                    <span style={finStyle}>{inicio ? (fin ? `a ${fin}` : "") : "completo"}</span>
+                    {inicio ? (
+                      <>
+                        <span style={horaStyle}>{inicio}</span>
+                        {fin && <span style={finStyle}>a {fin}</span>}
+                      </>
+                    ) : (
+                      <span style={todoElDiaStyle}>Todo el día</span>
+                    )}
                   </span>
                   <span style={cuerpoStyle}>
                     <span style={clienteFilaStyle}>
@@ -177,7 +183,7 @@ export function ProximosLlamados({
 }
 
 const columnaStyle: CSSProperties = {
-  width: 316,
+  width: 304,
   flexShrink: 0,
   position: "sticky",
   top: 24,
@@ -242,6 +248,13 @@ const horaStyle: CSSProperties = {
   fontStretch: "68%",
   fontWeight: 720,
   fontVariantNumeric: "tabular-nums",
+}
+
+const todoElDiaStyle: CSSProperties = {
+  fontSize: 14,
+  lineHeight: 1.15,
+  fontWeight: 650,
+  fontStretch: "85%",
 }
 
 const finStyle: CSSProperties = {

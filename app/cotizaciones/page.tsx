@@ -1188,7 +1188,7 @@ export default function CotizacionesPage() {
                     <button onClick={handleCreateClient} disabled={creatingClient || !newClientName.trim()} style={inlineBtnStyle("#131313")}>
                       {creatingClient ? "…" : "✓"}
                     </button>
-                    <button onClick={() => { setShowNewClient(false); setNewClientName("") }} style={inlineBtnStyle("#A3A3A3")}>✕</button>
+                    <button onClick={() => { setShowNewClient(false); setNewClientName("") }} style={inlineBtnStyle("#8F8F8F")}>✕</button>
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: 6 }}>
@@ -1235,7 +1235,7 @@ export default function CotizacionesPage() {
                       <button onClick={handleCreateProject} disabled={creatingProject || !newProjectName.trim()} style={{ ...inlineBtnStyle("#131313"), flex: 1, fontSize: 12 }}>
                         {creatingProject ? "Creando..." : "✓ Crear proyecto"}
                       </button>
-                      <button onClick={() => { setShowNewProject(false); setNewProjectName(""); setNewSubfolderName(""); setShowNewSubfolder(false); setNewProjectSubfolderId("") }} style={inlineBtnStyle("#A3A3A3")}>✕</button>
+                      <button onClick={() => { setShowNewProject(false); setNewProjectName(""); setNewSubfolderName(""); setShowNewSubfolder(false); setNewProjectSubfolderId("") }} style={inlineBtnStyle("#8F8F8F")}>✕</button>
                     </div>
                   </div>
                 ) : (
@@ -1393,7 +1393,7 @@ export default function CotizacionesPage() {
                     <div key={r.id} style={summaryRowStyle}>
                       <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                         <span style={{ width: 5, height: 5, borderRadius: 999, background: r.color, flexShrink: 0 }} />
-                        <span style={{ color: hasValue ? "#3F3F3F" : "#A3A3A3", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ color: hasValue ? "#3F3F3F" : "#8F8F8F", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {r.num}. {r.label}
                         </span>
                       </div>
@@ -2204,7 +2204,7 @@ function internalToggleStyle(active: boolean): React.CSSProperties {
     borderRadius: 5,
     border: active ? "1px solid rgba(22,163,74,0.55)" : "1px solid rgba(0,0,0,0.13)",
     background: active ? "#FFFFFF" : "transparent",
-    color: active ? "#1F8A55" : "#A3A3A3",
+    color: active ? "#1F8A55" : "#8F8F8F",
     fontSize: 9,
     fontWeight: 800,
     cursor: "pointer",

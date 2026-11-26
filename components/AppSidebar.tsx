@@ -185,7 +185,7 @@ export function AppSidebar({
         }}
       >
         <div style={sidebarTopStyle}>
-          <div style={brandZoneStyle}>
+          <div style={isMobile ? { ...brandZoneStyle, ...brandZoneMobileStyle } : brandZoneStyle}>
             <Link
               href="/"
               onClick={() => isMobile && onMenuClose()}
@@ -504,6 +504,14 @@ const brandZoneStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "flex-start",
   padding: "2px 10px 4px",
+}
+
+// En móvil el botón de menú flota arriba a la izquierda: el logo va a su lado
+const brandZoneMobileStyle: React.CSSProperties = {
+  alignItems: "center",
+  minHeight: 40,
+  padding: "0 10px 0 56px",
+  marginTop: -6,
 }
 
 const searchWrapStyle: React.CSSProperties = {

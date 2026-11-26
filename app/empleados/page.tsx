@@ -925,9 +925,9 @@ function avatarStyle(name: string): React.CSSProperties {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    background: "rgba(0,0,0,0.05)",
-    border: "1px solid rgba(0,0,0,0.12)",
-    color: "#FFFFFF",
+    background: "#EDEDED",
+    border: "none",
+    color: "#262626",
     fontSize: 13,
     fontWeight: 700,
   }

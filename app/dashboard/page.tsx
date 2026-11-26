@@ -410,7 +410,7 @@ export default function DashboardPage() {
           ) : (
           <>
           <section style={dateBannerStyle}>
-            <p style={dateBannerTitleStyle}>{formattedDate}</p>
+            <p style={dateBannerTitleStyle}>{formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)}</p>
             <p style={dateBannerHintStyle}>
               Llamados, vacaciones, cumpleaños y aniversarios del equipo Retro
             </p>
@@ -532,7 +532,7 @@ export default function DashboardPage() {
                       </div>
 
                       <p style={shootTitleStyle}>
-                        {statusEmoji(shoot.status)} {shoot.title}
+                        {shoot.title}
                       </p>
                       <p style={shootMetaStyle}>
                         {shoot.client || "Sin cliente"} ·{" "}
@@ -823,13 +823,6 @@ function statusLabel(status: string) {
   return "Tentativo"
 }
 
-function statusEmoji(status: string) {
-  if (status === "confirmed") return "✅"
-  if (status === "cancelled") return "❌"
-  if (status === "wrap") return "🏁"
-  return "🟡"
-}
-
 function getStatusColor(status: string) {
   if (status === "confirmed") return "#16a34a"
   if (status === "cancelled") return "#C2362B"
@@ -1016,7 +1009,6 @@ const dateBannerTitleStyle: React.CSSProperties = {
   color: "#141414",
   fontSize: 15,
   fontWeight: 600,
-  textTransform: "capitalize",
 }
 
 const dateBannerHintStyle: React.CSSProperties = {

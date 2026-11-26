@@ -253,6 +253,10 @@ input[type="number"] {
   color: var(--text);
 }
 
+.calendar-shell .fc-toolbar-title::first-letter {
+  text-transform: uppercase;
+}
+
 .calendar-shell .fc-button {
   padding: 7px 11px !important;
   background: var(--sheet) !important;
@@ -300,6 +304,8 @@ input[type="number"] {
 }
 
 .calendar-shell .fc-event .fc-event-time {
+  flex-shrink: 0;
+  margin-right: 5px;
   font-stretch: 72%;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -459,7 +465,9 @@ input[type="number"] {
     min-height: 4px;
     padding: 0 !important;
     margin: 0 !important;
-    border: none !important;
+    /* border-width y no border:none, para no borrar el border-color en línea
+       que las tiras claras usan como color de su barrita */
+    border-width: 0 !important;
     border-radius: 3px;
     overflow: hidden;
     white-space: nowrap;
@@ -704,4 +712,12 @@ html {
 /* Buscador dentro de la barra grafito */
 .search-dark::placeholder {
   color: #8E8E93;
+}
+
+/* "Próximos llamados" solo cuando hay espacio: en laptops angostas el
+   calendario necesita todo el ancho. */
+@media (max-width: 1359px) {
+  .proximos-llamados {
+    display: none;
+  }
 }

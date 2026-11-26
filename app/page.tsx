@@ -75,10 +75,22 @@ const STATUS_DEFAULT_COLORS = new Set([
   "#c2362b", "#8a8a8a", "#a86b00", "#131313",
 ])
 
+// Texto negro sobre colores claros (p. ej. un verde lima elegido a mano) y
+// blanco sobre los oscuros, para que el título siempre se lea.
+function textoSobre(hex: string) {
+  const h = hex.replace("#", "")
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255)
+  if ([r, g, b].some((v) => Number.isNaN(v))) return "#FFFFFF"
+  const lin = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))
+  const lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+  return lum > 0.4 ? "#131313" : "#FFFFFF"
+}
+
 function llamadoLook(shoot: { color?: string | null; status?: string | null }) {
   const color = String(shoot.color || "").toLowerCase()
   if (color && !STATUS_DEFAULT_COLORS.has(color)) {
-    return { backgroundColor: shoot.color as string, borderColor: shoot.color as string, textColor: "#FFFFFF", classNames: ["ev-llamado"], stripColor: shoot.color as string }
+    return { backgroundColor: shoot.color as string, borderColor: shoot.color as string, textColor: textoSobre(color), classNames: ["ev-llamado"], stripColor: shoot.color as string }
   }
   if (shoot.status === "confirmed") {
     return { backgroundColor: "#131313", borderColor: "#131313", textColor: "#FFFFFF", classNames: ["ev-llamado"], stripColor: "#131313" }
@@ -2542,6 +2554,7 @@ function openEditVacation() {
                 locale={esLocale}
                 firstDay={0}
                 buttonText={{ today: "Hoy", month: "Mes", week: "Semana", day: "Día" }}
+                eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
                 customButtons={{
                   stackMonths: {
                     text: "Meses",
@@ -2616,6 +2629,7 @@ function openEditVacation() {
                         initialView="dayGridMonth"
                         locale={esLocale}
                         firstDay={0}
+                        eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
                         initialDate={d}
                         headerToolbar={false}
                         height="auto"
@@ -2644,11 +2658,14 @@ function openEditVacation() {
               <div style={mobileDayListStyle}>
                 <div style={mobileDayListHeaderStyle}>
                   <span style={mobileDayListDateStyle}>
-                    {new Date(`${mobileSelectedDay}T00:00:00`).toLocaleDateString("es-MX", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    })}
+                    {(() => {
+                      const t = new Date(`${mobileSelectedDay}T00:00:00`).toLocaleDateString("es-MX", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })
+                      return t.charAt(0).toUpperCase() + t.slice(1)
+                    })()}
                   </span>
                   {canJunta && (
                     <button
@@ -4324,6 +4341,9 @@ function openEditVacation() {
                     ...(fin ? [{ label: "Fin estimado", value: fin }] : []),
                   ]
                   return (
+                    // Envoltura sin overflow: el cuerpo del modal es un grid con
+                    // scroll y una celda con overflow hidden se encogería.
+                    <div>
                     <div
                       style={{
                         display: "grid",
@@ -4331,11 +4351,11 @@ function openEditVacation() {
                         border: "1px solid #E2E2E2",
                         borderRadius: 10,
                         overflow: "hidden",
-                        marginBottom: 20,
+                        marginBottom: 6,
                       }}
                     >
                       <div style={{ background: "#131313", padding: "14px 16px 15px" }}>
-                        <div style={{ fontSize: 12.5, color: "#A3A3A3" }}>Llamado general</div>
+                        <div style={{ fontSize: 12.5, color: "#8F8F8F" }}>Llamado general</div>
                         <div
                           style={{
                             marginTop: 6,
@@ -4375,6 +4395,7 @@ function openEditVacation() {
                           </div>
                         </div>
                       ))}
+                    </div>
                     </div>
                   )
                 })()}
@@ -5500,7 +5521,6 @@ const mobileDayListDateStyle: React.CSSProperties = {
   color: "#262626",
   fontSize: 14,
   fontWeight: 700,
-  textTransform: "capitalize",
 }
 
 const mobileDayAddBtnStyle: React.CSSProperties = {
@@ -5584,10 +5604,10 @@ const stackedMonthBlockStyle: React.CSSProperties = {
 const stackedMonthTitleStyle: React.CSSProperties = {
   margin: "0 0 14px",
   padding: "10px 16px",
-  background: "linear-gradient(90deg, rgba(0,0,0,0.08), rgba(30,58,138,0.12), transparent)",
+  background: "#FFFFFF",
   borderLeft: "3px solid #131313",
   borderRadius: 8,
-  color: "#FFFFFF",
+  color: "#141414",
   fontSize: 14,
   fontWeight: 700,
 }

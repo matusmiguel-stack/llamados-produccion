@@ -525,7 +525,7 @@ export default function FlujoPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {fijosVisibles.map(f => (
                   <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                    <span style={{ flex: 1, minWidth: 160, color: f.activo ? "#262626" : "#A3A3A3", fontSize: 13, fontWeight: 600, textDecoration: f.activo ? "none" : "line-through" }}>
+                    <span style={{ flex: 1, minWidth: 160, color: f.activo ? "#262626" : "#8F8F8F", fontSize: 13, fontWeight: 600, textDecoration: f.activo ? "none" : "line-through" }}>
                       {f.concepto}
                     </span>
                     <span style={{ fontSize: 11, color: "#737373" }}>{EMPRESA_LABEL[f.empresa]}</span>
@@ -782,8 +782,8 @@ function DiaMovil({ dia, alertaMin, expandido, onToggle, onDeleteMov, esHoy, mos
           </span>
         </span>
         <span style={{ ...mono, display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11 }}>
-          <span style={{ color: dia.entradas > 0 ? "#1F8A55" : "#A3A3A3" }}>{dia.entradas > 0 ? `+${fmt(dia.entradas)}` : "+—"}</span>
-          <span style={{ color: dia.salidas > 0 ? "#C2362B" : "#A3A3A3" }}>{dia.salidas > 0 ? `–${fmt(dia.salidas)}` : "–—"}</span>
+          <span style={{ color: dia.entradas > 0 ? "#1F8A55" : "#8F8F8F" }}>{dia.entradas > 0 ? `+${fmt(dia.entradas)}` : "+—"}</span>
+          <span style={{ color: dia.salidas > 0 ? "#C2362B" : "#8F8F8F" }}>{dia.salidas > 0 ? `–${fmt(dia.salidas)}` : "–—"}</span>
           <span style={{ color: dia.neto >= 0 ? "#1F8A55" : "#C2362B", fontWeight: 600 }}>= {dia.neto >= 0 ? "+" : ""}{fmt(dia.neto)}</span>
         </span>
         {dia.eventos.some(e => e.atrasado) && <span style={{ fontSize: 10, color: "#C2362B" }}>⚠ incluye atrasados</span>}

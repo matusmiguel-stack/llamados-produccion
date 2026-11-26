@@ -17,7 +17,7 @@ import { CalendarSearch, type CalendarSearchItem } from "../../components/Calend
 const TIPOS_ENTREGA = [
   { label: "Entrega Interna", color: "#131313" },
   { label: "Entrega Cliente", color: "#2C6FB7" },
-  { label: "Entrega Final",   color: "#16a34a" },
+  { label: "Entrega Final",   color: "#15803D" },
 ] as const
 
 type TipoEntrega = typeof TIPOS_ENTREGA[number]["label"]

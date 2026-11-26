@@ -17,9 +17,9 @@ import { CalendarSearch, type CalendarSearchItem } from "../../components/Calend
 const TIPOS_ENTREGA = [
   { label: "CDT Interna",       color: "#131313" },
   { label: "CDT Cliente",       color: "#2C6FB7" },
-  { label: "CDT Agencia",       color: "#d97706" },
-  { label: "Entrega final",     color: "#16a34a" },
-  { label: "Ronda Ajustes",     color: "#ea580c" },
+  { label: "CDT Agencia",       color: "#B45309" },
+  { label: "Entrega final",     color: "#15803D" },
+  { label: "Ronda Ajustes",     color: "#C2410C" },
   { label: "Edición y Post",    color: "#131313" },
   { label: "Online CC y Audio", color: "#C93F5D" },
 ] as const

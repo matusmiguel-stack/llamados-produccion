@@ -1791,7 +1791,7 @@ function SupplierCombobox({
           style={{
             ...comboboxInputStyle,
             paddingRight: value ? 28 : 12,
-            color: open ? "#141414" : (value ? "#262626" : "#A3A3A3"),
+            color: open ? "#141414" : (value ? "#262626" : "#8F8F8F"),
           }}
         />
         {value && !open && (

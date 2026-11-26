@@ -1,32 +1,32 @@
 // Estilos compartidos del módulo Plan de rodaje. Mismo lenguaje visual que el
-// resto de la app: fondo pizarra, acentos violeta y verde para lo filmado.
+// resto de la app: fondo claro, acentos en negro y verde para lo filmado.
 
 import type { CSSProperties } from "react"
 
 export const C = {
-  texto: "#f8fafc",
-  texto2: "#cbd5e1",
-  tenue: "#94a3b8",
-  apagado: "#7d8ca3",
-  linea: "rgba(148,163,184,0.14)",
-  lineaSuave: "rgba(148,163,184,0.09)",
-  panel: "rgba(15,23,42,0.72)",
-  hueco: "rgba(2,6,23,0.35)",
-  violeta: "#a78bfa",
-  violetaClaro: "#c4b5fd",
-  violetaFondo: "rgba(124,58,237,0.12)",
-  violetaBorde: "rgba(167,139,250,0.28)",
-  verde: "#34d399",
-  verdeClaro: "#6ee7b7",
+  texto: "#141414",
+  texto2: "#3F3F3F",
+  tenue: "#6B6B6B",
+  apagado: "#737373",
+  linea: "rgba(0,0,0,0.1)",
+  lineaSuave: "rgba(0,0,0,0.07)",
+  panel: "#FFFFFF",
+  hueco: "#FFFFFF",
+  violeta: "#131313",
+  violetaClaro: "#3F3F3F",
+  violetaFondo: "rgba(0,0,0,0.05)",
+  violetaBorde: "rgba(0,0,0,0.08)",
+  verde: "#1F8A55",
+  verdeClaro: "#1F7A4D",
   verdeFondo: "rgba(52,211,153,0.10)",
   verdeBorde: "rgba(52,211,153,0.30)",
-  ambar: "#fbbf24",
+  ambar: "#A86B00",
   ambarFondo: "rgba(251,191,36,0.10)",
   ambarBorde: "rgba(251,191,36,0.30)",
-  rojo: "#f87171",
+  rojo: "#C2362B",
   rojoFondo: "rgba(248,113,113,0.10)",
   rojoBorde: "rgba(248,113,113,0.30)",
-  azul: "#93c5fd",
+  azul: "#1D5FA8",
 }
 
 export const MONO = "var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace"
@@ -34,7 +34,7 @@ export const MONO = "var(--font-mono), ui-monospace, SFMono-Regular, Menlo, mono
 export const panel: CSSProperties = {
   background: C.panel,
   border: `1px solid ${C.linea}`,
-  boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.05)",
   backdropFilter: "blur(16px)",
   borderRadius: 16,
   padding: "16px 18px",
@@ -48,7 +48,7 @@ export const boton: CSSProperties = {
   padding: "8px 12px",
   borderRadius: 9,
   border: `1px solid ${C.linea}`,
-  background: "rgba(255,255,255,0.04)",
+  background: "#FFFFFF",
   color: C.texto2,
   fontSize: 13,
   fontWeight: 600,
@@ -58,9 +58,9 @@ export const boton: CSSProperties = {
 
 export const botonPrimario: CSSProperties = {
   ...boton,
-  border: "1px solid rgba(167,139,250,0.45)",
-  background: "linear-gradient(180deg, rgba(124,58,237,0.55), rgba(109,40,217,0.55))",
-  color: "#f5f3ff",
+  border: "1px solid #131313",
+  background: "#131313",
+  color: "#FFFFFF",
 }
 
 export const botonVioleta: CSSProperties = {
@@ -81,7 +81,7 @@ export const botonPeligro: CSSProperties = {
   ...boton,
   border: `1px solid ${C.rojoBorde}`,
   background: C.rojoFondo,
-  color: "#fca5a5",
+  color: "#B42318",
 }
 
 export const botonChico: CSSProperties = {
@@ -105,7 +105,7 @@ export const campo: CSSProperties = {
   padding: "9px 11px",
   borderRadius: 9,
   border: `1px solid ${C.linea}`,
-  background: "rgba(2,6,23,0.55)",
+  background: "#FFFFFF",
   color: C.texto,
   fontSize: 14,
   outline: "none",
@@ -125,8 +125,6 @@ export const etiquetaCampo: CSSProperties = {
   color: C.apagado,
   fontSize: 11,
   fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: 0.6,
 }
 
 export const chip: CSSProperties = {
@@ -136,7 +134,7 @@ export const chip: CSSProperties = {
   padding: "2px 8px",
   borderRadius: 999,
   border: `1px solid ${C.linea}`,
-  background: "rgba(148,163,184,0.08)",
+  background: "rgba(0,0,0,0.03)",
   color: C.tenue,
   fontSize: 11,
   fontWeight: 600,
@@ -178,7 +176,7 @@ export const avisoError: CSSProperties = {
   ...aviso,
   border: `1px solid ${C.rojoBorde}`,
   background: C.rojoFondo,
-  color: "#fca5a5",
+  color: "#B42318",
 }
 
 export const avisoAmbar: CSSProperties = {
@@ -191,8 +189,8 @@ export const avisoAmbar: CSSProperties = {
 export const vacio: CSSProperties = {
   padding: "28px 20px",
   borderRadius: 12,
-  border: "1px dashed rgba(148,163,184,0.2)",
-  background: "rgba(255,255,255,0.02)",
+  border: "1px dashed rgba(0,0,0,0.14)",
+  background: "#FFFFFF",
   textAlign: "center",
   color: C.apagado,
   fontSize: 13,
@@ -202,7 +200,7 @@ export const vacio: CSSProperties = {
 export const modalFondo: CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0,0,0,0.62)",
+  background: "rgba(17,17,17,0.32)",
   backdropFilter: "blur(4px)",
   zIndex: 10000,
   display: "flex",
@@ -214,10 +212,10 @@ export const modalFondo: CSSProperties = {
 
 export const modalCaja: CSSProperties = {
   width: "100%",
-  background: "linear-gradient(180deg, rgba(10,14,26,0.99) 0%, rgba(6,9,18,0.99) 100%)",
-  border: "1px solid rgba(148,163,184,0.16)",
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.12)",
   borderRadius: 18,
-  boxShadow: "0 40px 120px rgba(0,0,0,0.60)",
+  boxShadow: "0 40px 120px rgba(0,0,0,0.13)",
   overflow: "hidden",
 }
 
@@ -238,7 +236,5 @@ export const eyebrow: CSSProperties = {
   margin: 0,
   color: C.violeta,
   fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: 1.2,
   fontWeight: 700,
 }

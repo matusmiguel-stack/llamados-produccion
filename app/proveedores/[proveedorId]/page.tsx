@@ -1086,7 +1086,7 @@ function SupplierCombobox({
           style={{
             width: "100%", padding: "4px 24px 4px 8px", borderRadius: 6,
             border: "1px solid rgba(0,0,0,0.2)", background: "rgba(0,0,0,0.05)",
-            color: open ? "#141414" : (value ? "#262626" : "#A3A3A3"),
+            color: open ? "#141414" : (value ? "#262626" : "#8F8F8F"),
             fontSize: 12, outline: "none", boxSizing: "border-box" as const,
           }}
         />
